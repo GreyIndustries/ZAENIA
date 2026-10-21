@@ -119,6 +119,20 @@ def build_messages(
     from core.foundation.moral_code.engine import guidance_for_generation
     default_charter()  # Verify the reviewed charter before using its guidance.
     messages.append({"role": "system", "content": guidance_for_generation()})
+
+    # Keep the whole prompt inside the model's window: Ollama drops the start
+    # of an over-long prompt, which is where the instructions above live.
+    from core.brain.context_budget import fit_prompt
+    clock = clock_context()
+    fitted = fit_prompt(
+        fixed_text="".join(m["content"] for m in messages) + clock,
+        question=user_text,
+        behavior=behavior_context,
+        conversation=conversation_context,
+        history=recent_messages,
+        context_window=get_brain_settings()["context_window"],
+    )
+    behavior_context, conversation_context, recent_messages = fitted.behavior, fitted.conversation, fitted.history
     extra_context_parts: list[str] = []
 
     if behavior_context:
@@ -169,7 +183,7 @@ def build_messages(
     messages.append(
         {
             "role": "system",
-            "content": clock_context(),
+            "content": clock,
         }
     )
 
