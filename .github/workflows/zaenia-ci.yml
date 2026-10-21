@@ -1,4 +1,3 @@
-
 name: ZAENIA Continuous Integration
 
 on:
@@ -8,6 +7,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Read-only token for every job; nothing here writes to the repository.
 permissions:
   contents: read
 
@@ -15,19 +15,26 @@ concurrency:
   group: zaenia-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# GitHub-maintained actions are pinned to full commit SHAs (tag in the
+# trailing comment). All three run on the Node 24 action runtime.
+#   actions/checkout      v7.0.1  3d3c42e5aac5ba805825da76410c181273ba90b1
+#   actions/setup-python  v7.0.0  5fda3b95a4ea91299a34e894583c3862153e4b97
+#   actions/setup-node    v7.1.0  949feb2413d6458794dcd2491c4babbbce0c15c1
+
 jobs:
   python-check:
     name: Python Syntax
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.11'
 
@@ -66,6 +73,7 @@ jobs:
   desktop-build:
     name: React Desktop Build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     defaults:
       run:
@@ -73,12 +81,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
+      # The build itself stays on Node 22 for now; only the action runtime
+      # moves to Node 24.
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
 
@@ -91,25 +101,36 @@ jobs:
   secret-scan:
     name: Secret Detection
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      GITLEAKS_VERSION: 8.24.3
+      # SHA-256 of gitleaks_8.24.3_linux_x64.tar.gz from the release's
+      # gitleaks_8.24.3_checksums.txt.
+      GITLEAKS_SHA256: 9991e0b2903da4c8f6122b5c3186448b927a5da4deef1fe45271c3793f4ee29c
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
+      # Standalone CLI (no GitHub API integration). The download is verified
+      # against the pinned checksum before it is installed.
       - name: Install Gitleaks CLI
         shell: bash
         run: |
+          set -euo pipefail
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
           curl -fsSL \
-            https://github.com/gitleaks/gitleaks/releases/download/v8.24.3/gitleaks_8.24.3_linux_x64.tar.gz \
-            -o /tmp/gitleaks.tar.gz
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}" \
+            -o "/tmp/${archive}"
+
+          echo "${GITLEAKS_SHA256}  /tmp/${archive}" | sha256sum --check --strict
 
           mkdir -p /tmp/gitleaks-cli
-
-          tar -xzf /tmp/gitleaks.tar.gz \
-            -C /tmp/gitleaks-cli gitleaks
+          tar -xzf "/tmp/${archive}" -C /tmp/gitleaks-cli gitleaks
 
           sudo install -m 755 \
             /tmp/gitleaks-cli/gitleaks \
