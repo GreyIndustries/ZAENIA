@@ -88,6 +88,65 @@ class ThreadTrackerTest(unittest.TestCase):
         self.tracker._vectors.clear()
         self.assertEqual(self.tracker.route("a completely different long question about other things").decision, "continue")
 
+    def test_route_uses_the_history_it_is_given(self):
+        self.say("which saber form is aggressive")
+        self.memory.write_text("", encoding="utf-8")  # the log is no longer read
+        at = (self.now - timedelta(minutes=2)).isoformat()
+        history = [{"role": "user", "content": "which saber form is aggressive", "at": at},
+                   {"role": "assistant", "content": "Djem So.", "at": at}]
+        view = self.tracker.route("why?", history)
+        self.assertEqual(view.decision, "continue")
+        self.assertEqual([row["content"] for row in view.history], ["which saber form is aggressive", "Djem So."])
+
+
+    def test_recent_untracked_turns_become_the_current_topic(self):
+        at = (self.now - timedelta(minutes=3)).isoformat()
+        history = [{"role": "user", "content": "which saber form is aggressive", "at": at},
+                   {"role": "assistant", "content": "Djem So.", "at": at}]
+        view = self.tracker.route("why?", history)
+        self.assertEqual(view.decision, "continue")
+        self.assertEqual(len(view.history), 2)
+        old = (self.now - timedelta(hours=3)).isoformat()
+        stale = [{"role": "user", "content": "which saber form is aggressive", "at": old}]
+        fresh = ThreadTracker(self.dir / "other.json", self.memory, embed=fake_embed, judge=lambda *a: None,
+                              summarize=lambda *a: {}, run=self.jobs.append, clock=lambda: self.now)
+        self.assertEqual(fresh.route("why?", stale).history, [])  # hours old: starts fresh
+
+
+class BrainServiceTopicTest(unittest.TestCase):
+    """The brain uses topic tracking only for its own timed history."""
+
+    def test_untimed_history_never_touches_topic_state(self):
+        from unittest import mock
+        from core.brain import brain_service, conversation_threads
+        service = brain_service.BrainService(memory_authorizer=lambda operation: True)
+        history = [{"role": "user", "content": "What's the weather today?"}, {"role": "assistant", "content": "Mild."}]
+        with mock.patch.object(service, "load_recent_messages", return_value=history), \
+                mock.patch.object(conversation_threads.ThreadTracker, "route", side_effect=AssertionError("tracker used")):
+            turn = service.prepare_turn("What about tomorrow?")
+        self.assertIn("What's the weather today?", json.dumps(turn.messages))
+
+    def test_timed_history_goes_to_the_tracker_for_this_log(self):
+        from unittest import mock
+        from core.brain import brain_service, conversation_threads
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        log = folder / "memory.jsonl"
+        stamp = datetime.now(timezone.utc).isoformat()
+        log.write_text(json.dumps({"timestamp": stamp, "role": "user", "content": "saber forms"}) + "\n"
+                       + json.dumps({"timestamp": stamp, "role": "assistant", "content": "Djem So."}) + "\n", encoding="utf-8")
+        seen = {}
+
+        def fake_route(tracker, question, history=None):
+            seen.update(state=tracker.state_path, history=history)
+            return conversation_threads.ThreadView(history or [], None, "t1", "continue")
+
+        with mock.patch.object(brain_service, "MEMORY_PATH", log), \
+                mock.patch.object(conversation_threads.ThreadTracker, "route", fake_route):
+            brain_service.BrainService(memory_authorizer=lambda operation: True).prepare_turn("why?")
+        self.assertEqual(seen["state"], folder / "conversation" / "threads.json")
+        self.assertEqual([row["at"] for row in seen["history"]], [stamp, stamp])
+
 
 if __name__ == "__main__":
     unittest.main()

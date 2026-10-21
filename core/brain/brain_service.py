@@ -339,12 +339,15 @@ class BrainService:
             }
             and content
         ):
-            normalized.append(
-                {
-                    "role": role,
-                    "content": content,
-                }
-            )
+            item = {
+                "role": role,
+                "content": content,
+            }
+            # The topic tracker matches exchanges to topics by this time.
+            stamp = record.get("timestamp")
+            if isinstance(stamp, str) and stamp:
+                item["at"] = stamp
+            normalized.append(item)
 
             return normalized
 
@@ -817,13 +820,18 @@ class BrainService:
         from core.brain.turn_context import prepare_turn
         # Follow the conversation by topic: keep building on the current
         # subject, start clean on a new one, and pick an older one back up.
-        try:
-            from core.brain.conversation_threads import tracker
-            view = tracker(MEMORY_PATH).route(owner_words(question))
-        except Exception:
-            view = None
+        # The tracker works only from this service's own history; history
+        # without times (older logs, tests) keeps the plain behaviour.
+        history = self.load_recent_messages()
+        view = None
+        if any(isinstance(row, dict) and row.get("at") for row in history):
+            try:
+                from core.brain.conversation_threads import tracker
+                view = tracker(MEMORY_PATH).route(owner_words(question), history)
+            except Exception:
+                view = None
         if view is None:
-            return prepare_turn(question,self.load_recent_messages())
+            return prepare_turn(question, history)
         turn = prepare_turn(question, view.history)
         if view.notes:
             import dataclasses

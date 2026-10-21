@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, LIVE_API } from "../../core/bridge";
+import { openLink } from "../../core/openLink";
 import "./NewsPanel.css";
 
 type Story = { title: string; link: string; summary?: string; published?: string | null; sources: string[]; links: Record<string, string>; coverage: number };
@@ -64,10 +65,10 @@ export function NewsPanel() {
     {news && !news.stories.length && !busy && <p>No headlines yet. Tap “Check now” when you're online.</p>}
     <ol className="news-panel__list">
       {news?.stories.map(story => <li key={story.link} className="news-panel__story">
-        <a href={story.link} target="_blank" rel="noreferrer noopener">{story.title}</a>
+        <a href={story.link} onClick={event => { event.preventDefault(); openLink(story.link); }}>{story.title}</a>
         {story.summary && <p>{story.summary}</p>}
         <small>
-          {story.sources.map((name, index) => <span key={name}>{index > 0 && " · "}<a href={story.links[name]} target="_blank" rel="noreferrer noopener">{name}</a></span>)}
+          {story.sources.map((name, index) => <span key={name}>{index > 0 && " · "}<a href={story.links[name]} onClick={event => { event.preventDefault(); openLink(story.links[name]); }}>{name}</a></span>)}
           {story.coverage > 1 && <span className="news-panel__badge">{story.coverage} sources</span>}
           {story.published && <span> · {ago(story.published)}</span>}
         </small>

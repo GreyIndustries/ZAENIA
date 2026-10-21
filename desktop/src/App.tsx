@@ -35,6 +35,7 @@ import { StatusPanel } from "./components/status/StatusPanel";
 import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { NewsPanel } from './components/news/NewsPanel';
+import { NewsRail } from './components/news/NewsRail';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
@@ -1115,6 +1116,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           />
           <div className="stage-footer"><div><span className="stage-footer__line"/>{source==="preview"?"VISUAL PREVIEW ACTIVE":live?"LIVE STATUS":"STATUS OFFLINE"}<span className="stage-footer__dim"> / {photos.length ? "PHOTO CONVERSATION · THIS SESSION ONLY" : LIVE_API ? "CONVERSATION SAVED IN ZÆNIA MEMORY" : "PREVIEW"}</span></div><button type="button" className="text-action" onClick={()=>openSection(section==="system"?"overview":"system")}>{section==="system"?"BACK TO CORE":"SYSTEM DETAILS"} <Icon name="arrow" size={17}/></button></div>
         </section>
+        {/* Desktop: tech headlines down the right side (hide with the › button). */}
+        {!isPhone && <NewsRail onOpenAll={() => openSection("news")}/>}
         {isPhone && <aside
           id="core-panel"
           className="detail-panel"

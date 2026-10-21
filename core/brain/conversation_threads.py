@@ -184,20 +184,29 @@ class ThreadTracker:
         return vector
 
     # ---- history -----------------------------------------------------------
-    def _exchanges(self) -> list[_Exchange]:
-        from core.brain.recent_memory import recent_lines
+    def _exchanges(self, history: list[dict[str, Any]] | None = None) -> list[_Exchange]:
+        """Exchanges from the given history rows ({role, content, at}), or from
+        this tracker's own log when none are given (background notes)."""
         from core.brain.brain_service import owner_words
-        if not self.memory_path.exists():
-            return []
+        if history is None:
+            from core.brain.recent_memory import recent_lines
+            if not self.memory_path.exists():
+                return []
+            rows = []
+            for line in recent_lines(self.memory_path, max_bytes=512 * 1024, limit=400):
+                try:
+                    row = json.loads(line)
+                except (TypeError, ValueError):
+                    continue
+                if isinstance(row, dict):
+                    rows.append({**row, "at": row.get("timestamp")})
+        else:
+            rows = [row for row in history if isinstance(row, dict)]
         result: list[_Exchange] = []
-        for line in recent_lines(self.memory_path, max_bytes=512 * 1024, limit=400):
-            try:
-                row = json.loads(line)
-            except (TypeError, ValueError):
+        for row in rows:
+            if not isinstance(row.get("content"), str):
                 continue
-            if not isinstance(row, dict) or not isinstance(row.get("content"), str):
-                continue
-            at = _time(row.get("timestamp"))
+            at = _time(row.get("at"))
             if row.get("role") == "user" and at is not None:
                 result.append(_Exchange(at, owner_words(row["content"]).strip()))
             elif row.get("role") == "assistant" and result:
@@ -230,15 +239,25 @@ class ThreadTracker:
         return "\n".join(p for p in parts if p)
 
     # ---- routing -------------------------------------------------------------
-    def route(self, question: str) -> ThreadView:
+    def route(self, question: str, history: list[dict[str, Any]] | None = None) -> ThreadView:
         from core.brain.turn_context import continuation, topic_change
         with self.lock:
             state = self._load()
-            exchanges = self._exchanges()
+            exchanges = self._exchanges(history)
             topics = state["topics"]
             current = next((t for t in topics if t["id"] == state.get("current")), None)
             now = self.clock()
             text = " ".join(question.split())
+            if current is None:
+                # Recent exchanges no topic holds yet (a new log, or turns from
+                # before tracking) become the current topic, so they still count.
+                tracked = {turn for topic in topics for turn in topic.get("turns", [])}
+                loose = [e for e in exchanges if self._turn_key(e.at) not in tracked and now - e.at <= PAUSE]
+                if loose:
+                    current = {"id": uuid.uuid4().hex[:12], "title": loose[0].user[:60], "key_points": [],
+                               "turns": [self._turn_key(e.at) for e in loose], "started": loose[0].at.isoformat(),
+                               "last": loose[-1].at.isoformat(), "summarized": 0}
+                    topics.append(current)
             decision, target = "new", None
             last = _time(current.get("last")) if current else None
             paused = last is None or now - last > PAUSE
