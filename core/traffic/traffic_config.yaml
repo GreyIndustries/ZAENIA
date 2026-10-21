@@ -1,0 +1,65 @@
+traffic_system:
+  enabled: true
+  provider: "wsdot"
+  timezone: "America/Los_Angeles"
+
+route_focus:
+  highway: "I-5"
+  display_name: "I-5"
+  area_label: "between Lacey, JBLM, and Tacoma"
+  directions:
+    - northbound
+    - southbound
+
+check_windows:
+  morning:
+    enabled: true
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "05:15"
+    target_time: "05:30"
+    end_time: "06:15"
+
+  evening:
+    enabled: true
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "16:45"
+    target_time: "17:00"
+    end_time: "18:30"
+
+default_behavior:
+  outside_check_window: "Do not include traffic unless Zack asks."
+  if_traffic_unavailable: "I-5 traffic check is unavailable right now, so drive smart and keep your spacing."
+
+message_rules:
+  keep_short: true
+  mention_only_if_relevant: true
+  avoid_alarmist_language: true
+  avoid_phrases:
+    - "night mode"
+    - "gridlock nightmare"
+    - "traffic disaster"
+    - "beast mode"
+    - "grindset"
+
+carplay_traffic:
+  enabled: true
+  include_morning_traffic: true
+  include_evening_traffic: true
+  speak_with_weather: true
+  max_sentence_length: 28
+
+wsdot:
+  api_key_env: "WSDOT_API_KEY"
+  use_highway_alerts: true
+  use_traffic_flow: true
+  use_travel_times: true

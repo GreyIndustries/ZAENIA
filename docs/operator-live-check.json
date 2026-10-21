@@ -1,0 +1,96 @@
+{
+  "checkedAt": "2026-10-18T18:09:01+00:00",
+  "scope": "Synthetic data and public sources only; no owner data, pixels or daily browser.",
+  "checks": [
+    {
+      "name": "real_docx_mission",
+      "ok": true,
+      "seconds": 0.27,
+      "evidence": {
+        "status": "completed",
+        "steps": 2,
+        "allVerified": true
+      }
+    },
+    {
+      "name": "public_https_read",
+      "ok": true,
+      "seconds": 0.12,
+      "evidence": {
+        "url": "https://www.python.org/about/",
+        "title": "About Python™ | Python.org",
+        "checkedAt": "2026-10-18T18:09:01+00:00",
+        "verified": true,
+        "characters": 4587
+      }
+    },
+    {
+      "name": "public_research",
+      "ok": true,
+      "seconds": 4.03,
+      "evidence": {
+        "sourceUrls": [
+          "https://docs.python.org/3/library/pathlib.html",
+          "https://docs.python.org/3/library/filesys.html",
+          "https://pathlib.readthedocs.io/en/pep428/"
+        ],
+        "checkedAt": "2026-10-18T18:09:05+00:00"
+      }
+    },
+    {
+      "name": "local_evidence_summary",
+      "ok": true,
+      "seconds": 0.95,
+      "evidence": {
+        "answer": "The synthetic measured value is 42. \n\nSource: https://example.com/synthetic-fixture, checked on 2026-10-18T18:09:05+00:00.\n\nSources:\n[1] Source: https://example.com/synthetic-fixture (checked 2026-10-18T18:09:05+00:00)",
+        "modelGenerated": true,
+        "independentClaimVerification": false
+      }
+    },
+    {
+      "name": "local_controlled_mission_draft",
+      "ok": true,
+      "seconds": 8.77,
+      "evidence": {
+        "status": "draft",
+        "priority": true,
+        "tools": [
+          "web.read",
+          "evidence.summarize"
+        ],
+        "executed": false
+      }
+    },
+    {
+      "name": "local_synthetic_vision",
+      "ok": true,
+      "seconds": 0.2,
+      "evidence": {
+        "answer": "The number printed in the screenshot is **42**.",
+        "rawImageSaved": false,
+        "actualOwnerScreenCaptured": false
+      }
+    },
+    {
+      "name": "isolated_blender_copy_edit",
+      "ok": true,
+      "seconds": 5.12,
+      "evidence": {
+        "verified": true,
+        "objects": [
+          {
+            "name": "FixtureCube",
+            "type": "MESH",
+            "location": [
+              1.0,
+              2.0,
+              3.0
+            ]
+          }
+        ],
+        "originalPreserved": true,
+        "outputBytes": 86580
+      }
+    }
+  ]
+}

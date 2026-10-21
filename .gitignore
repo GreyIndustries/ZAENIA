@@ -1,0 +1,123 @@
+
+# Python environments and generated files
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# JavaScript / Tauri build output
+node_modules/
+dist/
+build/
+target/
+.next/
+coverage/
+desktop/src-tauri/target/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*secret*
+*credential*
+*token*
+*passphrase*
+
+# ZÆNIA personal/runtime data
+/data/
+/models/
+/backups/
+/logs/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.wav
+*.mp3
+
+# AI model weights
+*.gguf
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.bin
+
+# Temporary files and archives
+*.zip
+*.7z
+*.rar
+*.tmp
+*.bak
+
+# IDE and system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Sensitive local configuration
+/config/settings.yaml
+
+# Private calendars and learning data
+/core/calendar_context/zaenia_calendar.yaml
+/core/personality/feedback_log.jsonl
+/core/reasoning/cases.json
+
+# Personal profiles and assessments
+/docs/ABOUT_ZACK_FOR_ZAE.md
+/user_understanding/
+
+# Personalized moral charter
+/core/foundation/moral_code/charter.json
+
+# Broken or historical virtual environments
+.venv_broken_*/
+.venv*/
+
+# Personal screenshots
+/docs/chat-file-sharing-preview.jpg
+
+# Runtime databases, secrets and private state
+/data/
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+
+# ZÆNIA historical source backups
+**/_backup_before_*/
+desktop/ui-backup*/
+desktop/ui-backups/
+module1_backups/
+restore_check/
+
+# Generated desktop builds
+desktop/dist-web/
+
+# Temporary testing and preview directories
+/zae-operator-*/
+/zae-platform-test-*/
+/zae-ui-preview-*/
+
+# Security vaults and runtime lock files
+*.vault
+*.lock
+!package-lock.json
+!Cargo.lock
+

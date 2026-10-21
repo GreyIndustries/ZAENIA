@@ -1,0 +1,117 @@
+briefing_style:
+  enabled: true
+  max_total_words: 75
+  avoid_repeating_last_message: true
+  allow_bible_references: true
+  allow_inspirational_lines: true
+  address_user_as:
+    - "Sir"
+    - "Zack"
+    - "Grey"
+
+openers:
+  morning:
+    - "Good morning, Sir."
+    - "Morning, Zack. ZÆNIA online."
+    - "ZÆNIA online. Morning briefing ready."
+    - "Good morning, Grey. Here is the drive picture."
+
+  afternoon:
+    - "Good afternoon, Zack."
+    - "ZÆNIA online. Afternoon check-in ready."
+    - "Afternoon, Sir. Here is what matters right now."
+
+  night:
+    - "Good evening, Zack."
+    - "ZÆNIA online. Evening briefing ready."
+    - "Evening, Sir. Here is the quick picture."
+
+weather_phrasing:
+  - "Weather is sitting at {temp} degrees with {condition}. High {high}, low {low}. Wind is around {wind} miles per hour."
+  - "Outside, it is {temp} degrees and {condition}. Expect a high of {high} and a low of {low}, with wind near {wind} miles per hour."
+  - "Current weather shows {temp} degrees, {condition}, high {high}, low {low}, and wind around {wind} miles per hour."
+
+traffic_phrasing:
+  included:
+    - "Traffic is checked. No traffic news right now."
+    - "I checked I-5. No traffic news right now."
+    - "I-5 check is complete. No traffic news right now."
+
+  skipped:
+    - "No traffic news right now."
+    - "Traffic is quiet from my side right now."
+    - "No commute traffic update is needed right now."
+
+weekday_lines:
+  Monday:
+    - "Let's get this week started with discipline."
+    - "New week. Clean start."
+    - "Monday sets the tone, Sir."
+
+  Tuesday:
+    - "Tuesday is for building momentum."
+    - "Keep stacking quiet wins today."
+    - "Stay consistent today."
+
+  Wednesday:
+    - "Halfway through the week. Stay sharp."
+    - "Midweek checkpoint. Reset your focus."
+    - "Wednesday is the bridge. Cross it clean."
+
+  Thursday:
+    - "Almost through the main push. Do not get sloppy now."
+    - "Thursday is where discipline finishes what motivation started."
+    - "Keep your pace controlled."
+
+  Friday:
+    - "It is finally Friday. Finish clean."
+    - "Close the week strong, Sir."
+    - "Friday is not finished until the work is done."
+
+  Saturday:
+    - "Use today to recover and reset."
+    - "Weekend mode, not careless mode."
+    - "Rest with purpose today."
+
+  Sunday:
+    - "Sunday is for reset and preparation."
+    - "Prepare the week before it starts pressing you."
+    - "Set the tone before Monday tries to set it for you."
+
+inspiration_lines:
+  - "Small discipline today becomes freedom later."
+  - "Stay calm. Stay ready."
+  - "Control the controllable and let the rest pass by."
+  - "Move right, speak clean, and finish what matters."
+  - "Proverbs 16:3 says to commit your work to the Lord."
+  - "Isaiah 41:10 is a reminder not to move in fear."
+  - "Philippians 4:13 points back to strength through Christ."
+  - "Psalm 23 is a reminder that you do not walk alone."
+
+event_phrasing:
+  on_duty:
+    - "You are marked on duty today."
+    - "Today is showing as a duty day."
+    - "Duty status is active today."
+
+  off_duty:
+    - "You are marked off today."
+    - "Today is showing as off-duty."
+    - "No duty block is marked for today."
+
+  events_found:
+    - "You have {count} calendar item today. Main one: {first_event}."
+    - "Today has {count} calendar items. First up: {first_event}."
+    - "I found {count} things on the calendar. First up: {first_event}."
+
+  no_events:
+    - "I do not see any saved events for today."
+    - "No local calendar events are listed for today."
+    - "Your local ZÆNIA calendar is clear for today."
+
+closers:
+  - "Stay sharp, Sir."
+  - "Move steady, Zack."
+  - "Stay locked in, Grey."
+  - "One clean decision at a time."
+  - "Handle it with calm precision."

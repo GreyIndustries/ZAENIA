@@ -1,0 +1,17 @@
+[Unit]
+Description=ZÆNIA API server (token mode)
+Documentation=file://@ROOT@/scripts/linux/README.md
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+# On ZÆ OS the brain stays loaded on the graphics card, so it isn't reloaded from disk.
+Environment=ZAENIA_OLLAMA_KEEP_ALIVE=24h
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/zaenia/env
+ExecStart=@ROOT@/.venv/bin/python -m core.api.server server --unattended
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=default.target

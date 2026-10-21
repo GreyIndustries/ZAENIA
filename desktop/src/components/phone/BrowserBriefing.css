@@ -1,0 +1,15 @@
+.browser-briefing{position:absolute;top:14px;right:18px;z-index:12;max-width:calc(100% - 36px);font-size:13px;color:#e6efff}
+.browser-briefing__toggle,.browser-briefing__panel button{min-height:44px;padding:9px 16px;border:1px solid rgba(255,190,100,.5);border-radius:12px;color:#ffcf86;background:rgba(8,18,32,.94);font:inherit;cursor:pointer}
+.browser-briefing__toggle{display:block;margin-left:auto;box-shadow:0 4px 25px rgba(0,0,0,.25)}
+.browser-briefing button:focus-visible{outline:2px solid #ffd58f;outline-offset:3px}
+.browser-briefing button:disabled{opacity:.5;cursor:wait}
+.browser-briefing__panel{box-sizing:border-box;width:390px;max-width:100%;max-height:55dvh;overflow:auto;margin-top:8px;padding:18px;border:1px solid rgba(112,162,215,.35);border-radius:17px;background:rgba(4,12,24,.98);box-shadow:0 12px 45px rgba(0,0,0,.5);line-height:1.6}
+.browser-briefing__panel[hidden]{display:none}
+.browser-briefing__head{display:flex;align-items:center;justify-content:space-between;gap:15px}
+.browser-briefing__head strong{font-size:17px;color:#ffe1b2}
+.browser-briefing__text{white-space:pre-wrap;font-size:15px;line-height:1.65}
+.browser-briefing__panel small{display:block;margin:8px 0;color:#93aac2}
+.browser-briefing__panel audio{width:100%;margin-top:10px;height:44px;color-scheme:dark}
+.browser-briefing__panel audio[hidden]{display:none}
+.browser-briefing__error{color:#ffc7ac}
+@media(max-width:760px){.browser-briefing{top:10px;right:12px;max-width:calc(100% - 24px)}.browser-briefing__panel{width:calc(100vw - 48px);max-height:50dvh;padding:15px}.browser-briefing__toggle{min-height:40px;padding:8px 13px;font-size:12px}}

@@ -1,0 +1,12 @@
+:root {
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  color: #ecf8ff;
+  background: #030711;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; padding: 0; }
+body { min-width: 320px; overflow: hidden; }

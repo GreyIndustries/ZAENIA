@@ -1,0 +1,62 @@
+weather_system:
+  enabled: true
+  timezone: "America/Los_Angeles"
+
+locations:
+  duty:
+    name: "JBLM"
+    display_label: "near JBLM"
+    lookup_name: "Joint Base Lewis-McChord, Washington"
+    latitude: null
+    longitude: null
+
+  off_duty:
+    name: "Lacey"
+    display_label: "in Lacey"
+    lookup_name: "Lacey, Washington"
+    latitude: null
+    longitude: null
+
+schedule_rules:
+  weekday_duty_hours:
+    enabled: true
+    location_key: "duty"
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "05:30"
+    end_time: "18:00"
+
+default_location_key: "off_duty"
+
+manual_override:
+  enabled: false
+  location_key: null
+  custom_location_name: null
+  custom_lookup_name: null
+  expires_at: null
+
+carplay_weather:
+  enabled: true
+  include_temperature: true
+  include_rain_warning: true
+  include_wind_warning: true
+  include_fog_warning: true
+  include_ice_warning: true
+  max_weather_sentence_length: 22
+
+message_rules:
+  keep_short: true
+  avoid_alarmist_weather: true
+  avoid_phrases:
+    - "night mode"
+    - "beast mode"
+    - "grindset"
+    - "rise and grind"
+
+fallback:
+  if_weather_unavailable: "Weather check is unavailable right now, so drive smart and keep your spacing."
+  if_location_unclear: "Location check is unclear, so use the safer driving assumption."

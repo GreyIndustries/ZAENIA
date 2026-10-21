@@ -1,0 +1,56 @@
+aliases:
+  1840:
+    action: "evening_check"
+    response: "Understood, Sir. Checking the 1840 CarPlay chain and evening audio status."
+
+  fix evening:
+    action: "repair_evening"
+    response: "Repairing the evening CarPlay task, then testing the full chain once."
+
+  carplay:
+    action: "full_auto"
+    response: "Refreshing the full CarPlay chain: calendar sync, briefing, and custom voice MP3."
+
+  audio:
+    action: "audio"
+    response: "Generating the latest ZÆNIA CarPlay audio."
+
+  audio force:
+    action: "audio_force"
+    response: "Generating the latest ZÆNIA CarPlay audio with traffic forced."
+
+  drive:
+    action: "commute"
+    response: "Building the drive picture with traffic included."
+
+  commute:
+    action: "commute"
+    response: "Commute briefing coming up. Weather, traffic, and what matters."
+
+  morning:
+    action: "morning_preview"
+    response: "Morning preview selected. Let us make sure the first briefing of the day is clean."
+
+  evening:
+    action: "evening_check"
+    response: "Evening check selected. We are looking at task timing, output, and OneDrive sync."
+
+  sync:
+    action: "sync"
+    response: "Syncing Google Calendar into ZÆNIA."
+
+  calendar:
+    action: "calendar"
+    response: "Reading today’s calendar context."
+
+  weather:
+    action: "weather"
+    response: "Checking weather context now."
+
+  traffic:
+    action: "traffic"
+    response: "Checking I-5 traffic now."
+
+  goodnight:
+    action: "exit"
+    response: "Console closing. Get rest, Sir. Tomorrow goes better when tonight ends on time."

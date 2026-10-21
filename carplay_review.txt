@@ -1,0 +1,2668 @@
+﻿ZÆNIA CARPLAY SOURCE REVIEW
+
+
+===== C:\Projects\ZAENIA\core\briefing\briefing_personality.py =====
+
+import json
+import random
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+STYLE_PATH = PROJECT_ROOT / "core" / "briefing" / "briefing_style.yaml"
+HISTORY_PATH = PROJECT_ROOT / "data" / "briefing_history.json"
+
+
+def load_style_config() -> dict[str, Any]:
+    if not STYLE_PATH.exists():
+        raise FileNotFoundError(f"Briefing style file not found: {STYLE_PATH}")
+
+    with STYLE_PATH.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def get_now() -> datetime:
+    return datetime.now(ZoneInfo("America/Los_Angeles"))
+
+
+def get_time_block(now: datetime | None = None) -> str:
+    now = now or get_now()
+    hour = now.hour
+
+    if 5 <= hour < 12:
+        return "morning"
+    if 12 <= hour < 18:
+        return "afternoon"
+    return "night"
+
+
+def load_history() -> dict[str, Any]:
+    if not HISTORY_PATH.exists():
+        return {}
+
+    try:
+        return json.loads(HISTORY_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def save_history(history: dict[str, Any]) -> None:
+    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    HISTORY_PATH.write_text(
+        json.dumps(history, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def choose_rotating(
+    options: list[str],
+    key: str,
+    avoid_last: bool = True,
+) -> str:
+    """
+    Pick a line while trying not to repeat the last used option.
+    """
+    if not options:
+        return ""
+
+    history = load_history()
+    last_used = history.get(key)
+
+    choices = options[:]
+
+    if avoid_last and len(choices) > 1 and last_used in choices:
+        choices.remove(last_used)
+
+    selected = random.choice(choices)
+
+    history[key] = selected
+    save_history(history)
+
+    return selected
+
+
+def build_personality_lines(
+    calendar_context: dict[str, Any],
+    traffic_included: bool,
+) -> dict[str, str]:
+    """
+    Build opener, duty/event sentence, traffic sentence, inspiration, weekday line, and closer.
+    """
+    style = load_style_config()
+    now = get_now()
+    time_block = get_time_block(now)
+    weekday = calendar_context.get("weekday") or now.strftime("%A")
+
+    openers = style.get("openers", {}).get(time_block, [])
+    opener = choose_rotating(openers, f"opener_{time_block}")
+
+    event_phrasing = style.get("event_phrasing", {})
+    status = calendar_context.get("status", "unknown")
+    event_count = calendar_context.get("event_count", 0)
+    first_event = calendar_context.get("first_event")
+
+    if status == "on_duty":
+        duty_sentence = choose_rotating(event_phrasing.get("on_duty", []), "duty_on")
+    elif status == "off_duty":
+        duty_sentence = choose_rotating(event_phrasing.get("off_duty", []), "duty_off")
+    else:
+        duty_sentence = f"Today is marked as {calendar_context.get('status_label', status)}."
+
+    if event_count and first_event:
+        event_templates = event_phrasing.get("events_found", [])
+        event_template = choose_rotating(event_templates, "events_found")
+        event_sentence = event_template.format(
+            count=event_count,
+            first_event=first_event.get("title", "your first event"),
+        )
+    else:
+        event_sentence = choose_rotating(event_phrasing.get("no_events", []), "no_events")
+
+    reminders = calendar_context.get("reminders", [])
+    reminder_sentence = ""
+    if reminders:
+        reminder_sentence = f"Reminder: {reminders[0]}"
+
+    traffic_options = style.get("traffic_phrasing", {})
+    if traffic_included:
+        traffic_sentence = choose_rotating(traffic_options.get("included", []), "traffic_included")
+    else:
+        traffic_sentence = choose_rotating(traffic_options.get("skipped", []), "traffic_skipped")
+
+    weekday_options = style.get("weekday_lines", {}).get(weekday, [])
+    weekday_sentence = choose_rotating(weekday_options, f"weekday_{weekday}")
+
+    inspiration_options = style.get("inspiration_lines", [])
+    inspiration_sentence = choose_rotating(inspiration_options, "inspiration")
+
+    closers = style.get("closers", [])
+    closer = choose_rotating(closers, "closer")
+
+    return {
+        "opener": opener,
+        "duty_sentence": duty_sentence,
+        "event_sentence": event_sentence,
+        "reminder_sentence": reminder_sentence,
+        "traffic_sentence": traffic_sentence,
+        "weekday_sentence": weekday_sentence,
+        "inspiration_sentence": inspiration_sentence,
+        "closer": closer,
+    }
+
+
+def trim_words(text: str, max_words: int = 85) -> str:
+    words = text.split()
+
+    if len(words) <= max_words:
+        return text
+
+    return " ".join(words[:max_words]).rstrip(".,;") + "."
+
+===== C:\Projects\ZAENIA\core\briefing\briefing_style.yaml =====
+
+briefing_style:
+  enabled: true
+  max_total_words: 75
+  avoid_repeating_last_message: true
+  allow_bible_references: true
+  allow_inspirational_lines: true
+  address_user_as:
+    - "Sir"
+    - "Zack"
+    - "Grey"
+
+openers:
+  morning:
+    - "Good morning, Sir."
+    - "Morning, Zack. ZÃ†NIA online."
+    - "ZÃ†NIA online. Morning briefing ready."
+    - "Good morning, Grey. Here is the drive picture."
+
+  afternoon:
+    - "Good afternoon, Zack."
+    - "ZÃ†NIA online. Afternoon check-in ready."
+    - "Afternoon, Sir. Here is what matters right now."
+
+  night:
+    - "Good evening, Zack."
+    - "ZÃ†NIA online. Evening briefing ready."
+    - "Evening, Sir. Here is the quick picture."
+
+weather_phrasing:
+  - "Weather is sitting at {temp} degrees with {condition}. High {high}, low {low}. Wind is around {wind} miles per hour."
+  - "Outside, it is {temp} degrees and {condition}. Expect a high of {high} and a low of {low}, with wind near {wind} miles per hour."
+  - "Current weather shows {temp} degrees, {condition}, high {high}, low {low}, and wind around {wind} miles per hour."
+
+traffic_phrasing:
+  included:
+    - "Traffic is checked. No traffic news right now."
+    - "I checked I-5. No traffic news right now."
+    - "I-5 check is complete. No traffic news right now."
+
+  skipped:
+    - "No traffic news right now."
+    - "Traffic is quiet from my side right now."
+    - "No commute traffic update is needed right now."
+
+weekday_lines:
+  Monday:
+    - "Let's get this week started with discipline."
+    - "New week. Clean start."
+    - "Monday sets the tone, Sir."
+
+  Tuesday:
+    - "Tuesday is for building momentum."
+    - "Keep stacking quiet wins today."
+    - "Stay consistent today."
+
+  Wednesday:
+    - "Halfway through the week. Stay sharp."
+    - "Midweek checkpoint. Reset your focus."
+    - "Wednesday is the bridge. Cross it clean."
+
+  Thursday:
+    - "Almost through the main push. Do not get sloppy now."
+    - "Thursday is where discipline finishes what motivation started."
+    - "Keep your pace controlled."
+
+  Friday:
+    - "It is finally Friday. Finish clean."
+    - "Close the week strong, Sir."
+    - "Friday is not finished until the work is done."
+
+  Saturday:
+    - "Use today to recover and reset."
+    - "Weekend mode, not careless mode."
+    - "Rest with purpose today."
+
+  Sunday:
+    - "Sunday is for reset and preparation."
+    - "Prepare the week before it starts pressing you."
+    - "Set the tone before Monday tries to set it for you."
+
+inspiration_lines:
+  - "Small discipline today becomes freedom later."
+  - "Stay calm. Stay ready."
+  - "Control the controllable and let the rest pass by."
+  - "Move right, speak clean, and finish what matters."
+  - "Proverbs 16:3 says to commit your work to the Lord."
+  - "Isaiah 41:10 is a reminder not to move in fear."
+  - "Philippians 4:13 points back to strength through Christ."
+  - "Psalm 23 is a reminder that you do not walk alone."
+
+event_phrasing:
+  on_duty:
+    - "You are marked on duty today."
+    - "Today is showing as a duty day."
+    - "Duty status is active today."
+
+  off_duty:
+    - "You are marked off today."
+    - "Today is showing as off-duty."
+    - "No duty block is marked for today."
+
+  events_found:
+    - "You have {count} calendar item today. Main one: {first_event}."
+    - "Today has {count} calendar items. First up: {first_event}."
+    - "I found {count} things on the calendar. First up: {first_event}."
+
+  no_events:
+    - "I do not see any saved events for today."
+    - "No local calendar events are listed for today."
+    - "Your local ZÃ†NIA calendar is clear for today."
+
+closers:
+  - "Stay sharp, Sir."
+  - "Move steady, Zack."
+  - "Stay locked in, Grey."
+  - "One clean decision at a time."
+  - "Handle it with calm precision."
+
+===== C:\Projects\ZAENIA\core\briefing\drive_briefing.py =====
+
+from datetime import date
+from typing import Any
+
+from core.briefing.briefing_personality import (
+    build_personality_lines,
+    choose_rotating,
+    load_style_config,
+    trim_words,
+)
+from core.calendar_context.calendar_context import build_calendar_context
+from core.traffic.traffic_client import get_i5_traffic_summary
+from core.traffic.traffic_main import get_active_window, load_traffic_config
+from core.weather.weather_client import get_weather_for_location, weather_code_text
+from core.weather.weather_selector import select_weather_location
+
+
+def clean_traffic_summary(summary: str) -> str:
+    """
+    Keep traffic useful. If WSDOT only returns unclear/unknown sensor data,
+    do not speak ugly sensor wording.
+    """
+    cleaned = summary.strip()
+    lower = cleaned.lower()
+
+    unclear_markers = [
+        "unclear traffic",
+        "unknown traffic",
+        "unknown",
+        "no matching",
+        "unavailable",
+        "sensor points",
+    ]
+
+    if any(marker in lower for marker in unclear_markers):
+        return "No traffic news right now."
+
+    return cleaned
+
+
+def format_number(value: Any, fallback: str = "unknown") -> str:
+    if value is None:
+        return fallback
+
+    try:
+        return str(round(float(value)))
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def build_weather_sentence(weather_result: dict[str, Any]) -> str:
+    """
+    Build a more natural, rotating weather sentence.
+    """
+    style = load_style_config()
+    weather_templates = style.get("weather_phrasing", [])
+
+    forecast = weather_result.get("forecast", {}) or {}
+    current = forecast.get("current", {}) or {}
+    daily = forecast.get("daily", {}) or {}
+
+    temp = format_number(current.get("temperature_2m"))
+    wind = format_number(current.get("wind_speed_10m"))
+
+    weather_code = current.get("weather_code")
+    condition = weather_code_text(weather_code) if weather_code is not None else "unclear conditions"
+
+    highs = daily.get("temperature_2m_max") or []
+    lows = daily.get("temperature_2m_min") or []
+
+    high = format_number(highs[0] if highs else None)
+    low = format_number(lows[0] if lows else None)
+
+    if weather_templates:
+        template = choose_rotating(weather_templates, "weather_template")
+        return template.format(
+            temp=temp,
+            condition=condition,
+            high=high,
+            low=low,
+            wind=wind,
+        )
+
+    return weather_result.get("summary", "Weather check is unavailable right now.")
+
+
+def build_drive_briefing(
+    include_traffic_force: bool = False,
+    calendar_date: date | None = None,
+) -> dict[str, Any]:
+    """
+    Build a personalized ZÃ†NIA drive briefing using weather, traffic,
+    local calendar context, and rotating personality lines.
+    """
+    location = select_weather_location()
+    weather_result = get_weather_for_location(location)
+    weather_sentence = build_weather_sentence(weather_result)
+
+    calendar_context = build_calendar_context(calendar_date)
+
+    traffic_config = load_traffic_config()
+    active_traffic_window = get_active_window(traffic_config)
+
+    traffic_included = False
+    traffic_summary = None
+    traffic_result = None
+
+    if active_traffic_window or include_traffic_force:
+        traffic_result = get_i5_traffic_summary()
+        traffic_summary = clean_traffic_summary(traffic_result["summary"])
+        traffic_included = True
+
+    personality = build_personality_lines(
+        calendar_context=calendar_context,
+        traffic_included=traffic_included,
+    )
+
+    parts = [
+        personality["opener"],
+        weather_sentence,
+        personality["duty_sentence"],
+        personality["event_sentence"],
+    ]
+
+    if personality.get("reminder_sentence"):
+        parts.append(personality["reminder_sentence"])
+
+    if traffic_summary:
+        parts.append(traffic_summary)
+    else:
+        parts.append(personality["traffic_sentence"])
+
+    parts.extend(
+        [
+            personality["weekday_sentence"],
+            personality["inspiration_sentence"],
+            personality["closer"],
+        ]
+    )
+
+    spoken_briefing = " ".join(part for part in parts if part).strip()
+    spoken_briefing = trim_words(spoken_briefing, max_words=95)
+
+    return {
+        "weather_location": location,
+        "weather_result": weather_result,
+        "weather_summary": weather_sentence,
+        "calendar_context": calendar_context,
+        "traffic_included": traffic_included,
+        "traffic_window": active_traffic_window,
+        "traffic_summary": traffic_summary,
+        "traffic_result": traffic_result,
+        "personality": personality,
+        "spoken_briefing": spoken_briefing,
+    }
+
+===== C:\Projects\ZAENIA\core\briefing\drive_briefing_main.py =====
+
+from datetime import date
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.briefing.drive_briefing import build_drive_briefing
+from core.voice_output.speaker import speak
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA drive briefing tools.
+    """
+    pass
+
+
+@app.command("now")
+def now_command(
+    say: bool = typer.Option(False, "--say", help="Speak the drive briefing aloud."),
+    force_traffic: bool = typer.Option(
+        False,
+        "--force-traffic",
+        help="Include I-5 traffic even outside the normal traffic windows.",
+    ),
+    calendar_date: str | None = typer.Option(
+        None,
+        "--calendar-date",
+        help="Preview briefing using a specific calendar date, format YYYY-MM-DD.",
+    ),
+):
+    """
+    Build a drive briefing with weather, calendar context, personality, and optional I-5 traffic.
+    """
+    preview_date = date.fromisoformat(calendar_date) if calendar_date else None
+
+    briefing = build_drive_briefing(
+        include_traffic_force=force_traffic,
+        calendar_date=preview_date,
+    )
+
+    table = Table(title="ZÃ†NIA Drive Briefing")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Weather Location", str(briefing["weather_location"].get("display_label")))
+    table.add_row("Calendar Date", str(briefing["calendar_context"].get("date")))
+    table.add_row("Calendar Status", str(briefing["calendar_context"].get("status_label")))
+    table.add_row("Event Count", str(briefing["calendar_context"].get("event_count")))
+    table.add_row("Traffic Included", str(briefing["traffic_included"]))
+    table.add_row("Traffic Window", str(briefing["traffic_window"] or "None"))
+
+    first_event = briefing["calendar_context"].get("first_event")
+    if first_event:
+        table.add_row("First Event", str(first_event.get("title")))
+    else:
+        table.add_row("First Event", "None")
+
+    console.print(table)
+    console.print(f"[cyan]{briefing['spoken_briefing']}[/cyan]")
+
+    if say:
+        speak(briefing["spoken_briefing"])
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\calendar_context\calendar_context.py =====
+
+from datetime import datetime, date
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CALENDAR_PATH = PROJECT_ROOT / "core" / "calendar_context" / "zaenia_calendar.yaml"
+
+
+def load_calendar_config() -> dict[str, Any]:
+    if not CALENDAR_PATH.exists():
+        raise FileNotFoundError(f"ZÃ†NIA calendar file not found: {CALENDAR_PATH}")
+
+    with CALENDAR_PATH.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def get_calendar_timezone(config: dict[str, Any]) -> ZoneInfo:
+    calendar_config = config.get("calendar_context", {})
+    timezone_name = calendar_config.get("timezone", "America/Los_Angeles")
+    return ZoneInfo(timezone_name)
+
+
+def get_today(config: dict[str, Any] | None = None) -> date:
+    config = config or load_calendar_config()
+    tz = get_calendar_timezone(config)
+    return datetime.now(tz).date()
+
+
+def get_weekday_name(target_date: date) -> str:
+    return target_date.strftime("%A")
+
+
+def get_status_for_date(
+    config: dict[str, Any],
+    target_date: date,
+) -> dict[str, Any]:
+    """
+    Check special_dates first. If no override exists, use the default weekly schedule.
+    """
+    target_key = target_date.isoformat()
+    weekday_name = get_weekday_name(target_date)
+
+    special_dates = config.get("special_dates", {}) or {}
+    default_schedule = config.get("default_schedule", {}) or {}
+    status_phrases = config.get("status_phrases", {}) or {}
+
+    if target_key in special_dates:
+        special = special_dates[target_key] or {}
+        status = special.get("status", "unknown")
+        note = special.get("note")
+    else:
+        status = default_schedule.get(weekday_name, "unknown")
+        note = None
+
+    return {
+        "status": status,
+        "status_label": status_phrases.get(status, status.replace("_", " ")),
+        "note": note,
+        "weekday": weekday_name,
+        "date": target_key,
+    }
+
+
+def normalize_event(event: dict[str, Any], source: str) -> dict[str, Any]:
+    return {
+        "date": event.get("date"),
+        "day": event.get("day"),
+        "time": event.get("time", ""),
+        "title": event.get("title", "Untitled event"),
+        "reminder": event.get("reminder"),
+        "source": source,
+    }
+
+
+def get_events_for_date(
+    config: dict[str, Any],
+    target_date: date,
+) -> list[dict[str, Any]]:
+    """
+    Return one-time and weekly recurring events that apply to the selected date.
+    """
+    target_key = target_date.isoformat()
+    weekday_name = get_weekday_name(target_date)
+
+    matched_events: list[dict[str, Any]] = []
+
+    for event in config.get("events", []) or []:
+        if event.get("date") == target_key:
+            matched_events.append(normalize_event(event, "one_time"))
+
+    for event in config.get("recurring_events", []) or []:
+        if event.get("day") == weekday_name:
+            matched_events.append(normalize_event(event, "recurring"))
+
+    matched_events.sort(key=lambda item: item.get("time") or "99:99")
+    return matched_events
+
+
+def build_calendar_context(target_date: date | None = None) -> dict[str, Any]:
+    """
+    Build the calendar context ZÃ†NIA can use inside spoken briefings.
+    """
+    config = load_calendar_config()
+
+    calendar_config = config.get("calendar_context", {})
+    enabled = bool(calendar_config.get("enabled", True))
+
+    target_date = target_date or get_today(config)
+    status = get_status_for_date(config, target_date)
+    events = get_events_for_date(config, target_date)
+
+    first_event = events[0] if events else None
+    reminders = [
+        event["reminder"]
+        for event in events
+        if event.get("reminder")
+    ]
+
+    return {
+        "enabled": enabled,
+        "date": target_date.isoformat(),
+        "weekday": get_weekday_name(target_date),
+        "status": status["status"],
+        "status_label": status["status_label"],
+        "status_note": status["note"],
+        "events": events,
+        "event_count": len(events),
+        "first_event": first_event,
+        "reminders": reminders,
+    }
+
+
+def build_simple_calendar_sentence(context: dict[str, Any]) -> str:
+    """
+    Simple fallback sentence before the full personality layer is connected.
+    """
+    if not context.get("enabled", True):
+        return "Calendar context is disabled."
+
+    status_label = context.get("status_label", "unknown")
+    event_count = context.get("event_count", 0)
+    first_event = context.get("first_event")
+
+    parts = [f"Today is marked as {status_label}."]
+
+    if event_count and first_event:
+        parts.append(f"You have {event_count} calendar item today. First up: {first_event['title']}.")
+    else:
+        parts.append("No local calendar events are listed for today.")
+
+    reminders = context.get("reminders", [])
+    if reminders:
+        parts.append(f"Reminder: {reminders[0]}")
+
+    return " ".join(parts)
+
+===== C:\Projects\ZAENIA\core\calendar_context\calendar_context_main.py =====
+
+from datetime import date
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.calendar_context.calendar_context import (
+    build_calendar_context,
+    build_simple_calendar_sentence,
+)
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA local calendar context tools.
+    """
+    pass
+
+
+@app.command("today")
+def today_command():
+    """
+    Show today's local ZÃ†NIA calendar context.
+    """
+    context = build_calendar_context()
+
+    table = Table(title="ZÃ†NIA Calendar Context")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Date", context["date"])
+    table.add_row("Weekday", context["weekday"])
+    table.add_row("Status", context["status_label"])
+    table.add_row("Status Note", str(context["status_note"] or "None"))
+    table.add_row("Event Count", str(context["event_count"]))
+
+    if context["first_event"]:
+        table.add_row("First Event", context["first_event"]["title"])
+    else:
+        table.add_row("First Event", "None")
+
+    if context["reminders"]:
+        table.add_row("First Reminder", context["reminders"][0])
+    else:
+        table.add_row("First Reminder", "None")
+
+    console.print(table)
+    console.print(f"[cyan]{build_simple_calendar_sentence(context)}[/cyan]")
+
+
+@app.command("date")
+def date_command(
+    target_date: str = typer.Argument(..., help="Date to check, format YYYY-MM-DD"),
+):
+    """
+    Show local ZÃ†NIA calendar context for a specific date.
+    """
+    parsed_date = date.fromisoformat(target_date)
+    context = build_calendar_context(parsed_date)
+
+    table = Table(title=f"ZÃ†NIA Calendar Context â€” {target_date}")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Date", context["date"])
+    table.add_row("Weekday", context["weekday"])
+    table.add_row("Status", context["status_label"])
+    table.add_row("Status Note", str(context["status_note"] or "None"))
+    table.add_row("Event Count", str(context["event_count"]))
+
+    if context["first_event"]:
+        table.add_row("First Event", context["first_event"]["title"])
+    else:
+        table.add_row("First Event", "None")
+
+    if context["reminders"]:
+        table.add_row("First Reminder", context["reminders"][0])
+    else:
+        table.add_row("First Reminder", "None")
+
+    console.print(table)
+    console.print(f"[cyan]{build_simple_calendar_sentence(context)}[/cyan]")
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\calendar_context\calendar_update_main.py =====
+
+from datetime import date
+from typing import Any
+
+import typer
+import yaml
+from rich.console import Console
+from rich.table import Table
+
+from core.calendar_context.calendar_context import (
+    CALENDAR_PATH,
+    build_calendar_context,
+    build_simple_calendar_sentence,
+)
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+VALID_STATUSES = {
+    "on_duty",
+    "off_duty",
+    "leave",
+    "appointment",
+    "field",
+    "recovery",
+}
+
+
+def load_config() -> dict[str, Any]:
+    if not CALENDAR_PATH.exists():
+        raise FileNotFoundError(f"Calendar file not found: {CALENDAR_PATH}")
+
+    with CALENDAR_PATH.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def save_config(config: dict[str, Any]) -> None:
+    CALENDAR_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with CALENDAR_PATH.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(
+            config,
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+            width=1000,
+        )
+
+
+def validate_date(value: str) -> str:
+    date.fromisoformat(value)
+    return value
+
+
+def validate_status(status: str) -> str:
+    if status not in VALID_STATUSES:
+        raise typer.BadParameter(
+            f"Invalid status '{status}'. Use one of: {', '.join(sorted(VALID_STATUSES))}"
+        )
+    return status
+
+
+def print_context(target_date: str) -> None:
+    context = build_calendar_context(date.fromisoformat(target_date))
+
+    table = Table(title=f"ZÃ†NIA Calendar â€” {target_date}")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Weekday", context["weekday"])
+    table.add_row("Status", context["status_label"])
+    table.add_row("Status Note", str(context["status_note"] or "None"))
+    table.add_row("Event Count", str(context["event_count"]))
+
+    if context["first_event"]:
+        table.add_row("First Event", context["first_event"]["title"])
+    else:
+        table.add_row("First Event", "None")
+
+    if context["reminders"]:
+        table.add_row("First Reminder", context["reminders"][0])
+    else:
+        table.add_row("First Reminder", "None")
+
+    console.print(table)
+    console.print(f"[cyan]{build_simple_calendar_sentence(context)}[/cyan]")
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA local calendar updater.
+    """
+    pass
+
+
+@app.command("set-status")
+def set_status_command(
+    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+    status: str = typer.Argument(..., help="on_duty, off_duty, leave, appointment, field, recovery"),
+    note: str = typer.Option("", "--note", help="Optional note for that date."),
+):
+    """
+    Override Zack's normal schedule for a specific date.
+    """
+    target_date = validate_date(target_date)
+    status = validate_status(status)
+
+    config = load_config()
+    special_dates = config.get("special_dates") or {}
+    config["special_dates"] = special_dates
+
+    special_dates[target_date] = {
+        "status": status,
+        "note": note or None,
+    }
+
+    save_config(config)
+
+    console.print(f"[green]Saved {target_date} as {status}.[/green]")
+    print_context(target_date)
+
+
+@app.command("add-event")
+def add_event_command(
+    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+    event_time: str = typer.Argument(..., help="Time format: HH:MM"),
+    title: str = typer.Argument(..., help="Event title."),
+    reminder: str = typer.Option("", "--reminder", help="Optional reminder ZÃ†NIA should mention."),
+):
+    """
+    Add a one-time event to Zack's local ZÃ†NIA calendar.
+    """
+    target_date = validate_date(target_date)
+
+    config = load_config()
+    events = config.get("events") or []
+    config["events"] = events
+
+    events.append(
+        {
+            "date": target_date,
+            "time": event_time,
+            "title": title,
+            "reminder": reminder or None,
+        }
+    )
+
+    save_config(config)
+
+    console.print(f"[green]Added event for {target_date}: {title}.[/green]")
+    print_context(target_date)
+
+
+@app.command("add-recurring")
+def add_recurring_command(
+    day: str = typer.Argument(..., help="Weekday name, example: Monday"),
+    event_time: str = typer.Argument(..., help="Time format: HH:MM"),
+    title: str = typer.Argument(..., help="Recurring event title."),
+    reminder: str = typer.Option("", "--reminder", help="Optional recurring reminder."),
+):
+    """
+    Add a weekly recurring event.
+    """
+    valid_days = {
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    }
+
+    day = day.capitalize()
+
+    if day not in valid_days:
+        raise typer.BadParameter("Use a weekday name: Monday through Sunday.")
+
+    config = load_config()
+    recurring_events = config.get("recurring_events") or []
+    config["recurring_events"] = recurring_events
+
+    recurring_events.append(
+        {
+            "day": day,
+            "time": event_time,
+            "title": title,
+            "reminder": reminder or None,
+        }
+    )
+
+    save_config(config)
+
+    console.print(f"[green]Added recurring {day} event: {title}.[/green]")
+
+
+@app.command("show")
+def show_command(
+    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+):
+    """
+    Show ZÃ†NIA calendar context for a specific date.
+    """
+    target_date = validate_date(target_date)
+    print_context(target_date)
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\calendar_context\zaenia_calendar.yaml =====
+
+calendar_context:
+  enabled: true
+  timezone: America/Los_Angeles
+default_schedule:
+  Monday: on_duty
+  Tuesday: on_duty
+  Wednesday: on_duty
+  Thursday: on_duty
+  Friday: on_duty
+  Saturday: off_duty
+  Sunday: off_duty
+status_phrases:
+  on_duty: on duty
+  off_duty: off duty
+  leave: on leave
+  appointment: appointment day
+  field: field/training day
+  recovery: recovery day
+special_dates: null
+events:
+- date: '2026-08-31'
+  time: 05:30
+  title: Morning formation
+  reminder: Bring water, ID, and headphones.
+- date: '2026-08-31'
+  time: '10:30'
+  title: shaving profile appointment at winder
+  reminder: 'Location: Winder Family Medicine Clinic, 9119 Mil Park Ave, Joint Base Lewis-McChord, WA 98433, USA.'
+  source: google_ics
+  google_uid: 1cetc2ei3aigpf7f0k5pimeei5@google.com
+recurring_events: null
+message_rules:
+  mention_duty_status: true
+  mention_first_event: true
+  mention_event_count: true
+  mention_reminders: true
+  max_events_spoken: 2
+
+
+===== C:\Projects\ZAENIA\core\carplay\carplay_main.py =====
+
+from pathlib import Path
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.carplay.carplay_manager import (
+    build_carstartup_text,
+    get_default_onedrive_path,
+    load_message_config,
+    validate_messages,
+    write_carstartup_file,
+)
+
+app = typer.Typer()
+console = Console()
+
+CONFIG_PATH = Path("core") / "carplay" / "messages.yaml"
+
+
+@app.command()
+def preview():
+    """
+    Preview the CarStartup.txt output without writing it.
+    """
+    data = load_message_config(CONFIG_PATH)
+    problems = validate_messages(data)
+
+    if problems:
+        console.print("[red]Problems found:[/red]")
+        for problem in problems:
+            console.print(f"- {problem}")
+        raise typer.Exit(code=1)
+
+    text = build_carstartup_text(data)
+    console.print(text)
+
+
+@app.command()
+def validate():
+    """
+    Check if messages.yaml is safe for the iPhone Shortcut.
+    """
+    data = load_message_config(CONFIG_PATH)
+    problems = validate_messages(data)
+
+    if not problems:
+        console.print("[green]CarPlay messages are valid.[/green]")
+        return
+
+    console.print("[red]Problems found:[/red]")
+    for problem in problems:
+        console.print(f"- {problem}")
+
+    raise typer.Exit(code=1)
+
+
+@app.command()
+def write(
+    output: str = typer.Option(None, "--output", "-o"),
+):
+    """
+    Write CarStartup.txt for the iPhone Shortcut.
+    """
+    data = load_message_config(CONFIG_PATH)
+    problems = validate_messages(data)
+
+    if problems:
+        console.print("[red]Refusing to write because problems were found:[/red]")
+        for problem in problems:
+            console.print(f"- {problem}")
+        raise typer.Exit(code=1)
+
+    output_path = Path(output) if output else get_default_onedrive_path()
+    text = build_carstartup_text(data)
+
+    write_carstartup_file(output_path, text)
+
+    console.print("[green]CarStartup.txt updated successfully.[/green]")
+    console.print(f"[cyan]Path:[/cyan] {output_path}")
+
+
+@app.command()
+def show_path():
+    """
+    Show the default OneDrive CarStartup.txt path ZÃ†NIA will use.
+    """
+    path = get_default_onedrive_path()
+    console.print(f"[cyan]Default path:[/cyan] {path}")
+
+
+@app.command()
+def table():
+    """
+    Show messages in table form.
+    """
+    data = load_message_config(CONFIG_PATH)
+    messages = data["messages"]
+
+    table_view = Table(title="ZÃ†NIA CarPlay Startup Messages")
+    table_view.add_column("Day", style="cyan")
+    table_view.add_column("Morning", style="green")
+    table_view.add_column("Afternoon", style="yellow")
+    table_view.add_column("Night", style="magenta")
+
+    for day, blocks in messages.items():
+        table_view.add_row(
+            day,
+            blocks.get("Morning", ""),
+            blocks.get("Afternoon", ""),
+            blocks.get("Night", ""),
+        )
+
+    console.print(table_view)
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\carplay\carplay_manager.py =====
+
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+
+DAYS = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
+
+TIME_BLOCKS = ["Morning", "Afternoon", "Night"]
+
+
+def load_message_config(config_path: Path) -> dict[str, Any]:
+    if not config_path.exists():
+        raise FileNotFoundError(f"Message config not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError("messages.yaml is empty or invalid.")
+
+    return data
+
+
+def validate_messages(data: dict[str, Any]) -> list[str]:
+    problems: list[str] = []
+
+    messages = data.get("messages", {})
+    avoid_phrases = [
+        phrase.lower()
+        for phrase in data.get("profile", {}).get("avoid_phrases", [])
+    ]
+
+    for day in DAYS:
+        if day not in messages:
+            problems.append(f"Missing day: {day}")
+            continue
+
+        for block in TIME_BLOCKS:
+            message = messages[day].get(block)
+
+            if not message:
+                problems.append(f"Missing message: {day} {block}")
+                continue
+
+            lower_message = message.lower()
+
+            for phrase in avoid_phrases:
+                if phrase in lower_message:
+                    problems.append(
+                        f"Avoided phrase found in {day} {block}: {phrase}"
+                    )
+
+            if "=" in message:
+                problems.append(f"Message contains '=' which breaks shortcut: {day} {block}")
+
+    return problems
+
+
+def build_carstartup_text(data: dict[str, Any]) -> str:
+    messages = data["messages"]
+    lines: list[str] = []
+
+    for day in DAYS:
+        for block in TIME_BLOCKS:
+            key = f"{day}{block}"
+            message = messages[day][block].strip()
+            lines.append(f"{key}={message}")
+
+    return "\n".join(lines) + "\n"
+
+
+def write_carstartup_file(output_path: Path, text: str) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(text, encoding="utf-8")
+
+
+def get_default_onedrive_path() -> Path:
+    home = Path.home()
+
+    candidates = [
+        home / "OneDrive" / "CarStartup.txt",
+        home / "OneDrive - Personal" / "CarStartup.txt",
+        home / "OneDrive" / "Documents" / "CarStartup.txt",
+    ]
+
+    for path in candidates:
+        if path.parent.exists():
+            return path
+
+    return home / "OneDrive" / "CarStartup.txt"
+
+===== C:\Projects\ZAENIA\core\carplay_audio\carplay_audio.py =====
+
+import os
+from datetime import date
+from pathlib import Path
+from typing import Any
+
+import requests
+import yaml
+
+from core.briefing.drive_briefing import build_drive_briefing
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+VOICE_CONFIG_PATH = PROJECT_ROOT / "core" / "voice_output" / "voice_config.yaml"
+
+DEFAULT_AUDIO_NAME = "CarStartupAudio.mp3"
+DEFAULT_TEXT_NAME = "CarStartupAudio.txt"
+
+
+def load_voice_config() -> dict[str, Any]:
+    if not VOICE_CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Voice config not found: {VOICE_CONFIG_PATH}")
+
+    with VOICE_CONFIG_PATH.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def get_onedrive_folder() -> Path:
+    """
+    Default OneDrive folder for Zack's Windows account.
+    """
+    one_drive_env = os.environ.get("OneDrive")
+
+    if one_drive_env:
+        return Path(one_drive_env)
+
+    return Path.home() / "OneDrive"
+
+
+def get_default_audio_path() -> Path:
+    return get_onedrive_folder() / DEFAULT_AUDIO_NAME
+
+
+def get_default_text_path() -> Path:
+    return get_onedrive_folder() / DEFAULT_TEXT_NAME
+
+
+def generate_elevenlabs_audio(text: str, output_path: Path) -> Path:
+    """
+    Generate an MP3 using Zack's configured ElevenLabs ZÃ†NIA voice.
+    This does not play the audio. It only saves it for the iPhone Shortcut.
+    """
+    config = load_voice_config()
+
+    elevenlabs_config = config.get("elevenlabs", {})
+    api_key_env = elevenlabs_config.get("api_key_env", "ELEVENLABS_API_KEY")
+    api_key = os.environ.get(api_key_env)
+
+    if not api_key:
+        raise RuntimeError(
+            f"Missing ElevenLabs API key. Expected environment variable: {api_key_env}"
+        )
+
+    voice_id = elevenlabs_config.get("voice_id")
+    model_id = elevenlabs_config.get("model_id", "eleven_multilingual_v2")
+
+    if not voice_id:
+        raise RuntimeError("Missing ElevenLabs voice_id in voice_config.yaml")
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+
+    payload = {
+        "text": text,
+        "model_id": model_id,
+        "voice_settings": {
+            "stability": 0.58,
+            "similarity_boost": 0.82,
+            "style": 0.18,
+            "use_speaker_boost": True,
+        },
+    }
+
+    headers = {
+        "xi-api-key": api_key,
+        "Content-Type": "application/json",
+        "Accept": "audio/mpeg",
+    }
+
+    response = requests.post(url, json=payload, headers=headers, timeout=60)
+
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"ElevenLabs request failed: {response.status_code} {response.text}"
+        )
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(response.content)
+
+    return output_path
+
+
+def build_and_save_carplay_audio(
+    force_traffic: bool = False,
+    output_path: Path | None = None,
+    calendar_date: date | None = None,
+) -> dict[str, Any]:
+    """
+    Build the drive briefing, generate MP3 audio, and save both audio + text to OneDrive.
+    """
+    briefing = build_drive_briefing(
+        include_traffic_force=force_traffic,
+        calendar_date=calendar_date,
+    )
+
+    text = briefing["spoken_briefing"]
+
+    audio_path = output_path or get_default_audio_path()
+    text_path = get_default_text_path()
+
+    generated_audio_path = generate_elevenlabs_audio(text, audio_path)
+
+    text_path.parent.mkdir(parents=True, exist_ok=True)
+    text_path.write_text(text, encoding="utf-8")
+
+    return {
+        "text": text,
+        "audio_path": str(generated_audio_path),
+        "text_path": str(text_path),
+        "traffic_included": briefing["traffic_included"],
+        "traffic_window": briefing["traffic_window"],
+        "weather_location": briefing["weather_location"],
+        "calendar_context": briefing["calendar_context"],
+    }
+
+===== C:\Projects\ZAENIA\core\carplay_audio\carplay_audio_main.py =====
+
+from pathlib import Path
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.carplay_audio.carplay_audio import (
+    build_and_save_carplay_audio,
+    get_default_audio_path,
+    get_default_text_path,
+)
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA CarPlay custom voice audio tools.
+    """
+    pass
+
+
+@app.command("paths")
+def paths_command():
+    """
+    Show where ZÃ†NIA will save the CarPlay audio and text files.
+    """
+    table = Table(title="ZÃ†NIA CarPlay Audio Paths")
+    table.add_column("File", style="cyan")
+    table.add_column("Path", style="green")
+
+    table.add_row("Audio MP3", str(get_default_audio_path()))
+    table.add_row("Text Backup", str(get_default_text_path()))
+
+    console.print(table)
+
+
+@app.command("generate")
+def generate_command(
+    force_traffic: bool = typer.Option(
+        False,
+        "--force-traffic",
+        help="Include I-5 traffic even outside normal traffic windows.",
+    ),
+    output: Path | None = typer.Option(
+        None,
+        "--output",
+        help="Optional custom MP3 output path.",
+    ),
+):
+    """
+    Build the current drive briefing and save it as an MP3 for iPhone Shortcuts.
+    """
+    result = build_and_save_carplay_audio(
+        force_traffic=force_traffic,
+        output_path=output,
+    )
+
+    table = Table(title="ZÃ†NIA CarPlay Audio Generated")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Audio Path", result["audio_path"])
+    table.add_row("Text Path", result["text_path"])
+    table.add_row("Traffic Included", str(result["traffic_included"]))
+    table.add_row("Traffic Window", str(result["traffic_window"] or "None"))
+
+    console.print(table)
+    console.print(f"[cyan]{result['text']}[/cyan]")
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\google_calendar_sync\google_calendar_ics.py =====
+
+from __future__ import annotations
+
+from datetime import date, datetime, time, timedelta
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import recurring_ical_events
+import requests
+import yaml
+from icalendar import Calendar
+
+from core.calendar_context.calendar_context import CALENDAR_PATH
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+GOOGLE_CALENDAR_DIR = PROJECT_ROOT / "data" / "google_calendar"
+ICS_URL_PATH = GOOGLE_CALENDAR_DIR / "google_calendar_ics_url.txt"
+
+LOCAL_TIMEZONE = ZoneInfo("America/Los_Angeles")
+GOOGLE_SYNC_SOURCE = "google_ics"
+
+
+def load_ics_url() -> str:
+    """
+    Read Zack's private Google Calendar iCal URL from local storage.
+    Treat this URL like a password.
+    """
+    if not ICS_URL_PATH.exists():
+        raise FileNotFoundError(f"Missing iCal URL file: {ICS_URL_PATH}")
+
+    url = ICS_URL_PATH.read_text(encoding="utf-8").strip()
+
+    if not url:
+        raise RuntimeError(f"iCal URL file is empty: {ICS_URL_PATH}")
+
+    return url
+
+
+def fetch_ics_calendar() -> Calendar:
+    """
+    Download the Google Calendar iCal feed and parse it.
+    """
+    url = load_ics_url()
+
+    response = requests.get(url, timeout=30)
+    response.raise_for_status()
+
+    return Calendar.from_ical(response.content)
+
+
+def load_local_calendar_config() -> dict[str, Any]:
+    if not CALENDAR_PATH.exists():
+        raise FileNotFoundError(f"Missing ZÃ†NIA local calendar file: {CALENDAR_PATH}")
+
+    with CALENDAR_PATH.open("r", encoding="utf-8") as f:
+        return yaml.safe_load(f) or {}
+
+
+def save_local_calendar_config(config: dict[str, Any]) -> None:
+    CALENDAR_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with CALENDAR_PATH.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(
+            config,
+            f,
+            sort_keys=False,
+            allow_unicode=True,
+            width=1000,
+        )
+
+
+def as_local_datetime(value: Any) -> datetime:
+    """
+    Convert iCal date/dateTime values into America/Los_Angeles datetime.
+    """
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            return value.replace(tzinfo=LOCAL_TIMEZONE)
+        return value.astimezone(LOCAL_TIMEZONE)
+
+    if isinstance(value, date):
+        return datetime.combine(value, time.min, tzinfo=LOCAL_TIMEZONE)
+
+    raise TypeError(f"Unsupported calendar time value: {value!r}")
+
+
+def clean_text(value: Any, max_length: int = 180) -> str:
+    if value is None:
+        return ""
+
+    text = str(value).replace("\\n", " ").replace("\n", " ").strip()
+    text = " ".join(text.split())
+
+    if len(text) > max_length:
+        return text[: max_length - 3].rstrip() + "..."
+
+    return text
+
+
+def build_reminder_from_event(event: Any) -> str | None:
+    """
+    Build a short reminder from location or description.
+    """
+    location = clean_text(event.get("LOCATION"), max_length=90)
+    description = clean_text(event.get("DESCRIPTION"), max_length=140)
+
+    if location and description:
+        return f"Location: {location}. {description}"
+
+    if location:
+        return f"Location: {location}."
+
+    if description:
+        return description
+
+    return None
+
+
+def convert_ical_event(event: Any) -> dict[str, Any] | None:
+    """
+    Convert one Google iCal event into ZÃ†NIA local calendar event format.
+    """
+    summary = clean_text(event.get("SUMMARY"), max_length=100)
+
+    if not summary:
+        summary = "Untitled calendar event"
+
+    dtstart_raw = event.get("DTSTART")
+    if not dtstart_raw:
+        return None
+
+    start_value = dtstart_raw.dt
+    start_dt = as_local_datetime(start_value)
+
+    is_all_day = isinstance(start_value, date) and not isinstance(start_value, datetime)
+
+    event_time = "00:00" if is_all_day else start_dt.strftime("%H:%M")
+    title = f"All day: {summary}" if is_all_day else summary
+
+    uid = clean_text(event.get("UID"), max_length=200)
+
+    return {
+        "date": start_dt.date().isoformat(),
+        "time": event_time,
+        "title": title,
+        "reminder": build_reminder_from_event(event),
+        "source": GOOGLE_SYNC_SOURCE,
+        "google_uid": uid,
+    }
+
+
+def get_google_events_between(start_date: date, days: int = 2) -> list[dict[str, Any]]:
+    """
+    Pull Google Calendar events from the iCal feed.
+    """
+    calendar = fetch_ics_calendar()
+
+    start_dt = datetime.combine(start_date, time.min, tzinfo=LOCAL_TIMEZONE)
+    end_dt = start_dt + timedelta(days=days)
+
+    raw_events = recurring_ical_events.of(calendar).between(start_dt, end_dt)
+
+    converted_events: list[dict[str, Any]] = []
+
+    for raw_event in raw_events:
+        converted = convert_ical_event(raw_event)
+        if converted:
+            converted_events.append(converted)
+
+    converted_events.sort(key=lambda item: (item["date"], item["time"], item["title"]))
+    return converted_events
+
+
+def remove_existing_google_events(
+    config: dict[str, Any],
+    target_dates: set[str],
+) -> dict[str, Any]:
+    """
+    Remove old Google-synced events only for the dates being refreshed.
+    Keep Zack's manually added local events.
+    """
+    existing_events = config.get("events") or []
+    kept_events = []
+
+    for event in existing_events:
+        event_date = event.get("date")
+        event_source = event.get("source")
+
+        if event_date in target_dates and event_source == GOOGLE_SYNC_SOURCE:
+            continue
+
+        kept_events.append(event)
+
+    config["events"] = kept_events
+    return config
+
+
+def sync_google_calendar_to_local(
+    start_date: date | None = None,
+    days: int = 2,
+) -> dict[str, Any]:
+    """
+    Sync Google Calendar iCal events into ZÃ†NIA's local calendar file.
+
+    By default, this imports today and tomorrow.
+    """
+    start_date = start_date or datetime.now(LOCAL_TIMEZONE).date()
+
+    google_events = get_google_events_between(start_date=start_date, days=days)
+
+    target_dates = {
+        (start_date + timedelta(days=offset)).isoformat()
+        for offset in range(days)
+    }
+
+    config = load_local_calendar_config()
+    config = remove_existing_google_events(config, target_dates)
+
+    local_events = config.get("events") or []
+    local_events.extend(google_events)
+    local_events.sort(key=lambda item: (item.get("date", ""), item.get("time", ""), item.get("title", "")))
+
+    config["events"] = local_events
+    save_local_calendar_config(config)
+
+    return {
+        "start_date": start_date.isoformat(),
+        "days": days,
+        "target_dates": sorted(target_dates),
+        "imported_count": len(google_events),
+        "events": google_events,
+    }
+
+===== C:\Projects\ZAENIA\core\google_calendar_sync\google_calendar_sync_main.py =====
+
+from datetime import date
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.google_calendar_sync.google_calendar_ics import (
+    ICS_URL_PATH,
+    get_google_events_between,
+    sync_google_calendar_to_local,
+)
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA Google Calendar iCal sync tools.
+    """
+    pass
+
+
+@app.command("status")
+def status_command():
+    """
+    Check whether the private Google Calendar iCal URL is saved.
+    """
+    table = Table(title="ZÃ†NIA Google Calendar Sync Status")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("iCal URL File", str(ICS_URL_PATH))
+    table.add_row("Exists", str(ICS_URL_PATH.exists()))
+
+    if ICS_URL_PATH.exists():
+        url = ICS_URL_PATH.read_text(encoding="utf-8").strip()
+        table.add_row("URL Saved", str(bool(url)))
+    else:
+        table.add_row("URL Saved", "False")
+
+    console.print(table)
+
+
+@app.command("preview")
+def preview_command(
+    start_date: str | None = typer.Option(
+        None,
+        "--start-date",
+        help="Start date to preview, format YYYY-MM-DD. Defaults to today.",
+    ),
+    days: int = typer.Option(
+        2,
+        "--days",
+        help="Number of days to preview.",
+    ),
+):
+    """
+    Preview Google Calendar events without saving them into ZÃ†NIA.
+    """
+    parsed_start = date.fromisoformat(start_date) if start_date else None
+    parsed_start = parsed_start or date.today()
+
+    events = get_google_events_between(start_date=parsed_start, days=days)
+
+    table = Table(title="Google Calendar iCal Preview")
+    table.add_column("Date", style="cyan")
+    table.add_column("Time", style="green")
+    table.add_column("Title", style="yellow")
+    table.add_column("Reminder", style="magenta")
+
+    for event in events:
+        table.add_row(
+            str(event.get("date", "")),
+            str(event.get("time", "")),
+            str(event.get("title", "")),
+            str(event.get("reminder") or ""),
+        )
+
+    console.print(table)
+    console.print(f"[green]Found {len(events)} Google Calendar event(s).[/green]")
+
+
+@app.command("sync")
+def sync_command(
+    start_date: str | None = typer.Option(
+        None,
+        "--start-date",
+        help="Start date to sync, format YYYY-MM-DD. Defaults to today.",
+    ),
+    days: int = typer.Option(
+        2,
+        "--days",
+        help="Number of days to sync into ZÃ†NIA local calendar.",
+    ),
+):
+    """
+    Sync Google Calendar iCal events into ZÃ†NIA's local calendar file.
+    """
+    parsed_start = date.fromisoformat(start_date) if start_date else None
+
+    result = sync_google_calendar_to_local(
+        start_date=parsed_start,
+        days=days,
+    )
+
+    table = Table(title="Google Calendar Synced to ZÃ†NIA")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Start Date", result["start_date"])
+    table.add_row("Days", str(result["days"]))
+    table.add_row("Imported Events", str(result["imported_count"]))
+    table.add_row("Target Dates", ", ".join(result["target_dates"]))
+
+    console.print(table)
+
+    if result["events"]:
+        event_table = Table(title="Imported Events")
+        event_table.add_column("Date", style="cyan")
+        event_table.add_column("Time", style="green")
+        event_table.add_column("Title", style="yellow")
+        event_table.add_column("Reminder", style="magenta")
+
+        for event in result["events"]:
+            event_table.add_row(
+                str(event.get("date", "")),
+                str(event.get("time", "")),
+                str(event.get("title", "")),
+                str(event.get("reminder") or ""),
+            )
+
+        console.print(event_table)
+    else:
+        console.print("[yellow]No Google Calendar events found for this window.[/yellow]")
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\traffic\traffic_client.py =====
+
+import os
+from typing import Any
+
+import requests
+
+
+TRAFFIC_FLOWS_URL = "https://wsdot.wa.gov/Traffic/api/TrafficFlow/TrafficFlowREST.svc/GetTrafficFlowsAsJson"
+
+
+I5_AREA_KEYWORDS = [
+    "i-5",
+    "i 5",
+    "interstate 5",
+    "lacey",
+    "jblm",
+    "joint base lewis",
+    "mcchord",
+    "dupont",
+    "lakewood",
+    "tacoma",
+    "nisqually",
+    "steilacoom",
+    "mounts road",
+]
+
+
+def get_wsdot_api_key() -> str:
+    api_key = os.getenv("WSDOT_API_KEY")
+
+    if not api_key:
+        raise RuntimeError(
+            "Missing WSDOT_API_KEY. Save it to Windows before using traffic tools."
+        )
+
+    return api_key
+
+
+def fetch_traffic_flows() -> list[dict[str, Any]]:
+    api_key = get_wsdot_api_key()
+
+    response = requests.get(
+        TRAFFIC_FLOWS_URL,
+        params={"AccessCode": api_key},
+        timeout=20,
+    )
+
+    response.raise_for_status()
+
+    data = response.json()
+
+    if not isinstance(data, list):
+        raise RuntimeError("Unexpected WSDOT traffic flow response format.")
+
+    return data
+
+
+def item_to_search_text(item: dict[str, Any]) -> str:
+    parts = []
+
+    for key, value in item.items():
+        if isinstance(value, (str, int, float)):
+            parts.append(str(value))
+
+        if isinstance(value, dict):
+            for inner_value in value.values():
+                if isinstance(inner_value, (str, int, float)):
+                    parts.append(str(inner_value))
+
+    return " ".join(parts).lower()
+
+
+def filter_i5_area_flows(flows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    matches = []
+
+    for item in flows:
+        search_text = item_to_search_text(item)
+
+        if any(keyword in search_text for keyword in I5_AREA_KEYWORDS):
+            matches.append(item)
+
+    return matches
+
+
+def summarize_flow_conditions(flows: list[dict[str, Any]]) -> str:
+    if not flows:
+        return "No matching I-5 traffic flow sensors were found for the JBLM, Lacey, or Tacoma area."
+
+    condition_counts: dict[str, int] = {}
+
+    for item in flows:
+        condition = (
+            item.get("CurrentFlow")
+            or item.get("Flow")
+            or item.get("Status")
+            or item.get("TrafficStatus")
+            or "Unknown"
+        )
+
+        condition = str(condition)
+        condition_counts[condition] = condition_counts.get(condition, 0) + 1
+
+    worst_order = ["StopAndGo", "Heavy", "Moderate", "WideOpen", "Unknown"]
+
+    worst_condition = "Unknown"
+
+    for condition in worst_order:
+        if condition in condition_counts:
+            worst_condition = condition
+            break
+
+    readable = {
+        "WideOpen": "clear",
+        "Moderate": "moderate",
+        "Heavy": "heavy",
+        "StopAndGo": "stop-and-go",
+        "Unknown": "unclear",
+    }.get(worst_condition, worst_condition)
+
+    return (
+        f"I-5 traffic check: {readable} traffic reported across "
+        f"{len(flows)} matching sensor points near the JBLM, Lacey, and Tacoma corridor."
+    )
+
+
+def get_i5_traffic_summary() -> dict[str, Any]:
+    all_flows = fetch_traffic_flows()
+    i5_flows = filter_i5_area_flows(all_flows)
+    summary = summarize_flow_conditions(i5_flows)
+
+    return {
+        "total_flow_points": len(all_flows),
+        "matched_i5_points": len(i5_flows),
+        "summary": summary,
+        "matched_flows": i5_flows,
+    }
+
+===== C:\Projects\ZAENIA\core\traffic\traffic_config.yaml =====
+
+traffic_system:
+  enabled: true
+  provider: "wsdot"
+  timezone: "America/Los_Angeles"
+
+route_focus:
+  highway: "I-5"
+  display_name: "I-5"
+  area_label: "between Lacey, JBLM, and Tacoma"
+  directions:
+    - northbound
+    - southbound
+
+check_windows:
+  morning:
+    enabled: true
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "05:15"
+    target_time: "05:30"
+    end_time: "06:15"
+
+  evening:
+    enabled: true
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "16:45"
+    target_time: "17:00"
+    end_time: "18:30"
+
+default_behavior:
+  outside_check_window: "Do not include traffic unless Zack asks."
+  if_traffic_unavailable: "I-5 traffic check is unavailable right now, so drive smart and keep your spacing."
+
+message_rules:
+  keep_short: true
+  mention_only_if_relevant: true
+  avoid_alarmist_language: true
+  avoid_phrases:
+    - "night mode"
+    - "gridlock nightmare"
+    - "traffic disaster"
+    - "beast mode"
+    - "grindset"
+
+carplay_traffic:
+  enabled: true
+  include_morning_traffic: true
+  include_evening_traffic: true
+  speak_with_weather: true
+  max_sentence_length: 28
+
+wsdot:
+  api_key_env: "WSDOT_API_KEY"
+  use_highway_alerts: true
+  use_traffic_flow: true
+  use_travel_times: true
+
+===== C:\Projects\ZAENIA\core\traffic\traffic_main.py =====
+
+from datetime import datetime, time
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import typer
+import yaml
+from rich.console import Console
+from rich.table import Table
+
+from core.traffic.traffic_client import get_i5_traffic_summary
+from core.voice_output.speaker import speak
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+TRAFFIC_CONFIG_PATH = PROJECT_ROOT / "core" / "traffic" / "traffic_config.yaml"
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+def load_traffic_config() -> dict[str, Any]:
+    if not TRAFFIC_CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Traffic config not found: {TRAFFIC_CONFIG_PATH}")
+
+    with TRAFFIC_CONFIG_PATH.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError("traffic_config.yaml is empty or invalid.")
+
+    return data
+
+
+def parse_clock(value: str) -> time:
+    hour, minute = value.split(":")
+    return time(hour=int(hour), minute=int(minute))
+
+
+def get_now(config: dict[str, Any]) -> datetime:
+    timezone_name = config.get("traffic_system", {}).get("timezone", "America/Los_Angeles")
+    return datetime.now(ZoneInfo(timezone_name))
+
+
+def get_active_window(config: dict[str, Any]) -> str | None:
+    now = get_now(config)
+    current_day = now.strftime("%A")
+    current_time = now.time()
+
+    windows = config.get("check_windows", {})
+
+    for window_name, window in windows.items():
+        if not window.get("enabled", False):
+            continue
+
+        if current_day not in window.get("days", []):
+            continue
+
+        start = parse_clock(window["start_time"])
+        end = parse_clock(window["end_time"])
+
+        if start <= current_time <= end:
+            return window_name
+
+    return None
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA traffic tools.
+    """
+    pass
+
+
+@app.command("status")
+def status_command():
+    """
+    Show traffic module status and whether traffic should be included right now.
+    """
+    config = load_traffic_config()
+    active_window = get_active_window(config)
+
+    table = Table(title="ZÃ†NIA Traffic Status")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Enabled", str(config.get("traffic_system", {}).get("enabled", False)))
+    table.add_row("Provider", str(config.get("traffic_system", {}).get("provider")))
+    table.add_row("Route", str(config.get("route_focus", {}).get("display_name")))
+    table.add_row("Area", str(config.get("route_focus", {}).get("area_label")))
+    table.add_row("Active Window", active_window or "None")
+
+    console.print(table)
+
+    if active_window:
+        console.print("[green]Traffic should be included right now.[/green]")
+    else:
+        console.print("[yellow]Outside traffic check window. Traffic will be skipped unless forced.[/yellow]")
+
+
+@app.command("now")
+def now_command(
+    say: bool = typer.Option(False, "--say", help="Speak the traffic summary aloud."),
+    force: bool = typer.Option(False, "--force", help="Check traffic even outside normal windows."),
+):
+    """
+    Check I-5 traffic near Lacey, JBLM, and Tacoma.
+    """
+    config = load_traffic_config()
+
+    if not config.get("traffic_system", {}).get("enabled", False):
+        console.print("[red]Traffic system is disabled.[/red]")
+        raise typer.Exit(code=1)
+
+    active_window = get_active_window(config)
+
+    if not active_window and not force:
+        message = config.get("default_behavior", {}).get(
+            "outside_check_window",
+            "Traffic is outside the normal check window."
+        )
+        console.print(f"[yellow]{message}[/yellow]")
+        return
+
+    result = get_i5_traffic_summary()
+
+    table = Table(title="ZÃ†NIA I-5 Traffic")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Active Window", active_window or "Forced")
+    table.add_row("Total WSDOT Flow Points", str(result["total_flow_points"]))
+    table.add_row("Matched I-5 Area Points", str(result["matched_i5_points"]))
+
+    console.print(table)
+    console.print(f"[cyan]{result['summary']}[/cyan]")
+
+    if say:
+        speak(result["summary"])
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\weather\weather_client.py =====
+
+import requests
+
+
+GEOCODE_URL = "https://geocoding-api.open-meteo.com/v1/search"
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+
+
+WEATHER_CODES = {
+    0: "clear",
+    1: "mostly clear",
+    2: "partly cloudy",
+    3: "cloudy",
+    45: "foggy",
+    48: "foggy with possible icy fog",
+    51: "light drizzle",
+    53: "drizzle",
+    55: "heavy drizzle",
+    61: "light rain",
+    63: "rain",
+    65: "heavy rain",
+    71: "light snow",
+    73: "snow",
+    75: "heavy snow",
+    80: "light showers",
+    81: "showers",
+    82: "heavy showers",
+    95: "thunderstorms",
+}
+
+
+def weather_code_text(code: int | None) -> str:
+    if code is None:
+        return "unknown conditions"
+
+    return WEATHER_CODES.get(code, f"weather code {code}")
+
+
+def geocode_location(lookup_name: str) -> dict:
+    params = {
+        "name": lookup_name,
+        "count": 1,
+        "language": "en",
+        "format": "json",
+    }
+
+    response = requests.get(GEOCODE_URL, params=params, timeout=15)
+    response.raise_for_status()
+
+    data = response.json()
+    results = data.get("results", [])
+
+    if not results:
+        raise RuntimeError(f"No geocoding result found for: {lookup_name}")
+
+    result = results[0]
+
+    return {
+        "name": result.get("name"),
+        "latitude": result["latitude"],
+        "longitude": result["longitude"],
+        "timezone": result.get("timezone", "America/Los_Angeles"),
+        "admin1": result.get("admin1"),
+        "country": result.get("country"),
+    }
+
+
+def get_forecast(latitude: float, longitude: float, timezone: str = "America/Los_Angeles") -> dict:
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": "temperature_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m,wind_gusts_10m",
+        "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_gusts_10m_max,weather_code",
+        "temperature_unit": "fahrenheit",
+        "wind_speed_unit": "mph",
+        "precipitation_unit": "inch",
+        "timezone": timezone,
+        "forecast_days": 1,
+    }
+
+    response = requests.get(FORECAST_URL, params=params, timeout=15)
+    response.raise_for_status()
+
+    return response.json()
+
+
+def build_weather_summary(forecast: dict, display_label: str) -> str:
+    current = forecast.get("current", {})
+    daily = forecast.get("daily", {})
+
+    temp = current.get("temperature_2m")
+    feels = current.get("apparent_temperature")
+    condition = weather_code_text(current.get("weather_code"))
+    wind = current.get("wind_speed_10m")
+    gusts = current.get("wind_gusts_10m")
+    rain_now = current.get("rain") or 0
+    precip_today = (daily.get("precipitation_sum") or [0])[0]
+    high = (daily.get("temperature_2m_max") or [None])[0]
+    low = (daily.get("temperature_2m_min") or [None])[0]
+
+    alerts = []
+
+    if rain_now > 0 or precip_today >= 0.03 or "rain" in condition or "showers" in condition:
+        alerts.append("roads may be wet")
+
+    if gusts is not None and gusts >= 25:
+        alerts.append("watch the wind gusts")
+
+    if temp is not None and temp <= 35:
+        alerts.append("watch for cold spots")
+
+    if "fog" in condition:
+        alerts.append("visibility may be lower")
+
+    if temp is None:
+        return f"Weather {display_label}: weather data is unavailable right now."
+
+    summary = f"Weather {display_label}: {round(temp)} degrees, {condition}"
+
+    if feels is not None and abs(feels - temp) >= 5:
+        summary += f", feels like {round(feels)}"
+
+    if high is not None and low is not None:
+        summary += f". High {round(high)}, low {round(low)}"
+
+    if wind is not None:
+        summary += f". Wind around {round(wind)} miles per hour"
+
+    if alerts:
+        summary += ". " + ", ".join(alerts) + "."
+
+    return summary
+
+
+def get_weather_for_location(location: dict) -> dict:
+    lookup_name = location.get("lookup_name")
+    display_label = location.get("display_label", lookup_name)
+
+    latitude = location.get("latitude")
+    longitude = location.get("longitude")
+    timezone = "America/Los_Angeles"
+
+    if latitude is None or longitude is None:
+        geocoded = geocode_location(lookup_name)
+        latitude = geocoded["latitude"]
+        longitude = geocoded["longitude"]
+        timezone = geocoded.get("timezone") or timezone
+    else:
+        geocoded = {
+            "name": location.get("name"),
+            "latitude": latitude,
+            "longitude": longitude,
+            "timezone": timezone,
+        }
+
+    forecast = get_forecast(latitude, longitude, timezone)
+    summary = build_weather_summary(forecast, display_label)
+
+    return {
+        "location": location,
+        "geocoded": geocoded,
+        "forecast": forecast,
+        "summary": summary,
+    }
+
+===== C:\Projects\ZAENIA\core\weather\weather_config.yaml =====
+
+weather_system:
+  enabled: true
+  timezone: "America/Los_Angeles"
+
+locations:
+  duty:
+    name: "JBLM"
+    display_label: "near JBLM"
+    lookup_name: "Joint Base Lewis-McChord, Washington"
+    latitude: null
+    longitude: null
+
+  off_duty:
+    name: "Lacey"
+    display_label: "in Lacey"
+    lookup_name: "Lacey, Washington"
+    latitude: null
+    longitude: null
+
+schedule_rules:
+  weekday_duty_hours:
+    enabled: true
+    location_key: "duty"
+    days:
+      - Monday
+      - Tuesday
+      - Wednesday
+      - Thursday
+      - Friday
+    start_time: "05:30"
+    end_time: "18:00"
+
+default_location_key: "off_duty"
+
+manual_override:
+  enabled: false
+  location_key: null
+  custom_location_name: null
+  custom_lookup_name: null
+  expires_at: null
+
+carplay_weather:
+  enabled: true
+  include_temperature: true
+  include_rain_warning: true
+  include_wind_warning: true
+  include_fog_warning: true
+  include_ice_warning: true
+  max_weather_sentence_length: 22
+
+message_rules:
+  keep_short: true
+  avoid_alarmist_weather: true
+  avoid_phrases:
+    - "night mode"
+    - "beast mode"
+    - "grindset"
+    - "rise and grind"
+
+fallback:
+  if_weather_unavailable: "Weather check is unavailable right now, so drive smart and keep your spacing."
+  if_location_unclear: "Location check is unclear, so use the safer driving assumption."
+
+===== C:\Projects\ZAENIA\core\weather\weather_main.py =====
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from core.voice_output.speaker import speak
+from core.weather.weather_client import get_weather_for_location
+from core.weather.weather_selector import build_location_response, select_weather_location
+
+app = typer.Typer(no_args_is_help=True)
+console = Console()
+
+
+@app.callback()
+def main():
+    """
+    ZÃ†NIA weather tools.
+    """
+    pass
+
+
+@app.command("location")
+def location_command(
+    say: bool = typer.Option(False, "--say", help="Speak the selected weather location aloud."),
+):
+    """
+    Show which weather location ZÃ†NIA should use right now.
+    """
+    location = select_weather_location()
+    response = build_location_response(location)
+
+    table = Table(title="ZÃ†NIA Weather Location")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Name", str(location.get("name")))
+    table.add_row("Display Label", str(location.get("display_label")))
+    table.add_row("Lookup Name", str(location.get("lookup_name")))
+    table.add_row("Location Key", str(location.get("location_key")))
+    table.add_row("Source", str(location.get("source")))
+    table.add_row("Selected At", str(location.get("selected_at", "manual")))
+
+    console.print(table)
+    console.print(f"[cyan]{response}[/cyan]")
+
+    if say:
+        speak(response)
+
+
+@app.command("now")
+def now_command(
+    say: bool = typer.Option(False, "--say", help="Speak the weather summary aloud."),
+):
+    """
+    Get current weather for ZÃ†NIA's selected location.
+    """
+    location = select_weather_location()
+    result = get_weather_for_location(location)
+
+    geo = result["geocoded"]
+
+    table = Table(title="ZÃ†NIA Weather Now")
+    table.add_column("Field", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Context", str(location.get("display_label")))
+    table.add_row("Lookup", str(location.get("lookup_name")))
+    table.add_row("Resolved Name", str(geo.get("name")))
+    table.add_row("Latitude", str(geo.get("latitude")))
+    table.add_row("Longitude", str(geo.get("longitude")))
+    table.add_row("Timezone", str(geo.get("timezone")))
+
+    console.print(table)
+    console.print(f"[cyan]{result['summary']}[/cyan]")
+
+    if say:
+        speak(result["summary"])
+
+
+@app.command("status")
+def status_command():
+    """
+    Quick weather module status check.
+    """
+    location = select_weather_location()
+    console.print("[green]Weather selector is working.[/green]")
+    console.print(f"[cyan]Current weather context:[/cyan] {location.get('display_label')}")
+
+
+if __name__ == "__main__":
+    app()
+
+===== C:\Projects\ZAENIA\core\weather\weather_selector.py =====
+
+from datetime import datetime, time
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+WEATHER_CONFIG_PATH = PROJECT_ROOT / "core" / "weather" / "weather_config.yaml"
+
+
+def load_weather_config() -> dict[str, Any]:
+    if not WEATHER_CONFIG_PATH.exists():
+        raise FileNotFoundError(f"Weather config not found: {WEATHER_CONFIG_PATH}")
+
+    with WEATHER_CONFIG_PATH.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file)
+
+    if not isinstance(data, dict):
+        raise ValueError("weather_config.yaml is empty or invalid.")
+
+    return data
+
+
+def parse_time(value: str) -> time:
+    hour, minute = value.split(":")
+    return time(hour=int(hour), minute=int(minute))
+
+
+def get_now_for_config(config: dict[str, Any]) -> datetime:
+    timezone_name = config.get("weather_system", {}).get("timezone", "America/Los_Angeles")
+    return datetime.now(ZoneInfo(timezone_name))
+
+
+def is_weekday_duty_time(config: dict[str, Any], now: datetime) -> bool:
+    rule = config.get("schedule_rules", {}).get("weekday_duty_hours", {})
+
+    if not rule.get("enabled", False):
+        return False
+
+    current_day = now.strftime("%A")
+    allowed_days = rule.get("days", [])
+
+    if current_day not in allowed_days:
+        return False
+
+    start = parse_time(rule["start_time"])
+    end = parse_time(rule["end_time"])
+
+    current_time = now.time()
+
+    return start <= current_time <= end
+
+
+def select_weather_location() -> dict[str, Any]:
+    config = load_weather_config()
+
+    manual = config.get("manual_override", {})
+    locations = config.get("locations", {})
+
+    if manual.get("enabled"):
+        location_key = manual.get("location_key")
+
+        if location_key and location_key in locations:
+            selected = locations[location_key].copy()
+            selected["source"] = "manual_override"
+            selected["location_key"] = location_key
+            return selected
+
+        custom_lookup = manual.get("custom_lookup_name")
+        custom_name = manual.get("custom_location_name")
+
+        if custom_lookup:
+            return {
+                "name": custom_name or custom_lookup,
+                "display_label": custom_name or custom_lookup,
+                "lookup_name": custom_lookup,
+                "latitude": None,
+                "longitude": None,
+                "source": "manual_override_custom",
+                "location_key": "custom",
+            }
+
+    now = get_now_for_config(config)
+
+    if is_weekday_duty_time(config, now):
+        location_key = config["schedule_rules"]["weekday_duty_hours"]["location_key"]
+    else:
+        location_key = config.get("default_location_key", "off_duty")
+
+    selected = locations[location_key].copy()
+    selected["source"] = "schedule"
+    selected["location_key"] = location_key
+    selected["selected_at"] = now.isoformat()
+
+    return selected
+
+
+def build_location_response(location: dict[str, Any]) -> str:
+    name = location.get("name", "unknown location")
+    label = location.get("display_label", name)
+
+    return f"ZÃ†NIA weather context is set to {label}."
+
+===== C:\Projects\ZAENIA\scripts\generate_carplay_audio.ps1 =====
+
+Set-Location "C:\Projects\ZAENIA"
+
+$env:ELEVENLABS_API_KEY = [Environment]::GetEnvironmentVariable("ELEVENLABS_API_KEY", "User")
+$env:WSDOT_API_KEY = [Environment]::GetEnvironmentVariable("WSDOT_API_KEY", "User")
+
+# Sync Google Calendar iCal feed into ZÃ†NIA's local calendar.
+.\.venv\Scripts\python.exe -m core.google_calendar_sync.google_calendar_sync_main sync --days 2
+
+# Generate the personalized CarPlay MP3.
+.\.venv\Scripts\python.exe -m core.carplay_audio.carplay_audio_main generate
+
+Start-Sleep -Seconds 5
+
+===== C:\Projects\ZAENIA\core\voice_output\voice_config.yaml =====
+
+voice_output:
+  enabled: true
+  provider: "piper"
+
+  fallback_order:
+    - "piper"
+    - "windows"
+
+piper:
+  enabled: true
+
+  model_path: "data/voices/piper/en_US-hfc_female-medium.onnx"
+  config_path: "data/voices/piper/en_US-hfc_female-medium.onnx.json"
+
+  output_file: "data/audio/zaenia_local.wav"
+
+  length_scale: 1.10
+  noise_scale: 0.667
+  noise_w: 0.8
+
+windows:
+  enabled: true
+  rate: 0
+  volume: 100
+
+elevenlabs:
+  enabled: false
+  api_key_env: "ELEVENLABS_API_KEY"
+  voice_id: ""
+  model_id: "eleven_multilingual_v2"
+
+personality:
+  voice_description: "calm, intelligent, feminine, precise, natural"
+
+  rules:
+    - "Do not attach generic motivational phrases."
+    - "Use situational wording only."
+    - "Keep normal confirmations concise."
+    - "Reserve danger language for genuine urgent situations."

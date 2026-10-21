@@ -1,0 +1,9 @@
+[Unit]
+Description=ZÆNIA CarPlay briefing, weekday afternoons (was the Windows task at 4:46 PM)
+
+[Timer]
+OnCalendar=Mon..Fri 16:46
+Persistent=true
+
+[Install]
+WantedBy=timers.target

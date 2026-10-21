@@ -1,0 +1,65 @@
+app:
+  name: "Z.A.E.N.I.A"
+  nickname: "Zay"
+  version: "0.1"
+
+user:
+  full_name: "Zackariah Mullings"
+  call_names: ["Mr. Mullings", "Grey"]
+  loyalty_target: "Zackariah Mullings"
+
+voice:
+  primary: "soft_calm_feminine"
+  secondary: "neutral_androgynous"
+  wake_phrases:
+    - "Z.A.E.N.I.A"
+    - "Zay"
+  language_default: "en-US"
+
+system:
+  mode: "hybrid"   # local + cloud
+  local_broker:
+    host: "localhost"
+    port: 8883
+    tls: true
+    certfile: "secrets/certs/core_server.crt"
+    keyfile: "secrets/certs/core_server.key"
+    cafile: "secrets/certs/ca.crt"
+  cloud_broker:
+    host: "broker.example.com"   # replace with cloud broker if you use one
+    port: 8883
+    tls: true
+    cafile: "secrets/certs/ca.crt"
+  node_connect_timeout: 8   # seconds to try local before falling back
+
+database:
+  type: postgresql
+  host: localhost
+  port: 5432
+  name: zaenia_core
+  user: postgres
+  password: "changeme_securely"
+
+abilities:
+  - speech_recognition
+  - camera_vision
+  - face_detection
+  - emotion_detection
+  - sound_classification
+  - activity_recognition
+  - keyboard_monitoring
+  - sensor_reading
+  - tts
+  - program_control
+  - windows_control
+  - alerts
+  - automation
+  - file_ops
+  - cybersecurity
+  - memory_short_term
+  - memory_long_term
+  - reasoning
+  - scheduling
+  - health_monitoring
+  - entertainment
+  - translation

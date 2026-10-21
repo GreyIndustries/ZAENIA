@@ -1,0 +1,316 @@
+registry:
+  version: 1
+
+  principles:
+    local_files_are_source_of_truth: true
+    registry_does_not_duplicate_runtime_state: true
+    derive_dynamic_state_from_evidence: true
+    core_must_remain_offline_capable: true
+
+  components:
+
+    voice_output:
+      name: "Voice Output"
+      description: "Produces ZÆNIA's spoken responses."
+      role: "speech_output"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "voice"
+        - "speech output"
+        - "talk"
+        - "speak"
+        - "text to speech"
+        - "tts"
+        - "piper"
+
+      provides:
+        - "spoken_audio"
+        - "local_text_to_speech"
+
+      depends_on:
+        - "piper_runtime"
+        - "local_voice_model"
+        - "audio_playback"
+
+      evidence_paths:
+        - "core/voice_output/voice_config.yaml"
+        - "core/voice_output/speaker.py"
+        - "core/conversation_runtime/interruptible_speaker.py"
+
+      state:
+        strategy: "yaml"
+        path: "core/voice_output/voice_config.yaml"
+
+        fields:
+          enabled: "voice_output.enabled"
+          provider: "voice_output.provider"
+          fallback_order: "voice_output.fallback_order"
+          piper_enabled: "piper.enabled"
+          piper_model: "piper.model_path"
+          windows_enabled: "windows.enabled"
+          elevenlabs_enabled: "elevenlabs.enabled"
+
+    voice_input:
+      name: "Voice Input"
+      description: "Listens for and transcribes Zack's speech."
+      role: "speech_input"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "listener"
+        - "microphone"
+        - "speech input"
+        - "speech recognition"
+        - "speech to text"
+        - "stt"
+        - "vosk"
+        - "hear"
+
+      provides:
+        - "microphone_input"
+        - "local_speech_recognition"
+        - "attention_detection"
+
+      depends_on:
+        - "approved_microphone"
+        - "vosk_model"
+
+      evidence_paths:
+        - "core/voice_listener/voice_listener_config.yaml"
+        - "core/voice_listener/voice_listener.py"
+        - "core/voice_listener/cognitive_filter.py"
+
+      state:
+        strategy: "yaml"
+        path: "core/voice_listener/voice_listener_config.yaml"
+
+        fields:
+          enabled: "voice_listener.enabled"
+          mode: "voice_listener.mode.default"
+          speech_engine: "voice_listener.speech.engine"
+          model_path: "voice_listener.speech.model_path"
+          approved_mic_only: "voice_listener.speech.approved_mic_only"
+          execution_requires_attention: "voice_listener.attention.required_for_execution"
+
+    system_awareness:
+      name: "System Awareness"
+      description: "Indexes and retrieves approved ZÆNIA project files."
+      role: "system_grounding"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "filesystem awareness"
+        - "system awareness"
+        - "file retrieval"
+        - "retrieval"
+        - "grounding"
+        - "local files"
+
+      provides:
+        - "filesystem_index"
+        - "lexical_retrieval"
+        - "grounded_system_evidence"
+
+      depends_on:
+        - "approved_filesystem_roots"
+
+      evidence_paths:
+        - "core/brain/system_awareness_config.yaml"
+        - "core/brain/system_index.py"
+        - "core/brain/system_retriever.py"
+        - "core/brain/index_freshness.py"
+
+      state:
+        strategy: "yaml"
+        path: "core/brain/system_awareness_config.yaml"
+
+        fields:
+          enabled: "system_awareness.enabled"
+          index_file: "system_awareness.index_file"
+          local_files_source_of_truth: "system_awareness.grounding.local_files_are_source_of_truth"
+          model_memory_not_system_state: "system_awareness.grounding.model_memory_is_not_system_state"
+
+    semantic_search:
+      name: "Semantic Search"
+      description: "Searches approved local files by meaning using local embeddings."
+      role: "semantic_retrieval"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "semantic search"
+        - "embeddings"
+        - "meaning search"
+        - "semantic retrieval"
+        - "vector search"
+
+      provides:
+        - "local_embeddings"
+        - "semantic_file_search"
+        - "hybrid_retrieval"
+
+      depends_on:
+        - "ollama_local"
+        - "embedding_model"
+        - "system_awareness"
+
+      evidence_paths:
+        - "core/brain/semantic_config.yaml"
+        - "core/brain/local_embeddings.py"
+        - "core/brain/semantic_index.py"
+        - "core/brain/hybrid_retriever.py"
+
+      state:
+        strategy: "yaml"
+        path: "core/brain/semantic_config.yaml"
+
+        fields:
+          enabled: "semantic_search.enabled"
+          provider: "semantic_search.provider"
+          embedding_model: "semantic_search.embedding.model"
+          local_only: "semantic_search.behavior.local_only"
+          internet_required_at_runtime: "semantic_search.behavior.internet_required_at_runtime"
+
+    conversation:
+      name: "Conversation System"
+      description: "Controls conversational engagement and command separation."
+      role: "conversation_control"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "conversation"
+        - "conversation state"
+        - "reply system"
+        - "attention"
+        - "background mode"
+
+      provides:
+        - "conversation_state"
+        - "reply_policy"
+        - "attention_boundary"
+
+      depends_on:
+        - "cognitive_filter"
+
+      evidence_paths:
+        - "core/conversation/reply_rules.yaml"
+        - "core/conversation/reply_engine.py"
+        - "core/conversation/conversation_state.py"
+
+      state:
+        strategy: "yaml"
+        path: "core/conversation/reply_rules.yaml"
+
+        fields:
+          enabled: "conversation.enabled"
+          execution_requires_attention: "conversation.execution_requires_attention_call"
+          background_updates_allowed: "conversation.allow_background_task_updates"
+          urgent_interrupts_allowed: "conversation.allow_urgent_interrupts"
+          default_action: "conversation.response_policy.default_action"
+
+    local_brain:
+      name: "Local Brain"
+      description: "Provides ZÆNIA's local language reasoning and brain routing."
+      role: "reasoning"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "brain"
+        - "qwen"
+        - "ollama"
+        - "reasoning"
+        - "local llm"
+        - "language model"
+
+      provides:
+        - "local_reasoning"
+        - "brain_routing"
+        - "grounded_answer_generation"
+
+      depends_on:
+        - "ollama_local"
+        - "qwen_local_model"
+
+      evidence_paths:
+        - "core/brain/brain_config.yaml"
+        - "core/brain/local_llm.py"
+        - "core/brain/brain_router.py"
+        - "core/brain/grounded_answer.py"
+
+      state:
+        strategy: "evidence_only"
+        paths:
+          - "core/brain/brain_config.yaml"
+          - "core/brain/local_llm.py"
+
+    authentication:
+      name: "Authentication and Rule Engine"
+      description: "Protects owner-only operations and hard security rules."
+      role: "security"
+      scope: "core"
+      local_first: true
+
+      aliases:
+        - "authentication"
+        - "passkey"
+        - "rules"
+        - "rule engine"
+        - "security"
+        - "hard rules"
+
+      provides:
+        - "owner_authentication"
+        - "sensitive_change_reauthentication"
+        - "hard_rule_enforcement"
+
+      depends_on:
+        - "encrypted_local_storage"
+
+      evidence_paths:
+        - "core/foundation/auth/passkey.py"
+        - "core/foundation/auth/voice_passkey.py"
+        - "core/foundation/rules/engine.py"
+        - "core/foundation/rules/vault.py"
+
+      state:
+        strategy: "evidence_only"
+        paths:
+          - "core/foundation/rules/vault.py"
+          - "core/foundation/rules/engine.py"
+
+    carplay_audio:
+      name: "CarPlay Audio"
+      description: "Generates drive-briefing audio for the CarPlay subsystem."
+      role: "carplay_audio"
+      scope: "extension"
+      local_first: false
+
+      aliases:
+        - "carplay"
+        - "carplay audio"
+        - "drive briefing audio"
+        - "startup audio"
+
+      provides:
+        - "carplay_briefing_audio"
+
+      depends_on:
+        - "drive_briefing"
+
+      evidence_paths:
+        - "core/carplay_audio/carplay_audio.py"
+        - "scripts/generate_carplay_audio.ps1"
+        - "core/voice_output/voice_config.yaml"
+
+      state:
+        strategy: "evidence_only"
+        paths:
+          - "core/carplay_audio/carplay_audio.py"
+          - "scripts/generate_carplay_audio.ps1"
+          - "core/voice_output/voice_config.yaml"

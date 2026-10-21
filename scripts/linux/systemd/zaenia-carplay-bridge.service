@@ -1,0 +1,14 @@
+[Unit]
+Description=ZÆNIA OneDrive CarPlay bridge
+
+[Service]
+Type=simple
+WorkingDirectory=@ROOT@
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-%h/.config/zaenia/env
+ExecStart=@ROOT@/.venv/bin/python -m core.carplay_trigger.onedrive_bridge watch --poll 1.0
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

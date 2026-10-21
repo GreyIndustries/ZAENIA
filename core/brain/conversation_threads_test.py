@@ -1,0 +1,93 @@
+import json
+import shutil
+import tempfile
+import unittest
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from core.brain.conversation_threads import ThreadTracker
+
+TOPICS = {"saber": [1.0, 0.0, 0.0], "weather": [0.0, 1.0, 0.0], "pc": [0.0, 0.0, 1.0]}
+
+
+def fake_embed(texts):
+    vectors = []
+    for text in texts:
+        lowered = text.lower()
+        hits = [vec for word, vec in (("saber", TOPICS["saber"]), ("djem", TOPICS["saber"]), ("weather", TOPICS["weather"]),
+                                      ("jacket", TOPICS["weather"]), ("ram", TOPICS["pc"]), ("gpu", TOPICS["pc"])) if word in lowered]
+        vectors.append([sum(v[i] for v in hits) or 0.01 for i in range(3)])
+    return vectors
+
+
+class ThreadTrackerTest(unittest.TestCase):
+    def setUp(self):
+        self.dir = Path(tempfile.mkdtemp())
+        self.memory = self.dir / "memory.jsonl"
+        self.now = datetime(2026, 10, 19, 1, 0, tzinfo=timezone.utc)
+        self.jobs = []
+        self.judged = []
+        self.tracker = ThreadTracker(self.dir / "threads.json", self.memory, embed=fake_embed,
+                                     judge=lambda *args: self.judged.append(args) or None,
+                                     summarize=lambda title, points, text: {"title": "Lightsaber forms", "key_points": ["Grey likes Djem So."]},
+                                     run=self.jobs.append, clock=lambda: self.now)
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def say(self, question, answer="ok", minutes=2):
+        view = self.tracker.route(question)
+        with self.memory.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps({"timestamp": self.now.isoformat(), "role": "user", "content": question}) + "\n")
+            handle.write(json.dumps({"timestamp": self.now.isoformat(), "role": "assistant", "content": answer}) + "\n")
+        self.tracker.record(question, self.now)
+        self.now += timedelta(minutes=minutes)
+        return view
+
+    def test_builds_switches_and_resumes(self):
+        first = self.say("which saber form is aggressive")
+        self.assertEqual(first.decision, "new")
+        follow = self.say("why?")
+        self.assertEqual((follow.decision, len(follow.history)), ("continue", 2))
+        self.assertEqual(self.say("djem so for saber power").decision, "continue")
+        switch = self.say("weather tomorrow")
+        self.assertEqual((switch.decision, switch.history), ("new", []))
+        self.assertIn("Just before this", switch.notes)
+        self.assertEqual(self.say("should I bring a jacket for the weather").decision, "continue")
+        back = self.say("back to saber forms, which fits me")
+        self.assertEqual(back.decision, "resume")
+        self.assertEqual(back.topic_id, first.topic_id)
+        self.assertEqual([row["content"] for row in back.history if row["role"] == "user"][:1], ["which saber form is aggressive"])
+
+    def test_explicit_topic_change_and_long_pause_start_fresh(self):
+        self.say("which saber form is aggressive")
+        self.assertEqual(self.say("new topic: something else entirely").decision, "new")
+        self.say("ram for my pc", minutes=90)
+        self.assertEqual(self.tracker.route("tell me a story").decision, "new")
+
+    def test_key_points_are_kept_and_shown(self):
+        for line in ("saber forms", "djem so saber", "saber stance", "saber again"):
+            self.say(line)
+        self.assertTrue(self.jobs)
+        for job in self.jobs:
+            job()
+        view = self.tracker.route("more about saber djem so")
+        self.assertIn("Grey likes Djem So.", view.notes)
+        self.assertEqual(self.tracker.topics()[0]["title"], "Lightsaber forms")
+
+    def test_unclear_case_asks_the_local_model_and_unsure_keeps_going(self):
+        self.say("which saber form is aggressive")
+        self.tracker.embed = lambda texts: [[1.0, 1.2, 0.0] for _ in texts[:1]] if "saber" not in texts[0] else [[1.0, 0.0, 0.0]]
+        view = self.tracker.route("something kind of related here")
+        self.assertTrue(self.judged)
+        self.assertEqual(view.decision, "continue")
+
+    def test_no_embeddings_keeps_old_behaviour(self):
+        self.say("which saber form is aggressive")
+        self.tracker.embed = lambda texts: (_ for _ in ()).throw(OSError("ollama down"))
+        self.tracker._vectors.clear()
+        self.assertEqual(self.tracker.route("a completely different long question about other things").decision, "continue")
+
+
+if __name__ == "__main__":
+    unittest.main()

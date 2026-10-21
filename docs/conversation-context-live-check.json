@@ -1,0 +1,34 @@
+{
+  "model": "llama3.1:8b",
+  "scope": "Synthetic local-model spot checks; no owner memory or hardware used. Signal checks are limited, not a general comprehension benchmark.",
+  "results": [
+    {
+      "case": "reference",
+      "question": "Why does that one fit better?",
+      "answer": "Maple is generally lighter in color and tone compared to walnut, which makes it a closer match to your preference for a light wood.",
+      "elapsedSeconds": 0.88,
+      "expectedSignalsPresent": true
+    },
+    {
+      "case": "correction",
+      "question": "What is the budget for this project?",
+      "answer": "$450.",
+      "elapsedSeconds": 0.14,
+      "expectedSignalsPresent": true
+    },
+    {
+      "case": "older_constraints",
+      "question": "Back to the desk setup: what constraints did I give?",
+      "answer": "You need to stay under $450 and avoid subscriptions.",
+      "elapsedSeconds": 0.22,
+      "expectedSignalsPresent": true
+    },
+    {
+      "case": "topic_change",
+      "question": "New topic: what is seven times eight?",
+      "answer": "Sir, the product of seven and eight is 56.",
+      "elapsedSeconds": 0.22,
+      "expectedSignalsPresent": true
+    }
+  ]
+}

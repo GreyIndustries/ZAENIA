@@ -1,0 +1,186 @@
+/* Conversation panel on the home dashboard, under the core. */
+.home-chat{
+  position:relative;z-index:6;flex:0 0 clamp(236px,36vh,390px);min-height:0;width:100%;
+  display:flex;flex-direction:column;gap:8px;padding:12px 12px 10px;margin-top:6px;box-sizing:border-box;
+  border-radius:18px;border:1px solid rgba(143,202,255,.5);border-top-color:rgba(255,207,129,.55);
+  background:linear-gradient(160deg,rgba(14,28,50,.84),rgba(4,11,24,.9));
+  box-shadow:0 14px 40px rgba(0,0,0,.35),0 0 24px rgba(0,165,255,.08),inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+}
+.home-chat__head{display:flex;align-items:center;gap:12px;padding:0 4px;min-height:28px}
+.home-chat__title{font-size:10px;font-weight:650;letter-spacing:.2em;color:#ffcf81}
+.home-chat__head small{font-size:9px;letter-spacing:.14em;color:#7f9bb8}
+.home-chat__voice{
+  margin-left:auto;display:inline-flex;align-items:center;gap:7px;height:28px;padding:0 11px;border-radius:14px;cursor:pointer;
+  border:1px solid rgba(143,202,255,.28);background:rgba(10,24,44,.7);color:#9fbcd8;font-size:11px;letter-spacing:.04em;
+}
+.home-chat__voice--on{border-color:rgba(255,191,87,.65);color:#ffd08a;background:rgba(120,72,20,.25);box-shadow:0 0 12px rgba(255,170,60,.18)}
+.home-chat__voice:focus-visible,.message__play:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}
+
+.home-chat__log{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:10px;padding:4px 6px 6px;scrollbar-width:thin}
+.home-chat__item{display:flex;flex-direction:column;gap:10px}
+.home-chat__item>.message--user{align-self:flex-end}
+.home-chat__note{margin:auto 0 2px;font-size:12px;line-height:1.6;color:#94b3cf;text-align:center}
+.home-chat__divider{display:flex;align-items:center;gap:10px;font-size:8px;letter-spacing:.2em;color:#6f8fae}
+.home-chat__divider::before,.home-chat__divider::after{content:"";flex:1;height:1px;background:rgba(143,202,255,.18)}
+.home-chat .message{padding:10px 13px;max-width:min(88%,680px)}
+.home-chat .message>span{display:flex;align-items:baseline;gap:8px}
+.home-chat .message time{font-size:9px;letter-spacing:.04em;color:#6f88a3}
+.home-chat .message p{font-size:13px}
+.message--history{opacity:.82}
+.message--pending p{color:#9fbcd8;font-style:italic}
+.message__play{
+  margin-top:8px;height:26px;padding:0 10px;border-radius:13px;cursor:pointer;font-size:10px;letter-spacing:.08em;
+  border:1px solid rgba(143,202,255,.28);background:rgba(10,24,44,.6);color:#a8d6ff;
+}
+.message__play:hover:not(:disabled){border-color:rgba(255,191,87,.6);color:#ffd08a}
+.message__play:disabled{opacity:.4;cursor:default}
+.home-chat__error{margin:0 6px;font-size:11px;line-height:1.4;color:#ffcfae}
+.home-chat__composer{flex:0 0 auto;margin:0}
+
+/* Phone: the core above, the conversation below, input above the tab bar. */
+.zaenia-app--phone .home-chat{flex:0 0 auto;height:clamp(210px,40dvh,380px);margin-top:4px;padding:10px 8px 8px;border-radius:16px}
+.zaenia-app--phone .home-chat__head small{display:none}
+.zaenia-app--phone .home-chat .message{max-width:92%}
+.zaenia-app--phone .home-chat .message p{font-size:14px}
+.zaenia-app--phone .home-chat__composer input{font-size:16px}
+
+/* Microphone: listen toggle, status strip with level, and the mic button. */
+.home-chat{--mic-level:0}
+.home-chat__strip{display:flex;align-items:center;gap:9px;min-height:26px;padding:3px 8px;margin:0 2px;border-radius:13px;font-size:11px;color:#b9d6f1;background:rgba(92,168,255,.08);border:1px solid rgba(92,168,255,.18)}
+.home-chat__dot{width:8px;height:8px;border-radius:50%;flex:none;background:#5fd38d;box-shadow:0 0 8px rgba(95,211,141,.8)}
+.home-chat__dot--hot{background:#ffb24a;box-shadow:0 0 10px rgba(255,178,74,.9);animation:home-chat-pulse 1s ease-in-out infinite}
+@keyframes home-chat-pulse{50%{transform:scale(1.35)}}
+.home-chat__meter{flex:0 0 64px;height:4px;border-radius:2px;background:rgba(143,202,255,.18);overflow:hidden;margin-left:auto}
+.home-chat__meter i{display:block;height:100%;width:calc(var(--mic-level) * 100%);background:linear-gradient(90deg,#5fd38d,#ffb24a);transition:width .08s linear}
+.home-chat__pc{margin-left:auto;height:24px;padding:0 10px;border-radius:12px;cursor:pointer;font-size:10px;letter-spacing:.06em;color:#ffd08a;background:rgba(120,72,20,.25);border:1px solid rgba(255,191,87,.5)}
+.home-chat__strip .home-chat__meter+.home-chat__pc{margin-left:8px}
+.home-chat__hint{margin:0 6px;font-size:11px;line-height:1.4;color:#a9c3dc}
+.home-chat__listen:disabled{cursor:default;opacity:1}
+.home-chat .home-chat__composer button.home-chat__mic{
+  position:relative;color:#ffd08a;background:rgba(120,72,20,.2);border-color:rgba(255,191,87,.45);
+  box-shadow:0 0 0 calc(var(--mic-level) * 7px) rgba(255,178,74,.25);transition:box-shadow .08s linear}
+.home-chat .home-chat__composer button.home-chat__mic--on{color:#1c1003;background:linear-gradient(180deg,#ffd089,#f2a141);animation:home-chat-pulse-ring 1.4s ease-in-out infinite}
+@keyframes home-chat-pulse-ring{50%{filter:brightness(1.15)}}
+.home-chat__mic:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}
+.zaenia-app--phone .home-chat__voice{height:28px;padding:0 9px;gap:5px;font-size:10px}
+.zaenia-app--phone .home-chat__strip{font-size:12px}
+@media(prefers-reduced-motion:reduce){.home-chat__dot--hot,.home-chat .home-chat__composer button.home-chat__mic--on{animation:none}}
+
+/* Streaming replies and stopping ZÆNIA. */
+.message__caret{display:inline-block;width:7px;height:13px;margin-left:3px;vertical-align:-2px;border-radius:1px;background:#ffcf81;animation:home-chat-caret 1s steps(2,start) infinite}
+@keyframes home-chat-caret{to{visibility:hidden}}
+.message__cut{font-style:normal;font-size:8px;letter-spacing:.16em;color:#ffb68a;padding:1px 6px;border-radius:7px;border:1px solid rgba(255,160,110,.4)}
+.home-chat .home-chat__composer button.home-chat__stop{
+  color:#fff1e6;background:linear-gradient(150deg,#ff8a6a,#d5482f);border-color:rgba(255,150,120,.7);
+  box-shadow:0 0 14px rgba(255,110,80,.35)}
+.home-chat__stop:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.message__caret{animation:none}}
+
+/* Concrete actions proposed by the server; saving always needs a button press. */
+.message-action{display:flex;flex-direction:column;gap:8px;margin-top:12px;padding:12px;border:1px solid rgba(255,207,129,.35);border-radius:12px;background:rgba(9,22,39,.8)}
+.message-action__eyebrow{font-size:9px;letter-spacing:.12em;color:#ffcf81}
+.message-action>strong{font-size:13px;line-height:1.5;overflow-wrap:anywhere;color:#e0efff}
+.message-action dl{display:flex;flex-direction:column;gap:5px;margin:0;font-size:12px;line-height:1.5}
+.message-action dl>div{display:flex;gap:10px}
+.message-action dt{flex:0 0 48px;color:#8dacc8}
+.message-action dd{margin:0;color:#c9dff3;overflow-wrap:anywhere}
+.message-action>small{font-size:11px;line-height:1.5;color:#9ab4ce}
+.message-action__buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:2px}
+.message-action__buttons button{min-height:34px;padding:6px 12px;border-radius:9px;border:1px solid rgba(255,207,129,.5);background:rgba(120,72,20,.24);color:#ffdc9d;font:inherit;font-size:12px;cursor:pointer}
+.message-action__buttons button+button{border-color:rgba(143,202,255,.3);background:rgba(10,24,44,.7);color:#b6d0e7}
+.message-action__buttons button:hover:not(:disabled){border-color:#ffcf81;background:rgba(120,72,20,.4)}
+.message-action__buttons button:focus-visible{outline:2px solid #ffd58f;outline-offset:3px}
+.message-action__buttons button:disabled{cursor:default;opacity:.5}
+.home-chat .message .message-action__status{margin:0;font-size:12px;line-height:1.5;color:#ffcfae}
+.message-action--succeeded{border-color:rgba(95,211,141,.45)}
+.message-action--succeeded .message-action__eyebrow{color:#9ce4b6}
+.message-action--dismissed{opacity:.65}
+
+/* Floating conversation: no panel. The input bar stays; ZÆNIA's words and
+   yours hover over the UI as transparent text and fade with age. */
+.zaenia-app .main-stage .home-chat.home-chat--float{
+  flex:0 0 auto;min-height:0;height:auto;gap:6px;padding:0;margin-top:auto;
+  background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;opacity:1;
+}
+.home-chat--float .home-chat__head{position:absolute;right:4px;bottom:calc(100% + 6px);z-index:2;min-height:0;gap:8px;padding:0}
+.home-chat--float .home-chat__head .home-chat__voice{margin-left:0;height:26px;background:rgba(6,14,28,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.home-chat--float .home-chat__log{
+  position:absolute;left:0;right:0;bottom:calc(100% + 40px);z-index:1;max-height:min(46vh,420px);
+  overflow:hidden;justify-content:flex-end;gap:12px;padding:0 6px;pointer-events:none;
+  mask-image:linear-gradient(to bottom,transparent 0,#000 18%);-webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18%);
+}
+.home-chat--float .message{
+  max-width:min(78%,720px);padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none;
+  transition:opacity 1s linear;
+}
+.home-chat--float .message p{font-size:15px;line-height:1.55;color:#eef6ff;text-shadow:0 1px 2px rgba(0,0,0,.9),0 0 14px rgba(0,0,0,.75)}
+.home-chat--float .message>span{font-size:9px;letter-spacing:.2em;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.home-chat--float .message--assistant>span{color:#ffcf81}
+.home-chat--float .message--user{align-self:flex-end;text-align:right}
+.home-chat--float .message--user>span{justify-content:flex-end;color:#8fc3ff}
+.home-chat--float .message--user p{color:#cfe6ff}
+.home-chat--float .message--error p{color:#ffcfae}
+.home-chat--float .message--pending p{color:#ffd9a3;font-style:italic}
+/* Only real controls take clicks; the words never block the page underneath. */
+.home-chat--float .message-action,.home-chat--float .message__play{pointer-events:auto}
+.home-chat--float .message-action{background:rgba(6,14,28,.72);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.home-chat--float .home-chat__strip{background:none;border:0;padding:0 6px;min-height:18px;font-size:10px;text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.home-chat--float .home-chat__composer{
+  background:rgba(6,14,28,.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.home-chat--float .home-chat__hint,.home-chat--float .home-chat__error{text-shadow:0 1px 2px rgba(0,0,0,.9)}
+.zaenia-app--phone .main-stage .home-chat.home-chat--float{height:auto;flex:0 0 auto;min-height:0}
+.zaenia-app--phone .home-chat--float .message{max-width:92%}
+@media(prefers-reduced-motion:reduce){.home-chat--float .message{transition:none}}
+/* On busy pages (tasks, calendar…) a soft fade behind the words keeps them
+   readable without bringing back a box; it is only there while lines show. */
+.main-stage:not(.main-stage--overview) .home-chat--float .home-chat__log{max-height:min(32vh,300px);padding:28px 10px 6px}
+.main-stage:not(.main-stage--overview) .home-chat--float .home-chat__log:has(.message){
+  background:radial-gradient(ellipse 75% 100% at 50% 100%,rgba(3,8,18,.88),rgba(3,8,18,.55) 55%,transparent 100%)}
+/* Words over open windows get the same soft fade behind them. */
+.os-layer:has(.os-window) ~ .home-chat--float .home-chat__log{padding:28px 10px 6px}
+.os-layer:has(.os-window) ~ .home-chat--float .home-chat__log:has(.message){
+  background:radial-gradient(ellipse 75% 100% at 50% 100%,rgba(3,8,18,.88),rgba(3,8,18,.55) 55%,transparent 100%)}
+
+/* Each reply is its own see-through card in a narrow column on the right, so
+   the conversation never covers the window you're working in. */
+.home-chat--float .home-chat__log{left:auto;right:0;width:min(400px,38%);padding:0 2px;gap:8px;mask-image:none;-webkit-mask-image:none}
+.os-layer:has(.os-window) ~ .home-chat--float .home-chat__log,
+.main-stage:not(.main-stage--overview) .home-chat--float .home-chat__log{padding:0 2px}
+.os-layer:has(.os-window) ~ .home-chat--float .home-chat__log:has(.message),
+.main-stage:not(.main-stage--overview) .home-chat--float .home-chat__log:has(.message){background:none}
+.home-chat--float .message{
+  max-width:100%;padding:8px 12px;border-radius:12px;
+  background:rgba(8,18,34,.42);border:1px solid rgba(143,202,255,.18);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);pointer-events:auto;
+}
+.home-chat--float .message--assistant{border-left:2px solid rgba(255,191,87,.6)}
+.home-chat--float .message--user{border-right:2px solid rgba(92,168,255,.6)}
+.home-chat--float .message p{font-size:13.5px;text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.home-chat--float .home-chat__head{right:0}
+/* While windows are open the core docks top-left and the reply cards stack in
+   the free column under it, so they never sit on top of your work. */
+.progress-stage--top-left~.home-chat--float .home-chat__log,
+.progress-stage--left~.home-chat--float .home-chat__log,
+.progress-stage--bottom-left~.home-chat--float .home-chat__log{left:0;right:auto;width:min(330px,30%);max-height:min(48vh,440px)}
+.home-chat__photos{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px solid rgba(143,202,255,.25);border-radius:12px;background:rgba(8,18,34,.92);font-size:12px;pointer-events:auto;margin-bottom:8px}
+.home-chat__photo-list,.message__photos{display:flex;gap:6px;flex-wrap:wrap}
+.home-chat__photo{position:relative}
+.home-chat__photo img{width:56px;height:56px;object-fit:cover;border-radius:7px}
+.home-chat__photo button{position:absolute;right:-4px;top:-4px;border-radius:50%;background:#15263d;color:white;border:1px solid #6692bc;cursor:pointer}
+.home-chat__photos>span{flex:1;min-width:130px;color:#d3e4f5}
+.home-chat__photos>button{color:#b9ddff;background:transparent;border:1px solid #527393;border-radius:6px;padding:6px;cursor:pointer}
+.message__photos img{max-width:120px;max-height:100px;object-fit:contain;border-radius:6px}
+.chat-dock input[type=file][hidden]{display:none}
+
+/* Shared files: chips above the chat bar, drop zone, and file names on messages. */
+.home-chat__file-list{display:flex;gap:6px;flex-wrap:wrap}
+.home-chat__file{display:inline-flex;align-items:center;gap:6px;max-width:240px;padding:5px 8px;border:1px solid rgba(143,202,255,.3);border-radius:8px;background:rgba(18,36,60,.9);color:#d3e4f5}
+.home-chat__file>span{display:flex;flex-direction:column;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.home-chat__file small{color:#8fb0cf;font-size:10px}
+.home-chat__file button{background:transparent;border:0;color:#b9ddff;cursor:pointer;font-size:14px;line-height:1;padding:0 2px}
+.home-chat__dropzone{pointer-events:none;margin-bottom:8px;padding:18px;border:1.5px dashed rgba(143,202,255,.7);border-radius:12px;background:rgba(8,18,34,.85);color:#d3e4f5;text-align:center;font-size:13px}
+.home-chat--drop .chat-dock{border-color:rgba(143,202,255,.8)}
+.message__files{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.message__file{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#b9d4ee;padding:2px 6px;border:1px solid rgba(143,202,255,.25);border-radius:6px}

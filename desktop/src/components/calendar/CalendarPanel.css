@@ -1,0 +1,43 @@
+/* Calendar tab on real data (extends the base calendar-* styles). */
+.cal-panel__grid--loading{opacity:.6;transition:opacity .2s}
+.cal-panel .calendar-day{display:grid;place-items:center}
+.cal-panel__day--outside{opacity:.42}
+.cal-panel__day--today{box-shadow:inset 0 0 0 1px rgba(143,202,255,.7)}
+.cal-panel__count{position:absolute;top:2px;right:4px;font-size:8px;color:#ffcf81}
+.cal-panel__status-dot{position:absolute;bottom:3px;left:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:#ffcf81}
+.cal-panel__notice{margin:-8px 0 12px;font-size:11px;color:#9fbcd8}
+.cal-panel__error{margin:-6px 0 12px;padding:9px 12px;border-radius:8px;font-size:12px;color:#ffd9c2;background:rgba(255,110,60,.12);border:1px solid rgba(255,130,80,.4)}
+.cal-panel__dayhead{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.cal-panel__dayhead strong{font-size:13px;color:#c7daf2}
+.cal-panel__duty{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#ffcf81;border:1px solid rgba(255,191,87,.35);border-radius:10px;padding:3px 8px}
+.cal-panel__duty-form{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin:10px 0 15px;padding:12px;border:1px solid rgba(255,191,87,.23);border-radius:10px;background:rgba(10,24,42,.5)}
+.cal-panel__duty-form label{display:grid;gap:5px;flex:1;min-width:160px;font-size:12px;color:#c7daf2}.cal-panel__duty-form select{width:100%;border:1px solid rgba(143,202,255,.3);border-radius:7px;padding:8px;background:#0b1b2c;color:#edf3fa;font:inherit}.cal-panel__duty-form button{border:1px solid rgba(255,191,87,.4);border-radius:7px;background:rgba(135,85,24,.2);color:#ffd28c;padding:8px 12px;cursor:pointer}.cal-panel__duty-form button:disabled{opacity:.45;cursor:default}.cal-panel__duty-form small{flex-basis:100%;font-size:11px;line-height:1.5;color:#92abc4}
+.cal-panel__empty{margin:6px 0 14px;font-size:12px;color:#8fa6c0}
+.cal-panel__list{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:6px}
+.cal-panel__event{display:grid;grid-template-columns:74px minmax(0,1fr) auto auto;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+  background:rgba(9,25,42,.6);border:1px solid rgba(116,144,185,.14);border-left:3px solid rgba(143,202,255,.6)}
+.cal-panel__event--zaenia{border-left-color:#ffb24a}
+.cal-panel__event--google{border-left-color:#7fb4ff}
+.cal-panel__event--draft{border-left-color:#8a7a62;border-style:dashed;grid-template-columns:74px minmax(0,1fr) auto}
+.cal-panel__time{font-size:12px;color:#dfe9f6;font-variant-numeric:tabular-nums;display:flex;flex-direction:column}
+.cal-panel__time small{font-size:10px;color:#8fa6c0}
+.cal-panel__body{min-width:0;display:flex;flex-direction:column;gap:3px}
+.cal-panel__body strong{font-size:13px;font-weight:550;color:#eef4fc;overflow-wrap:anywhere}
+.cal-panel__body small{font-size:11px;color:#8fa6c0;overflow-wrap:anywhere}
+.cal-panel__source{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:9px;color:#b2c5dd;background:#1b2a3d;white-space:nowrap}
+.cal-panel__source--zaenia{color:#ffd28c;background:#3a2a17}
+.cal-panel__source--google{color:#bcd8ff;background:#1b2d4a}
+.cal-panel__delete{min-width:34px;height:30px;padding:0 8px;border-radius:8px;cursor:pointer;color:#ffc9a8;background:rgba(255,110,60,.06);border:1px solid rgba(255,140,90,.3);font-size:12px}
+.cal-panel__delete--confirm{background:rgba(255,110,60,.22);border-color:rgba(255,140,90,.75);color:#ffe3d2}
+.cal-panel__draft-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.cal-panel__draft-actions button{height:30px;padding:0 10px;border-radius:8px;cursor:pointer;font-size:11px;color:#f7c17b;background:rgba(216,151,63,.12);border:1px solid rgba(230,168,74,.35)}
+.cal-panel__form input[type=time]{flex:0 0 118px;color-scheme:dark}
+.cal-panel__form select{flex:0 0 96px}
+.cal-panel__foot{margin:4px 0 0;font-size:11px;line-height:1.5;color:#7f93ad}
+.cal-panel :focus-visible{outline:2px solid #ffc16e;outline-offset:2px}
+@media(max-width:760px){
+  .cal-panel__event{grid-template-columns:62px minmax(0,1fr) auto}
+  .cal-panel__source{display:none}
+  .cal-panel__form input:first-child{flex-basis:100%}
+  .cal-panel__form input,.cal-panel__form select{font-size:16px}
+}

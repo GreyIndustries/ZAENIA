@@ -1,0 +1,510 @@
+:root {
+  --zae-blue: #0d3f73;
+  --zae-blue-bright: #39a8ff;
+  --zae-blue-soft: rgba(57, 168, 255, 0.28);
+
+  --zae-amber: #ff9d2e;
+  --zae-amber-bright: #ffb347;
+  --zae-amber-soft: rgba(255, 157, 46, 0.30);
+
+  --zae-white-soft: rgba(255, 255, 255, 0.75);
+}
+
+.living-core-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.living-core-shell {
+  position: relative;
+  width: 520px;
+  height: 520px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center;
+  animation: coreBreath 7.5s ease-in-out infinite;
+}
+
+/* -------------------- AURAS -------------------- */
+
+.core-aura {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(28px);
+  pointer-events: none;
+}
+
+.aura-outer {
+  width: 430px;
+  height: 430px;
+  background:
+    radial-gradient(circle,
+      rgba(57, 168, 255, 0.10) 0%,
+      rgba(57, 168, 255, 0.06) 35%,
+      rgba(255, 157, 46, 0.06) 62%,
+      transparent 78%);
+  animation: auraPulseOuter 7.5s ease-in-out infinite;
+}
+
+.aura-mid {
+  width: 320px;
+  height: 320px;
+  background:
+    radial-gradient(circle,
+      rgba(57, 168, 255, 0.18) 0%,
+      rgba(57, 168, 255, 0.10) 36%,
+      rgba(255, 157, 46, 0.10) 60%,
+      transparent 75%);
+  animation: auraPulseMid 7.5s ease-in-out infinite;
+}
+
+.aura-inner {
+  width: 250px;
+  height: 250px;
+  background:
+    radial-gradient(circle,
+      rgba(57, 168, 255, 0.20) 0%,
+      rgba(255, 157, 46, 0.18) 42%,
+      transparent 72%);
+  filter: blur(18px);
+  animation: auraPulseInner 7.5s ease-in-out infinite;
+}
+
+/* -------------------- PLANET BODY -------------------- */
+
+.planet-body {
+  position: absolute;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 38% 30%,
+      rgba(78, 177, 255, 0.96) 0%,
+      rgba(32, 112, 198, 0.94) 30%,
+      rgba(10, 42, 82, 0.96) 68%,
+      rgba(4, 18, 36, 1) 100%);
+  box-shadow:
+    0 0 12px rgba(57, 168, 255, 0.28),
+    0 0 40px rgba(57, 168, 255, 0.22),
+    0 0 80px rgba(255, 157, 46, 0.08);
+  animation:
+    planetBreath 7.5s ease-in-out infinite,
+    planetRotate 30s linear infinite;
+}
+
+.planet-sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 28%,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(255, 255, 255, 0.10) 16%,
+      transparent 38%);
+  mix-blend-mode: screen;
+}
+
+.planet-energy {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  opacity: 0.46;
+  mix-blend-mode: screen;
+}
+
+.planet-energy-1 {
+  background:
+    radial-gradient(circle at 68% 48%, rgba(255, 159, 53, 0.20), transparent 22%),
+    radial-gradient(circle at 42% 66%, rgba(67, 174, 255, 0.16), transparent 28%),
+    linear-gradient(135deg, transparent 15%, rgba(57, 168, 255, 0.11) 30%, transparent 46%, rgba(255, 157, 46, 0.10) 62%, transparent 78%);
+  animation: energyDrift1 12s ease-in-out infinite alternate;
+}
+
+.planet-energy-2 {
+  background:
+    linear-gradient(45deg, transparent 18%, rgba(255, 157, 46, 0.08) 38%, transparent 54%, rgba(57, 168, 255, 0.08) 70%, transparent 84%);
+  animation: energyDrift2 14s ease-in-out infinite alternate;
+}
+
+.planet-energy-3 {
+  background:
+    radial-gradient(circle at 54% 38%, rgba(57, 168, 255, 0.12), transparent 30%),
+    radial-gradient(circle at 52% 58%, rgba(255, 166, 76, 0.14), transparent 32%);
+  animation: energyDrift3 10s ease-in-out infinite alternate;
+}
+
+/* -------------------- NUCLEUS -------------------- */
+
+.nucleus-wrap {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 96px;
+  height: 96px;
+  transform: translate(-50%, -50%);
+  animation: heartbeatShell 3.4s infinite;
+}
+
+.nucleus-glow {
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      rgba(255, 215, 122, 0.40) 0%,
+      rgba(255, 164, 62, 0.28) 34%,
+      rgba(255, 128, 0, 0.14) 55%,
+      transparent 75%);
+  filter: blur(10px);
+  animation: heartbeatGlow 3.4s infinite;
+}
+
+.nucleus-core {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      rgba(255, 250, 225, 0.98) 0%,
+      rgba(255, 207, 108, 0.95) 24%,
+      rgba(255, 157, 46, 0.92) 54%,
+      rgba(255, 108, 0, 0.88) 100%);
+  box-shadow:
+    0 0 10px rgba(255, 210, 126, 0.6),
+    0 0 24px rgba(255, 170, 72, 0.5),
+    0 0 46px rgba(255, 140, 45, 0.38);
+  animation: heartbeatCore 3.4s infinite;
+}
+
+.nucleus-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 88px;
+  height: 88px;
+  border: 1.5px solid rgba(255, 214, 161, 0.42);
+  border-radius: 50%;
+  transform-origin: center;
+  mix-blend-mode: screen;
+  animation: heartbeatRing 3.4s infinite;
+}
+
+.ring-a {
+  transform: translate(-50%, -50%) rotate(18deg) scaleX(1.18) scaleY(0.54);
+}
+
+.ring-b {
+  transform: translate(-50%, -50%) rotate(72deg) scaleX(1.08) scaleY(0.50);
+}
+
+.ring-c {
+  transform: translate(-50%, -50%) rotate(-28deg) scaleX(1.26) scaleY(0.42);
+}
+
+/* -------------------- SATURN-LIKE ORBIT BAND -------------------- */
+
+.orbit-band {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 390px;
+  height: 142px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.orbit-band-main {
+  border: 0;
+  background:
+    radial-gradient(ellipse at center,
+      transparent 55%,
+      rgba(57, 168, 255, 0.85) 60%,
+      rgba(255, 170, 72, 0.90) 63%,
+      rgba(255, 235, 210, 0.92) 64%,
+      rgba(255, 170, 72, 0.88) 66%,
+      rgba(57, 168, 255, 0.75) 70%,
+      transparent 75%);
+  filter: blur(0.5px);
+  opacity: 0.94;
+  transform: translate(-50%, -50%) rotate(8deg);
+  animation: orbitBandPulse 7.5s ease-in-out infinite;
+}
+
+.orbit-band-rear {
+  width: 360px;
+  height: 116px;
+  border: 1px solid rgba(106, 194, 255, 0.14);
+  opacity: 0.55;
+  transform: translate(-50%, -50%) rotate(8deg);
+}
+
+/* -------------------- ATOMIC ARCS -------------------- */
+
+.atomic-arc {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 360px;
+  height: 160px;
+  border: 1.2px solid rgba(255, 243, 225, 0.38);
+  border-radius: 50%;
+  transform-origin: center;
+  mix-blend-mode: screen;
+  filter: drop-shadow(0 0 5px rgba(255, 239, 220, 0.18));
+  animation: arcPresence 7.5s ease-in-out infinite;
+}
+
+.arc-1 {
+  transform: translate(-50%, -50%) rotate(18deg);
+}
+
+.arc-2 {
+  transform: translate(-50%, -50%) rotate(102deg);
+}
+
+.arc-3 {
+  transform: translate(-50%, -50%) rotate(-54deg);
+}
+
+/* -------------------- ANIMATIONS -------------------- */
+
+@keyframes coreBreath {
+  0%,
+  100% {
+    transform: scale(0.985);
+  }
+  50% {
+    transform: scale(1.015);
+  }
+}
+
+@keyframes planetBreath {
+  0%,
+  100% {
+    box-shadow:
+      0 0 12px rgba(57, 168, 255, 0.28),
+      0 0 40px rgba(57, 168, 255, 0.22),
+      0 0 80px rgba(255, 157, 46, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(57, 168, 255, 0.36),
+      0 0 64px rgba(57, 168, 255, 0.28),
+      0 0 105px rgba(255, 157, 46, 0.14);
+  }
+}
+
+@keyframes planetRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auraPulseOuter {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.70;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes auraPulseMid {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.74;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes auraPulseInner {
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.80;
+    transform: scale(1.04);
+  }
+}
+
+/* Slightly irregular heartbeat */
+@keyframes heartbeatShell {
+  0%,
+  18%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  20% {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+
+  24% {
+    transform: translate(-50%, -50%) scale(0.99);
+  }
+
+  29% {
+    transform: translate(-50%, -50%) scale(1.09);
+  }
+
+  36% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  68% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  73% {
+    transform: translate(-50%, -50%) scale(1.03);
+  }
+
+  79% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes heartbeatCore {
+  0%,
+  18%,
+  100% {
+    filter: brightness(1);
+  }
+
+  20% {
+    filter: brightness(1.18);
+  }
+
+  29% {
+    filter: brightness(1.28);
+  }
+
+  36% {
+    filter: brightness(1.02);
+  }
+
+  73% {
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes heartbeatGlow {
+  0%,
+  18%,
+  100% {
+    opacity: 0.72;
+    transform: scale(1);
+  }
+
+  20% {
+    opacity: 0.95;
+    transform: scale(1.08);
+  }
+
+  29% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+
+  36% {
+    opacity: 0.76;
+    transform: scale(1.01);
+  }
+
+  73% {
+    opacity: 0.86;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes heartbeatRing {
+  0%,
+  18%,
+  100% {
+    opacity: 0.60;
+  }
+
+  20% {
+    opacity: 0.82;
+  }
+
+  29% {
+    opacity: 0.96;
+  }
+
+  36% {
+    opacity: 0.62;
+  }
+
+  73% {
+    opacity: 0.74;
+  }
+}
+
+@keyframes orbitBandPulse {
+  0%,
+  100% {
+    opacity: 0.88;
+    filter: blur(0.5px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+}
+
+@keyframes arcPresence {
+  0%,
+  100% {
+    opacity: 0.50;
+  }
+  50% {
+    opacity: 0.76;
+  }
+}
+
+@keyframes energyDrift1 {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(14deg) scale(1.04);
+  }
+}
+
+@keyframes energyDrift2 {
+  0% {
+    transform: rotate(0deg) translateX(0px);
+  }
+  100% {
+    transform: rotate(-10deg) translateX(4px);
+  }
+}
+
+@keyframes energyDrift3 {
+  0% {
+    transform: scale(1) translateY(0px);
+  }
+  100% {
+    transform: scale(1.03) translateY(-3px);
+  }
+}

@@ -1,0 +1,85 @@
+system_awareness:
+  enabled: true
+
+  index_file: "data/system_awareness/system_index.json"
+
+  roots:
+    - label: "zaenia"
+      path: "C:/Projects/ZAENIA"
+      recursive: true
+
+  indexing:
+    max_file_bytes: 262144
+    include_file_content: true
+
+    text_extensions:
+      - ".py"
+      - ".yaml"
+      - ".yml"
+      - ".json"
+      - ".jsonl"
+      - ".txt"
+      - ".md"
+      - ".ps1"
+      - ".toml"
+      - ".ini"
+      - ".cfg"
+      - ".sql"
+      - ".html"
+      - ".css"
+      - ".js"
+      - ".jsx"
+      - ".ts"
+      - ".tsx"
+      - ".rs"
+
+  ignore_directories:
+    - ".venv*"
+    - "venv"
+    - "env"
+    - ".git"
+    - "__pycache__"
+    - "node_modules"
+    - ".pytest_cache"
+    - ".mypy_cache"
+    - ".ruff_cache"
+    - "build"
+    - "dist"
+    - "restore_check"
+    - "data/audio"
+    - "data/models"
+    - "data/voices"
+    - "data/secure"
+    - "data/system_awareness"
+
+  ignore_files:
+    - ".env"
+    - ".env.local"
+    - ".env.production"
+
+  ignore_globs:
+    - "*.pem"
+    - "*.key"
+    - "*.p12"
+    - "*.pfx"
+    - "*credentials*.json"
+    - "*token*.json"
+    - "data/google_calendar/google_calendar_ics_url.txt"
+
+  metadata_only_globs:
+    - "data/*.jsonl"
+    - "data/conversation_memory.jsonl"
+    - "data/conversation_state.json"
+    - "data/voice_context_state.json"
+    - "data/briefing_history.json"
+    - "data/console_history.jsonl"
+
+  privacy:
+    store_secret_contents: false
+    index_raw_audio: false
+    index_model_files: false
+    index_virtual_environment: false
+
+  grounding:
+    local_files_are_source_of_truth: true
+    model_memory_is_not_system_state: true

@@ -1,0 +1,61 @@
+/* Phone web app: first-run token screen over the hangar backdrop. */
+.phone-connect{
+  position:relative;min-height:100vh;min-height:100dvh;overflow:hidden;isolation:isolate;
+  font-family:Inter,"Segoe UI",system-ui,sans-serif;color:#edf2ff;background:#03070f;
+}
+.phone-connect__body{
+  position:relative;z-index:1;box-sizing:border-box;min-height:100vh;min-height:100dvh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  background:radial-gradient(ellipse 80% 55% at 50% 40%,rgba(3,8,18,.25),rgba(3,8,18,.82) 78%);
+}
+
+/* A small procedural core: amber nucleus inside a blue rim. */
+.phone-connect__mark{
+  width:92px;height:92px;border-radius:50%;display:grid;place-items:center;margin-bottom:4px;
+  background:radial-gradient(circle at 50% 50%,rgba(255,170,70,.32),rgba(8,16,32,.9) 64%);
+  border:1.5px solid rgba(110,175,240,.55);
+  box-shadow:0 0 28px rgba(92,168,255,.28),0 0 70px rgba(255,150,50,.14),inset 0 0 22px rgba(92,168,255,.22);
+}
+.phone-connect__mark span{
+  width:24px;height:24px;border-radius:50%;
+  background:radial-gradient(circle,#fff5de 0%,#ffc768 40%,rgba(255,140,40,0) 72%);
+  box-shadow:0 0 22px rgba(255,170,60,.9),0 0 46px rgba(255,140,40,.5);
+  animation:phone-connect-pulse 3.6s ease-in-out infinite;
+}
+@keyframes phone-connect-pulse{0%,100%{transform:scale(1);opacity:.92}50%{transform:scale(1.12);opacity:1}}
+
+.phone-connect__brand{margin:0;font-size:30px;font-weight:700;letter-spacing:.32em;padding-left:.32em;line-height:1.1;color:#fff5de;text-shadow:0 0 18px rgba(255,170,60,.45)}
+.phone-connect__lede{margin:0 0 8px;font-size:15px;line-height:1.45;text-align:center;color:#c4d4e6;max-width:320px}
+
+.phone-connect__card{
+  box-sizing:border-box;width:100%;max-width:380px;display:flex;flex-direction:column;gap:10px;padding:20px 18px 18px;border-radius:18px;
+  background:linear-gradient(135deg,rgba(20,40,68,.7),rgba(4,10,22,.86));
+  border:1px solid rgba(110,175,240,.26);border-top-color:rgba(170,215,255,.4);
+  box-shadow:0 18px 44px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.05);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+}
+.phone-connect__card label{font-size:10px;font-weight:650;letter-spacing:.22em;color:#9fc4ea}
+.phone-connect__field{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 14px;border-radius:12px;background:rgba(2,7,16,.78);border:1px solid rgba(143,202,255,.3)}
+.phone-connect__field:focus-within{border-color:rgba(255,190,100,.75);box-shadow:0 0 0 3px rgba(255,170,60,.16)}
+/* 16px keeps iOS from zooming the page when the field is focused. */
+.phone-connect__field input{flex:1;min-width:0;height:44px;border:0;outline:0;background:none;color:#f3f7ff;font:500 16px/1.2 ui-monospace,"SF Mono",Menlo,Consolas,monospace;letter-spacing:.02em}
+.phone-connect__field input::placeholder{font-family:Inter,"Segoe UI",system-ui,sans-serif;letter-spacing:0;color:#6f84a0}
+.phone-connect__reveal{flex:none;min-width:58px;height:44px;border:0;border-radius:9px;background:rgba(92,168,255,.1);color:#a8d6ff;font-size:10px;font-weight:650;letter-spacing:.16em;cursor:pointer}
+.phone-connect__reveal:focus-visible,.phone-connect__submit:focus-visible{outline:2px solid #ffd58f;outline-offset:3px}
+.phone-connect__help{margin:0;font-size:12px;line-height:1.5;color:#8fa5bc}
+.phone-connect__message{margin:2px 0 0;padding:10px 12px;border-radius:10px;font-size:13px;line-height:1.45;color:#d9e8f8;background:rgba(92,168,255,.1);border:1px solid rgba(92,168,255,.28)}
+.phone-connect__message--error{color:#ffd9c2;background:rgba(255,110,60,.12);border-color:rgba(255,130,80,.4)}
+.phone-connect__submit{
+  margin-top:4px;height:50px;border-radius:12px;cursor:pointer;
+  border:1px solid rgba(255,190,100,.7);color:#1c1003;font-size:15px;font-weight:700;letter-spacing:.04em;
+  background:linear-gradient(180deg,#ffd089,#f2a141);box-shadow:0 0 24px rgba(255,160,50,.35);
+}
+.phone-connect__submit:disabled{cursor:not-allowed;color:#8a7a62;background:rgba(255,190,100,.12);border-color:rgba(255,190,100,.25);box-shadow:none}
+.phone-connect__foot{margin:6px 0 0;max-width:320px;text-align:center;font-size:11px;line-height:1.5;color:#7f93ad}
+
+@media(prefers-reduced-motion:reduce){.phone-connect__mark span{animation:none}}
+
+.phone-connect__phrase{margin:0;padding:15px;border:1px solid rgba(255,190,100,.45);border-radius:10px;font-size:20px;line-height:1.65;word-spacing:.3em;color:#ffe0aa;background:rgba(255,170,60,.07)}
+.phone-connect__cancel{align-self:center;min-height:44px;padding:8px 18px;color:#a8c4df;background:transparent;border:1px solid #38516b;border-radius:9px;cursor:pointer}
+.phone-connect__cancel:focus-visible{outline:2px solid #ffd58f;outline-offset:3px}

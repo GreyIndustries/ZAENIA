@@ -1,0 +1,17 @@
+{
+  "name": "ZÆNIA",
+  "short_name": "ZÆNIA",
+  "description": "Zack's Ædaptive, Neural, Intelligent Agent — status and chat from your PC.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#030711",
+  "theme_color": "#030711",
+  "icons": [
+    { "src": "icons/zaenia-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/zaenia-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/zaenia-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

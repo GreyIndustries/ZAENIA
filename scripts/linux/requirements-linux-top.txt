@@ -1,0 +1,34 @@
+# Fallback if a pinned version in requirements-linux.txt can't be installed:
+# the same packages without pins (newest versions).
+argon2-cffi
+cryptography
+fastapi
+uvicorn
+pydantic
+starlette
+requests
+pyyaml
+icalendar
+recurring-ical-events
+x-wr-timezone
+numpy
+scipy
+psutil
+rich
+typer
+vosk
+piper-tts
+onnxruntime
+sounddevice
+soundfile
+speechbrain
+silero-vad
+pygame
+huggingface-hub
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+psycopg2-binary
+python-dotenv
+httpx
+websockets

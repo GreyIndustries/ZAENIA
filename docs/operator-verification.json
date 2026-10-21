@@ -1,0 +1,43 @@
+{
+  "checkedAt": "2026-10-18T18:12:11+00:00",
+  "apiVersion": "0.9.0",
+  "lastObservedRunningApiVersion": "0.8.0",
+  "normalAuthenticatedRestartRequired": true,
+  "backendChecks": 305,
+  "frontendChecks": 181,
+  "builds": [
+    {
+      "path": "desktop/src-tauri/target/release/desktop.exe",
+      "bytes": 26682880,
+      "sha256": "e13933c890d17f19bcae6e280e21886b99a3c33880cd02538f806aaa5fc19e9e"
+    },
+    {
+      "path": "desktop/dist/index.html",
+      "bytes": 1085,
+      "sha256": "10408689dafc50c2f5f36e2488806943a81aae7f2be08145b081dfbcc96b8cfc"
+    },
+    {
+      "path": "desktop/dist-web/index.html",
+      "bytes": 1105,
+      "sha256": "5ead081cf8ffb8f7bfb44164a9c70ed33bf56d94d6c32afa0c0ff976f1f1cfba"
+    }
+  ],
+  "sourceSnapshot": {
+    "files": 350,
+    "bytes": 2481689,
+    "sha256": "a2ee860408fec461102eb79ec94419b96672ace88e7acc8e3e9c56cfc3139f73",
+    "status": "snapshot_ready",
+    "id": "e557619f84b844a88675742acda97a20",
+    "revision": 1,
+    "updatedAt": "2026-10-18T18:12:09+00:00"
+  },
+  "sourceSnapshotValidated": true,
+  "liveChecksReport": "operator-live-check.json",
+  "hardwareAcceptanceRemaining": [
+    "Dedicated Edge interactive opening and form preparation",
+    "VS Code focus",
+    "Owner-selected real window vision",
+    "Live phone/CarPlay",
+    "Destination SSD cold start and recovery"
+  ]
+}

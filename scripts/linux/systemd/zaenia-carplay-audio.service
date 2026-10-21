@@ -1,0 +1,8 @@
+[Unit]
+Description=ZÆNIA CarPlay briefing refresh
+
+[Service]
+Type=oneshot
+WorkingDirectory=@ROOT@
+EnvironmentFile=-%h/.config/zaenia/env
+ExecStart=/usr/bin/env bash @ROOT@/scripts/linux/generate_carplay_audio.sh

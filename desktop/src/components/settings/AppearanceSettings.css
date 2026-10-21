@@ -1,0 +1,29 @@
+.appearance-settings{display:flex;flex-direction:column;gap:8px}
+.appearance-settings__label{font-size:9px;letter-spacing:.2em;color:#9fbcd8;margin-top:6px;display:flex;justify-content:space-between}
+.appearance-settings__label strong{color:#ffcf81;font-weight:600;letter-spacing:.06em}
+.appearance-settings__swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.appearance-settings__swatch{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;border-radius:10px;cursor:pointer;
+  border:1px solid rgba(143,202,255,.2);background:rgba(10,24,44,.6);color:#b9d6f1;font-size:10px}
+.appearance-settings__swatch i{width:18px;height:18px;border-radius:50%}
+.appearance-settings__swatch--on{border-color:rgba(255,207,129,.8);color:#ffd08a;background:rgba(120,72,20,.25)}
+.appearance-settings__swatch:focus-visible,.appearance-settings__select:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}
+.appearance-settings__select{height:34px;border-radius:9px;border:1px solid rgba(143,202,255,.3);background:rgba(10,24,44,.8);color:#e0efff;padding:0 10px}
+.appearance-settings input[type=range]{accent-color:#ffb14a;width:100%}
+.appearance-settings__reset{margin-top:8px;align-self:flex-start}
+
+/* Applied to the app root. Every panel inherits the chosen font; the accent
+   re-tints everything above the backdrop photo. */
+.zaenia-app--font,.zaenia-app--font *:not(svg):not(svg *){font-family:var(--app-font)!important}
+.zaenia-app--sized .workspace,.zaenia-app--sized .sidebar,.zaenia-app--sized .identity-header{zoom:var(--app-zoom,1)}
+/* Tint the core and the accent elements only, so the navy glass panels stay navy. */
+.zaenia-app--tinted .neural-core,.zaenia-app--tinted .system-core,.zaenia-app--tinted .brand-glyph,.zaenia-app--tinted .preview-status__dot,
+.zaenia-app--tinted .nav-item--active,.zaenia-app--tinted .nav-item__indicator,.zaenia-app--tinted .eyebrow,.zaenia-app--tinted .subheading,
+.zaenia-app--tinted .os-window__label,.zaenia-app--tinted .os-window--active>.os-window__bar,.zaenia-app--tinted .os-dock__item--active,
+.zaenia-app--tinted .choice--active,.zaenia-app--tinted .switch--on,.zaenia-app--tinted .topbar__weather,.zaenia-app--tinted .chat-dock button[type=submit],
+.zaenia-app--tinted .home-chat--float .message--assistant,.zaenia-app--tinted .home-chat__mic,.zaenia-app--tinted .brand-menu__group,
+.zaenia-app--tinted .stage-footer__line,.zaenia-app--tinted .appearance-settings__label strong{filter:hue-rotate(var(--accent-shift,0deg)) saturate(var(--accent-saturate,1))}
+/* Colour previews in the swatch picker always show their true colour. */
+.zaenia-app--tinted .appearance-settings__swatch i{filter:none}
+/* The orb label panels sit inside the tinted core; turn them back to navy. */
+.zaenia-app--tinted .core-orb__plate{filter:hue-rotate(calc(-1 * var(--accent-shift,0deg)))}
+.zaenia-app--tinted .core-orb__plate em,.zaenia-app--tinted .core-orb__plate .core-orb__plate-status{filter:hue-rotate(var(--accent-shift,0deg))}

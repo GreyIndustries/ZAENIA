@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=ZÆNIA Voice
+Comment=Opens the ZÆNIA Voice window at sign-in; enter your passkey there.
+Exec=@ROOT@/scripts/linux/open_zaenia_voice.sh --delay 30
+Icon=@ROOT@/desktop/src-tauri/icons/128x128.png
+Terminal=false
+X-GNOME-Autostart-enabled=true

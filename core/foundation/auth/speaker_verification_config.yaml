@@ -1,0 +1,60 @@
+speaker_verification:
+  enabled: true
+
+  # Zack's encrypted profile exists, but live command authority
+  # stays disabled until calibration succeeds.
+  mode: "calibration"
+
+  audio:
+    sample_rate: 16000
+    channels: 1
+    recording_seconds: 4.0
+    minimum_rms: 0.008
+    max_recording_attempts: 3
+    approved_microphone_only: true
+
+  model:
+    provider: "speechbrain_local"
+
+    remote_source: "speechbrain/spkrec-ecapa-voxceleb"
+
+    local_source_dir: "data/models/speaker_verification/ecapa_voxceleb"
+
+    local_runtime_cache_dir: "data/models/speaker_verification/runtime_cache"
+
+    device: "auto"
+
+    required_files:
+      - "hyperparams.yaml"
+      - "embedding_model.ckpt"
+      - "mean_var_norm_emb.ckpt"
+      - "classifier.ckpt"
+      - "label_encoder.txt"
+
+  diagnostic:
+    reference_samples: 3
+
+    # Development-only threshold.
+    # Never use this value for command authorization.
+    same_speaker_threshold: 0.25
+
+  enrollment:
+    sample_count: 6
+    encryption_scope: "speaker_profile_v1"
+    profile_version: 1
+
+  calibration:
+    genuine_samples: 5
+    impostor_samples: 3
+
+    # Genuine and impostor score ranges must have at least this
+    # much separation before authentication can be enabled.
+    minimum_score_gap: 0.05
+
+    calibration_file: "data/secure/speaker_auth_calibration.yaml"
+
+  privacy:
+    persist_raw_audio: false
+    persist_diagnostic_embeddings: false
+    persist_plaintext_profile: false
+    secure_profile_required_for_authentication: true

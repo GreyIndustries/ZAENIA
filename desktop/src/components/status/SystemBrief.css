@@ -1,0 +1,29 @@
+.system-brief{margin:0 0 22px;padding:16px 16px 12px;border-radius:14px;border:1px solid rgba(143,202,255,.32);border-top-color:rgba(255,207,129,.45);
+  background:linear-gradient(160deg,rgba(18,34,58,.72),rgba(6,13,26,.82))}
+.system-brief__head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.system-brief__eyebrow{font-size:9px;font-weight:650;letter-spacing:.22em;color:#ffcf81}
+.system-brief__head h2{margin:6px 0 4px;font-size:18px;font-weight:600;letter-spacing:-.01em;color:#eef4fc}
+.system-brief__head small{font-size:11px;color:#8fa6c0}
+.system-brief__actions{display:flex;gap:8px;flex-wrap:wrap}
+.system-brief__actions button{height:32px;padding:0 12px;border-radius:9px;cursor:pointer;font-size:11px;color:#f7c17b;background:rgba(216,151,63,.12);border:1px solid rgba(230,168,74,.38)}
+.system-brief__actions button:disabled{opacity:.45;cursor:default}
+.system-brief__actions button:focus-visible{outline:2px solid #ffc16e;outline-offset:2px}
+.system-brief__error{margin:10px 0 0;font-size:12px;color:#ffd9c2}
+.system-brief__group{margin-top:14px}
+.system-brief__group h3{margin:0 0 8px;font-size:10px;font-weight:650;letter-spacing:.16em;text-transform:uppercase;color:#9fbcd8}
+.system-brief__group--attention h3{color:#ffb8a0}
+.system-brief__group--improve h3{color:#ffd28c}
+.system-brief__group ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.system-brief__group li{padding:10px 12px;border-radius:9px;background:rgba(9,25,42,.6);border:1px solid rgba(116,144,185,.14);border-left:3px solid #6f8fae}
+.system-brief__group--attention li{border-left-color:#ff8a65}
+.system-brief__group--improve li{border-left-color:#ffb24a}
+.system-brief__group li strong{display:block;font-size:13px;font-weight:550;color:#eef4fc}
+.system-brief__group li p{margin:4px 0 0;font-size:12px;line-height:1.5;color:#a9bed4}
+.system-brief__fix span{display:inline-block;margin-right:8px;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#ffcf81}
+.system-brief__ready{margin:14px 0 2px;font-size:11px;color:#8fa6c0}
+.system-brief__ready span{color:#a6e3c0}
+/* "Fix it": a fix ZÆNIA can run herself. */
+.system-brief__fixit{margin-top:8px;min-height:30px;padding:5px 14px;border-radius:9px;cursor:pointer;font-size:12px;
+  border:1px solid rgba(255,191,87,.6);background:rgba(120,72,20,.28);color:#ffd9a3}
+.system-brief__fixit:hover{background:rgba(160,96,28,.4)}
+.system-brief__fixit:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}

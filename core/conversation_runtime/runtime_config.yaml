@@ -1,0 +1,36 @@
+conversation_runtime:
+  sample_rate: 16000
+
+vad:
+  enabled: true
+  threshold: 0.50
+
+  # Silence required before ZÆNIA considers the thought finished.
+  min_silence_duration_ms: 650
+
+  # Prevent clipping the start/end of speech.
+  speech_pad_ms: 120
+
+  # Silero works cleanly with 512-sample frames at 16 kHz.
+  frame_samples: 512
+
+turn_timing:
+  short_pause_ms: 350
+  normal_end_pause_ms: 650
+  thinking_pause_ms: 1000
+
+  # Safety limit so an accidental endless stream cannot
+  # become one giant conversation turn.
+  max_utterance_seconds: 30
+
+behavior:
+  allow_hesitation: true
+  do_not_finalize_on_short_pause: true
+  wait_longer_after:
+    - "and"
+    - "but"
+    - "so"
+    - "because"
+    - "well"
+    - "um"
+    - "uh"

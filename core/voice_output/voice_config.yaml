@@ -1,0 +1,51 @@
+voice_output:
+  enabled: true
+  # kokoro: natural neural voice (local). Falls back to Piper automatically
+  # if its package or model files are missing.
+  provider: "kokoro"
+
+  fallback_order:
+    - "piper"
+    - "windows"
+
+piper:
+  enabled: true
+
+  model_path: "data/voices/piper/en_US-hfc_female-medium.onnx"
+  config_path: "data/voices/piper/en_US-hfc_female-medium.onnx.json"
+
+  output_file: "data/audio/zaenia_local.wav"
+
+  length_scale: 1.10
+  noise_scale: 0.667
+  noise_w: 0.8
+
+kokoro:
+  enabled: true
+  model_path: "data/voices/kokoro/kokoro-v1.0.onnx"
+  voices_path: "data/voices/kokoro/voices-v1.0.bin"
+  # One voice, or a blend such as "af_heart:0.7,af_bella:0.3".
+  # Warm female voices to try: af_heart, af_bella, af_nicole, bf_emma.
+  voice: "af_heart"
+  speed: 1.0
+  lang: "en-us"
+
+windows:
+  enabled: true
+  rate: 0
+  volume: 100
+
+elevenlabs:
+  enabled: false
+  api_key_env: "ELEVENLABS_API_KEY"
+  voice_id: ""
+  model_id: "eleven_multilingual_v2"
+
+personality:
+  voice_description: "calm, intelligent, feminine, precise, natural"
+
+  rules:
+    - "Do not attach generic motivational phrases."
+    - "Use situational wording only."
+    - "Keep normal confirmations concise."
+    - "Reserve danger language for genuine urgent situations."

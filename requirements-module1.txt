@@ -1,0 +1,9 @@
+# Versions used for the module's security checks. Python 3.11+.
+# Your existing voice/speaker libraries remain in your original requirements.
+argon2-cffi==25.1.0
+cryptography==50.0.1
+fastapi==0.143.0
+pydantic==2.14.0
+starlette==1.7.0
+uvicorn==0.54.0
+httpx==0.28.1

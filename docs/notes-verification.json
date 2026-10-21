@@ -1,0 +1,26 @@
+{
+  "apiVersion": "0.9.1",
+  "backendChecks": 313,
+  "frontendChecks": 183,
+  "sourceSnapshot": {
+    "files": 365,
+    "bytes": 2559959,
+    "sha256": "df7c3bff339fcd1e39d2a1c2b8bbbb8acad0cda4059d260485ffc554afbbe533",
+    "status": "snapshot_ready",
+    "id": "f5e256761ee444adb28af226247a8378",
+    "revision": 1,
+    "updatedAt": "2026-10-18T19:10:24+00:00"
+  },
+  "sourceSnapshotValidated": true,
+  "desktopBytes": 26686976,
+  "desktopSha256": "9c202641944360f222667566a65ded81400af0e6f03cac42e07d1d853459400c",
+  "uiChecks": [
+    "create/save/pin/reference",
+    "draft survives window reopening",
+    "archive and restore",
+    "content search",
+    "reload persistence",
+    "390px phone layout without overflow"
+  ],
+  "ownerNotesModified": false
+}

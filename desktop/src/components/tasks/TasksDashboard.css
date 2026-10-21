@@ -1,0 +1,32 @@
+.task-dashboard{overflow:auto;min-height:0}
+.task-dashboard input,.task-dashboard select{min-width:0;max-width:100%;color:#d9e6f4;background:#0a1727;border:1px solid #29405a;border-radius:7px;padding:10px;font:inherit;color-scheme:dark}
+.task-dashboard button{color:#e3bd80;background:#132033;border:1px solid #354359;border-radius:7px;padding:9px 12px;font:inherit;cursor:pointer}
+.task-dashboard button:hover,.task-dashboard button[aria-pressed=true]{border-color:#c18d45;background:#28272b}
+.task-dashboard button:disabled{opacity:.5;cursor:default}
+.task-dashboard :focus-visible{outline:2px solid #ffc16e;outline-offset:3px}
+.task-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0}
+.task-stats>div,.task-stats>button{display:flex;flex-direction:column;gap:10px;text-align:left;padding:15px;border:1px solid #23364a;border-radius:9px;background:#0d1a2b}
+.task-stats span{font-size:11px;color:#9bafc4}.task-stats strong{font-size:26px;color:#e6edf7}
+.task-create{display:grid;grid-template-columns:minmax(130px,1fr) 115px minmax(180px,auto) auto;gap:10px;align-items:end}
+.task-create label,.task-edit label{display:flex;flex-direction:column;gap:8px;font-size:11px;color:#9bafc4}.task-create small{font-size:10px}
+.task-create button{height:39px}
+.task-toolbar{display:flex;gap:10px;margin-top:22px}.task-toolbar input{flex:1}
+.task-sort-note{color:#7992ad;font-size:11px;margin:12px 0}
+.task-card{display:grid;grid-template-columns:minmax(100px,1fr) 75px 135px auto;align-items:center;gap:12px;padding:14px 10px;border-bottom:1px solid #23364a}
+.task-card--selected{background:#102238;border-radius:8px}
+.task-card .task-title{display:flex;flex-direction:column;align-items:flex-start;gap:8px;text-align:left;background:transparent;border:none;padding:0;color:#e5edf7;min-width:0}
+.task-title strong{overflow-wrap:anywhere;font-weight:550}.task-title span{font-size:11px;color:#8fa6c0}
+.task-priority{font-size:10px;padding:5px 8px;border-radius:5px;justify-self:start;background:#293244;color:#b2c5dd}
+.task-priority--critical{background:#46272b;color:#ffc0bd}.task-priority--high{background:#493724;color:#ffd28c}.task-priority--low{background:#203831;color:#a3d0b9}
+.task-completed{text-decoration:line-through;opacity:.6}.task-dashboard .task-overdue{color:#ffaaa0}
+.task-details{margin-top:20px;padding:18px;border:1px solid #3b4c62;border-radius:10px;background:#0b192a}
+.task-details-heading{display:flex;justify-content:space-between;gap:15px;align-items:center}.task-details-heading strong{overflow-wrap:anywhere}
+.task-edit{display:flex;gap:15px;margin:16px 0}.task-details h3{font-size:12px;color:#deb984}
+.task-history{padding:0;list-style:none;max-height:180px;overflow:auto}.task-history li{display:flex;justify-content:space-between;gap:15px;padding:10px 0;border-top:1px solid #24354a;font-size:11px;color:#a7bdd3}.task-history time{color:#7e96b1;white-space:nowrap}
+.task-warning{color:#ffcb94;font-size:12px;padding:12px;border:1px solid #79583c;border-radius:8px}
+@media(max-width:1400px){.task-create{grid-template-columns:minmax(0,1fr) 120px}.task-create button{align-self:end}.task-card{grid-template-columns:minmax(0,1fr) 70px 125px}.task-card>button:last-child{grid-column:3}.task-stats{gap:6px}}
+@media(max-width:760px){.task-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.task-create{grid-template-columns:1fr}.task-toolbar{flex-wrap:wrap}.task-toolbar input{flex-basis:100%}.task-card{grid-template-columns:minmax(0,1fr) 70px}.task-card>button:last-child{grid-column:auto}.task-edit,.task-history li{flex-direction:column}.task-details-heading{align-items:flex-start;flex-direction:column}}
+.task-move{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:4px 0 14px;padding:10px 12px;border-radius:9px;font-size:12px;color:#d9e8f8;background:rgba(92,168,255,.1);border:1px solid rgba(92,168,255,.28)}
+.task-delete{display:flex;justify-content:flex-end;margin-top:12px}
+.task-dashboard .task-delete button{color:#ffc9a8;border-color:rgba(255,140,90,.35);background:rgba(255,110,60,.06)}
+.task-dashboard .task-delete button.task-delete--confirm{color:#ffe3d2;border-color:rgba(255,140,90,.8);background:rgba(255,110,60,.22)}

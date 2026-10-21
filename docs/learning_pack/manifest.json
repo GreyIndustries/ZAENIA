@@ -1,0 +1,112 @@
+{
+  "prepared": "2026-10-18",
+  "guides": [
+    {
+      "file": "01_VOICE_TONE.md",
+      "title": "Voice tone, prosody and conversational understanding",
+      "words": 842,
+      "characters": 5987,
+      "sha256": "e710947b2170d1157154c790c0c35cc857b6370d429de59b04157d44d267867d"
+    },
+    {
+      "file": "02_ARMY_REGULATIONS.md",
+      "title": "Understanding U.S. Army regulations and finding the governing rule",
+      "words": 1418,
+      "characters": 10392,
+      "sha256": "b2b4a4d493a7ced7a596dea4c0836fdefd220b6fe6be587692d0e8d1ce8505ce"
+    },
+    {
+      "file": "03_FITNESS_AND_MENTAL_HEALTH.md",
+      "title": "Fitness, recovery and mental health",
+      "words": 630,
+      "characters": 4686,
+      "sha256": "5187dac6538c01a22dc15490d90acb318e5858bcbd1d81cae5a6513611013afc"
+    },
+    {
+      "file": "04_TECHNOLOGY_AND_SCIENCE.md",
+      "title": "Technology and the sciences: field map and learning system",
+      "words": 966,
+      "characters": 7226,
+      "sha256": "a84a13f5b7ed663f886886059a87c1718e492910815c06e94b78cf15c6b54403"
+    },
+    {
+      "file": "05_LIGHTSABER_FORMS_II_IV_V.md",
+      "title": "Combining Forms II, IV and V: fiction, mindset and training transfer",
+      "words": 614,
+      "characters": 4293,
+      "sha256": "c9311ede3d86d9fe8f921739769c6e068976b60ab14640aee06002f48342c64c"
+    },
+    {
+      "file": "06_STAR_WARS.md",
+      "title": "Star Wars: lore, continuity and source guide",
+      "words": 421,
+      "characters": 3158,
+      "sha256": "5f8938e0c21614aaee2f5ad8137d94eac204975b4c61e32757a3362c6f3f30ef"
+    },
+    {
+      "file": "07_MARVEL.md",
+      "title": "Marvel: characters, universes and research guide",
+      "words": 415,
+      "characters": 2983,
+      "sha256": "9baee536858f331c895f0f5f220b3a6290ef39c82ca2af21e8da9bb3be569202"
+    },
+    {
+      "file": "08_DC.md",
+      "title": "DC: characters, continuities and research guide",
+      "words": 375,
+      "characters": 2686,
+      "sha256": "08e4908c764838781dc68b17491deec15c316fb66b65a19427ff6a74f5670524"
+    },
+    {
+      "file": "09_HUNGER_GAMES.md",
+      "title": "The Hunger Games: books, films and interpretation",
+      "words": 397,
+      "characters": 3222,
+      "sha256": "8f382053b3b95b450a40af0bcaab0c3c296cfea1932dda95f57e8b72a2003c1a"
+    },
+    {
+      "file": "10_DIVERGENT.md",
+      "title": "Divergent: books, films and interpretation",
+      "words": 373,
+      "characters": 2900,
+      "sha256": "d7f589330318b44b1437659c4446c580f2fabe2e2cbe797ac640fc9564bd6206"
+    },
+    {
+      "file": "11_MUSIC_NF.md",
+      "title": "NF: music, themes and listening analysis",
+      "words": 323,
+      "characters": 2341,
+      "sha256": "a7fabaf4d104f427d267ea92437bd84197fa4207a14602e5030a38cceffc1fd8"
+    },
+    {
+      "file": "12_MUSIC_MICHAEL_JACKSON.md",
+      "title": "Michael Jackson: music and performance study",
+      "words": 331,
+      "characters": 2469,
+      "sha256": "7443f8f1919d6c296783bcd4361c8a1f3670ed790a4e7860ed33df1a87a692f7"
+    },
+    {
+      "file": "13_MUSIC_JUSTIN_BIEBER.md",
+      "title": "Justin Bieber: music, versions and interpretation",
+      "words": 317,
+      "characters": 2359,
+      "sha256": "c201ba5ffd75128e8be17b8b5e429df2895144f530a934c788b534a3950f5ace"
+    },
+    {
+      "file": "14_MUSIC_FOR_KING_AND_COUNTRY.md",
+      "title": "for KING + COUNTRY: music, faith and listening analysis",
+      "words": 331,
+      "characters": 2413,
+      "sha256": "dc134b44290224913078473f1306d3e0f17093660ce2a550d1dfe58604306595"
+    },
+    {
+      "file": "15_JARVIS_AND_FRIDAY.md",
+      "title": "J.A.R.V.I.S. and F.R.I.D.A.Y. — reference for Zae",
+      "words": 1316,
+      "characters": 9496,
+      "sha256": "08f63bf5fd7093b5dd70418a72e7bf4653f04091f091ecf89b2062f4fef66203"
+    }
+  ],
+  "scope": "Original primers and verified source links; not exhaustive source corpora",
+  "automaticallyImported": false
+}

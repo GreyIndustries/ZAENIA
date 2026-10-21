@@ -1,0 +1,36 @@
+semantic_search:
+  enabled: true
+
+  provider: "ollama_local"
+
+  embedding:
+    model: "nomic-embed-text"
+    endpoint: "http://127.0.0.1:11434/api/embed"
+    timeout_seconds: 120
+
+    # Larger batches mean fewer separate Ollama tokenizer
+    # requests during a full semantic-index rebuild.
+    batch_size: 32
+
+    # Temporary local socket/tokenizer pressure should cause
+    # a controlled retry rather than crashing ZÆNIA.
+    retry_attempts: 5
+    retry_base_delay_seconds: 2.0
+    retry_max_delay_seconds: 12.0
+
+  chunking:
+    max_chars: 1200
+    overlap_chars: 200
+
+  storage:
+    semantic_index_file: "data/system_awareness/semantic_index.json"
+
+  behavior:
+    local_only: true
+    internet_required_at_runtime: false
+
+  privacy:
+    embed_only_approved_index_content: true
+    embed_secure_files: false
+    embed_credentials: false
+    embed_raw_audio: false

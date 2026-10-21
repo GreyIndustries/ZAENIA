@@ -1,0 +1,238 @@
+voice_listener:
+  enabled: true
+  timezone: "America/Los_Angeles"
+
+  mode:
+    default: "background"
+    allow_passive_listening: true
+    allow_context_learning: true
+    allow_command_execution: true
+
+  speech:
+    engine: "vosk"
+    model_path: "data/models/vosk-model-small-en-us-0.15"
+    approved_mic_only: true
+
+attention:
+  required_for_execution: true
+
+  names:
+    - "zae"
+    - "zænia"
+    - "zaenia"
+    - "zania"
+    - "zenia"
+    - "xenia"
+    - "zinnia"
+    - "zay nia"
+    - "zaynia"
+    - "zay"
+
+  # Explicit calls can appear anywhere in an utterance, not only at its start.
+  # Avoid ordinary words such as "say" as aliases: nearby conversation uses them.
+  calls:
+    - "hey assistant"
+    - "okay assistant"
+
+  require_name_in_each_executable_command: false
+  follow_up_seconds: 30
+  contextual_follow_ups: true
+  # Attention never replaces owner verification, operation authorization, or
+  # the fresh confirmation required for a proposed write.
+
+  examples:
+    allowed:
+      - "ZÆNIA check traffic"
+      - "ZÆNIA update CarPlay"
+      - "ZÆNIA sync my calendar"
+      - "ZÆNIA fix evening"
+      - "What is on my calendar, ZAE?"
+      - "Could you, Zay, explain that?"
+      - "Hey assistant, what time is it?"
+
+    not_authorized:
+      - "I should check traffic later"
+      - "The calendar needs updating"
+      - "Fix evening tomorrow"
+      - "Someone should regenerate the briefing"
+
+cognitive_filter:
+  enabled: true
+
+  passive_behavior:
+    execute_commands: false
+    respond_to_everything: false
+    interrupt_user: false
+
+  learn_signals:
+    - "fatigue"
+    - "frustration"
+    - "urgency"
+    - "task_focus"
+    - "repeated_problem"
+    - "preferred_explanation_length"
+    - "preferred_workflow"
+    - "time_pressure"
+    - "conversation_wrap_up"
+    - "current_project_context"
+
+  ignore_for_learning:
+    - "background television"
+    - "music"
+    - "unrelated conversations"
+    - "speech from unapproved voices"
+    - "isolated words without useful context"
+
+privacy:
+  raw_transcript_logging: false
+  save_audio_recordings: false
+  save_filtered_behavior_events: true
+  store_locally_only: true
+
+  behavior_log_path: "data/voice_context_log.jsonl"
+
+  # Keep only useful derived context such as:
+  # "user appears tired" or "user prefers full file replacement"
+  # rather than permanent verbatim conversations.
+  store_derived_context_only: true
+
+conversation:
+  active_conversation_enabled: true
+
+  # ZÆNIA may understand that an interaction is ending,
+  # but these are examples of intent, not rigid magic phrases.
+  background_intents:
+    - "go background"
+    - "sleep for now"
+    - "we are good"
+    - "that's enough"
+    - "I'm going to bed"
+    - "you can go background"
+    - "we can leave this here"
+    - "that's all for now"
+
+  background_behavior:
+    stop_conversational_responses: true
+    continue_passive_context_filtering: true
+    continue_scheduled_tasks: true
+    continue_background_tasks: true
+    continue_calendar_sync: true
+
+execution:
+  require_rule_engine_authorization: true
+  require_attention_call: true
+
+  sensitive_actions_require_reauthentication: true
+
+  passive_speech_can:
+    - "update behavior context"
+    - "identify possible fatigue"
+    - "identify possible frustration"
+    - "identify current task context"
+    - "update conversation state"
+
+  passive_speech_cannot:
+    - "run shell commands"
+    - "change files"
+    - "delete files"
+    - "schedule events"
+    - "send messages"
+    - "change security settings"
+    - "trigger automations"
+
+background_tasks:
+  enabled: true
+
+  continue_when_conversation_backgrounded: true
+
+  report_updates_when_relevant: true
+
+  allowed_sources:
+    - "scheduled tasks"
+    - "calendar sync"
+    - "CarPlay generation"
+    - "weather refresh"
+    - "traffic refresh"
+    - "task status changes"
+
+  reporting_rules:
+    do_not_interrupt_for_minor_updates: true
+    report_errors: true
+    report_completed_requested_tasks: true
+    report_urgent_conditions: true
+
+behavior_learning:
+  enabled: true
+
+  connect_to_behavior_engine: true
+
+  context_window_seconds: 120
+
+  update_profile_from_single_observation: false
+  require_repeated_pattern_before_profile_change: true
+  repeated_pattern_threshold: 3
+
+  learned_behavior_examples:
+    - "Zack asks for full file replacements after repeated patch errors"
+    - "Late-night sessions should use fewer steps"
+    - "CarPlay briefings should avoid unnecessary motivational lines"
+    - "Repeated phrases become annoying and should be reduced"
+    - "Troubleshooting responses should become more direct after repeated failures"
+
+carplay_behavior:
+  use_recent_behavior_context: true
+  use_calendar_context: true
+  use_current_schedule: true
+
+  # We will wire this into the briefing engine later.
+  behavior_context_max_age_minutes: 180
+
+danger:
+  allow_danger_alert_phrase: true
+  danger_alert_phrase: "Stay sharp."
+
+  use_only_for:
+    - "immediate safety threat"
+    - "dangerous driving condition"
+    - "urgent physical hazard"
+    - "serious security compromise"
+
+# Ambient awareness (PC voice service). ZAE hears the verified owner without
+# being named, keeps the last few minutes in memory only (never on disk), and
+# the local brain decides whether a short offer of help is worth saying.
+# Ambient speech never runs or confirms an action. Set enabled: false to
+# return to name-only attention.
+ambient:
+  enabled: true
+  # No wake word: ZAE's brain decides whether each thing you say is meant for
+  # her and answers it. Her name still works. Set true for name-only mode.
+  require_name: false
+  direct_threshold: 0.7     # brain confidence that you're talking to her
+  respond_threshold: 0.75   # brain confidence needed to speak up unasked
+  cooldown_seconds: 0       # minimum gap between unasked offers (0 = none)
+  max_per_window: 0         # cap on unasked offers per window (0 = no cap; the brain decides)
+  window_seconds: 600       # ...per this many seconds
+  context_minutes: 10       # how long background speech is remembered
+  max_lines: 24
+
+# PC activity awareness (PC voice service). Samples the focused app and window
+# title so ZAE knows what you're working on. Memory only, never saved or sent
+# anywhere; expires after history_minutes. Activity alone never makes her speak
+# or act. Titles from private browsing, password managers and banking/login
+# pages are always hidden; list more apps below to keep only their name.
+activity:
+  enabled: true
+  sample_seconds: 5
+  history_minutes: 30
+  hide_titles_for:
+    - "Signal"
+    - "WhatsApp"
+    - "Messenger"
+
+# Your verified voice is the authorization: these actions happen as soon as
+# you ask, with no "confirm that action" step. Deleting a memory still asks.
+voice_authorization:
+  auto_confirm:
+    - "task.create"
+    - "calendar.create"
+    - "memory.remember"
