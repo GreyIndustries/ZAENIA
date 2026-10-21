@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.3  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.4  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -232,3 +232,28 @@ Status: IMPLEMENTED, UNIT TEST, live-checked on feature/claude-development; not 
 Note: an earlier test run had already created C:\Projects\ZAENIA-Claude\data\conversation\threads.json (gitignored, test topics only). It was left in place, because deleting files needs Grey's OK.
 
 2026-10-21 | v1.3 | Claude | Topic tracker made hermetic (section 19). No ADR change.
+
+## 20. Three-engine improvements — Claude, 2026-10-21 (v1.4)
+
+Requested by Grey on 2026-10-21 ("make as much needed changes to improve ZAENIA … authorization is given to update ZAENIA's app"). Each item below was measured first, then implemented on feature/claude-development, tested, and applied to the live install.
+
+### 20.1 Reasoning engine: context budget (core/brain/context_budget.py)
+Problem (measured): a multi-topic question built a ~7,500-token prompt for the 8,192-token window. Ollama drops the start of an over-long prompt, which is where the system prompt and charter guidance sit. Causes: an unbudgeted 8,000-character source-library dump matched on a single shared word; a raw YAML behaviour profile; stale state JSON.
+Change: reference context is split into labelled sections with priorities and caps. The lowest-priority sections shrink first, then the oldest turns (the newest 4 always stay), and 1,100 tokens are kept for the answer. Applied in `local_llm.build_messages`, so every model path is covered. The source library now needs two shared content words before an excerpt is included.
+Evidence: live context 7,478 → 5,118 tokens for the same question; context_budget_test 5 pass. Status: IMPLEMENTED, UNIT TEST, live-applied.
+
+### 20.2 Learning and memory engine: ledger in the repo, owner review (core/personal_memory/ledger, owner_profile.py)
+Problem: the memory ledger code lived only in `user_understanding/`, which is excluded from git as personal, so a clean checkout had no Learning-engine store. There was also no way for Grey to inspect or correct his long-term profile (plan §8: "why did you remember this?", review, edit, delete).
+Change: the ledger (`user_learning.py`, `adapter.py`, extraction prompt, 42 tests), originally authored with ChatGPT, is vendored unchanged apart from imports. The personal seed and assessment stay local. Owner review was added: `records`, `explain` (evidence and source), `confirm` (candidate → active) and `forget` (deleted, and tombstoned so it isn't relearned). API: `GET /api/assistant/profile`, `GET|DELETE /api/assistant/profile/{id}`, `POST /api/assistant/profile/{id}/confirm` (memory.read / memory.write). UI: Assistant window → "What ZAE knows about you" (Known / To confirm, search, Why?, Confirm, Forget with a second tap).
+Evidence: on a copy of the live profile (100+ known, 38 candidates), explain, confirm and forget all work, and a forgotten key is blocked from relearning. Ledger 42 tests (5 seed tests skip without the personal seed). Status: IMPLEMENTED, UNIT TEST, live-applied.
+
+### 20.3 Execution and security engine
+- **Clean-checkout test suite.** Added `core/reasoning/cases.example.json` (the benchmark with neutral place names, used when the personal `cases.json` is absent). The full-Bible-corpus test runs only when the downloaded corpus exists. Evidence: a fresh `git clone` with no personal files ran **551 tests, 0 failures, 0 errors** (13 skipped). This meets the plan's Phase 0 "clean-install test" for the test suite. Note: a clone under `AppData\Local\Temp` fails 11 document-tool tests by design, because the document tools refuse system folders.
+- **Security activity view (read-only).** The audit log holds about 283,000 entries (49 MB), almost all routine allowed reads. `core/api/security_activity.py` reads the last 16 MB, counts routine allows, and lists notable events (denials, sign-ins, voice rejections, memory changes, actions, rules, pairing, screen watch). Exposed at `GET /api/security/activity` (status.read) and as a System window card. Tests: 3 pass. Permissions are unchanged: memory and learning still can't grant permissions, and no gate was altered.
+
+### 20.4 Open decisions for Grey (not implemented)
+1. **Audit log growth (~49 MB and rising).** Options: rotate by size, or stop logging routine *allowed* reads (denials and sensitive operations always logged). Either changes audit retention, a security-policy choice.
+2. **App microphone voice policy (a/b/c)**, still pending from §17.3.
+3. **`core/behavior/behavior_profile.yaml` is stale** (it still names Piper as the preferred voice and repeats rules now in the profile). It's protected identity configuration, so it waits for Grey's approval.
+
+2026-10-21 | v1.4 | Claude | Context budget, ledger in repo with owner review, clean-checkout test suite, security activity view. No ADR change; ADR-001…005 remain PROPOSED.
