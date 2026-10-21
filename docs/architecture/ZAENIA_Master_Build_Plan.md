@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.2  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.3  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -220,3 +220,15 @@ Tests: core/tech_news/service_test.py (8 pass); existing brain/API suites pass; 
 Rollback: revert the branch commit.
 
 2026-10-21 | v1.2 | Claude | Added tech news module (section 18). No ADR change.
+
+## 19. Conversation-topic tracker fix — Claude, 2026-10-21 (v1.3)
+
+Objective (approved by Grey 2026-10-21, assessment priority 1): make topic tracking hermetic. The 10/19 tracker read `data/conversation_memory.jsonl` and wrote `data/conversation/threads.json` itself, bypassing `BrainService.load_recent_messages()`. As a result `turn_context_test` failed (1 on the branch, 3 on main), and running the test suite could write test topics into Grey's live topic file.
+Change (Reasoning engine, core/brain): `load_recent_messages()` rows now carry their timestamp (`at`). `prepare_turn()` gives the tracker only that history, and only when it is timed; untimed history (tests, old logs) keeps the plain behaviour and never touches topic state. `ThreadTracker.route(question, history)` builds exchanges from the history it is given, and the state file stays next to the log in use. New: recent exchanges that no topic holds yet (within 45 min) become the current topic, so a fresh log or pre-tracking turns still give follow-ups their context.
+Files: core/brain/brain_service.py, core/brain/conversation_threads.py, core/brain/conversation_threads_test.py.
+Tests: conversation_threads_test 9 pass (4 new); turn_context_test passes; full suite 503 run, 0 failures, 27 errors, all from personal files kept out of git (core/reasoning/cases.json, scripture manifest), which is priority 2. SHA-256 of the worktree's data/conversation files was identical before and after the full suite. Live: the two 8-message topic scenarios still score 16/16 against llama3.1:8b and nomic-embed-text. End-to-end through BrainService on a temp log: follow-up kept context, new subject started clean, "back to…" resumed with both earlier exchanges.
+Security effect: none on permissions. It removes an unintended write path to personal runtime data during tests.
+Status: IMPLEMENTED, UNIT TEST, live-checked on feature/claude-development; not merged.
+Note: an earlier test run had already created C:\Projects\ZAENIA-Claude\data\conversation\threads.json (gitignored, test topics only). It was left in place, because deleting files needs Grey's OK.
+
+2026-10-21 | v1.3 | Claude | Topic tracker made hermetic (section 19). No ADR change.
