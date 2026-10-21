@@ -176,6 +176,7 @@ export function Dock({ windows, titles, active, onOpen, onClose, onMinimize, onC
 export function windowForText(text: string): string | null {
   const words = text.toLowerCase();
   if (/\b(notes?|notebook)\b/.test(words)) return 'notes';
+  if (/\b(tech news|headlines)\b/.test(words)) return 'news';
   if (/\b(calendar|schedule|meeting|appointment|event|tomorrow at|next week|agenda)\b/.test(words)) return "calendar";
   if (/\b(task|tasks|to-?do|todo|checklist|deadline)\b/.test(words)) return "tasks";
   if (/\b(file|files|folder|code|config|source|script)\b/.test(words)) return "files";

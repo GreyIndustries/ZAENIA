@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.1  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.2  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -209,3 +209,14 @@ Learning in 17.2 never grants permissions. Profile records, topic notes, file co
 ### 17.5 Change log
 
 2026-10-21 | v1.1 | Claude | Verified hardware and model facts; recorded features built 2026-10-17 to 2026-10-19 with status labels; fixed P0 path-case bypass (code change: core/api/ui_files.py, test added); documented the open voice-verification decision and repository hygiene risks. ADR-001 to ADR-005 remain PROPOSED.
+
+## 18. Tech news module — Claude, 2026-10-21 (v1.2)
+
+Objective (USER REQUIREMENT, Grey 2026-10-21): "create a module for tracking tech news with the top 10 most credible and honest tech news sources."
+Placement: an optional online data source alongside weather and traffic. It does not change the three-engine architecture. Feed text enters the Reasoning engine only as labeled reference data. It never reaches the Learning engine (no profile learning from news) or the Execution engine (no permissions).
+Implementation (branch feature/claude-development, not merged): core/tech_news/ (service, sources.yaml, tests); API GET /api/news/tech and POST /api/news/tech/refresh (status.read); background refresh every 30 min in the API server; brain context only for news questions; Tech News window in the desktop and phone UI. Details and the source list: docs/TECH_NEWS.md.
+Security effect: outbound HTTPS GET requests to 10 fixed public feeds; no user data sent; DTD/entity XML refused; 3 MB cap; cache in data/news (gitignored).
+Tests: core/tech_news/service_test.py (8 pass); existing brain/API suites pass; desktop tsc, UI script tests and build pass. Live: 10/10 feeds reachable, 225 stories grouped in 2.1 s; local model answered news questions with sources named. Status: IMPLEMENTED, UNIT TEST, live-checked on the branch; not yet INTEGRATED in main.
+Rollback: revert the branch commit.
+
+2026-10-21 | v1.2 | Claude | Added tech news module (section 18). No ADR change.

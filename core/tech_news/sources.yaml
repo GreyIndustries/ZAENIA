@@ -1,0 +1,70 @@
+# Tech news sources ZAE tracks. Edit freely: set enabled: false to drop one,
+# or add another with a name and an RSS/Atom feed URL.
+#
+# Chosen for accuracy and accountability: named reporters, public corrections,
+# original reporting or expert technical review, and clear separation of news
+# from advertising. "focus" helps ZAE pick sources for a question.
+
+sources:
+  - name: Ars Technica
+    url: https://feeds.arstechnica.com/arstechnica/index
+    focus: [general, science, policy, hardware, security]
+    why: In-depth reporting by specialist writers; publishes corrections.
+
+  - name: MIT Technology Review
+    url: https://www.technologyreview.com/feed/
+    focus: [ai, science, research]
+    why: MIT-owned; research-grounded explanations of AI and emerging tech.
+
+  - name: IEEE Spectrum
+    url: https://spectrum.ieee.org/feeds/feed.rss
+    focus: [engineering, hardware, ai, research]
+    why: Magazine of the IEEE engineering society; technically reviewed.
+
+  - name: BBC News Technology
+    url: https://feeds.bbci.co.uk/news/technology/rss.xml
+    focus: [general, policy]
+    why: Public broadcaster with strict editorial guidelines.
+
+  - name: NPR Technology
+    url: https://feeds.npr.org/1019/rss.xml
+    focus: [general, policy, society]
+    why: Non-profit public radio newsroom with a public ethics code.
+
+  - name: The Verge
+    url: https://www.theverge.com/rss/index.xml
+    focus: [consumer, gadgets, ai, gaming]
+    why: Large consumer-tech newsroom; transparent ethics and corrections.
+
+  - name: Wired
+    url: https://www.wired.com/feed/rss
+    focus: [general, security, ai, science]
+    why: Long-running investigative and explanatory tech reporting.
+
+  - name: The Register
+    url: https://www.theregister.com/headlines.atom
+    focus: [enterprise, security, software, hardware]
+    why: Fast, sceptical reporting on enterprise IT and security.
+
+  - name: Tom's Hardware
+    url: https://www.tomshardware.com/feeds.xml
+    focus: [hardware, gpus, cpus, pc]
+    why: Hands-on hardware testing and benchmarks.
+
+  - name: BleepingComputer
+    url: https://www.bleepingcomputer.com/feed/
+    focus: [security, software, windows]
+    why: Rapid, detailed cybersecurity and Windows reporting.
+
+  # Alternates (off by default):
+  - name: The Guardian Technology
+    url: https://www.theguardian.com/us/technology/rss
+    focus: [general, policy]
+    why: Independent trust-owned newspaper.
+    enabled: false
+
+  - name: Krebs on Security
+    url: https://krebsonsecurity.com/feed/
+    focus: [security]
+    why: Investigative security journalism by Brian Krebs.
+    enabled: false
