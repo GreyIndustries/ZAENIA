@@ -27,3 +27,11 @@
 /* The orb label panels sit inside the tinted core; turn them back to navy. */
 .zaenia-app--tinted .core-orb__plate{filter:hue-rotate(calc(-1 * var(--accent-shift,0deg)))}
 .zaenia-app--tinted .core-orb__plate em,.zaenia-app--tinted .core-orb__plate .core-orb__plate-status{filter:hue-rotate(var(--accent-shift,0deg))}
+
+/* Security activity list (System window). */
+.security-activity{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:5px}
+.security-activity li{display:flex;flex-direction:column;padding:6px 9px;border-radius:8px;border:1px solid rgba(143,202,255,.12);background:rgba(10,22,40,.45)}
+.security-activity li strong{font-size:12px;font-weight:600;color:#e4eafa}
+.security-activity li small{font-size:10px;color:#7f93ad}
+.security-activity__warn{border-color:rgba(255,160,100,.45)!important}
+.security-activity__warn strong{color:#ffc79a!important}

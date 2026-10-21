@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./AssistantPanel.css";
 import { KnowledgePanel } from './KnowledgePanel';
+import { ProfileReview } from './ProfileReview';
 
 type Category = "fact" | "preference" | "goal" | "person" | "commitment";
 type Memory = { id: string; key: string; value: string; category: Category; source: string; created_at: string; updated_at: string };
@@ -241,6 +242,7 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
           }}>{clearAsked ? "Confirm: delete all learned points" : "Delete all learned points"}</button>
         </div>}
       </section>
+      <ProfileReview/>
       <section className="assistant-panel__section" aria-labelledby="assistant-followthrough-heading" aria-busy={loading}>
         <header className="assistant-panel__heading"><h2 id="assistant-followthrough-heading">Follow-through</h2><span>{inbox?.unreadCount ?? "—"} unread</span></header>
         <p className="assistant-panel__note">Keep ZAE’s local service running and this app connected for reminders about saved ZAE events and task deadlines.</p>
