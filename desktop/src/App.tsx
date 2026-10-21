@@ -34,6 +34,7 @@ import { TasksDashboard } from "./components/tasks/TasksDashboard";
 import { StatusPanel } from "./components/status/StatusPanel";
 import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
+import { NewsPanel } from './components/news/NewsPanel';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
@@ -47,8 +48,8 @@ import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes";
-type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes";
+type Section = "overview" | "status" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news";
+type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news";
 type VisualMode = "blend" | "progress";
 
 // The Conversation tab is replaced by System Status. Conversations live in the
@@ -59,6 +60,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
   { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
+  { id: "news", label: "Tech News", short: "News", icon: "news" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "System", short: "System", icon: "system" },
@@ -69,12 +71,13 @@ const sections: Record<Section, { title: string; label: string; description: str
   tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
+  news: { title: 'Tech News', label: 'TRACKED SOURCES', description: 'Headlines from ten credible tech newsrooms, checked every 30 minutes. Stories several sources report are marked.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "System", label: "DIAGNOSTICS", description: "Preview module states and optional read-only local status telemetry. Sample values are not live measurements." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "tasks", "calendar", "notes", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "tasks", "calendar", "notes", "news", "assistant", "files", "system"];
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -97,6 +100,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h.01M12 14h.01M17 14h.01M7 18h.01M12 18h.01M17 18h.01"/></>,
     files: <path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>,
     notes: <><path d="M6 3h9l4 4v14H6Z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></>,
+    news: <><path d="M4 5h13v14a2 2 0 0 0 2 2H6a2 2 0 0 1-2-2Z"/><path d="M17 9h3v10a2 2 0 0 1-2 2M8 9h5M8 13h5M8 17h3"/></>,
     system: <><circle cx="12" cy="12" r="3"/><path d="M11 2h2l.6 2.3 1.8.7 2.1-1.2 1.4 1.4-1.2 2.1.7 1.8L21 10v2l-2.3.6-.7 1.8 1.2 2.1-1.4 1.4-2.1-1.2-1.8.7L13 20h-2l-.6-2.3-1.8-.7-2.1 1.2-1.4-1.4 1.2-2.1-.7-1.8L3 12v-2l2.3-.6.7-1.8-1.2-2.1 1.4-1.4 2.1 1.2 1.8-.7Z"/></>,
     arrow: <path d="M5 12h14m-6-6 6 6-6 6"/>,
     bolt: <path d="m13 2-9 11h7l-1 9 10-12h-7Z"/>,
@@ -990,6 +994,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   function sectionBody(id: Section): ReactNode {
     switch (id) {
       case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
+      case 'news': return <NewsPanel/>;
       case "status": return <StatusPanel onFix={runFix} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
       case "tasks": return <TasksDashboard remote={LIVE_API} refreshVersion={actionRefresh.tasks}/>;
       case "calendar": return <CalendarPanel refreshVersion={actionRefresh.calendar}/>;

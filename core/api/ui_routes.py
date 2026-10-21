@@ -50,6 +50,8 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/voice/status", "status.read"),
         ("GET", r"/api/weather/now", "status.read"),
         ("GET", r"/api/screen/watch", "status.read"),
+        ("GET", r"/api/news/tech", "status.read"),
+        ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
     )
 )
@@ -327,6 +329,18 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     @router.get("/api/voice/status")
     def voice_status() -> dict[str, Any]:
         return ui_voice.service_status()
+
+    @router.get("/api/news/tech")
+    def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),
+                            limit: int = Query(default=20, ge=1, le=50)) -> dict[str, Any]:
+        from core.tech_news.service import tech_news
+        return tech_news().headlines(query=q, topic=topic, limit=limit)
+
+    @router.post("/api/news/tech/refresh")
+    def tech_news_refresh() -> dict[str, Any]:
+        from core.tech_news.service import tech_news
+        tech_news().refresh()
+        return tech_news().headlines(limit=20)
 
     @router.get("/api/screen/watch")
     def screen_watch_status() -> dict[str, Any]:

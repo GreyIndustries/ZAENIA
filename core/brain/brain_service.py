@@ -527,7 +527,13 @@ class BrainService:
             screen = screen_context()
         except Exception:
             screen = None
-        parts = [part for part in (profile, owner, learned, ambient, screen) if part]
+        news = None
+        try:
+            from core.tech_news.service import news_context
+            news = news_context(question)
+        except Exception:
+            news = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, news) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(

@@ -142,10 +142,14 @@ def create_app(
         def start_assistant_worker():
             followthrough().start()
             game_mode.start()  # frees the brain while a full-screen game is in front
+            from core.tech_news.service import tech_news
+            tech_news().start()  # tech headlines every 30 minutes (optional, online)
 
         @application.on_event("shutdown")
         def stop_assistant_worker():
             game_mode.stop()
+            from core.tech_news.service import tech_news
+            tech_news().stop()
             if followthrough_instance is not None:
                 followthrough_instance.stop()
 
