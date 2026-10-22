@@ -134,6 +134,19 @@ def build_system_brief(mode: str) -> dict[str, Any]:
                            "Create a Google OAuth client (Desktop app), save it as data\\google_calendar\\credentials.json, then press Fix it.",
                            "connect_google"))
     try:
+        from core.api.ui_voice import voice_check_status
+        check = voice_check_status()
+    except Exception:
+        check = {"required": False}
+    if check.get("required") and not check.get("setUp"):
+        items.append(_item("attention", "voice", "Voice check for the app mic",
+                           "The app mic now needs your voice, but voice checking isn't set up, so spoken turns are ignored.",
+                           "Press Fix it to run voice training (passkey needed), or type to ZAE meanwhile.", "voice_training"))
+    elif check.get("needsTraining"):
+        items.append(_item("attention", "voice", "ZAE isn't recognising your voice well",
+                           f"Only {int((check.get('recognisedRate') or 0) * 100)}% of your recent app-mic turns were recognised.",
+                           "Press Fix it to retrain your voice on the approved mic (passkey needed).", "voice_training"))
+    try:
         from core.email_watch.gmail import status as gmail_status
         mail = gmail_status()
     except Exception:

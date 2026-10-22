@@ -14,7 +14,9 @@ import { api, errorText, LIVE_API } from "./bridge";
  */
 export type VoiceMode = "off" | "dictate" | "always";
 export type VoiceStatus = "off" | "starting" | "listening" | "hearing" | "transcribing" | "paused" | "blocked" | "error";
-export type Transcript = { text: string; addressed: boolean; command: string; dismiss: boolean; conversational?: boolean; acknowledgement?: boolean; forZae?: boolean; nameRequired?: boolean | null };
+export type Transcript = { text: string; addressed: boolean; command: string; dismiss: boolean; conversational?: boolean; acknowledgement?: boolean; forZae?: boolean; nameRequired?: boolean | null;
+  /** Set when the turn wasn't checked as Grey's voice; nothing else in it is used. */
+  rejected?: string; message?: string };
 
 const TARGET_RATE = 16000;
 const PREROLL_SECONDS = 0.35;

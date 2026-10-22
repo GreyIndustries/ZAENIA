@@ -11,7 +11,7 @@ import { HandControls } from "./components/shell/HandControls";
 import type { GestureCommand } from "./core/handGestures";
 import type { ShellWindow } from "./components/shell/WindowShell";
 import { parseCoreTelemetry, PREVIEW_TELEMETRY } from "./core/coreTelemetry";
-import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, restartServer, startServer } from "./core/bridge";
+import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, openVoiceTraining, restartServer, startServer } from "./core/bridge";
 import { api, askZaenia, BridgeError, canGoLive, errorText, forgetToken, IN_TAURI, LIVE_API, readStatus, savedToken, startVoiceService, streamChat, streamUnsupported, WEB_APP } from "./core/bridge";
 import type { ChatStream } from "./core/bridge";
 import { assistantProposalExpired, confirmedAssistantAction, parseAssistantProposal } from "./core/assistantActions";
@@ -658,6 +658,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (action === "start_passkey") { void startServer("passkey").catch(failure => setVoiceNote(errorText(failure))); return "Opening the server window. Type your passkey there."; }
     if (action === "restart_token") { void restartServer().catch(failure => setVoiceNote(errorText(failure))); return "Restarting the server, sir."; }
     if (action === "connect_google") { void connectGoogleCalendar().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Google sign-in. Click Allow in your browser."; }
+    if (action === "voice_training") { void openVoiceTraining().catch(failure => setVoiceNote(errorText(failure))); return "Opening voice training. Have your passkey ready, sir."; }
     if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail sign-in. It's read-only; click Allow in your browser."; }
     if (action === "open_files") { openSection("files"); return "Files are up."; }
     if (action === "open_tasks") { openSection("tasks"); return "Tasks are up."; }
@@ -668,6 +669,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     [/^(?:please )?(?:restart|start)(?: up)? (?:the )?server with (?:the |my )?passkey\b|^(?:unlock|switch to) (?:full|owner) (?:mode|features)\b/, "start_passkey"],
     [/^(?:please )?(?:restart|reboot|fix) (?:the )?server\b/, "restart_token"],
     [/^(?:please )?(?:connect|link|set up|sync) (?:my )?(?:g ?mail|e-?mail|inbox)\b/, "connect_gmail"],
+    [/^(?:please )?(?:train|retrain|calibrate|re-?enroll) (?:my |your )?voice\b|^voice training\b/, "voice_training"],
     [/^(?:please )?(?:connect|link|set up|sync) (?:my )?google(?: calendar)?\b/, "connect_google"],
   ];
 
@@ -822,6 +824,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // Names work anywhere in a sentence. Questions and directed replies continue
   // the current conversation, without admitting every nearby utterance.
   function onTranscript(result: Transcript, clipMode: VoiceMode, barged: boolean) {
+    if (result.rejected) {
+      // Not recognised as Grey's voice: drop it. Explain only when he was
+      // clearly talking to the app (button press) or something needs fixing.
+      if (barged) speech.duck(false);
+      if (clipMode === "dictate" || result.rejected === "not_set_up") setVoiceNote(result.message || "That didn't sound like you.");
+      return;
+    }
     if (typeof result.nameRequired === "boolean") setOpenMic(!result.nameRequired);
     const words = (result.addressed ? result.command : result.text).trim();
     if (barged) {

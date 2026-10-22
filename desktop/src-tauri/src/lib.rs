@@ -406,6 +406,21 @@ fn connect_google_calendar() -> Result<(), String> {
     open_voice_window(&script, &root).map_err(|_| "Could not open the Google sign-in window.".to_string())
 }
 
+/// Opens the guided voice training (retrain profile, calibrate, refresh app-mic check).
+#[tauri::command]
+fn open_voice_training() -> Result<(), String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|desktop| desktop.parent())
+        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
+        .to_path_buf();
+    let script = root.join("scripts").join("voice_training.ps1");
+    if !script.is_file() {
+        return Err(format!("Voice training script not found: {}", script.display()));
+    }
+    open_voice_window(&script, &root).map_err(|_| "Could not open voice training.".to_string())
+}
+
 /// Opens the one-time Gmail (read-only) sign-in for important-email summaries.
 #[tauri::command]
 fn connect_gmail() -> Result<(), String> {
@@ -502,6 +517,7 @@ pub fn run() {
                 start_server,
                 connect_google_calendar,
                 connect_gmail,
+                open_voice_training,
                 run_profile_tool
             ]
         )
