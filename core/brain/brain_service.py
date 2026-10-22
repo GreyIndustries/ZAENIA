@@ -786,6 +786,15 @@ class BrainService:
                         "\n"
                     )
 
+        # Learning from this exchange (topic notes, key points, Grey's profile)
+        # happens only here, after it is saved, and only with memory.write.
+        # Reading memory for a turn never learns.
+        try:
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.write")
+        except Exception:
+            return
+
         # The exchange joins its conversation topic (key points refresh in the background).
         try:
             from core.brain.conversation_threads import tracker
@@ -795,8 +804,6 @@ class BrainService:
 
         # Key points about Zack are distilled in the background every few turns.
         try:
-            from core.assistant_service import authorize_memory
-            authorize_memory(self.memory_authorizer, "memory.write")
             from core.personal_memory.insights import learner
             learner().observe(owner_words(question))
             from core.personal_memory.owner_profile import owner_profile

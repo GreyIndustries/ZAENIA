@@ -219,6 +219,8 @@ class OwnerProfile:
 
     def explain(self, memory_id: str) -> dict[str, Any]:
         """Why ZAE remembers this: the record and the evidence behind it."""
+        if not self.available():
+            raise KeyError(memory_id)  # no profile yet; looking never creates one
         with self._memory() as memory:
             row = memory.db.execute("SELECT * FROM memories WHERE id=?", (memory_id,)).fetchone()
             if row is None:

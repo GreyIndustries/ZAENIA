@@ -112,6 +112,34 @@ class ThreadTrackerTest(unittest.TestCase):
                               summarize=lambda *a: {}, run=self.jobs.append, clock=lambda: self.now)
         self.assertEqual(fresh.route("why?", stale).history, [])  # hours old: starts fresh
 
+    def test_route_only_reads_and_record_saves(self):
+        state = self.dir / "threads.json"
+        at = (self.now - timedelta(minutes=3)).isoformat()
+        history = [{"role": "user", "content": "which saber form is aggressive", "at": at},
+                   {"role": "assistant", "content": "Djem So.", "at": at}]
+        view = self.tracker.route("why?", history)
+        self.assertFalse(state.exists())  # routing created no topic file
+        self.assertEqual(self.jobs, [])   # and started no key-point summary
+        self.tracker.record("why?", self.now)
+        saved = json.loads(state.read_text(encoding="utf-8"))
+        self.assertEqual(saved["current"], view.topic_id)
+        self.assertEqual(saved["topics"][0]["turns"], [at, self.now.isoformat()])
+
+    def test_a_turn_that_is_not_recorded_leaves_topics_unchanged(self):
+        self.say("which saber form is aggressive")
+        self.say("djem so for saber power")
+        state = self.dir / "threads.json"
+        before, jobs = state.read_bytes(), len(self.jobs)
+        switch = self.tracker.route("weather tomorrow")  # a new subject ends the saber topic
+        self.assertEqual(switch.decision, "new")
+        self.assertEqual(state.read_bytes(), before)
+        self.assertEqual(len(self.jobs), jobs)
+        self.tracker.record("weather tomorrow", self.now)  # saving the turn saves the switch
+        saved = json.loads(state.read_text(encoding="utf-8"))
+        self.assertEqual(saved["current"], switch.topic_id)
+        self.assertEqual(len(saved["topics"]), 2)
+        self.assertEqual(len(self.jobs), jobs + 1)  # the ended topic's notes refresh now
+
 
 class BrainServiceTopicTest(unittest.TestCase):
     """The brain uses topic tracking only for its own timed history."""
@@ -146,6 +174,23 @@ class BrainServiceTopicTest(unittest.TestCase):
             brain_service.BrainService(memory_authorizer=lambda operation: True).prepare_turn("why?")
         self.assertEqual(seen["state"], folder / "conversation" / "threads.json")
         self.assertEqual([row["at"] for row in seen["history"]], [stamp, stamp])
+
+    def test_preparing_a_turn_writes_no_topic_state(self):
+        from unittest import mock
+        from core.brain import brain_service, conversation_threads
+        folder = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, folder, True)
+        log = folder / "memory.jsonl"
+        stamp = datetime.now(timezone.utc).isoformat()
+        log.write_text(json.dumps({"timestamp": stamp, "role": "user", "content": "saber forms"}) + "\n"
+                       + json.dumps({"timestamp": stamp, "role": "assistant", "content": "Djem So."}) + "\n", encoding="utf-8")
+        local = conversation_threads.ThreadTracker(folder / "conversation" / "threads.json", log, embed=fake_embed,
+                                                   judge=lambda *a: None, summarize=lambda *a: {}, run=lambda job: None)
+        with mock.patch.object(brain_service, "MEMORY_PATH", log), \
+                mock.patch.object(conversation_threads, "tracker", return_value=local):
+            turn = brain_service.BrainService(memory_authorizer=lambda operation: True).prepare_turn("why?")
+        self.assertIn("Djem So.", json.dumps(turn.messages))
+        self.assertEqual(sorted(p.name for p in folder.rglob("*")), ["memory.jsonl"])
 
 
 if __name__ == "__main__":
