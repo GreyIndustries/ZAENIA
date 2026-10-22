@@ -14,7 +14,7 @@ let checks = 0;
 const check = run => { run(); checks++; };
 const base = { ...DEFAULT_APPEARANCE };
 
-check(() => assert.deepEqual({ ...parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}') }, { font: 'mono', size: 125, accent: 'amber', glow: 40 }));
+check(() => assert.deepEqual({ ...parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}') }, { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora' }));
 check(() => assert.deepEqual({ ...parseAppearance('not json') }, base));
 check(() => assert.equal(parseAppearanceCommand('make it blue', base).accent, 'blue'));
 check(() => assert.equal(parseAppearanceCommand('change the color to red', base).accent, 'crimson'));
