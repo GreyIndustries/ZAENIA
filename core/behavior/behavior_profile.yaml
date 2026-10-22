@@ -24,7 +24,10 @@ behavior_profile:
     danger_only_alert_phrase: "Stay sharp."
 
   current_user_preferences:
-    preferred_local_voice: "en_US-hfc_female-medium"
+    preferred_local_voice: "Kokoro af_heart (Piper en_US-hfc_female-medium only as fallback)"
+    preferred_local_brain: "llama3.1:8b"
+    listens_without_wake_word: true
+    voice_is_authorization_for_everyday_actions: true
     prefers_full_file_replacements_when_patching_gets_messy: true
     prefers_step_by_step_building: true
     prefers_one_test_after_each_change: true

@@ -231,6 +231,11 @@ activity:
 
 # Your verified voice is the authorization: these actions happen as soon as
 # you ask, with no "confirm that action" step. Deleting a memory still asks.
+app_mic:
+  # Grey's choice (2026-10-22): every turn from the desktop/phone app mic must
+  # be his voice (checked against his enrolled voice before transcription).
+  require_owner_voice: true
+
 voice_authorization:
   auto_confirm:
     - "task.create"

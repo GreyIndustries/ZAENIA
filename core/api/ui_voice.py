@@ -126,9 +126,34 @@ def interpret(text: str, wake: bool) -> dict[str, Any]:
 
 from core.assistant_platform.performance import measure
 
+def app_mic_requires_voice() -> bool:
+    """Grey's choice (B2): app-mic turns must be his voice. Config: app_mic.require_owner_voice."""
+    try:
+        from core.voice_listener.cognitive_filter import load_config
+        return load_config().get("app_mic", {}).get("require_owner_voice", True) is not False
+    except Exception:
+        return True
+
+
+def voice_check_status() -> dict[str, Any]:
+    if not app_mic_requires_voice():
+        return {"required": False}
+    from core.voice_security.app_mic import app_mic_gate
+    return app_mic_gate().stats()
+
+
 @measure("transcription_and_intent")
 def transcribe(audio: Any, wake: bool = False) -> dict[str, Any]:
     pcm = _decode(audio)
+    if app_mic_requires_voice():
+        # Check the speaker before any speech recognition: a turn that isn't
+        # Grey's voice is dropped, never transcribed, answered or learned from.
+        from core.voice_security.app_mic import REJECT_MESSAGES, app_mic_gate
+        verdict = app_mic_gate().check(pcm)
+        if not verdict["accepted"]:
+            return {"text": "", "addressed": False, "command": "", "dismiss": False, "wake": bool(wake),
+                    "conversational": False, "acknowledgement": False, "forZae": False, "nameRequired": None,
+                    "rejected": verdict["reason"], "message": REJECT_MESSAGES.get(verdict["reason"], "")}
     try:
         text = recognize(pcm)
     except VoiceUnavailable:
@@ -157,6 +182,10 @@ def service_status() -> dict[str, Any]:
     """The PC voice service, as reported by its own heartbeat."""
     result = _service_status()
     result["nameRequired"] = name_required()
+    try:
+        result["voiceCheck"] = voice_check_status()
+    except Exception:
+        result["voiceCheck"] = {"required": True, "setUp": False}
     return result
 
 

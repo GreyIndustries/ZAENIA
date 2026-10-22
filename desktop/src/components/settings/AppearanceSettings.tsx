@@ -1,4 +1,4 @@
-import { ACCENTS, DEFAULT_APPEARANCE, FONTS } from "../../core/appearance";
+import { ACCENTS, DEFAULT_APPEARANCE, FONTS, LOOKS } from "../../core/appearance";
 import type { Appearance } from "../../core/appearance";
 import "./AppearanceSettings.css";
 
@@ -8,6 +8,12 @@ export function AppearanceSettings({ value, onChange }: { value: Appearance; onC
     <div className="section-heading"><span className="subheading">APPEARANCE</span><span>THIS DEVICE</span></div>
     <h2>Fonts &amp; colours</h2>
     <p>Re-tints the whole interface, core included. You can also say “make it blue” or “use the mono font”.</p>
+    <div className="appearance-settings__label">WINDOW STYLE</div>
+    <div className="appearance-settings__looks" role="radiogroup" aria-label="Window style">
+      {LOOKS.map(look => <button key={look.id} type="button" role="radio" aria-checked={value.look === look.id}
+        className={`appearance-settings__look appearance-settings__look--${look.id}${value.look === look.id ? " appearance-settings__look--on" : ""}`}
+        onClick={() => onChange({ ...value, look: look.id })}><strong>{look.label}</strong><small>{look.note}</small></button>)}
+    </div>
     <div className="appearance-settings__label">ACCENT COLOUR</div>
     <div className="appearance-settings__swatches" role="radiogroup" aria-label="Accent colour">
       {ACCENTS.map(accent => <button key={accent.id} type="button" role="radio" aria-checked={value.accent === accent.id}

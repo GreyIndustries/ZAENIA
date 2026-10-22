@@ -1,0 +1,79 @@
+/* Alternative window styles (System → Appearance → Window style).
+   "aurora" is the default glass look in glass-modules.css and NewsPanel.css;
+   these override it for every module window and the Tech News window. */
+
+/* Window style picker */
+.appearance-settings__looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:6px}
+.appearance-settings__look{display:flex;flex-direction:column;gap:3px;text-align:left;padding:10px 12px;border-radius:12px;cursor:pointer;
+  border:1px solid rgba(160,205,255,.18);background:rgba(10,22,40,.5);color:#dbe6f4}
+.appearance-settings__look small{font-size:10px;color:#8ea4c0;line-height:1.35}
+.appearance-settings__look--on{border-color:rgba(244,199,138,.7);box-shadow:0 0 0 2px rgba(244,199,138,.18)}
+.appearance-settings__look--hud{font-family:"Cascadia Mono",Consolas,monospace}
+.appearance-settings__look--editorial strong{font-family:Georgia,Cambria,serif;font-size:14px}
+.appearance-settings__look--neon{background:linear-gradient(135deg,rgba(255,80,200,.18),rgba(80,200,255,.18))}
+
+/* ---------------------------------------------------------------- HOLO HUD */
+[data-look="hud"] .glass-module,[data-look="hud"] .news{--edge:rgba(90,220,255,.45);font-family:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace}
+[data-look="hud"] .glass-masthead,[data-look="hud"] .news__masthead{border-radius:4px!important;background:linear-gradient(90deg,rgba(0,170,255,.12),transparent 70%)!important;
+  border:1px solid rgba(90,220,255,.5)!important;box-shadow:inset 0 0 30px rgba(0,180,255,.12)!important;padding:16px 18px!important}
+[data-look="hud"] .glass-masthead::before{display:none}
+[data-look="hud"] .glass-masthead::after{background:repeating-linear-gradient(0deg,rgba(120,230,255,.07) 0 1px,transparent 1px 4px)!important;mask-image:none!important}
+[data-look="hud"] :is(.glass-masthead__title,.news__title){background:none!important;color:#bff4ff!important;-webkit-text-fill-color:#bff4ff;
+  text-transform:uppercase;letter-spacing:.12em!important;font-size:22px!important;text-shadow:0 0 14px rgba(80,220,255,.6)}
+[data-look="hud"] :is(.glass-masthead__kicker,.news__kicker){color:#5fe3ff!important;letter-spacing:.3em}
+[data-look="hud"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+  .cal-panel__list>li,.files-panel__side,.files-panel__main,.files-panel__banner,.readiness-summary>div,.readiness-modules>article,.codex-connection,
+  .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
+[data-look="hud"] :is(.news__hero,.news__card,.news__quick){
+  border-radius:3px!important;background:rgba(0,20,36,.55)!important;border:1px solid rgba(90,220,255,.35)!important;
+  box-shadow:inset 0 0 18px rgba(0,170,255,.08)!important;backdrop-filter:blur(6px)!important;
+  clip-path:polygon(0 10px,10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px))}
+[data-look="hud"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
+[data-look="hud"] :is(.news__pill,.news__refresh){border-radius:2px!important;text-transform:uppercase;letter-spacing:.12em;font-size:10px!important;
+  background:rgba(0,30,50,.6)!important;border:1px solid rgba(90,220,255,.45)!important;color:#9fefff!important}
+[data-look="hud"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="hud"] .news__pill--on{
+  background:rgba(60,220,255,.22)!important;color:#e9fdff!important;box-shadow:0 0 12px rgba(60,220,255,.35)!important}
+[data-look="hud"] .news__card::after,[data-look="hud"] .news__hero::after{background:linear-gradient(180deg,rgba(0,15,30,.1),rgba(0,15,30,.9))!important}
+[data-look="hud"] .news__img{filter:saturate(.6) hue-rotate(160deg) brightness(.85) contrast(1.1)}
+
+/* ------------------------------------------------------- MIDNIGHT EDITORIAL */
+[data-look="editorial"] :is(.glass-masthead__title,.news__title){font-family:Georgia,Cambria,"Times New Roman",serif!important;font-weight:700!important;
+  font-size:34px!important;letter-spacing:-.02em!important;background:none!important;color:#f6efe4!important;-webkit-text-fill-color:#f6efe4}
+[data-look="editorial"] .glass-masthead{background:none!important;border:0!important;border-bottom:2px solid var(--accent,#e0a353)!important;border-radius:0!important;
+  box-shadow:none!important;padding:4px 2px 14px!important}
+[data-look="editorial"] .glass-masthead::before,[data-look="editorial"] .glass-masthead::after{display:none}
+[data-look="editorial"] .news__masthead{border-bottom:2px solid #e0a353;padding-bottom:12px}
+[data-look="editorial"] :is(.glass-masthead__kicker,.news__kicker){font-family:Georgia,serif;font-style:italic;letter-spacing:.06em;text-transform:none;font-size:12px}
+[data-look="editorial"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+  .cal-panel__list>li,.files-panel__side,.files-panel__main,.readiness-summary>div,.readiness-modules>article,.codex-connection,
+  .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
+[data-look="editorial"] :is(.news__card,.news__quick){
+  border-radius:6px!important;background:#0c121c!important;border:1px solid rgba(255,255,255,.07)!important;box-shadow:none!important;backdrop-filter:none!important}
+[data-look="editorial"] .news__hero{border-radius:6px!important}
+[data-look="editorial"] :is(.news__hero h3,.news__card h4,.glass-module h2){font-family:Georgia,Cambria,serif!important;letter-spacing:0!important}
+[data-look="editorial"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
+[data-look="editorial"] .news__pill{border-radius:4px!important;background:transparent!important;border:1px solid rgba(255,255,255,.18)!important}
+[data-look="editorial"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="editorial"] .news__pill--on{
+  background:#f6efe4!important;color:#111!important;border-color:#f6efe4!important}
+[data-look="editorial"] :is(.glass-module,.news) :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:none!important}
+
+/* ------------------------------------------------------------- NEON BENTO */
+[data-look="neon"] :is(.glass-masthead__title,.news__title){background:linear-gradient(90deg,#ff6ad5,#c774e8,#8795e8,#94d0ff)!important;
+  -webkit-background-clip:text!important;background-clip:text!important;font-size:32px!important;font-weight:800!important}
+[data-look="neon"] .glass-masthead{background:linear-gradient(135deg,rgba(255,106,213,.25),rgba(135,149,232,.18) 50%,rgba(148,208,255,.22))!important;
+  border:0!important;border-radius:26px!important;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 18px 50px rgba(199,116,232,.25)!important}
+[data-look="neon"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+  .cal-panel__list>li,.files-panel__side,.files-panel__main,.readiness-summary>div,.readiness-modules>article,.codex-connection,
+  .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
+[data-look="neon"] :is(.news__hero,.news__card,.news__quick){
+  border-radius:24px!important;border:1px solid transparent!important;
+  background:linear-gradient(#0b1020,#0b1020) padding-box,linear-gradient(135deg,var(--accent,#ff6ad5),#8795e8,#94d0ff) border-box!important;
+  box-shadow:0 10px 34px rgba(135,149,232,.18)!important}
+[data-look="neon"] .news__card:nth-child(3n+1){background:linear-gradient(160deg,rgba(255,106,213,.28),#0b1020 60%) padding-box,linear-gradient(135deg,#ff6ad5,#8795e8) border-box!important}
+[data-look="neon"] .news__card:nth-child(3n+2){background:linear-gradient(160deg,rgba(148,208,255,.25),#0b1020 60%) padding-box,linear-gradient(135deg,#94d0ff,#4fe39a) border-box!important}
+[data-look="neon"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),[data-look="neon"] .news__pill{border-radius:999px!important}
+[data-look="neon"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="neon"] .news__pill--on{
+  background:linear-gradient(90deg,#ff6ad5,#8795e8)!important;color:#fff!important;box-shadow:0 0 16px rgba(255,106,213,.45)!important}
+[data-look="neon"] :is(.glass-module,.news) :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:translateY(-4px) scale(1.01)!important;
+  box-shadow:0 18px 44px rgba(255,106,213,.28)!important}
+@media(prefers-reduced-motion:reduce){[data-look] :is(.glass-module,.news) *:hover{transform:none!important}}
