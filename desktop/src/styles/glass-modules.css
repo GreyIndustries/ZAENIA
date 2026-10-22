@@ -92,3 +92,38 @@
 .glass-module :is(.platform-note,.files-panel__note){border-radius:12px}
 .glass-module .platform-panel .platform-panel{border:0!important;background:none!important;box-shadow:none!important;padding:0!important}
 @media(max-width:700px){.glass-module .notes-workspace{grid-template-columns:1fr}}
+
+/* Each module's own accent (used for its kicker, banner glow, active pills
+   and hover edges), and a soft glowing banner behind the masthead. */
+.glass-module{--accent:#e0a353;--accent-2:#ffd9a6}
+.glass-module--status{--accent:#5fd6ff;--accent-2:#b9efff}
+.glass-module--tasks{--accent:#4fdc9b;--accent-2:#b8f5d6}
+.glass-module--calendar{--accent:#6aa8ff;--accent-2:#c4dcff}
+.glass-module--notes{--accent:#b48cff;--accent-2:#e2d2ff}
+.glass-module--assistant{--accent:#ff8fb3;--accent-2:#ffd2e0}
+.glass-module--files{--accent:#3fd4c4;--accent-2:#b4f3ec}
+.glass-module--system{--accent:#f0b35a;--accent-2:#ffe0b0}
+
+.glass-masthead{position:relative;isolation:isolate;padding:22px 22px 18px;border-radius:22px;overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--accent) 34%,transparent),transparent 55%),
+    radial-gradient(90% 120% at 100% 100%,color-mix(in srgb,var(--accent-2) 16%,transparent),transparent 60%),
+    linear-gradient(160deg,rgba(255,255,255,.06),rgba(8,16,30,.55));
+  box-shadow:0 16px 40px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.08)}
+.glass-masthead::before{content:"";position:absolute;z-index:-1;width:260px;height:260px;right:-60px;top:-120px;border-radius:50%;
+  background:radial-gradient(circle,color-mix(in srgb,var(--accent) 55%,transparent),transparent 70%);filter:blur(10px);opacity:.75;
+  animation:glass-banner-drift 14s ease-in-out infinite alternate}
+.glass-masthead::after{content:"";position:absolute;z-index:-1;inset:0;
+  background:repeating-linear-gradient(115deg,rgba(255,255,255,.035) 0 1px,transparent 1px 18px);mask-image:linear-gradient(90deg,transparent,#000 60%)}
+@keyframes glass-banner-drift{from{transform:translate(0,0)}to{transform:translate(-90px,40px)}}
+.glass-masthead__kicker{color:var(--accent)!important}
+.glass-masthead__title{background:linear-gradient(100deg,#fff 10%,var(--accent-2) 60%,var(--accent) 100%)!important;-webkit-background-clip:text!important;background-clip:text!important}
+
+.glass-module .subheading,.glass-module .section-content__tag{color:var(--accent)!important}
+.glass-module :is(.choice--active,[aria-pressed="true"].choice,.platform-tabs [aria-selected="true"],.files-panel__tabs [aria-selected="true"],
+  button[type="submit"]:not(:disabled),.system-brief__fixit){background:linear-gradient(120deg,var(--accent-2),var(--accent))!important}
+.glass-module :is(.task-card,.readiness-modules>article,.assistant-panel__item,.cal-panel__list>li,.platform-card,.notes-list__item):hover{
+  border-color:color-mix(in srgb,var(--accent) 55%,transparent)!important}
+.glass-module :is(input,select,textarea):focus{border-color:color-mix(in srgb,var(--accent) 65%,transparent)!important;
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)!important}
+@media(prefers-reduced-motion:reduce){.glass-masthead::before{animation:none}}
