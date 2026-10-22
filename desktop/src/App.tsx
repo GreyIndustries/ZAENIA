@@ -38,6 +38,7 @@ import { NewsPanel } from './components/news/NewsPanel';
 import { NewsRail } from './components/news/NewsRail';
 import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
+import './styles/module-looks.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
@@ -1029,7 +1030,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}>
+  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase} data-look={appearance.look}>
     <CoreBackdrop/>
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}

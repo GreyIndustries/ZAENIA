@@ -5,9 +5,18 @@
  */
 export type FontChoice = "default" | "segoe" | "bahnschrift" | "mono" | "serif";
 export type AccentChoice = "amber" | "gold" | "crimson" | "violet" | "blue" | "cyan" | "emerald" | "ice";
-export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number };
+export type LookChoice = "aurora" | "hud" | "editorial" | "neon";
+export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice };
 
-export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100 };
+export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora" };
+
+/** Window styles for every module (Tech News included). */
+export const LOOKS: { id: LookChoice; label: string; note: string }[] = [
+  { id: "aurora", label: "Aurora glass", note: "Frosted panels, glowing banners, soft colour" },
+  { id: "hud", label: "Holo HUD", note: "Jarvis-style lines, corner brackets, scanlines" },
+  { id: "editorial", label: "Midnight editorial", note: "Magazine headlines, solid dark cards" },
+  { id: "neon", label: "Neon bento", note: "Bold colour tiles with neon edges" },
+];
 
 export const FONTS: { id: FontChoice; label: string; stack: string }[] = [
   { id: "default", label: "Inter (default)", stack: 'Inter, "Segoe UI", system-ui, sans-serif' },
@@ -41,6 +50,7 @@ export function parseAppearance(raw: string | null): Appearance {
       size: clampNumber(saved.size, 85, 125, 100),
       accent: ACCENTS.some(accent => accent.id === saved.accent) ? saved.accent as AccentChoice : "amber",
       glow: clampNumber(saved.glow, 40, 140, 100),
+      look: LOOKS.some(look => look.id === saved.look) ? saved.look as LookChoice : "aurora",
     };
   } catch { return { ...DEFAULT_APPEARANCE }; }
 }
