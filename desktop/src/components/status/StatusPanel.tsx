@@ -6,7 +6,7 @@ import "./StatusPanel.css";
 const modules = [
   { id: "security", title: "Security & access", note: "Owner passkey, API token and server mode" },
   { id: "brain", title: "Local brain", note: "Ollama and the conversation model" },
-  { id: "voice", title: "Voice", note: "Piper voice for spoken replies and the brief" },
+  { id: "voice", title: "Voice", note: "Kokoro voice for spoken replies and the brief" },
   { id: "calendar", title: "Calendar", note: "Google Calendar link and the local calendar" },
   { id: "traffic", title: "Traffic", note: "WSDOT traffic for the drive brief" },
   { id: "weather", title: "Weather", note: "Forecast for the drive brief" },
