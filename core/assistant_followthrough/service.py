@@ -12,6 +12,7 @@ from contextlib import closing, contextmanager, nullcontext
 from datetime import datetime, time, timedelta, timezone
 import hashlib
 import json
+import re
 import logging
 import os
 from pathlib import Path
@@ -282,7 +283,8 @@ class FollowThroughService:
         with self._db() as db, db:
             db.execute("BEGIN IMMEDIATE")
             settings = {**DEFAULT_SETTINGS, **json.loads(db.execute("SELECT body FROM settings WHERE id=1").fetchone()[0])}
-            for row in db.execute("SELECT id,source,source_id,revision FROM notifications WHERE state IN ('pending','ready')").fetchall():
+            # Only calendar/task notices are planned here; posted notices (e.g. email) are left alone.
+            for row in db.execute("SELECT id,source,source_id,revision FROM notifications WHERE state IN ('pending','ready') AND source IN ('calendar','task')").fetchall():
                 if sources.get((row["source"], row["source_id"])) != row["revision"]:
                     db.execute("UPDATE notifications SET state='cancelled' WHERE id=?", (row["id"],))
             db.execute("UPDATE notifications SET state='expired' WHERE state='pending' AND valid_until<=?", (stamp,))
@@ -296,6 +298,29 @@ class FollowThroughService:
             db.execute("DELETE FROM notifications WHERE state IN ('read','cancelled','expired') AND valid_until<?", ((now - timedelta(days=90)).timestamp(),))
             db.execute("DELETE FROM delivery_claims WHERE notification_id NOT IN (SELECT id FROM notifications)")
             return delivered
+
+    def post(self, source: str, source_id: str, title: str, message: str, *, hours: float = 12,
+             now: datetime | None = None) -> str | None:
+        """Add a ready-now notice from another ZAE module (for example an important email).
+
+        Posting the same source item twice is a no-op. Returns the notice id,
+        or None while follow-through is switched off.
+        """
+        if source in ("calendar", "task") or not re.fullmatch(r"[a-z][a-z_]{1,30}", source):
+            raise ValueError("Use a module name other than calendar or task.")
+        now = self._now(now)
+        stamp = now.timestamp()
+        notice_id = "ft-" + _digest([source, str(source_id)])
+        with self._db() as db, db:
+            settings = {**DEFAULT_SETTINGS, **json.loads(db.execute("SELECT body FROM settings WHERE id=1").fetchone()[0])}
+            if not settings["enabled"]:
+                return None
+            db.execute("""INSERT OR IGNORE INTO notifications
+                (id,source,source_id,revision,kind,title,message,occurrence,lead_minutes,due,valid_until,created,state)
+                VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'ready')""",
+                (notice_id, source, str(source_id)[:200], "posted", f"{source}.important", str(title)[:500], str(message)[:2000],
+                 _iso(now), 0, stamp, stamp + hours * 3600, stamp))
+        return notice_id
 
     def list_notifications(self, include_read: bool = False, limit: int = 100, now: datetime | None = None) -> dict[str, Any]:
         if type(include_read) is not bool or type(limit) is not int or not 1 <= limit <= 500:

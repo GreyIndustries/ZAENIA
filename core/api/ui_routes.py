@@ -52,6 +52,8 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/screen/watch", "status.read"),
         ("GET", r"/api/news/tech", "status.read"),
         ("GET", r"/api/security/activity", "status.read"),
+        ("GET", r"/api/email/important", "notifications.read"),
+        ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
     )
@@ -330,6 +332,21 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     @router.get("/api/voice/status")
     def voice_status() -> dict[str, Any]:
         return ui_voice.service_status()
+
+    @router.get("/api/email/important")
+    def email_important(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, Any]:
+        from core.email_watch import gmail
+        from core.email_watch.service import email_watch
+        return {**email_watch().recent(limit), **{"setup": gmail.status()}}
+
+    @router.post("/api/email/check")
+    def email_check() -> dict[str, Any]:
+        from core.email_watch.service import email_watch
+        try:
+            result = email_watch().check()
+        except Exception as error:
+            raise HTTPException(503, f"Email check failed ({type(error).__name__}).") from error
+        return {**result, **email_watch().recent(20)}
 
     @router.get("/api/security/activity")
     def security_activity(limit: int = Query(default=60, ge=1, le=300)) -> dict[str, Any]:

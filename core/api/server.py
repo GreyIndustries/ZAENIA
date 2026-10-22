@@ -144,12 +144,16 @@ def create_app(
             game_mode.start()  # frees the brain while a full-screen game is in front
             from core.tech_news.service import tech_news
             tech_news().start()  # tech headlines every 30 minutes (optional, online)
+            from core.email_watch.service import email_watch
+            email_watch().start()  # important-email summaries every 5 minutes, once Gmail is connected
 
         @application.on_event("shutdown")
         def stop_assistant_worker():
             game_mode.stop()
             from core.tech_news.service import tech_news
             tech_news().stop()
+            from core.email_watch.service import email_watch
+            email_watch().stop()
             if followthrough_instance is not None:
                 followthrough_instance.stop()
 

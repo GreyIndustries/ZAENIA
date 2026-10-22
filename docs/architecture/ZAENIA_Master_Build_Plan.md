@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.4  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.5  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -257,3 +257,16 @@ Evidence: on a copy of the live profile (100+ known, 38 candidates), explain, co
 3. **`core/behavior/behavior_profile.yaml` is stale** (it still names Piper as the preferred voice and repeats rules now in the profile). It's protected identity configuration, so it waits for Grey's approval.
 
 2026-10-21 | v1.4 | Claude | Context budget, ledger in repo with owner review, clean-checkout test suite, security activity view. No ADR change; ADR-001…005 remain PROPOSED.
+
+## 21. News redesign, email summaries, audit rotation — Claude, 2026-10-21 (v1.5)
+
+Requested by Grey on 2026-10-21: a fresh, inspiring glass layout for Tech News; an email feature that announces summaries of important mail; and continued three-engine work.
+
+- **Tech News window (clients).** It's a glass magazine now: a masthead, topic pills, a hero story, a bento grid of frosted panels in wide, tall and regular sizes, and a "More headlines" list. Feeds now carry story images (media:content/thumbnail, enclosures, or the first `<img>`). Stories without a picture get a tinted panel per newsroom. On the phone app, external images are blocked by its CSP, so the tinted panels show there instead. Status: IMPLEMENTED, visually checked in preview.
+- **Important-email summaries (new optional online integration, docs/EMAIL.md).** Gmail is read-only (`gmail.readonly`) with Grey's own OAuth client and a separate token. Quick rules come first, the local model triages borderline mail, and important mail gets a 1–2 sentence summary, posted as a spoken notice through the new `FollowThroughService.post()`. Bodies are never stored, and email text is untrusted: it can't instruct, act, or teach the profile. In a live triage check, an Army range change was flagged important, a store sale was not, and a prompt-injection phishing email was judged not important and summarised as phishing. Status: IMPLEMENTED, UNIT TEST (7); **waiting for Grey to enable the Gmail API and scope, then connect.**
+- **Execution and security: audit rotation.** Above 32 MB, the audit log moves to `data/secure/audit_archive/` (nothing deleted) and a fresh file starts. This answers decision 20.4-1 with the non-destructive option. Tests: 2 pass.
+- **Reasoning benchmark.** `python -m core.reasoning benchmark --provider local` needs the owner passkey gate by design, so a live baseline score for llama3.1:8b is still to be recorded by Grey (Phase 1 exit criterion).
+
+Still open for Grey: app-microphone voice policy (a/b/c); stale `behavior_profile.yaml`; pushing feature/claude-development to GitHub.
+
+2026-10-21 | v1.5 | Claude | Tech News redesign, read-only email summaries, audit rotation. No ADR change.

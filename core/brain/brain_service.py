@@ -536,7 +536,13 @@ class BrainService:
             news = news_context(question)
         except Exception:
             news = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, news) if part]
+        mail = None
+        try:
+            from core.email_watch.service import email_context
+            mail = email_context(question)
+        except Exception:
+            mail = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, news, mail) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(

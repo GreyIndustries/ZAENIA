@@ -29,6 +29,7 @@ SECTION_RULES: tuple[tuple[str, int, int], ...] = (
     ("QUOTED WORKING CONTEXT", 85, 1500),
     ("SCREEN WATCH", 85, 1600),
     ("TECH NEWS", 80, 2400),
+    ("EMAIL", 80, 2400),
     ("ABOUT GREY", 75, 2600),
     ("RELEVANT THINGS YOU KNOW ABOUT GREY", 75, 1600),
     ("PERSONAL MEMORY", 70, 2000),
