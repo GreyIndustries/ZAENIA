@@ -357,6 +357,8 @@ class InsightLearner:
     def context(self, question: str = "") -> str | None:
         if not self.settings()["enabled"]:
             return None
+        if self.store is None and not DEFAULT_PATH.exists():
+            return None  # nothing learned yet; reading never creates the store
         try:
             return render_insights(self._store().list(limit=MAX_INSIGHTS), question=question)
         except Exception:

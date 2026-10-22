@@ -3,7 +3,8 @@ the subject changes, pick an old subject back up, and keep its key parts.
 
 Each exchange with Grey belongs to a topic. Before ZAE answers, route() decides
 whether the new message continues the current topic, returns to an earlier
-one, or starts a new one:
+one, or starts a new one. route() only reads: its choice is saved by record(),
+after the exchange itself has been saved, so reading never learns.
 
 * fast rules first: an explicit "new topic", a long pause, short follow-ups
   ("why?", "and that one?"), and clear embedding similarity (local
@@ -20,6 +21,7 @@ reference for the model, never instructions or permissions.
 """
 from __future__ import annotations
 
+import copy
 import json
 import math
 import re
@@ -128,6 +130,15 @@ class ThreadView:
 
 
 @dataclass
+class _Planned:
+    """What route() chose for a question; record() saves it once the exchange is saved."""
+    question: str
+    topic_id: str
+    new_topics: list[dict[str, Any]]  # topics route() opened (not saved yet)
+    ended: str | None                 # the topic that just ended, summarised after saving
+
+
+@dataclass
 class _Exchange:
     at: datetime
     user: str
@@ -147,7 +158,7 @@ class ThreadTracker:
         self.run = run or (lambda job: threading.Thread(target=job, name="zaenia-topic-notes", daemon=True).start())
         self.lock = threading.RLock()
         self._vectors: dict[str, list[float]] = {}
-        self._pending: tuple[str, str] | None = None  # (question, topic id) decided by route()
+        self._pending: _Planned | None = None  # decided by route(), saved by record()
         self._summarizing: set[str] = set()
 
     # ---- state ------------------------------------------------------------
@@ -248,6 +259,7 @@ class ThreadTracker:
             current = next((t for t in topics if t["id"] == state.get("current")), None)
             now = self.clock()
             text = " ".join(question.split())
+            created: list[dict[str, Any]] = []
             if current is None:
                 # Recent exchanges no topic holds yet (a new log, or turns from
                 # before tracking) become the current topic, so they still count.
@@ -258,6 +270,7 @@ class ThreadTracker:
                                "turns": [self._turn_key(e.at) for e in loose], "started": loose[0].at.isoformat(),
                                "last": loose[-1].at.isoformat(), "summarized": 0}
                     topics.append(current)
+                    created.append(current)
             decision, target = "new", None
             last = _time(current.get("last")) if current else None
             paused = last is None or now - last > PAUSE
@@ -308,13 +321,12 @@ class ThreadTracker:
                 target = {"id": uuid.uuid4().hex[:12], "title": text[:60], "key_points": [], "turns": [],
                           "started": now.isoformat(), "last": now.isoformat(), "summarized": 0}
                 topics.append(target)
-            if previous is not None and previous["id"] != target["id"]:
-                self._schedule_summary(previous["id"])  # the topic that just ended keeps its key parts
-            state["current"] = target["id"]
-            target["last"] = now.isoformat()
-            with self._locked():
-                self._save(state)
-            self._pending = (question, target["id"])
+                created.append(target)
+            # Nothing is saved or summarised here. A turn that is never
+            # remembered (remember=False, a failed answer, no memory.write)
+            # leaves no topic, turn or notes behind.
+            ended = previous["id"] if previous is not None and previous["id"] != target["id"] else None
+            self._pending = _Planned(question, target["id"], copy.deepcopy(created), ended)
 
             history = self._as_messages(self._topic_exchanges(target, exchanges)[-MAX_TOPIC_EXCHANGES:])
             return ThreadView(history, self._notes(target, previous, decision, topics, exchanges, text), target["id"], decision)
@@ -343,11 +355,15 @@ class ThreadTracker:
 
     # ---- after the reply -----------------------------------------------------
     def record(self, question: str, at: datetime | None = None) -> None:
-        """Attach a saved exchange to the topic route() chose for it."""
+        """Attach a saved exchange to the topic route() chose for it, and save that choice."""
         with self.lock:
             pending, self._pending = self._pending, None
             state = self._load()
-            topic_id = pending[1] if pending and pending[0].strip() == question.strip() else state.get("current")
+            planned = pending if pending and pending.question.strip() == question.strip() else None
+            if planned is not None:
+                known = {t["id"] for t in state["topics"]}
+                state["topics"].extend(t for t in planned.new_topics if t["id"] not in known)
+            topic_id = planned.topic_id if planned is not None else state.get("current")
             topic = next((t for t in state["topics"] if t["id"] == topic_id), None)
             if topic is None:
                 return
@@ -358,6 +374,8 @@ class ThreadTracker:
             state["current"] = topic["id"]
             with self._locked():
                 self._save(state)
+            if planned is not None and planned.ended and planned.ended != topic["id"]:
+                self._schedule_summary(planned.ended)  # the topic that just ended keeps its key parts
             if len(topic["turns"]) - int(topic.get("summarized", 0)) >= SUMMARY_EVERY:
                 self._schedule_summary(topic["id"])
 
