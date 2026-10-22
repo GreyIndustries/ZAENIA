@@ -406,6 +406,21 @@ fn connect_google_calendar() -> Result<(), String> {
     open_voice_window(&script, &root).map_err(|_| "Could not open the Google sign-in window.".to_string())
 }
 
+/// Opens the one-time Gmail (read-only) sign-in for important-email summaries.
+#[tauri::command]
+fn connect_gmail() -> Result<(), String> {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(|desktop| desktop.parent())
+        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
+        .to_path_buf();
+    let script = root.join("scripts").join("connect_gmail.ps1");
+    if !script.is_file() {
+        return Err(format!("Gmail connect script not found: {}", script.display()));
+    }
+    open_voice_window(&script, &root).map_err(|_| "Could not open the Gmail sign-in window.".to_string())
+}
+
 /// Restarts the ZÆNIA API server with the project's own script, hidden.
 /// Works even when the server is down, since it doesn't go through the API.
 #[tauri::command]
@@ -486,6 +501,7 @@ pub fn run() {
                 zaenia_briefing_audio,
                 start_server,
                 connect_google_calendar,
+                connect_gmail,
                 run_profile_tool
             ]
         )

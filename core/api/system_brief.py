@@ -134,6 +134,18 @@ def build_system_brief(mode: str) -> dict[str, Any]:
                            "Create a Google OAuth client (Desktop app), save it as data\\google_calendar\\credentials.json, then press Fix it.",
                            "connect_google"))
     try:
+        from core.email_watch.gmail import status as gmail_status
+        mail = gmail_status()
+    except Exception:
+        mail = {"clientFile": False, "connected": False}
+    if not mail["connected"]:
+        items.append(_item("improve", "email", "Important email summaries",
+                           "ZAE can't see your email yet.",
+                           "In Google Cloud Console enable the Gmail API and add the gmail.readonly scope, then press Fix it and click Allow."
+                           if mail["clientFile"] else
+                           "Create a Google OAuth client (Desktop app) as for Calendar, then press Fix it.",
+                           "connect_gmail"))
+    try:
         from core.voice_output.neural_voice import settings as kokoro_settings
         kokoro = kokoro_settings()
         kokoro_ready = (kokoro["active"] and kokoro["model_path"].is_file()
