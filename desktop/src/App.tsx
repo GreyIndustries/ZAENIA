@@ -36,6 +36,8 @@ import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { NewsPanel } from './components/news/NewsPanel';
 import { NewsRail } from './components/news/NewsRail';
+import { ModuleMasthead } from './components/shell/ModuleMasthead';
+import './styles/glass-modules.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
@@ -996,6 +998,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in System Status.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
   </>;
 
+  // Every module shares the Tech News look: a masthead and glass panels.
+  function glassBody(id: Section, masthead = true): ReactNode {
+    return <div className={`glass-module glass-module--${id}`}>
+      {masthead && id !== "news" && <ModuleMasthead label={sections[id].label} title={sections[id].title} description={sections[id].description}/>}
+      {sectionBody(id)}
+    </div>;
+  }
+
   function sectionBody(id: Section): ReactNode {
     switch (id) {
       case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
@@ -1071,13 +1081,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
           {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} processing={sending || listen.status === "hearing" || pcVoice?.state === "hearing" || pcVoice?.state === "replying"} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
-          {!windowed && section !== "overview" && sectionBody(section)}
+          {!windowed && section !== "overview" && glassBody(section, false)}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
             {shell.windows.filter(win => !win.minimized).map(win => <AppWindow key={win.id} win={win} title={sections[win.id as Section].title} label={sections[win.id as Section].label}
               active={shell.active === win.id} stage={() => layerRef.current?.getBoundingClientRect() ?? null}
               onAttention={() => { attendedTab.current = win.id; }}
               onFocus={() => { attendedTab.current = win.id; shell.open(win.id); }} onClose={() => shell.close(win.id)} onMinimize={() => shell.minimize(win.id)} onChange={rect => shell.update(win.id, rect)}>
-              {sectionBody(win.id as Section)}
+              {glassBody(win.id as Section)}
             </AppWindow>)}
           </div>}
           {windowed && <Dock windows={shell.windows} titles={Object.fromEntries(WINDOW_IDS.map(id => [id, sections[id as Section].title]))} active={shell.active} onOpen={shell.open}

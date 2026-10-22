@@ -1,0 +1,94 @@
+/* One glass look for every module window, matching Tech News:
+   a magazine masthead, pill controls, and frosted panels in mixed sizes.
+   Scoped to .glass-module so the core, dock and chat bar are untouched. */
+
+.glass-module{--glass:rgba(16,30,52,.42);--glass-hi:rgba(255,255,255,.08);--edge:rgba(160,205,255,.18);--warm:#f4c78a;--muted:#8ea4c0;
+  display:flex;flex-direction:column;gap:16px;color:#e7eef9}
+
+/* Masthead */
+.glass-masthead{display:flex;flex-direction:column;gap:2px;padding:2px 2px 4px}
+.glass-masthead__kicker{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#e0a353}
+.glass-masthead__title{margin:2px 0;font-size:28px;line-height:1.08;letter-spacing:-.035em;font-weight:650;
+  background:linear-gradient(100deg,#fff 10%,#ffd9a6 55%,#9fd3ff 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.glass-masthead__lede{margin:0;font-size:12px;line-height:1.55;color:var(--muted);max-width:720px}
+
+/* Frosted panels: the main building blocks of each module */
+.glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+  .cal-panel__list>li,.files-panel__side,.files-panel__main,.files-panel__banner,.readiness-summary>div,.readiness-modules>article,.codex-connection,
+  .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.notes-panel>section,.notes-panel>aside,.notes-panel>div>section){
+  position:relative;border-radius:18px!important;border:1px solid var(--edge)!important;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass) 40%,rgba(6,14,28,.6))!important;
+  backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
+  box-shadow:0 12px 30px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.07)!important;
+  transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+.glass-module :is(.task-card,.readiness-modules>article,.assistant-panel__item,.cal-panel__list>li,.platform-card):hover{
+  transform:translateY(-2px);border-color:rgba(244,199,138,.42)!important;box-shadow:0 16px 36px rgba(0,0,0,.3),0 0 0 1px rgba(244,199,138,.1)!important}
+.glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+  .files-panel__side,.files-panel__main,.codex-connection,.system-brief,.platform-card,.knowledge-panel,.detail-panel__block){padding:16px 18px!important}
+
+/* Items inside panels: lighter glass */
+.glass-module :is(.assistant-panel__item,.cal-panel__event,.files-panel__file,.system-brief__group li){
+  border-radius:14px!important;border:1px solid rgba(160,205,255,.12)!important;background:rgba(10,22,40,.42)!important}
+
+/* Headings */
+.glass-module :is(h2,h3){letter-spacing:-.02em}
+.glass-module .assistant-panel__heading h2,.glass-module .detail-panel__block h2,.glass-module .readiness-panel>h2{color:#f2f6fc;font-weight:650}
+.glass-module .subheading,.glass-module .section-content__tag{color:#e0a353!important;letter-spacing:.2em}
+
+/* Pills: tabs, choices and action buttons */
+.glass-module :is(.choice,.platform-tabs button,.files-panel__tabs button,.assistant-panel__actions button,.task-toolbar button,.task-move button,
+  .cal-panel__draft-actions button,.files-panel__actions button,.system-brief__fixit,.system-brief__actions button,.knowledge-panel button,
+  .assistant-panel__form button,.cal-panel__form button,.task-create button,.task-details button){
+  width:auto;min-height:30px;padding:0 14px;border-radius:999px!important;border:1px solid var(--edge)!important;
+  background:rgba(10,22,40,.5)!important;color:#c9d8ea!important;font-size:12px;cursor:pointer;transition:all .2s}
+.glass-module :is(.choice,.platform-tabs button,.files-panel__tabs button,.assistant-panel__actions button,.task-toolbar button,.task-move button,
+  .cal-panel__draft-actions button,.files-panel__actions button,.system-brief__fixit,.system-brief__actions button,.knowledge-panel button,
+  .assistant-panel__form button,.cal-panel__form button,.task-create button,.task-details button):hover:not(:disabled){color:#fff!important;border-color:rgba(255,255,255,.32)!important}
+.glass-module :is(.choice--active,[aria-pressed="true"].choice,.platform-tabs [aria-selected="true"],.files-panel__tabs [aria-selected="true"],
+  button[type="submit"]:not(:disabled),.system-brief__fixit){
+  color:#1b1206!important;background:linear-gradient(120deg,#ffd9a6,#e0a353)!important;border-color:transparent!important;font-weight:600}
+.glass-module .choice--danger{background:rgba(255,120,90,.18)!important;border-color:rgba(255,140,110,.6)!important;color:#ffd2c4!important}
+.glass-module .mode-grid,.glass-module .choice-row{display:flex;flex-wrap:wrap;gap:8px;background:none!important;border:0!important;padding:0!important}
+
+/* Inputs */
+.glass-module :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea){
+  border-radius:12px!important;border:1px solid var(--edge)!important;background:rgba(8,18,34,.55)!important;color:inherit!important;
+  backdrop-filter:blur(8px);padding:8px 12px}
+.glass-module :is(input,select,textarea):focus{outline:none;border-color:rgba(244,199,138,.55)!important;box-shadow:0 0 0 3px rgba(244,199,138,.12)}
+
+/* Badges */
+.glass-module :is(.assistant-panel__badge,.files-panel__badge,.readiness-badge,.task-priority){border-radius:999px!important}
+
+/* Bento: mixed panel sizes where a module shows several panels side by side */
+.glass-module .readiness-modules{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));grid-auto-flow:dense;gap:12px}
+.glass-module .readiness-modules>article:first-child{grid-column:span 2}
+.glass-module .readiness-summary{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.glass-module .readiness-summary>div{padding:16px 18px}
+.glass-module .readiness-summary>div:first-child{grid-column:span 2}
+.glass-module--system .core-settings{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));grid-auto-flow:dense;align-items:start;gap:14px}
+.glass-module--system .core-settings>.detail-panel__block:first-child,.glass-module--system .core-settings>.status-block{grid-column:span 2}
+.glass-module--system .system-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.glass-module :is(.system-module,.file-detail){border-radius:16px!important;border:1px solid var(--edge)!important;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass) 40%,rgba(6,14,28,.6))!important;backdrop-filter:blur(12px)}
+.glass-module .file-detail{padding:16px 18px;margin-top:12px}
+.glass-module .assistant-panel__sections{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;align-items:start}
+.glass-module .task-stats{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.glass-module .task-stats>*{border-radius:16px;border:1px solid var(--edge);background:var(--glass);padding:12px 14px}
+
+@media(max-width:700px){
+  .glass-masthead__title{font-size:22px}
+  .glass-module .readiness-modules>article:first-child,.glass-module .readiness-summary>div:first-child,
+  .glass-module--system .core-settings>.detail-panel__block:first-child,.glass-module--system .core-settings>.status-block{grid-column:auto}
+}
+@media(prefers-reduced-motion:reduce){.glass-module *{transition:none!important}.glass-module *:hover{transform:none!important}}
+
+/* Notes and the Assistant's platform tools share the platform-panel layout. */
+.glass-module :is(.platform-panel,.notes-list,.notes-editor){border-radius:18px!important;border:1px solid var(--edge)!important;
+  background:linear-gradient(160deg,var(--glass-hi),var(--glass) 40%,rgba(6,14,28,.6))!important;backdrop-filter:blur(14px);
+  box-shadow:0 12px 30px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.07)!important;padding:16px 18px!important}
+.glass-module .notes-workspace{display:grid;grid-template-columns:minmax(220px,1fr) minmax(280px,1.6fr);gap:14px;align-items:start}
+.glass-module .notes-list__item{border-radius:14px!important;border:1px solid rgba(160,205,255,.12)!important;background:rgba(10,22,40,.42)!important;transition:all .2s}
+.glass-module .notes-list__item:hover{border-color:rgba(244,199,138,.42)!important;transform:translateY(-1px)}
+.glass-module :is(.platform-note,.files-panel__note){border-radius:12px}
+.glass-module .platform-panel .platform-panel{border:0!important;background:none!important;box-shadow:none!important;padding:0!important}
+@media(max-width:700px){.glass-module .notes-workspace{grid-template-columns:1fr}}
