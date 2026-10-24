@@ -1,6 +1,6 @@
 import { useId } from "react";
-import jarvisHologram from "../../assets/jarvis-hologram.png";
-import jarvisReference from "../../assets/jarvis-reference.png";
+import jarvisHologram from "../../assets/jarvis-hologram.webp";
+import jarvisReference from "../../assets/jarvis-reference.webp";
 import type { CoreTelemetry } from "../../core/coreTelemetry";
 import "./SystemProgressCore.css";
 

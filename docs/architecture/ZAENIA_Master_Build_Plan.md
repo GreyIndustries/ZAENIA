@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.5  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.8  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -333,3 +333,45 @@ Requested by Grey on 2026-10-24. Security becomes its own tab, opened only with 
 - **Verified live:** not yet. Live unlock by passkey and by phrase plus voice needs Grey at the PC.
 
 2026-10-24 | v1.7 | Claude | Locked Security tab (passkey, or phrase plus voice), live attack-resistance assessment, recommendations, improvements; Status shows level only. No ADR change; no capability change.
+
+## 24. Looks, background mode, conversation, voice turns, game coach, Python 3.13 — Claude, 2026-10-23/24 (v1.8)
+
+Requested by Grey across 2026-10-23 and 2026-10-24. Grey's standing instruction (2026-10-24): finished work is merged into the live install without waiting for a GitHub merge; pushing still needs his word. Each item below was merged live, tested, and pushed with his OK unless noted.
+
+- **Appearance (clients).** There are now 35 accent colours (27 new). Every module window can have its own window style (Aurora, Holo HUD, Midnight editorial, Neon bento) and its own colour, or follow the app. `data-look` sits on each `.glass-module`, and `tabAppearance()` sets `--accent`/`--accent-2`. HUD, Editorial and Neon had hard-coded colours, so tab colours never showed; all styles now draw from the window's accent. A "Core icons" choice can show all six orbs in the accent colour. Voice: "make the tasks tab pink", "make the core icons the same colour". Status: IMPLEMENTED, UI checks (25 appearance), preview-verified.
+- **Background mode (clients, resources).** When the window is unfocused or hidden and ZAE is idle, the neural core stops requesting frames and keeps one still, glowing frame. CSS animations pause, and status and capability polling slow from 8 s to 32 s and from 2.5 s to 15 s (`core/appBackground.ts`). Everything resumes on focus or when she hears, thinks or speaks. Preview-verified: 0 running animations and an unchanged canvas while away.
+- **Conversation (Reasoning engine).** The rules are J.A.R.V.I.S. composure plus F.R.I.D.A.Y. speed (`conversation_rules.py`).
+  - `reply_shape.py` makes replies brief first and deeper only when he asks ("why?", "explain", "tell me more", "walk me through it"). A brief turn gets a short system line just before his message.
+  - His message always reaches the model last and unchanged. `closure_check` enforces this, and it caught an earlier version that appended the cue to his message; that version was fixed the same day.
+  - `personal_memory/speech_style.py` learns running averages only: message length, casual typing, his own shorthand, and speaking pace. No text is stored. It learns after `memory.write` and is read with `memory.read`.
+  - App-mic transcripts are marked as spoken, so they aren't treated as casual typing.
+  - Kokoro's speed moves toward his pace, within 0.92–1.12×, after 5 samples.
+  - Live check on llama3.1:8b: a simple question went from 206 to 40–50 words, and "why?" still gives the full explanation.
+- **Voice status.** The Voice module reports "Kokoro voice ready (af_heart), Piper as backup" instead of Piper.
+- **One answer per spoken turn (Execution).** PC Voice reports `recognising` false after 3 misses, which hands listening back to the app mic. When it flipped back, both listeners heard the same sentence and both answered. Now each claims a turn before answering (`service_status.claim_turn`, `data/ui/voice_turn.json` with hashed words and a time, no text). The second listener drops the same words within 12 s. The app mic waits up to 2.5 s while the PC is still hearing, and only claims words meant for ZAE. Tests: 7.
+- **Game coach (new, `core/assistant_platform/game_coach.py`).** It runs during game mode only, on by default, and "stop watching me play" turns it off.
+  - Every 20 s the local vision model notes the moment. Frames are kept in memory only, and capture pauses for private windows.
+  - When the game closes, the local brain reviews the session (style, decisions, strengths, mistakes, tips) and updates a per-game style profile in `data/gaming/`. "How did I play?" answers from it (`memory.read`). There is a System card and `/api/gaming/coach` (`status.read` / `assistant.desktop.manage`).
+  - **Tuned 2026-10-24 from the first real session (Stellaris):** that session was judged "indecisive" from 6 main-menu frames, and a web look-up returned a bird. Fixes:
+    - each note now starts with SCREEN: playing, menu, loading or paused;
+    - only playing moments count or get reviewed;
+    - non-play screens are checked every 60 s;
+    - repeated identical notes are dropped;
+    - web results must mention the game;
+    - review items are flattened to plain sentences;
+    - the review prompt forbids personality guesses from thin notes.
+  - The misjudged Stellaris profile was backed up (`data/gaming/profile.before-tuning-20261024.json`) and cleared. Tests: 19.
+- **Web look-ups (new optional online integration, `core/assistant_platform/web_lookup.py`).** Grey approved internet look-ups for what is on screen. Only a few search words leave the PC (a game, item or error code), never a picture or window text. Terms that look private (e-mail, URL, path, long number, password/bank words) are refused. Sources are DuckDuckGo instant answers, then Wikipedia full-text search, both keyless. Results are cached for a week in `data/web_cache/` and rate-limited to one per 20 s. Screen-watch notes may name one thing to look up. This is consistent with ADR-002 (optional, replaceable external service). Live check: Marvel Rivals, Elden Ring and Jeff the Land Shark resolved correctly.
+- **Security self-check fix commands** now work as typed in PowerShell (`cd` to the project, venv Python).
+- **Python 3.13.15 (runtime).** The live `.venv` moved from 3.11.0 (the first 3.11 release, with no security fixes since) to 3.13.15, with the same 109 packages and versions. Torch 2.11 is still CUDA 12.6.
+  - Verified before switching: 629 tests, self-test 45/45, closure 63/63, integration 16/16, CUDA, Kokoro, Vosk, ECAPA on the GPU, Piper, 16 microphones.
+  - Rollback: `.venv311_backup`.
+- **Upgrades batch (2026-10-24):**
+  - Six old `_backup_before_*` folders (gitignored, nothing imports them) moved out of `core/` to `backups/code-tree-backups-20261024/`.
+  - Pygame's start-up banner and its setuptools `pkg_resources` warning are hidden via `core/voice_output/quiet_pygame.py`. Pygame already falls back cleanly when `pkg_resources` is gone, so audio can't break on a future setuptools.
+  - Faster app start: the backdrop and preview images were converted to WebP (6.6 MB down to 0.67 MB), and seven module windows load when first opened. The main bundle went from 555 KB to 475 KB, so the 500 KB build warning is gone.
+  - Reasoning benchmark: its self-test passes (38 checks). The live baseline still needs Grey's passkey by design (Phase 1 exit criterion).
+
+Still open for Grey: run voice training (B2 priority) and then measure recognition; start PC Voice with the passkey (it picks up the turn-claim fix on 3.13); set a new spoken phrase; Gmail API enablement (C1); run `.\.venv\Scripts\python.exe -m core.reasoning benchmark --provider local --limit 14` for the baseline.
+
+2026-10-24 | v1.8 | Claude | Per-tab looks and colours, background mode, J.A.R.V.I.S./F.R.I.D.A.Y. conversation with brief-first replies and learned speech style, one answer per spoken turn, game coach with web look-ups (tuned), Python 3.13 runtime, start-up and housekeeping upgrades. No ADR change; no capability change (new routes use existing capabilities).

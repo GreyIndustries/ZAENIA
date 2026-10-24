@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-import pygame
+from core.voice_output.quiet_pygame import pygame
 import yaml
 
 

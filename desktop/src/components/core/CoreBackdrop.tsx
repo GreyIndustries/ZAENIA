@@ -1,4 +1,4 @@
-import hangar from "../../assets/core/warehouse-clean.png";
+import hangar from "../../assets/core/warehouse-clean.webp";
 
 /**
  * Hangar backdrop: the project's own warehouse render, with soft overlays so
