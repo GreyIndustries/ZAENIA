@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
+import type { TaskRecord } from "../../core/taskModel";
 import "./CalendarPanel.css";
 
 type CalendarEvent = {
@@ -33,7 +34,7 @@ function writeDrafts(drafts: Draft[]) {
  * live Google events, the same sources the brief reads. New events go to
  * ZÆNIA; Google stays read-only until two-way sign-in is set up.
  */
-export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number }) {
+export function CalendarPanel({ refreshVersion = 0, tasks = [] }: { refreshVersion?: number; tasks?: TaskRecord[] }) {
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [selected, setSelected] = useState(() => dayKey(new Date()));
   const [data, setData] = useState<CalendarReply | null>(null);
@@ -74,6 +75,17 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
     for (const event of data?.events ?? []) map.set(event.date, [...(map.get(event.date) ?? []), event]);
     return map;
   }, [data]);
+  // Open tasks with a deadline, by local day (from the Tasks side of the tab).
+  const tasksByDay = useMemo(() => {
+    const map = new Map<string, TaskRecord[]>();
+    for (const task of tasks) {
+      if (task.archived || task.status === "Completed" || !task.deadline) continue;
+      const key = dayKey(new Date(task.deadline));
+      map.set(key, [...(map.get(key) ?? []), task]);
+    }
+    return map;
+  }, [tasks]);
+  const dayTasks = tasksByDay.get(selected) ?? [];
   const cells = Array.from({ length: 42 }, (_, index) => { const date = new Date(gridStart); date.setDate(gridStart.getDate() + index); return date; });
   const dayEvents = (byDay.get(selected) ?? []).slice().sort((a, b) => (a.allDay ? "00:00" : a.time || "99:99").localeCompare(b.allDay ? "00:00" : b.time || "99:99"));
   const dayDrafts = drafts.filter(draft => draft.day === selected);
@@ -136,12 +148,13 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
       {cells.map(date => {
         const key = dayKey(date);
         const count = byDay.get(key)?.length ?? 0;
+        const due = tasksByDay.get(key)?.length ?? 0;
         const outside = date.getMonth() !== month.getMonth();
         const today = key === dayKey(new Date());
         return <button key={key} type="button" aria-pressed={selected === key}
-          aria-label={`${date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} event${count > 1 ? "s" : ""}` : ""}${data?.dutyOverrides?.[key] ? `, ${data.dayStatus[key]}` : ""}`}
+          aria-label={`${date.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}${count ? `, ${count} event${count > 1 ? "s" : ""}` : ""}${due ? `, ${due} task${due > 1 ? "s" : ""} due` : ""}${data?.dutyOverrides?.[key] ? `, ${data.dayStatus[key]}` : ""}`}
           className={`calendar-day${selected === key ? " calendar-day--selected" : ""}${count ? " calendar-day--event" : ""}${outside ? " cal-panel__day--outside" : ""}${today ? " cal-panel__day--today" : ""}`}
-          onClick={() => setSelected(key)}>{date.getDate()}{count > 1 && <small className="cal-panel__count">{count}</small>}{data?.dutyOverrides?.[key] && <span className="cal-panel__status-dot" aria-hidden="true"/>}</button>;
+          onClick={() => setSelected(key)}>{date.getDate()}{count > 1 && <small className="cal-panel__count">{count}</small>}{data?.dutyOverrides?.[key] && <span className="cal-panel__status-dot" aria-hidden="true"/>}{due > 0 && <span className="cal-panel__task-dot" aria-hidden="true"/>}</button>;
       })}
     </div>
     {data?.notice && <p className="cal-panel__notice" role="status">{data.notice}</p>}
@@ -151,15 +164,18 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
         <strong>{selectedDate.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</strong>
         {data?.dayStatus[selected] && <span className="cal-panel__duty">{data.dayStatus[selected]}</span>}
       </div>
+      <details className="cal-panel__duty-details">
+      <summary>Duty status: {data?.dayStatus[selected] ?? "from the calendar"}</summary>
       <form className="cal-panel__duty-form" onSubmit={saveDuty} aria-label="Edit selected day's duty status">
         <label>Duty status<select value={duty} onChange={event => setDuty(event.target.value as DutyStatus | "automatic")} disabled={savingDuty || loading || data?.dutyRevision === undefined}>
           <option value="automatic">Use calendar status</option><option value="on_duty">On duty</option><option value="off_duty">Off duty / DONSA</option><option value="class">School / class</option><option value="leave">On leave</option>
         </select></label>
         <button type="submit" disabled={savingDuty || loading || data?.dutyRevision === undefined || duty === (data?.dutyOverrides?.[selected] ?? "automatic")}>{savingDuty ? "Saving…" : "Save status"}</button>
-        <small>Your choice applies to this date and takes priority over inferred status. Events and reminders stay scheduled.</small>
+        <small>Applies to this date only and overrides the inferred status. Events and reminders stay scheduled.</small>
       </form>
+      </details>
       {dutyNotice && <p className="cal-panel__notice" role="status">{dutyNotice}</p>}
-      {dayEvents.length === 0 && dayDrafts.length === 0 && <p className="cal-panel__empty">{loading ? "Loading…" : "Nothing scheduled."}</p>}
+      {dayEvents.length === 0 && dayDrafts.length === 0 && dayTasks.length === 0 && <p className="cal-panel__empty">{loading ? "Loading…" : "Nothing scheduled."}</p>}
       <ul className="cal-panel__list">
         {dayEvents.map(item => <li key={`${item.id}-${item.date}`} className={`cal-panel__event cal-panel__event--${item.source}`}>
           <span className="cal-panel__time">{item.allDay ? "All day" : item.time ? timeLabel(item.time) : "—"}{item.endTime && !item.allDay && <small>– {timeLabel(item.endTime)}</small>}</span>
@@ -172,6 +188,11 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
           {item.deletable && <button type="button" className={`cal-panel__delete${confirmDelete === item.id ? " cal-panel__delete--confirm" : ""}`}
             onClick={() => void removeEvent(item)} aria-label={confirmDelete === item.id ? `Tap again to delete ${item.title}` : `Delete ${item.title}`}>
             {confirmDelete === item.id ? "Delete?" : "✕"}</button>}
+        </li>)}
+        {dayTasks.map(task => <li key={`task-${task.id}`} className="cal-panel__event cal-panel__event--task">
+          <span className="cal-panel__time">{task.deadline ? timeLabel(new Date(task.deadline).toTimeString().slice(0, 5)) : ""}</span>
+          <div className="cal-panel__body"><strong>{task.title}</strong><small>Task due · {task.status}</small></div>
+          <span className={`cal-panel__source cal-panel__source--task task-priority--${task.priority.toLowerCase()}`}>{task.priority}</span>
         </li>)}
         {dayDrafts.map(draft => <li key={`draft-${draft.id}`} className="cal-panel__event cal-panel__event--draft">
           <span className="cal-panel__time">Draft</span>
@@ -190,7 +211,7 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
         </select>
         <button type="submit" disabled={!title.trim() || !time || saving}>{saving ? "Adding…" : "+ Add"}</button>
       </form>
-      <p className="cal-panel__foot">New events are saved in ZÆNIA, so your brief and reminders include them. Google Calendar events are shown live but can't be changed here yet.</p>
+      <p className="cal-panel__foot">New events save to ZÆNIA (your brief includes them). Google events are read-only here.</p>
     </section>
   </div>;
 }

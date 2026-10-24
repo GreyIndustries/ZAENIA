@@ -35,7 +35,7 @@ function placement(index: number): Rect {
   return { x: 0.03 + step / 2, y: 0.02 + step / 2, w: 0.92, h: 0.92 };
 }
 
-export function useWindowShell(known: readonly string[]) {
+export function useWindowShell(known: readonly string[], aliases: Record<string, string> = {}) {
   const [windows, setWindows] = useState<ShellWindow[]>(() => readSaved().filter(win => known.includes(win.id)));
   const zTop = useRef(windows.reduce((top, win) => Math.max(top, win.z), 10));
   useEffect(() => {
@@ -69,7 +69,11 @@ export function useWindowShell(known: readonly string[]) {
     });
     zTop.current = checked.length + 12; setWindows(checked);
   }, [known]);
-  return { windows, active, open, close, closeAll, minimize, showDesktop, restoreAll, update, setRect, restore };
+  // A retired window id (e.g. "calendar", now part of Tasks & Calendar) opens its replacement.
+  const real = (id: string) => aliases[id] ?? id;
+  return { windows, active, closeAll, showDesktop, restoreAll, restore,
+    open: (id: string) => open(real(id)), close: (id: string) => close(real(id)), minimize: (id: string) => minimize(real(id)),
+    update: (id: string, rect: Partial<Rect>) => update(real(id), rect), setRect: (id: string, rect: Rect) => setRect(real(id), rect) };
 }
 
 type WindowProps = {

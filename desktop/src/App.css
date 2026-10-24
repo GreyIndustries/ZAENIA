@@ -196,7 +196,7 @@
 .sidebar__group-label{margin-top:0}
 .workspace{grid-row:2;grid-column:2;min-height:0;min-width:0}
 @media(max-width:1270px){
-  .zaenia-app{grid-template-columns:200px minmax(0,1fr)}
+  .zaenia-app{grid-template-columns:238px minmax(0,1fr)}
   .identity-header__panel{flex-basis:345px;padding:10px 19px}
   .identity-header>.topbar{padding-left:24px}
 }
@@ -259,7 +259,7 @@
 .chat-dock{border:1px solid #8fcaffaa;border-top-color:#ffcf81aa;background:linear-gradient(110deg,#25243299,#06172dbb)!important;backdrop-filter:blur(24px);box-shadow:0 0 20px #00a5ff22,inset 0 1px 0 #fff2;border-radius:18px;padding:8px 12px;min-height:67px}.chat-dock input::placeholder{color:#83b5da}.chat-dock .chat-dock__mark{border-radius:50%;background:#291e1277;color:#ffce6d;box-shadow:0 0 12px #ffb13666}.chat-dock button:last-child{background:linear-gradient(135deg,#ffd784,#e89b37);height:47px;width:47px;flex-basis:47px}.chat-dock__hint{color:#b3dafa}
 .section-content,.task-card,.folder-card{backdrop-filter:blur(20px);border-color:#3da8ec66;background:linear-gradient(135deg,#10283f99,#030e1dbb)}
 .stage-copy{position:relative;z-index:1}.stage-copy h1{font-size:33px}.stage-copy p{max-width:430px;color:#a0bdd3}.progress-stage{max-width:1100px;width:100%;margin:-15px auto -10px}.stage-footer{font-size:8px}.brand-type__definition{display:block!important}
-@media(min-width:1280px){.zaenia-app{grid-template-columns:245px minmax(0,1fr)}.dashboard{grid-template-columns:minmax(0,1fr) 290px}.main-stage{padding:20px 15px 10px}.sidebar__nav{gap:5px}}
+@media(min-width:1280px){.zaenia-app{grid-template-columns:283px minmax(0,1fr)}.dashboard{grid-template-columns:minmax(0,1fr) 290px}.main-stage{padding:20px 15px 10px}.sidebar__nav{gap:5px}}
 @media(max-width:1000px){.sidebar{margin-left:3px;padding:20px 8px}.dashboard{gap:8px;padding-right:7px}.detail-panel__block{padding:12px!important}.identity-header .brand-type span{font-size:9px!important}}
 @media(max-width:760px){.dashboard{padding-right:8px}.sidebar{border-radius:18px}.detail-panel{padding-left:10px!important}.stage-copy h1{font-size:29px}.chat-dock__hint{display:none}.quick-tools button{font-size:12px}}
 

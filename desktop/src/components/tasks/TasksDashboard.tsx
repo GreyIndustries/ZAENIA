@@ -31,7 +31,7 @@ type ServerTasks = { tasks: TaskRecord[] };
  * Tasks. With the ZÆNIA server (desktop app or phone app) the list lives on
  * the PC and is the same everywhere; otherwise it stays on this device.
  */
-export function TasksDashboard({ remote = false, refreshVersion = 0 }: { remote?: boolean; refreshVersion?: number }) {
+export function TasksDashboard({ remote = false, refreshVersion = 0, onTasks }: { remote?: boolean; refreshVersion?: number; onTasks?: (tasks: TaskRecord[]) => void }) {
   const [saved] = useState(readSaved);
   const [tasks, setTasks] = useState<TaskRecord[]>(remote ? [] : saved.tasks);
   const [storageError, setStorageError] = useState(remote ? "" : saved.error);
@@ -82,6 +82,8 @@ export function TasksDashboard({ remote = false, refreshVersion = 0 }: { remote?
     return () => window.clearTimeout(timer);
   }, [confirmDelete]);
 
+  // The combined Tasks & Calendar tab shows deadlines on the calendar too.
+  useEffect(() => { onTasks?.(tasks); }, [tasks, onTasks]);
   const active = tasks.filter(task => !task.archived);
   const visible = useMemo(() => tasks.filter(task => task.archived === showArchived &&
     (filter === "All" || task.status === filter) && task.title.toLowerCase().includes(search.toLowerCase()))
@@ -141,17 +143,16 @@ export function TasksDashboard({ remote = false, refreshVersion = 0 }: { remote?
       <div><span>Overdue</span><strong className="task-overdue">{active.filter(overdue).length}</strong></div>
     </div>
     <form className="task-create" onSubmit={event => void addTask(event)}>
-      <label>Task<input placeholder="What needs doing?" value={title} maxLength={180} required disabled={locked || busy} onChange={event => setTitle(event.target.value)}/></label>
-      <label>Priority<select value={priority} disabled={locked} onChange={event => setPriority(event.target.value as Priority)}>{PRIORITIES.map(value => <option key={value}>{value}</option>)}</select></label>
-      <label>Deadline <small>(optional)</small><input type="datetime-local" value={deadline} disabled={locked} onChange={event => setDeadline(event.target.value)}/></label>
+      <input aria-label="Task" placeholder="New task…" value={title} maxLength={180} required disabled={locked || busy} onChange={event => setTitle(event.target.value)}/>
+      <select aria-label="Priority" title="Priority" value={priority} disabled={locked} onChange={event => setPriority(event.target.value as Priority)}>{PRIORITIES.map(value => <option key={value}>{value}</option>)}</select>
+      <input aria-label="Deadline (optional)" title="Deadline (optional)" type="datetime-local" value={deadline} disabled={locked} onChange={event => setDeadline(event.target.value)}/>
       <button type="submit" disabled={!title.trim() || locked || busy}>+ Add task</button>
     </form>
     <div className="task-toolbar">
       <input aria-label="Search tasks" placeholder="Search tasks…" value={search} onChange={event => setSearch(event.target.value)}/>
       <select aria-label="Filter task status" value={filter} onChange={event => setFilter(event.target.value as Status | "All")}><option value="All">All statuses</option>{STATUSES.map(value => <option key={value}>{value}</option>)}</select>
-      <button type="button" aria-pressed={showArchived} onClick={() => setShowArchived(value => !value)}>{showArchived ? "View active" : "View archive"}</button>
+      <button type="button" aria-pressed={showArchived} title="Sorted by priority, then deadline" onClick={() => setShowArchived(value => !value)}>{showArchived ? "Active" : "Archive"}</button>
     </div>
-    <p className="task-sort-note">Sorted by priority, then deadline. Completed tasks follow active tasks.</p>
     <div className="task-table" aria-live="polite" aria-busy={busy}>
       {!loaded ? <div className="empty-state"><strong>Loading your tasks…</strong><span>From ZÆNIA on your PC.</span></div>
         : visible.length === 0 ? <div className="empty-state"><strong>{tasks.length ? "No matching tasks" : "A clear desk. A fresh start."}</strong><span>{tasks.length ? "Adjust your search or filters." : "Add your first task above."}</span></div>

@@ -41,3 +41,11 @@
   .cal-panel__form input:first-child{flex-basis:100%}
   .cal-panel__form input,.cal-panel__form select{font-size:16px}
 }
+
+/* Tasks due on a day (combined Tasks & Calendar tab). */
+.cal-panel__task-dot{position:absolute;bottom:3px;right:5px;width:5px;height:5px;border-radius:1px;background:#4fdc9b}
+.cal-panel__event--task{border-left-color:#4fdc9b}
+.cal-panel__duty-details{margin:6px 0 10px}
+.cal-panel__duty-details summary{cursor:pointer;font-size:11px;color:#a9c3dc;list-style:none}
+.cal-panel__duty-details summary::before{content:"\25B8  ";color:#ffcf81}
+.cal-panel__duty-details[open] summary::before{content:"\25BE  "}
