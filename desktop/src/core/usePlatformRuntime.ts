@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText, LIVE_API } from "./bridge";
 import { parsePlatformSummary } from "./platformModel";
+import { skipWhileAway } from "./appBackground";
 import type { PlatformSummary } from "./platformModel";
 
 export function usePlatformRuntime() {
@@ -20,7 +21,9 @@ export function usePlatformRuntime() {
   }, []);
   useEffect(() => {
     mounted.current = true;
-    void refresh(); const timer = window.setInterval(() => void refresh(), 2500);
+    // Every 2.5 s in use; every 15 s while the window is in the background.
+    const away = { n: 0 };
+    void refresh(); const timer = window.setInterval(() => { if (!skipWhileAway(away, 6)) void refresh(); }, 2500);
     const visible = () => { if (!document.hidden) void refresh(); };
     document.addEventListener("visibilitychange", visible);
     return () => { mounted.current = false; window.clearInterval(timer); document.removeEventListener("visibilitychange", visible); };

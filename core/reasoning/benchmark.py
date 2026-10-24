@@ -16,10 +16,13 @@ from .providers import ProviderError
 
 
 CASES_PATH = Path(__file__).with_name("cases.json")
+# cases.json holds the owner's real places and stays out of git; the example
+# corpus is the same benchmark with neutral place names, for clean checkouts.
+EXAMPLE_CASES_PATH = Path(__file__).with_name("cases.example.json")
 
 
 def load_cases() -> tuple[dict[str, Any], str]:
-    raw = CASES_PATH.read_bytes()
+    raw = (CASES_PATH if CASES_PATH.exists() else EXAMPLE_CASES_PATH).read_bytes()
     corpus = strict_json(raw.decode("utf-8"))
     if not isinstance(corpus, dict) or not isinstance(corpus.get("cases"), list):
         raise ReasoningError("The benchmark corpus is invalid.")

@@ -34,6 +34,9 @@ MAX_FEED_BYTES = 3_000_000
 USER_AGENT = "Mozilla/5.0 (ZAENIA personal assistant; tech news reader)"
 
 ATOM = "{http://www.w3.org/2005/Atom}"
+MEDIA = "{http://search.yahoo.com/mrss/}"
+CONTENT = "{http://purl.org/rss/1.0/modules/content/}"
+_IMG = re.compile(r"<img[^>]+src=[\"']([^\"']+)", re.I)
 _STOP = set("the a an of to in on for and or with by at from is are be as its it this that new how why what "
             "after over into about says say will has have was were not more than out up you your".split())
 NEWS_QUESTION = re.compile(
@@ -83,6 +86,30 @@ def _when(value: str | None) -> str | None:
     return moment.astimezone(timezone.utc).isoformat(timespec="seconds")
 
 
+def _image(node, *texts: str | None) -> str | None:
+    """The story's picture: media:content/thumbnail, an image enclosure, or the first <img> in its HTML."""
+    candidates = []
+    for tag in (MEDIA + "content", MEDIA + "thumbnail"):
+        for media in node.iter(tag):
+            kind = (media.get("medium") or media.get("type") or "image").lower()
+            if media.get("url") and "image" in kind:
+                candidates.append((int(media.get("width") or 0), media.get("url")))
+    for enclosure in list(node.findall("enclosure")) + [l for l in node.findall(ATOM + "link") if l.get("rel") == "enclosure"]:
+        if (enclosure.get("type") or "image").startswith("image") and (enclosure.get("url") or enclosure.get("href")):
+            candidates.append((0, enclosure.get("url") or enclosure.get("href")))
+    url = max(candidates)[1] if candidates else None
+    if not url:
+        for text in texts:
+            found = _IMG.search(html.unescape(text or ""))
+            if found:
+                url = found.group(1)
+                break
+    if not url or not url.startswith("https://"):
+        return None
+    url = html.unescape(url)
+    return url.replace("/standard/240/", "/standard/976/")  # BBC thumbnails come in larger sizes
+
+
 def parse_feed(raw: bytes, source: str) -> list[dict[str, Any]]:
     """Headlines from an RSS or Atom document. Refuses DTDs (no entity tricks)."""
     if len(raw) > MAX_FEED_BYTES:
@@ -95,19 +122,22 @@ def parse_feed(raw: bytes, source: str) -> list[dict[str, Any]]:
     for node in root.iter("item"):  # RSS
         items.append({"title": node.findtext("title"), "link": node.findtext("link"),
                       "published": node.findtext("pubDate") or node.findtext("{http://purl.org/dc/elements/1.1/}date"),
-                      "summary": node.findtext("description")})
+                      "summary": node.findtext("description"),
+                      "image": _image(node, node.findtext(CONTENT + "encoded"), node.findtext("description"))})
     for node in root.iter(ATOM + "entry"):  # Atom
         link = next((l.get("href") for l in node.findall(ATOM + "link") if l.get("rel") in (None, "alternate")), None)
         items.append({"title": node.findtext(ATOM + "title"), "link": link,
                       "published": node.findtext(ATOM + "published") or node.findtext(ATOM + "updated"),
-                      "summary": node.findtext(ATOM + "summary") or node.findtext(ATOM + "content")})
+                      "summary": node.findtext(ATOM + "summary") or node.findtext(ATOM + "content"),
+                      "image": _image(node, node.findtext(ATOM + "content"), node.findtext(ATOM + "summary"))})
     stories = []
     for item in items[:60]:
         title, link = _clean(item["title"], 220), str(item["link"] or "").strip()
         if not title or not link.startswith(("https://", "http://")):
             continue
         stories.append({"title": title, "link": link, "source": source,
-                        "published": _when(item["published"]), "summary": _clean(item["summary"], 320)})
+                        "published": _when(item["published"]), "summary": _clean(item["summary"], 320),
+                        "image": item.get("image")})
     return stories
 
 
@@ -134,6 +164,8 @@ def group_stories(stories: list[dict[str, Any]]) -> list[dict[str, Any]]:
                            "links": {story["source"]: story["link"]}, "_words": words})
         else:
             match["sources"].append(story["source"])
+            if not match.get("image") and story.get("image"):
+                match["image"] = story["image"]
             match["links"][story["source"]] = story["link"]
             match["_words"] |= words
     for group in groups:

@@ -84,6 +84,11 @@ class SecureRuntime:
             # and never reaches the action parser. The brain only decides
             # whether a short spoken offer would help.
             self.consider_ambient(text);return
+        # The app mic may have heard and answered the same sentence: answer once.
+        try:
+            from core.voice_listener.service_status import claim_turn
+            if not claim_turn('pc',text):return
+        except Exception:pass
         record_user_speech(signals=list(result.get('signals',{})))
         with self._ambient_lock:self._ambient_turn+=1
         if was_active and is_quiet_acknowledgement(reply_text):

@@ -58,6 +58,22 @@ class OwnerProfileTest(unittest.TestCase):
         passage = self.profile.passage("how should ZAE handle my screenshots and pasted errors")
         self.assertIsNotNone(passage)
 
+    def test_review_explain_confirm_and_forget(self):
+        gpu = self.profile.records(query="gpu")
+        self.assertTrue(gpu)
+        why = self.profile.explain(gpu[0]["id"])
+        self.assertTrue(why["evidence"])
+        candidates = self.profile.records(status="candidate")
+        if candidates:
+            self.assertEqual(self.profile.confirm(candidates[0]["id"], kind="preference")["status"], "active")
+            self.assertEqual(len(self.profile.records(status="candidate")), len(candidates) - 1)
+        self.assertGreaterEqual(self.profile.forget(gpu[0]["id"]), 1)
+        self.assertFalse(any(r["key"] == gpu[0]["key"] for r in self.profile.records(query="gpu")))
+        relearn = self.profile.store_proposals("my gpu is an RTX 5090", [
+            {"key": gpu[0]["key"], "value": "RTX 5090", "quote": "my gpu is an RTX 5090", "scope": "global", "suggested_kind": "fact"}],
+            message_id="t-forget")
+        self.assertEqual(relearn[0]["status"], "blocked_by_forget")
+
 
 if __name__ == "__main__":
     unittest.main()

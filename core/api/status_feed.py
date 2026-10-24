@@ -95,13 +95,29 @@ def _brain() -> dict[str, str]:
 
 
 def _voice() -> dict[str, str]:
+    # Kokoro is ZAE's voice; Piper is only the fallback when Kokoro can't run.
     from core.carplay_audio.carplay_audio import get_piper_settings
+    piper = None
     try:
         get_piper_settings()
     except FileNotFoundError:
-        return _module("voice", "Voice", "error", "Piper voice files are missing")
+        piper = "Piper voice files are missing"
     except RuntimeError as error:
-        return _module("voice", "Voice", "pending", str(error).split(":")[0] or "Piper voice is off")
+        piper = str(error).split(":")[0] or "Piper voice is off"
+    try:
+        from core.voice_output.neural_voice import settings as kokoro_settings
+        kokoro = kokoro_settings()
+    except Exception:
+        kokoro = {"active": False}
+    if kokoro.get("active"):
+        if kokoro["model_path"].exists() and kokoro["voices_path"].exists():
+            backup = "Piper as backup" if piper is None else "no Piper backup"
+            return _module("voice", "Voice", "ready", f"Kokoro voice ready ({kokoro['voice']}), {backup}")
+        if piper is None:
+            return _module("voice", "Voice", "working", "Kokoro voice files are missing; speaking with Piper for now")
+        return _module("voice", "Voice", "error", "Kokoro and Piper voice files are missing")
+    if piper is not None:
+        return _module("voice", "Voice", "error" if "missing" in piper else "pending", piper)
     return _module("voice", "Voice", "ready", "Piper voice ready")
 
 

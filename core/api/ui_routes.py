@@ -50,9 +50,17 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/voice/status", "status.read"),
         ("GET", r"/api/weather/now", "status.read"),
         ("GET", r"/api/screen/watch", "status.read"),
+        ("GET", r"/api/gaming/coach", "status.read"),
         ("GET", r"/api/news/tech", "status.read"),
+        ("GET", r"/api/security/activity", "status.read"),
+        ("GET", r"/api/security/checks", "status.read"),
+        ("GET", r"/api/security/checks/\d{8}T\d{6}Z", "status.read"),
+        ("POST", r"/api/security/checks", "status.read"),
+        ("GET", r"/api/email/important", "notifications.read"),
+        ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
+        ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
     )
 )
 
@@ -117,6 +125,11 @@ class DutyStatusUpdate(BaseModel):
     date: str = Field(min_length=10,max_length=10)
     status: Literal['on_duty','off_duty','class','leave'] | None
     revision: int = Field(ge=0,strict=True)
+
+
+class GameCoachRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    on: bool
 
 
 class ScreenWatchRequest(BaseModel):
@@ -330,6 +343,48 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def voice_status() -> dict[str, Any]:
         return ui_voice.service_status()
 
+    @router.get("/api/email/important")
+    def email_important(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, Any]:
+        from core.email_watch import gmail
+        from core.email_watch.service import email_watch
+        return {**email_watch().recent(limit), **{"setup": gmail.status()}}
+
+    @router.post("/api/email/check")
+    def email_check() -> dict[str, Any]:
+        from core.email_watch.service import email_watch
+        try:
+            result = email_watch().check()
+        except Exception as error:
+            raise HTTPException(503, f"Email check failed ({type(error).__name__}).") from error
+        return {**result, **email_watch().recent(20)}
+
+    @router.get("/api/security/activity")
+    def security_activity(limit: int = Query(default=60, ge=1, le=300)) -> dict[str, Any]:
+        from core.api.security_activity import recent_activity
+        return recent_activity(limit=limit)
+
+    # Security self-check: read-only, isolated tests plus live-setup checks (core/api/security_check.py).
+    @router.get("/api/security/checks")
+    def security_check_state() -> dict[str, Any]:
+        from core.api.security_check import security_checks
+        return security_checks().state()
+
+    @router.get("/api/security/checks/{report_id}")
+    def security_check_report(report_id: str) -> dict[str, Any]:
+        from core.api.security_check import load_report
+        report = load_report(report_id)
+        if report is None:
+            raise HTTPException(404, "No such security report.")
+        return report
+
+    @router.post("/api/security/checks")
+    def security_check_run() -> dict[str, Any]:
+        from core.api.security_check import security_checks
+        result = security_checks().start_check("manual", mode())
+        if not result["started"] and result.get("retryAfter"):
+            raise HTTPException(429, result["reason"])
+        return {**result, **security_checks().state()}
+
     @router.get("/api/news/tech")
     def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),
                             limit: int = Query(default=20, ge=1, le=50)) -> dict[str, Any]:
@@ -355,6 +410,18 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
         audit("assistant.screen_watch", operation="assistant.desktop.manage", reason_code="started" if body.on else "stopped")
+        return result
+
+    @router.get("/api/gaming/coach")
+    def gaming_coach_status() -> dict[str, Any]:
+        from core.assistant_platform.game_coach import game_coach
+        return game_coach().status()
+
+    @router.post("/api/gaming/coach")
+    def gaming_coach(body: GameCoachRequest) -> dict[str, Any]:
+        from core.assistant_platform.game_coach import game_coach
+        result = game_coach().set_enabled(body.on)
+        audit("assistant.game_coach", operation="assistant.desktop.manage", reason_code="on" if body.on else "off")
         return result
 
     @router.get("/api/weather/now")

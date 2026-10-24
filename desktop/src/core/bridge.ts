@@ -235,6 +235,20 @@ export async function connectGoogleCalendar(): Promise<void> {
   catch (error) { throw fromTauri(error); }
 }
 
+/** Desktop only: open the guided voice training window. */
+export async function openVoiceTraining(): Promise<void> {
+  if (!IN_TAURI) throw new BridgeError("Voice training runs on the PC, from the desktop app.", "forbidden");
+  try { await invoke("open_voice_training"); }
+  catch (error) { throw fromTauri(error); }
+}
+
+/** Desktop only: open the one-time Gmail (read-only) sign-in window. */
+export async function connectGmail(): Promise<void> {
+  if (!IN_TAURI) throw new BridgeError("Connect Gmail from the desktop app on the PC.", "forbidden");
+  try { await invoke("connect_gmail"); }
+  catch (error) { throw fromTauri(error); }
+}
+
 // ---- Streaming chat ------------------------------------------------------
 export type StreamEvent =
   | { type: "start"; id: string }

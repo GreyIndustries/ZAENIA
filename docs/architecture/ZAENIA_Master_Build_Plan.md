@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.2  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 1.5  |  Date: 2026-10-21 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -220,3 +220,78 @@ Tests: core/tech_news/service_test.py (8 pass); existing brain/API suites pass; 
 Rollback: revert the branch commit.
 
 2026-10-21 | v1.2 | Claude | Added tech news module (section 18). No ADR change.
+
+## 19. Conversation-topic tracker fix — Claude, 2026-10-21 (v1.3)
+
+Objective (approved by Grey 2026-10-21, assessment priority 1): make topic tracking hermetic. The 10/19 tracker read `data/conversation_memory.jsonl` and wrote `data/conversation/threads.json` itself, bypassing `BrainService.load_recent_messages()`. As a result `turn_context_test` failed (1 on the branch, 3 on main), and running the test suite could write test topics into Grey's live topic file.
+Change (Reasoning engine, core/brain): `load_recent_messages()` rows now carry their timestamp (`at`). `prepare_turn()` gives the tracker only that history, and only when it is timed; untimed history (tests, old logs) keeps the plain behaviour and never touches topic state. `ThreadTracker.route(question, history)` builds exchanges from the history it is given, and the state file stays next to the log in use. New: recent exchanges that no topic holds yet (within 45 min) become the current topic, so a fresh log or pre-tracking turns still give follow-ups their context.
+Files: core/brain/brain_service.py, core/brain/conversation_threads.py, core/brain/conversation_threads_test.py.
+Tests: conversation_threads_test 9 pass (4 new); turn_context_test passes; full suite 503 run, 0 failures, 27 errors, all from personal files kept out of git (core/reasoning/cases.json, scripture manifest), which is priority 2. SHA-256 of the worktree's data/conversation files was identical before and after the full suite. Live: the two 8-message topic scenarios still score 16/16 against llama3.1:8b and nomic-embed-text. End-to-end through BrainService on a temp log: follow-up kept context, new subject started clean, "back to…" resumed with both earlier exchanges.
+Security effect: none on permissions. It removes an unintended write path to personal runtime data during tests.
+Status: IMPLEMENTED, UNIT TEST, live-checked on feature/claude-development; not merged.
+Note: an earlier test run had already created C:\Projects\ZAENIA-Claude\data\conversation\threads.json (gitignored, test topics only). It was left in place, because deleting files needs Grey's OK.
+
+2026-10-21 | v1.3 | Claude | Topic tracker made hermetic (section 19). No ADR change.
+
+## 20. Three-engine improvements — Claude, 2026-10-21 (v1.4)
+
+Requested by Grey on 2026-10-21 ("make as much needed changes to improve ZAENIA … authorization is given to update ZAENIA's app"). Each item below was measured first, then implemented on feature/claude-development, tested, and applied to the live install.
+
+### 20.1 Reasoning engine: context budget (core/brain/context_budget.py)
+Problem (measured): a multi-topic question built a ~7,500-token prompt for the 8,192-token window. Ollama drops the start of an over-long prompt, which is where the system prompt and charter guidance sit. Causes: an unbudgeted 8,000-character source-library dump matched on a single shared word; a raw YAML behaviour profile; stale state JSON.
+Change: reference context is split into labelled sections with priorities and caps. The lowest-priority sections shrink first, then the oldest turns (the newest 4 always stay), and 1,100 tokens are kept for the answer. Applied in `local_llm.build_messages`, so every model path is covered. The source library now needs two shared content words before an excerpt is included.
+Evidence: live context 7,478 → 5,118 tokens for the same question; context_budget_test 5 pass. Status: IMPLEMENTED, UNIT TEST, live-applied.
+
+### 20.2 Learning and memory engine: ledger in the repo, owner review (core/personal_memory/ledger, owner_profile.py)
+Problem: the memory ledger code lived only in `user_understanding/`, which is excluded from git as personal, so a clean checkout had no Learning-engine store. There was also no way for Grey to inspect or correct his long-term profile (plan §8: "why did you remember this?", review, edit, delete).
+Change: the ledger (`user_learning.py`, `adapter.py`, extraction prompt, 42 tests), originally authored with ChatGPT, is vendored unchanged apart from imports. The personal seed and assessment stay local. Owner review was added: `records`, `explain` (evidence and source), `confirm` (candidate → active) and `forget` (deleted, and tombstoned so it isn't relearned). API: `GET /api/assistant/profile`, `GET|DELETE /api/assistant/profile/{id}`, `POST /api/assistant/profile/{id}/confirm` (memory.read / memory.write). UI: Assistant window → "What ZAE knows about you" (Known / To confirm, search, Why?, Confirm, Forget with a second tap).
+Evidence: on a copy of the live profile (100+ known, 38 candidates), explain, confirm and forget all work, and a forgotten key is blocked from relearning. Ledger 42 tests (5 seed tests skip without the personal seed). Status: IMPLEMENTED, UNIT TEST, live-applied.
+
+### 20.3 Execution and security engine
+- **Clean-checkout test suite.** Added `core/reasoning/cases.example.json` (the benchmark with neutral place names, used when the personal `cases.json` is absent). The full-Bible-corpus test runs only when the downloaded corpus exists. Evidence: a fresh `git clone` with no personal files ran **551 tests, 0 failures, 0 errors** (13 skipped). This meets the plan's Phase 0 "clean-install test" for the test suite. Note: a clone under `AppData\Local\Temp` fails 11 document-tool tests by design, because the document tools refuse system folders.
+- **Security activity view (read-only).** The audit log holds about 283,000 entries (49 MB), almost all routine allowed reads. `core/api/security_activity.py` reads the last 16 MB, counts routine allows, and lists notable events (denials, sign-ins, voice rejections, memory changes, actions, rules, pairing, screen watch). Exposed at `GET /api/security/activity` (status.read) and as a System window card. Tests: 3 pass. Permissions are unchanged: memory and learning still can't grant permissions, and no gate was altered.
+
+### 20.4 Open decisions for Grey (not implemented)
+1. **Audit log growth (~49 MB and rising).** Options: rotate by size, or stop logging routine *allowed* reads (denials and sensitive operations always logged). Either changes audit retention, a security-policy choice.
+2. **App microphone voice policy (a/b/c)**, still pending from §17.3.
+3. **`core/behavior/behavior_profile.yaml` is stale** (it still names Piper as the preferred voice and repeats rules now in the profile). It's protected identity configuration, so it waits for Grey's approval.
+
+2026-10-21 | v1.4 | Claude | Context budget, ledger in repo with owner review, clean-checkout test suite, security activity view. No ADR change; ADR-001…005 remain PROPOSED.
+
+## 21. News redesign, email summaries, audit rotation — Claude, 2026-10-21 (v1.5)
+
+Requested by Grey on 2026-10-21: a fresh, inspiring glass layout for Tech News; an email feature that announces summaries of important mail; and continued three-engine work.
+
+- **Tech News window (clients).** It's a glass magazine now: a masthead, topic pills, a hero story, a bento grid of frosted panels in wide, tall and regular sizes, and a "More headlines" list. Feeds now carry story images (media:content/thumbnail, enclosures, or the first `<img>`). Stories without a picture get a tinted panel per newsroom. On the phone app, external images are blocked by its CSP, so the tinted panels show there instead. Status: IMPLEMENTED, visually checked in preview.
+- **Important-email summaries (new optional online integration, docs/EMAIL.md).** Gmail is read-only (`gmail.readonly`) with Grey's own OAuth client and a separate token. Quick rules come first, the local model triages borderline mail, and important mail gets a 1–2 sentence summary, posted as a spoken notice through the new `FollowThroughService.post()`. Bodies are never stored, and email text is untrusted: it can't instruct, act, or teach the profile. In a live triage check, an Army range change was flagged important, a store sale was not, and a prompt-injection phishing email was judged not important and summarised as phishing. Status: IMPLEMENTED, UNIT TEST (7); **waiting for Grey to enable the Gmail API and scope, then connect.**
+- **Execution and security: audit rotation.** Above 32 MB, the audit log moves to `data/secure/audit_archive/` (nothing deleted) and a fresh file starts. This answers decision 20.4-1 with the non-destructive option. Tests: 2 pass.
+- **Reasoning benchmark.** `python -m core.reasoning benchmark --provider local` needs the owner passkey gate by design, so a live baseline score for llama3.1:8b is still to be recorded by Grey (Phase 1 exit criterion).
+
+Still open for Grey: app-microphone voice policy (a/b/c); stale `behavior_profile.yaml`; pushing feature/claude-development to GitHub.
+
+2026-10-21 | v1.5 | Claude | Tech News redesign, read-only email summaries, audit rotation. No ADR change.
+
+## 22. Status & Security tab and security self-check — Claude, 2026-10-24 (v1.6)
+
+Requested by Grey on 2026-10-24: rename System Status to Status & Security, and let ZAE run security checks on herself, with every report shown on that tab.
+
+- **Security self-check (Execution and security, read-only, `core/api/security_check.py`).** Each run does two things:
+  - It runs the three existing isolated suites (`core.foundation.self_test`, `closure_check`, `integration_check`) as subprocesses. They use their own temporary data folders.
+  - It checks the live setup read-only: data/secure is a plain folder; the passkey, salt, rules vault, moral-code vault and API token files are present (existence only, contents never read); `load_api_settings` binds to localhost; git ignores the private paths and tracks no secret-looking files (by name); the audit log is recording and rotating; and it counts failed sign-ins, denials and voice rejections over 24 h (thresholds give warnings).
+  - A report (check names, pass/warn/fail, plain-language fixes) is saved to `data/security_checks/<UTC id>.json` (gitignored), and the newest 50 are kept. Each run writes one `security.self_check` audit event, which is labelled in Security activity.
+- **When it runs:**
+  - from the "Run security check" button;
+  - from chat or voice ("run a security check", desktop app);
+  - from the system brief's Fix it (suggested when no check has run for a week, flagged as attention when the latest failed);
+  - automatically once a day while the server runs (first look 3 minutes after startup, then hourly).
+  - One check runs at a time, and manual runs are limited to one per 10 minutes.
+- **Routes:** `GET /api/security/checks`, `GET /api/security/checks/{id}` and `POST /api/security/checks`, all on the existing `status.read`. Grey chose this over a new desktop-only capability, so `auth.py`, capabilities, gates and rules are unchanged.
+- **Brain:** when asked about her security checks, the latest report is given as reference context, and she reports only those results.
+- **Clients:**
+  - The tab is renamed Status & Security.
+  - The tab shows the latest result, every saved report (expandable, grouped into isolated tests, live setup and last 24 hours) and the Security activity list, which moved here from the System window.
+- **Tests:** `core/api/security_check_test.py` (10 tests) covers pass, missing setup, a failing suite, a missing test file, timeouts, pruning, report-id path safety, the rate limit, one-at-a-time runs, brain context and route capabilities. Full suite: 618 OK, 13 skipped. Desktop: tsc OK, 74 + 25 UI checks, build OK.
+- **Real run against an empty isolated data folder:** 15 checks in 23 s.
+- **Known limitation:** in this worktree the three suites stop on the gitignored private `core/foundation/moral_code/charter.json`, and the report names the missing file. On the live install, where the file exists, they are expected to run but were not run there in this session.
+
+2026-10-24 | v1.6 | Claude | Status & Security tab, read-only security self-check with saved reports. No ADR change; no permission change.

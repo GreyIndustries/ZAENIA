@@ -21,6 +21,13 @@ def operation_for(method: str, path: str) -> str | None:
         return {"GET": "memory.read", "DELETE": "memory.write"}.get(method)
     if re.fullmatch(r"/api/assistant/insights/[A-Za-z0-9_-]{1,100}", path) and method in {"DELETE", "PATCH"}:
         return "memory.write"
+    # Grey's long-term profile (memory ledger): review, explain, confirm, forget.
+    if path == "/api/assistant/profile" and method == "GET":
+        return "memory.read"
+    if re.fullmatch(r"/api/assistant/profile/[A-Za-z0-9_-]{1,100}", path):
+        return {"GET": "memory.read", "DELETE": "memory.write"}.get(method)
+    if re.fullmatch(r"/api/assistant/profile/[A-Za-z0-9_-]{1,100}/confirm", path) and method == "POST":
+        return "memory.write"
     if path == "/api/assistant/notifications" and method == "GET":
         return "notifications.read"
     if re.fullmatch(r"/api/assistant/notifications/[A-Za-z0-9_-]{1,100}/(?:ack|snooze|claim)", path) and method == "POST":
@@ -34,6 +41,10 @@ class MemoryBody(BaseModel):
     key: str = Field(min_length=1, max_length=120)
     value: str = Field(min_length=1, max_length=800)
     category: str = Field(default="fact", max_length=20)
+
+
+class ProfileConfirmBody(BaseModel):
+    kind: str | None = Field(default=None, pattern=r"^(?:fact|preference|constraint|goal)$")
 
 
 class ForgetBody(BaseModel):
@@ -126,6 +137,42 @@ def create_assistant_router(require_auth: Callable[..., Any], followthrough: Cal
         removed = InsightStore().clear()
         audit("assistant.memory_changed", operation="memory.write", reason_code="insights_cleared")
         return {"cleared": removed}
+
+    # What ZAE knows about Grey long-term: inspect, see why, confirm, forget.
+    @router.get("/api/assistant/profile")
+    def profile_records(q: str = Query(default="", max_length=200), status: str = Query(default="active", pattern=r"^(?:active|candidate|all)$"),
+                        limit: int = Query(default=100, ge=1, le=500)):
+        from core.personal_memory.owner_profile import owner_profile
+        profile = owner_profile()
+        return {"available": profile.available(), "records": profile.records(query=q, status=status, limit=limit)}
+
+    @router.get("/api/assistant/profile/{memory_id}")
+    def profile_explain(memory_id: str):
+        from core.personal_memory.owner_profile import owner_profile
+        try:
+            return owner_profile().explain(memory_id)
+        except KeyError as error:
+            raise HTTPException(404, "That memory no longer exists.") from error
+
+    @router.post("/api/assistant/profile/{memory_id}/confirm")
+    def profile_confirm(memory_id: str, body: ProfileConfirmBody):
+        from core.personal_memory.owner_profile import owner_profile
+        try:
+            result = owner_profile().confirm(memory_id, kind=body.kind)
+        except (ValueError, PermissionError) as error:
+            raise HTTPException(422, str(error)) from error
+        audit("assistant.memory_changed", operation="memory.write", reason_code="profile_confirmed")
+        return result
+
+    @router.delete("/api/assistant/profile/{memory_id}")
+    def profile_forget(memory_id: str):
+        from core.personal_memory.owner_profile import owner_profile
+        try:
+            removed = owner_profile().forget(memory_id)
+        except KeyError as error:
+            raise HTTPException(404, "That memory no longer exists.") from error
+        audit("assistant.memory_changed", operation="memory.write", reason_code="profile_forgotten")
+        return {"forgotten": removed}
 
     @router.get("/api/assistant/notifications")
     def notifications(includeRead: bool = False):

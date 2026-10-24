@@ -70,6 +70,15 @@ def status() -> dict[str, Any]:
     return {"active": config["active"], "voice": config["voice"], "loaded": _ENGINE is not None, "error": _FAILED}
 
 
+def _paced(speed: float) -> float:
+    """Her speaking speed, nudged toward Zack's own pace once it's been learned."""
+    try:
+        from core.personal_memory.speech_style import speech_style
+        return min(1.5, max(0.6, speed * speech_style().voice_speed()))
+    except Exception:
+        return speed
+
+
 def synthesize_wav(text: str) -> bytes | None:
     """16-bit mono WAV of text in the Kokoro voice, or None to fall back to Piper."""
     config = settings()
@@ -83,7 +92,7 @@ def synthesize_wav(text: str) -> bytes | None:
         try:
             import numpy as np
             samples, rate = engine.create(words, voice=_style(engine, config["voice"]),
-                                          speed=config["speed"], lang=config["lang"])
+                                          speed=_paced(config["speed"]), lang=config["lang"])
             pcm = (np.clip(np.asarray(samples, dtype=np.float32), -1.0, 1.0) * 32767).astype("<i2")
         except Exception:
             return None

@@ -1,0 +1,29 @@
+/* Right-side tech news on the desktop. Sits under the top bar and above the
+   chat bar; windows opened from the dock float over it. */
+.news-rail{position:fixed;top:92px;right:16px;bottom:132px;width:286px;z-index:6;display:flex;flex-direction:column;gap:8px;
+  padding:14px 14px 12px;border-radius:16px;border:1px solid rgba(143,202,255,.22);
+  background:linear-gradient(180deg,rgba(9,19,35,.78),rgba(5,12,24,.84));backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  box-shadow:0 18px 40px rgba(0,0,0,.35);color:#dbe6f4;pointer-events:auto}
+.news-rail__head{display:flex;align-items:center;gap:8px}
+.news-rail__title{font-size:10px;letter-spacing:.18em;font-weight:650;color:#e0a353}
+.news-rail__age{font-size:10px;color:#7f93ad;flex:1}
+.news-rail__close{border:0;background:none;color:#9fb6d2;font-size:18px;line-height:1;cursor:pointer;padding:0 4px}
+.news-rail__close:hover{color:#f4c78a}
+.news-rail__note{font-size:12px;color:#8ea2bb;margin:0}
+.news-rail__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;min-height:0}
+.news-rail__story{display:block;width:100%;text-align:left;border:1px solid rgba(143,202,255,.12);border-radius:10px;background:rgba(10,22,40,.55);
+  color:inherit;padding:8px 10px;cursor:pointer;font:inherit}
+.news-rail__story:hover{border-color:rgba(236,170,75,.4);background:rgba(220,151,57,.08)}
+.news-rail__story strong{display:block;font-size:12px;line-height:1.38;font-weight:600;color:#e8eef9}
+.news-rail__story small{display:block;margin-top:4px;font-size:10px;color:#8196b0}
+.news-rail__story em{font-style:normal;margin-left:6px;padding:0 5px;border-radius:5px;border:1px solid rgba(255,190,110,.45);color:#ffcf95}
+.news-rail__all{border:1px solid rgba(236,170,75,.3);background:rgba(220,151,57,.1);color:#f4c78a;border-radius:8px;height:30px;font-size:11px;cursor:pointer}
+.news-rail__all:hover{background:rgba(220,151,57,.18)}
+.news-rail__tab{position:fixed;top:50%;right:0;z-index:6;transform:translateY(-50%);writing-mode:vertical-rl;padding:14px 7px;border-radius:10px 0 0 10px;
+  border:1px solid rgba(143,202,255,.25);border-right:0;background:rgba(9,19,35,.82);color:#e0a353;font-size:10px;letter-spacing:.2em;cursor:pointer}
+.news-rail__tab:hover{color:#f4c78a}
+@media(max-width:1100px){.news-rail{width:240px}}
+/* While the rail is open, the stage (core, reply cards, chat bar) uses the
+   space to its left, so nothing sits underneath it. */
+.zaenia-app:has(.news-rail) .dashboard{padding-right:314px}
+@media(max-width:1100px){.zaenia-app:has(.news-rail) .dashboard{padding-right:268px}}

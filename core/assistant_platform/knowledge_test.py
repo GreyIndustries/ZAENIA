@@ -76,6 +76,8 @@ class KnowledgeTests(unittest.TestCase):
             self.assertEqual(client.post('/api/platform/knowledge',json={'url':'https://example.com'}).status_code,401)
             download.assert_not_called()
 
+    @unittest.skipUnless(__import__("core.foundation.moral_code.scripture_context", fromlist=["MANIFEST_FILE"]).MANIFEST_FILE.exists(),
+                         "downloaded scripture corpus not present (data/, not in git)")
     def test_bible_full_corpus_and_original_language_words(self):
         from core.foundation.moral_code.scripture_context import Corpus
         corpus=Corpus(); self.assertEqual(len(corpus.coverage()['books']),66)

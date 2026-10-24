@@ -275,6 +275,8 @@ def memory_context(question: str, *, store: MemoryStore | None = None) -> str | 
     """
     if not isinstance(question, str) or not question.strip() or not _tokens(question):
         return None
+    if store is None and not DEFAULT_PATH.exists():
+        return None  # Nothing saved yet; reading never creates the private store.
     active = store if store is not None else MemoryStore()
     relevant = active.search(question[:8000], limit=8)
     preferences = [record for record in active.list(category="preference", limit=MAX_RECORDS)

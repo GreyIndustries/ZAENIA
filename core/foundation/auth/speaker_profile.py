@@ -555,6 +555,47 @@ def enrollment_prompts(
     )
 
 
+def replace_speaker_profile() -> bool:
+    """Owner-only voice retraining (protected identity change).
+
+    Requires the passkey and a typed REPLACE. The current encrypted profile is
+    moved aside (kept, never deleted) so a mistaken retrain can be undone by
+    moving it back; then normal enrollment runs and asks for the passkey again.
+    """
+    import os
+    from core.foundation.security.io import reject_link
+    print()
+    print("ZÆNIA voice retraining: replaces your enrolled voice profile.")
+    print("You'll need your passkey, then you'll record new samples on the approved microphone.")
+    print()
+    if not SPEAKER_PROFILE_FILE.exists():
+        print("No profile exists yet; running normal enrollment.")
+        return enroll_speaker_profile()
+    require_passkey(operation="auth.speaker.enroll", payload={"purpose": "replace_speaker_profile"})
+    if input("Type REPLACE to retrain your voice profile: ").strip() != "REPLACE":
+        print("Cancelled. Your current profile is unchanged.")
+        return False
+    backup_dir = SPEAKER_PROFILE_FILE.parent / "profile_backups"
+    backup_dir.mkdir(exist_ok=True)
+    reject_link(SPEAKER_PROFILE_FILE)
+    reject_link(backup_dir)
+    target = backup_dir / ("speaker_profile-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + ".vault")
+    os.replace(SPEAKER_PROFILE_FILE, target)
+    audit("auth.speaker_profile_retrain", operation="auth.speaker.enroll", reason_code="previous_profile_backed_up")
+    print(f"Previous profile kept at {target}.")
+    try:
+        passed = enroll_speaker_profile()
+    except BaseException:
+        if not SPEAKER_PROFILE_FILE.exists():
+            os.replace(target, SPEAKER_PROFILE_FILE)  # nothing new was written: put the old one back
+            print("Enrollment stopped; your previous profile was restored.")
+        raise
+    if not passed and not SPEAKER_PROFILE_FILE.exists():
+        os.replace(target, SPEAKER_PROFILE_FILE)
+        print("Enrollment didn't finish; your previous profile was restored.")
+    return passed
+
+
 def enroll_speaker_profile(
 ) -> bool:
     """
@@ -793,13 +834,13 @@ def main(
     """
     Speaker-profile management interface.
 
-    Current command:
+    Commands:
 
-        enroll
-
-    Replacement/deletion is intentionally not implemented here.
-    Those are sensitive identity changes and need their own
-    explicit protected workflow.
+        enroll    create the profile (refuses to overwrite one)
+        replace   owner-only retraining: passkey, then typing REPLACE; the
+                  old encrypted profile is moved to secure/profile_backups
+                  (never deleted), then a fresh enrollment runs on the
+                  approved microphone. Calibration must be redone after.
     """
 
     parser = (
@@ -815,12 +856,18 @@ def main(
         "command",
         choices=[
             "enroll",
+            "replace",
         ],
     )
 
     args = (
         parser.parse_args()
     )
+
+    if args.command == "replace":
+        if not replace_speaker_profile():
+            raise SystemExit(1)
+        return
 
     if args.command == "enroll":
         passed = (

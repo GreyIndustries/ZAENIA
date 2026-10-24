@@ -339,12 +339,15 @@ class BrainService:
             }
             and content
         ):
-            normalized.append(
-                {
-                    "role": role,
-                    "content": content,
-                }
-            )
+            item = {
+                "role": role,
+                "content": content,
+            }
+            # The topic tracker matches exchanges to topics by this time.
+            stamp = record.get("timestamp")
+            if isinstance(stamp, str) and stamp:
+                item["at"] = stamp
+            normalized.append(item)
 
             return normalized
 
@@ -519,6 +522,11 @@ class BrainService:
             authorize_memory(self.memory_authorizer, "memory.read")
             from core.personal_memory.owner_profile import owner_profile
             owner = owner_profile().context(question)
+            # How he talks, so her replies match it.
+            from core.personal_memory.speech_style import speech_style
+            style = speech_style().hint()
+            if style:
+                owner = f"{owner}\n\n{style}" if owner else style
         except Exception:
             owner = None
         screen = None
@@ -533,7 +541,28 @@ class BrainService:
             news = news_context(question)
         except Exception:
             news = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, news) if part]
+        gaming = None
+        try:
+            # Notes on how Grey plays are personal: memory.read like his profile.
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.read")
+            from core.assistant_platform.game_coach import gaming_context
+            gaming = gaming_context(question)
+        except Exception:
+            gaming = None
+        mail = None
+        try:
+            from core.email_watch.service import email_context
+            mail = email_context(question)
+        except Exception:
+            mail = None
+        security = None
+        try:
+            from core.api.security_check import security_check_context
+            security = security_check_context(question)
+        except Exception:
+            security = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(
@@ -777,6 +806,15 @@ class BrainService:
                         "\n"
                     )
 
+        # Learning from this exchange (topic notes, key points, Grey's profile)
+        # happens only here, after it is saved, and only with memory.write.
+        # Reading memory for a turn never learns.
+        try:
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.write")
+        except Exception:
+            return
+
         # The exchange joins its conversation topic (key points refresh in the background).
         try:
             from core.brain.conversation_threads import tracker
@@ -786,12 +824,15 @@ class BrainService:
 
         # Key points about Zack are distilled in the background every few turns.
         try:
-            from core.assistant_service import authorize_memory
-            authorize_memory(self.memory_authorizer, "memory.write")
             from core.personal_memory.insights import learner
             learner().observe(owner_words(question))
             from core.personal_memory.owner_profile import owner_profile
             owner_profile().observe(owner_words(question), channel=self.learning_channel)
+        except Exception:
+            pass
+        try:
+            from core.personal_memory.speech_style import speech_style
+            speech_style().observe_text(owner_words(question), spoken=str(self.learning_channel) != "typed")
         except Exception:
             pass
 
@@ -817,13 +858,18 @@ class BrainService:
         from core.brain.turn_context import prepare_turn
         # Follow the conversation by topic: keep building on the current
         # subject, start clean on a new one, and pick an older one back up.
-        try:
-            from core.brain.conversation_threads import tracker
-            view = tracker(MEMORY_PATH).route(owner_words(question))
-        except Exception:
-            view = None
+        # The tracker works only from this service's own history; history
+        # without times (older logs, tests) keeps the plain behaviour.
+        history = self.load_recent_messages()
+        view = None
+        if any(isinstance(row, dict) and row.get("at") for row in history):
+            try:
+                from core.brain.conversation_threads import tracker
+                view = tracker(MEMORY_PATH).route(owner_words(question), history)
+            except Exception:
+                view = None
         if view is None:
-            return prepare_turn(question,self.load_recent_messages())
+            return prepare_turn(question, history)
         turn = prepare_turn(question, view.history)
         if view.notes:
             import dataclasses

@@ -41,3 +41,12 @@ The Guardian Technology and Krebs on Security are in the file as alternates, swi
 - `core/tech_news/service_test.py`: unit tests.
 - Hooks: `core/api/server.py` (background refresh), `core/api/ui_routes.py` (`GET /api/news/tech`, `POST /api/news/tech/refresh`, both `status.read`), `core/brain/brain_service.py` (news context only for news questions).
 - UI: `desktop/src/components/news/NewsPanel.tsx`, plus the News section in `App.tsx`, `layoutCommands.ts` and `WindowShell.tsx`.
+
+## Right-side panel (2026-10-21, branch feature/claude-development)
+
+Grey asked for a right-side panel for tech news. On the desktop (not on the phone), a slim **TECH NEWS** rail now sits down the right side under the top bar. It shows the top 8 stories, most-covered and newest first, with the sources, a "N sources" badge and the story's age. Clicking a story opens it in the default browser (via the Tauri opener plugin in the desktop app). "All tech news" opens the full window. The › button hides the rail to a small tab on the right edge, and the choice is remembered on that device.
+
+While the rail is open, the stage (core, reply cards, chat bar) narrows to the space on its left, so nothing sits underneath it. Windows opened from the dock still float above everything. The rail refreshes from the local cache every 10 minutes while visible, and makes no requests while hidden.
+
+Status: IMPLEMENTED; desktop tsc, UI script tests and build pass; visually checked at 1600×900 open and hidden (preview data). Not merged.
+Files: desktop/src/components/news/NewsRail.tsx and .css, desktop/src/core/openLink.ts (shared link opener; NewsPanel links now use it too), desktop/src/App.tsx.

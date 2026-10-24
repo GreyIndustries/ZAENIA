@@ -119,6 +119,20 @@ def build_messages(
     from core.foundation.moral_code.engine import guidance_for_generation
     default_charter()  # Verify the reviewed charter before using its guidance.
     messages.append({"role": "system", "content": guidance_for_generation()})
+
+    # Keep the whole prompt inside the model's window: Ollama drops the start
+    # of an over-long prompt, which is where the instructions above live.
+    from core.brain.context_budget import fit_prompt
+    clock = clock_context()
+    fitted = fit_prompt(
+        fixed_text="".join(m["content"] for m in messages) + clock,
+        question=user_text,
+        behavior=behavior_context,
+        conversation=conversation_context,
+        history=recent_messages,
+        context_window=get_brain_settings()["context_window"],
+    )
+    behavior_context, conversation_context, recent_messages = fitted.behavior, fitted.conversation, fitted.history
     extra_context_parts: list[str] = []
 
     if behavior_context:
@@ -169,9 +183,24 @@ def build_messages(
     messages.append(
         {
             "role": "system",
-            "content": clock_context(),
+            "content": clock,
         }
     )
+
+    # Brief first, deeper on request, in a way that matches how Zack talks.
+    messages.append(
+        {
+            "role": "system",
+            "content": reply_guide_for(user_text, recent_messages),
+        }
+    )
+
+    # A short, direct cue right before his message keeps the local model brief.
+    # His message itself always goes last and unchanged (closure_check).
+    from core.brain.reply_shape import brief_cue
+    cue = brief_cue(user_text)
+    if cue:
+        messages.append({"role": "system", "content": cue})
 
     messages.append(
         {
@@ -181,6 +210,13 @@ def build_messages(
     )
 
     return messages
+
+
+def reply_guide_for(user_text: str, recent_messages: list[dict[str, str]] | None) -> str:
+    # How he talks (learned, memory.read) arrives with the behavior context.
+    from core.brain.reply_shape import reply_guide
+    answered = any(item.get("role") == "assistant" and item.get("content") for item in (recent_messages or []))
+    return reply_guide(user_text, has_previous_answer=answered)
 
 
 def clock_context(now: datetime | None = None) -> str:

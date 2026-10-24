@@ -1,6 +1,6 @@
 """Grey's long-term profile for ZAE: recall and ongoing learning.
 
-Built on the user-understanding kit in user_understanding/ (SQLite ledger
+Built on the memory ledger in core/personal_memory/ledger/ (SQLite ledger
 with provenance, corrections, conflicts, forgetting). This module only adds
 the live wiring:
 
@@ -30,7 +30,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-KIT_DIR = PROJECT_ROOT / "user_understanding"
+KIT_DIR = PROJECT_ROOT / "user_understanding"  # personal seed + assessment (not in git)
+LEDGER_DIR = Path(__file__).resolve().parent / "ledger"
 DB_PATH = PROJECT_ROOT / "data" / "user_understanding" / "user_memory.sqlite3"
 ASSESSMENT_FILES = (KIT_DIR / "GREY-Full-Assessment.md", KIT_DIR / "GREY-Assessment-Addendum.md")
 PROJECT_SCOPE = "project:zaenia"
@@ -46,8 +47,8 @@ _STOP = set("the a an and or but to of in on for with at by from is are was were
 
 
 def _kit():
-    from user_understanding.user_learning import ObservationContext, UserMemory, turn_scope
-    from user_understanding.zaenia_personalization_adapter import stage_model_proposals
+    from core.personal_memory.ledger.user_learning import ObservationContext, UserMemory, turn_scope
+    from core.personal_memory.ledger.adapter import stage_model_proposals
     return ObservationContext, UserMemory, turn_scope, stage_model_proposals
 
 
@@ -85,7 +86,7 @@ class OwnerProfile:
         self._passages: tuple[float, list[tuple[str, set[str]]]] = (-1.0, [])
 
     def available(self) -> bool:
-        return self.db_path.exists() and (KIT_DIR / "user_learning.py").exists()
+        return self.db_path.exists()
 
     def _memory(self):
         _, UserMemory, _, _ = _kit()
@@ -189,6 +190,68 @@ class OwnerProfile:
                 parts.append(value)
         return "\n\n".join(parts) or None
 
+    # ---- review (Grey inspects, confirms or forgets what ZAE knows) ------
+    def records(self, *, query: str = "", status: str = "active", limit: int = 100) -> list[dict[str, Any]]:
+        """Profile records for review, newest first. status: active, candidate, or all."""
+        if not self.available():
+            return []
+        statuses = {"active": ("active", "conflicted"), "candidate": ("candidate",),
+                    "all": ("active", "conflicted", "candidate", "historical")}.get(status, ("active",))
+        terms = _words(query)
+        with self._memory() as memory:
+            rows = memory.db.execute(
+                f"SELECT m.*, (SELECT COUNT(*) FROM evidence e WHERE e.memory_id=m.id) AS evidence_count "
+                f"FROM memories m WHERE m.namespace='real' AND m.status IN ({','.join('?' * len(statuses))}) "
+                "ORDER BY m.updated_at DESC", statuses).fetchall()
+        found = []
+        for row in rows:
+            value = json.loads(row["value_json"])
+            text = f"{row['key']} {_value(value)} {row['note']}"
+            if terms and not terms & _words(text):
+                continue
+            found.append({"id": row["id"], "key": row["key"], "value": _value(value), "kind": row["kind"],
+                          "scope": row["scope"], "status": row["status"], "sensitivity": row["sensitivity"],
+                          "confidence": round(float(row["confidence"]), 2), "updatedAt": row["updated_at"],
+                          "evidence": int(row["evidence_count"])})
+            if len(found) >= max(1, min(limit, 500)):
+                break
+        return found
+
+    def explain(self, memory_id: str) -> dict[str, Any]:
+        """Why ZAE remembers this: the record and the evidence behind it."""
+        if not self.available():
+            raise KeyError(memory_id)  # no profile yet; looking never creates one
+        with self._memory() as memory:
+            row = memory.db.execute("SELECT * FROM memories WHERE id=?", (memory_id,)).fetchone()
+            if row is None:
+                raise KeyError(memory_id)
+            evidence = [dict(e) for e in memory.db.execute(
+                "SELECT evidence_type, observed_at, quote, source_id FROM evidence WHERE memory_id=? ORDER BY observed_at",
+                (memory_id,))]
+        return {"id": row["id"], "key": row["key"], "value": _value(json.loads(row["value_json"])), "kind": row["kind"],
+                "scope": row["scope"], "status": row["status"], "sensitivity": row["sensitivity"], "note": row["note"],
+                "createdAt": row["created_at"], "updatedAt": row["updated_at"],
+                "evidence": [{"type": e["evidence_type"], "at": e["observed_at"], "quote": (e["quote"] or "")[:400],
+                              "source": "conversation" if str(e["source_id"]).startswith(("turn-", "claude-")) else
+                              "imported profile" if str(e["source_id"]).startswith("seed:") else "other"} for e in evidence]}
+
+    def confirm(self, memory_id: str, *, kind: str | None = None) -> dict[str, Any]:
+        """Grey confirmed a candidate in the app: it becomes an active memory."""
+        with self._memory() as memory:
+            result = memory.confirm_candidate(memory_id, self._context("confirm-" + uuid.uuid4().hex, "typed"), kind=kind)
+        self._core = (-1.0, None)
+        return {"id": result.get("id"), "key": result.get("key"), "status": result.get("status")}
+
+    def forget(self, memory_id: str) -> int:
+        """Grey asked to forget this: remove it and stop it being learned again."""
+        with self._memory() as memory:
+            row = memory.db.execute("SELECT key, scope, namespace FROM memories WHERE id=?", (memory_id,)).fetchone()
+            if row is None:
+                raise KeyError(memory_id)
+            removed = memory.forget(row["key"], scope=row["scope"], namespace=row["namespace"])
+        self._core = (-1.0, None)
+        return removed
+
     # ---- learning -----------------------------------------------------
     def observe(self, text: str, *, channel: str = "typed", message_id: str | None = None) -> list[dict[str, Any]]:
         """Learn from one accepted owner turn (his words only)."""
@@ -272,7 +335,7 @@ def extract_with_local_brain(text: str) -> list:
     """Ask the local model for atomic memory proposals (kit prompt). Never raises upward."""
     import requests
     from core.brain.local_llm import active_model, get_brain_settings
-    prompt_doc = (KIT_DIR / "LOCAL-MODEL-EXTRACTION-PROMPT.md").read_text(encoding="utf-8")
+    prompt_doc = (LEDGER_DIR / "EXTRACTION_PROMPT.md").read_text(encoding="utf-8")
     instruction = prompt_doc.split("```text", 1)[1].split("```", 1)[0].strip()
     known = ("Known key roots: identity, communication, values, interests, food, health, fitness, work, family, "
              "finance, hardware, projects, location, routine, preferences, appearance, learning. "

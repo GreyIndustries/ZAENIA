@@ -11,7 +11,7 @@ import { HandControls } from "./components/shell/HandControls";
 import type { GestureCommand } from "./core/handGestures";
 import type { ShellWindow } from "./components/shell/WindowShell";
 import { parseCoreTelemetry, PREVIEW_TELEMETRY } from "./core/coreTelemetry";
-import { checkPhoneConnection, connectGoogleCalendar, disconnectPhone, restartServer, startServer } from "./core/bridge";
+import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, openVoiceTraining, restartServer, startServer } from "./core/bridge";
 import { api, askZaenia, BridgeError, canGoLive, errorText, forgetToken, IN_TAURI, LIVE_API, readStatus, savedToken, startVoiceService, streamChat, streamUnsupported, WEB_APP } from "./core/bridge";
 import type { ChatStream } from "./core/bridge";
 import { assistantProposalExpired, confirmedAssistantAction, parseAssistantProposal } from "./core/assistantActions";
@@ -32,18 +32,25 @@ import { ZAENIA_IDENTITY_DESCRIPTION, ZAENIA_IDENTITY_REPLY, isZaeniaIdentityQue
 import type { CoreTelemetry, ModulePhase } from "./core/coreTelemetry";
 import { TasksDashboard } from "./components/tasks/TasksDashboard";
 import { StatusPanel } from "./components/status/StatusPanel";
+import { SECURITY_CHECK_EVENT } from "./components/status/SecurityChecks";
 import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { NewsPanel } from './components/news/NewsPanel';
+import { NewsRail } from './components/news/NewsRail';
+import { ModuleMasthead } from './components/shell/ModuleMasthead';
+import './styles/glass-modules.css';
+import './styles/module-looks.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
+import { skipWhileAway, useAppInBackground } from "./core/appBackground";
 import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
 import { layoutAck, parseLayoutCommand } from "./core/layoutCommands";
-import { ACCENTS, appearanceStyle, DEFAULT_APPEARANCE, parseAppearance, parseAppearanceCommand } from "./core/appearance";
+import { ACCENTS, appearanceStyle, tabAppearance, DEFAULT_APPEARANCE, parseAppearance, parseAppearanceCommand } from "./core/appearance";
 import type { Appearance } from "./core/appearance";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
+import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
@@ -52,11 +59,11 @@ type Section = "overview" | "status" | "tasks" | "calendar" | "files" | "system"
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news";
 type VisualMode = "blend" | "progress";
 
-// The Conversation tab is replaced by System Status. Conversations live in the
+// The Conversation tab is replaced by Status & Security. Conversations live in the
 // chat box under the core: its thread opens above the chat bar.
 const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
-  { id: "status", label: "System Status", short: "Status", icon: "pulse" },
+  { id: "status", label: "Status & Security", short: "Status", icon: "pulse" },
   { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
   { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
@@ -67,7 +74,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
 ];
 const sections: Record<Section, { title: string; label: string; description: string }> = {
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
-  status: { title: "System Status", label: "READINESS CODEX", description: "Module readiness and Codex connection reports, alongside the visual core startup state." },
+  status: { title: "Status & Security", label: "READINESS & SECURITY", description: "Module readiness, ZAE's security self-checks and their reports, and recent security activity." },
   tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
@@ -447,7 +454,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     };
     // Phones pause timers in the background; refresh as soon as the app is back.
     const onVisible = () => { if (!document.hidden) void getStatus(); };
-    void getStatus(); const id = window.setInterval(() => void getStatus(), 8_000);
+    // Every 8 s in use; every 32 s while the window is in the background.
+    const away = { n: 0 };
+    void getStatus(); const id = window.setInterval(() => { if (!skipWhileAway(away, 4)) void getStatus(); }, 8_000);
     document.addEventListener("visibilitychange", onVisible);
     return () => { mounted = false; controller?.abort(); window.clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [source, onAuthLost]);
@@ -654,15 +663,27 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (action === "start_passkey") { void startServer("passkey").catch(failure => setVoiceNote(errorText(failure))); return "Opening the server window. Type your passkey there."; }
     if (action === "restart_token") { void restartServer().catch(failure => setVoiceNote(errorText(failure))); return "Restarting the server, sir."; }
     if (action === "connect_google") { void connectGoogleCalendar().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Google sign-in. Click Allow in your browser."; }
+    if (action === "voice_training") { void openVoiceTraining().catch(failure => setVoiceNote(errorText(failure))); return "Opening voice training. Have your passkey ready, sir."; }
+    if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail sign-in. It's read-only; click Allow in your browser."; }
     if (action === "open_files") { openSection("files"); return "Files are up."; }
     if (action === "open_tasks") { openSection("tasks"); return "Tasks are up."; }
+    if (action === "open_status") { openSection("status"); return "Status & Security is up."; }
+    if (action === "run_security_check") {
+      openSection("status");
+      void api("POST", "/api/security/checks")
+        .then(() => window.dispatchEvent(new Event(SECURITY_CHECK_EVENT)), failure => setVoiceNote(errorText(failure)));
+      return "Running a security check, sir. It takes about half a minute; the report will be on Status & Security.";
+    }
     return null;
   }
   const FIX_COMMANDS: [RegExp, string][] = [
     [/^(?:please )?(?:start|turn on|fix)(?: up)? (?:the )?(?:pc )?voice(?: service)?\b/, "start_voice"],
     [/^(?:please )?(?:restart|start)(?: up)? (?:the )?server with (?:the |my )?passkey\b|^(?:unlock|switch to) (?:full|owner) (?:mode|features)\b/, "start_passkey"],
     [/^(?:please )?(?:restart|reboot|fix) (?:the )?server\b/, "restart_token"],
+    [/^(?:please )?(?:connect|link|set up|sync) (?:my )?(?:g ?mail|e-?mail|inbox)\b/, "connect_gmail"],
+    [/^(?:please )?(?:train|retrain|calibrate|re-?enroll) (?:my |your )?voice\b|^voice training\b/, "voice_training"],
     [/^(?:please )?(?:connect|link|set up|sync) (?:my )?google(?: calendar)?\b/, "connect_google"],
+    [/^(?:please )?(?:can you |could you )?(?:run|do|start|perform)(?: a| an| your)? (?:security (?:check|scan|self[- ]?check|test)|self[- ]?check)\b|^check (?:your|my) security\b/, "run_security_check"],
   ];
 
   /** One message to ZÆNIA, typed or spoken. Sending while she's busy interrupts her. */
@@ -816,6 +837,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // Names work anywhere in a sentence. Questions and directed replies continue
   // the current conversation, without admitting every nearby utterance.
   function onTranscript(result: Transcript, clipMode: VoiceMode, barged: boolean) {
+    if (result.rejected) {
+      // Not recognised as Grey's voice: drop it. Explain only when he was
+      // clearly talking to the app (button press) or something needs fixing.
+      if (barged) speech.duck(false);
+      if (clipMode === "dictate" || result.rejected === "not_set_up") setVoiceNote(result.message || "That didn't sound like you.");
+      return;
+    }
     if (typeof result.nameRequired === "boolean") setOpenMic(!result.nameRequired);
     const words = (result.addressed ? result.command : result.text).trim();
     if (barged) {
@@ -962,6 +990,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     preparingSpeech: speech.loading !== null,
   });
   const workspaceMotion = useWorkspaceMotion(voicePhase, motion, startup.ready);
+  const coreBusy = sending || listen.status === "hearing" || pcVoice?.state === "hearing" || pcVoice?.state === "replying";
+  // Window unfocused or hidden while ZAE is idle: the core holds still and animations pause.
+  const background = useAppInBackground(voicePhase !== "idle" || coreBusy);
   const readFollowUntil = useCallback(() => followUntil.current, []);
   // Only the app's own always-on microphone uses this window; the PC voice service keeps its own.
   const showFollowUp = listen.mode === "always" && !pcTakesOver && !openMic;
@@ -984,12 +1015,22 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const coreSettings = <>
           <AppearanceSettings value={appearance} onChange={setAppearance}/>
           <ScreenWatchSettings/>
+          <GameCoachSettings/>
           <div className="detail-panel__block"><div className="section-heading"><span className="subheading">VISUAL SOURCE</span><span>LOCAL</span></div><h2>Neural Core</h2><p>The sphere and its six nerves are one network. Signals leave the nucleus and travel each branch to its module.</p><div className="mode-grid">{([{id:"blend",label:"Neural View"},{id:"progress",label:"Technical"}] as {id:VisualMode;label:string}[]).map(o=><button key={o.id} type="button" className={mode===o.id?"choice choice--active":"choice"} onClick={()=>{setMode(o.id);openSection("overview");}} aria-pressed={mode===o.id}>{o.label}</button>)}</div>
             <button className="setting-row" type="button" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}><span className="setting-row__icon"><Icon name="bolt" size={18}/></span><span className="setting-row__content"><strong>Ambient motion</strong><small>Rotation and travelling signals</small></span><span className={`switch ${motion?"switch--on":""}`}><i/></span></button>
             <WorkspaceMotionControls settings={workspaceMotion.settings} toggle={workspaceMotion.toggle} resize={workspaceMotion.resize} reset={workspaceMotion.reset}/></div>
           <div className="detail-panel__block status-block"><div className="section-heading"><span className="subheading">MODULE STATUS</span><span>{String(readyCount).padStart(2,"0")} / {String(moduleTotal).padStart(2,"0")}</span></div><div className="module-list">{telemetry?.modules.map(m=><button type="button" className="module-button" key={m.id} title={m.detail} onClick={()=>{setSelectedModule(m.id);openSection("system");}}><span className={`module-item__dot module-item__dot--${m.phase}`}/><span>{m.name}</span><small className={`module-phase module-phase--${m.phase}`}>{phaseLabels[m.phase]}</small></button>)??<div className="hint">Status feed unavailable.</div>}</div></div>
-          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in System Status.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
+          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in Status & Security.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
   </>;
+
+  // Every module shares the Tech News look: a masthead and glass panels.
+  function glassBody(id: Section, masthead = true): ReactNode {
+    const tab = tabAppearance(appearance, id);
+    return <div className={`glass-module glass-module--${id}`} data-look={tab.look} style={tab.style as CSSProperties}>
+      {masthead && id !== "news" && <ModuleMasthead label={sections[id].label} title={sections[id].title} description={sections[id].description}/>}
+      {sectionBody(id)}
+    </div>;
+  }
 
   function sectionBody(id: Section): ReactNode {
     switch (id) {
@@ -1005,7 +1046,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}>
+  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}>
     <CoreBackdrop/>
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
@@ -1065,14 +1106,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           {stageSection === "overview"
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
-          {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} processing={sending || listen.status === "hearing" || pcVoice?.state === "hearing" || pcVoice?.state === "replying"} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
-          {!windowed && section !== "overview" && sectionBody(section)}
+          {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
+          {!windowed && section !== "overview" && glassBody(section, false)}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
             {shell.windows.filter(win => !win.minimized).map(win => <AppWindow key={win.id} win={win} title={sections[win.id as Section].title} label={sections[win.id as Section].label}
               active={shell.active === win.id} stage={() => layerRef.current?.getBoundingClientRect() ?? null}
               onAttention={() => { attendedTab.current = win.id; }}
               onFocus={() => { attendedTab.current = win.id; shell.open(win.id); }} onClose={() => shell.close(win.id)} onMinimize={() => shell.minimize(win.id)} onChange={rect => shell.update(win.id, rect)}>
-              {sectionBody(win.id as Section)}
+              {glassBody(win.id as Section)}
             </AppWindow>)}
           </div>}
           {windowed && <Dock windows={shell.windows} titles={Object.fromEntries(WINDOW_IDS.map(id => [id, sections[id as Section].title]))} active={shell.active} onOpen={shell.open}
@@ -1115,6 +1156,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           />
           <div className="stage-footer"><div><span className="stage-footer__line"/>{source==="preview"?"VISUAL PREVIEW ACTIVE":live?"LIVE STATUS":"STATUS OFFLINE"}<span className="stage-footer__dim"> / {photos.length ? "PHOTO CONVERSATION · THIS SESSION ONLY" : LIVE_API ? "CONVERSATION SAVED IN ZÆNIA MEMORY" : "PREVIEW"}</span></div><button type="button" className="text-action" onClick={()=>openSection(section==="system"?"overview":"system")}>{section==="system"?"BACK TO CORE":"SYSTEM DETAILS"} <Icon name="arrow" size={17}/></button></div>
         </section>
+        {/* Desktop: tech headlines down the right side (hide with the › button). */}
+        {!isPhone && <NewsRail onOpenAll={() => openSection("news")}/>}
         {isPhone && <aside
           id="core-panel"
           className="detail-panel"

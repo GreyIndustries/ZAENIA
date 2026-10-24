@@ -126,16 +126,76 @@ def interpret(text: str, wake: bool) -> dict[str, Any]:
 
 from core.assistant_platform.performance import measure
 
+def app_mic_requires_voice() -> bool:
+    """Grey's choice (B2): app-mic turns must be his voice. Config: app_mic.require_owner_voice."""
+    try:
+        from core.voice_listener.cognitive_filter import load_config
+        return load_config().get("app_mic", {}).get("require_owner_voice", True) is not False
+    except Exception:
+        return True
+
+
+def voice_check_status() -> dict[str, Any]:
+    if not app_mic_requires_voice():
+        return {"required": False}
+    from core.voice_security.app_mic import app_mic_gate
+    return app_mic_gate().stats()
+
+
 @measure("transcription_and_intent")
 def transcribe(audio: Any, wake: bool = False) -> dict[str, Any]:
     pcm = _decode(audio)
+    if app_mic_requires_voice():
+        # Check the speaker before any speech recognition: a turn that isn't
+        # Grey's voice is dropped, never transcribed, answered or learned from.
+        from core.voice_security.app_mic import REJECT_MESSAGES, app_mic_gate
+        verdict = app_mic_gate().check(pcm)
+        if not verdict["accepted"]:
+            return {"text": "", "addressed": False, "command": "", "dismiss": False, "wake": bool(wake),
+                    "conversational": False, "acknowledgement": False, "forZae": False, "nameRequired": None,
+                    "rejected": verdict["reason"], "message": REJECT_MESSAGES.get(verdict["reason"], "")}
     try:
         text = recognize(pcm)
     except VoiceUnavailable:
         raise
     except Exception as error:
         raise VoiceUnavailable(f"Speech recognition failed ({type(error).__name__}).") from error
-    return interpret(text, bool(wake))
+    result = interpret(text, bool(wake))
+    if result["text"]:
+        # The PC voice service may be answering this same sentence: answer once.
+        try:
+            from core.voice_listener.service_status import claim_turn
+            claimed = claim_turn("app", result["text"], wait_for_pc=True,
+                                 record=bool(result["forZae"] or result["conversational"] or wake))
+        except Exception:
+            claimed = True
+        if not claimed:
+            return {**result, "text": "", "command": "", "addressed": False, "forZae": False,
+                    "rejected": "pc_answering", "message": "ZAE's PC voice is already answering that."}
+    if result["text"] and app_mic_requires_voice():
+        # His voice was verified above: learn his speaking pace (a running
+        # average only) and note these words came from speech, not typing.
+        try:
+            from core.personal_memory.speech_style import mark_spoken, speech_style
+            mark_spoken(result["text"])
+            speech_style().observe_speech(len(result["text"].split()), voiced_seconds(pcm))
+        except Exception:
+            pass
+    return result
+
+
+def voiced_seconds(pcm: bytes, threshold: int = 500) -> float:
+    """Seconds of the clip that hold speech (20 ms frames above a quiet level)."""
+    import array
+    samples = array.array("h")
+    samples.frombytes(pcm[: len(pcm) - len(pcm) % 2])
+    frame = SAMPLE_RATE // 50
+    voiced = 0
+    for start in range(0, len(samples) - frame + 1, frame):
+        chunk = samples[start:start + frame]
+        if (sum(value * value for value in chunk) / frame) ** 0.5 > threshold:
+            voiced += 1
+    return voiced / 50.0
 
 
 # How to start the PC voice service by hand on this OS.
@@ -157,6 +217,10 @@ def service_status() -> dict[str, Any]:
     """The PC voice service, as reported by its own heartbeat."""
     result = _service_status()
     result["nameRequired"] = name_required()
+    try:
+        result["voiceCheck"] = voice_check_status()
+    except Exception:
+        result["voiceCheck"] = {"required": True, "setUp": False}
     return result
 
 

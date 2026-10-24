@@ -1,4 +1,6 @@
 import type { CoreTelemetry } from "../../core/coreTelemetry";
+import { SecurityActivity } from "../settings/SecurityActivity";
+import { SecurityChecks } from "./SecurityChecks";
 import { SystemBrief } from "./SystemBrief";
 import "./StatusPanel.css";
 
@@ -6,7 +8,7 @@ import "./StatusPanel.css";
 const modules = [
   { id: "security", title: "Security & access", note: "Owner passkey, API token and server mode" },
   { id: "brain", title: "Local brain", note: "Ollama and the conversation model" },
-  { id: "voice", title: "Voice", note: "Piper voice for spoken replies and the brief" },
+  { id: "voice", title: "Voice", note: "Kokoro voice for spoken replies and the brief" },
   { id: "calendar", title: "Calendar", note: "Google Calendar link and the local calendar" },
   { id: "traffic", title: "Traffic", note: "WSDOT traffic for the drive brief" },
   { id: "weather", title: "Weather", note: "Forecast for the drive brief" },
@@ -22,6 +24,7 @@ export function StatusPanel({ telemetry, source, connection, startupReady, voice
   return <div className="section-content readiness-panel">
     <div className="section-content__tag">READINESS CODEX <span>{verified ? "LIVE STATUS FEED" : "AWAITING VERIFIED STATUS"}</span></div>
     {source === "local" && <SystemBrief voice={voice} onFix={onFix}/>}
+    {source === "local" && <SecurityChecks/>}
     <div className="readiness-summary">
       <div><span>Visual core</span><strong>{startupReady ? "Online" : "Starting"}</strong><small>Seven-second interface startup</small></div>
       <div><span>Verified modules</span><strong>{readyCount} / {modules.length}</strong><small>{verified ? `Reported live by the ZÆNIA server · ${telemetry.diagnostics.toLowerCase()}` : "Preview values are not counted"}</small></div>
@@ -40,5 +43,6 @@ export function StatusPanel({ telemetry, source, connection, startupReady, voice
       {codex && <small>Last connector check: <time dateTime={codex.checkedAt}>{new Date(codex.checkedAt).toLocaleString()}</time></small>}
       <p className="readiness-feed">{source === "local" ? connection : "Choose Live under System Data to read real status from the ZÆNIA server."}</p>
     </section>
+    {source === "local" && <div className="security-activity-panel"><SecurityActivity/></div>}
   </div>;
 }

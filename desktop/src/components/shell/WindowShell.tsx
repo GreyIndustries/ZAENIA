@@ -31,7 +31,8 @@ function readSaved(): ShellWindow[] {
 /** Cascade new windows so they never open exactly on top of each other. */
 function placement(index: number): Rect {
   const step = (index % 5) * 0.035;
-  return { x: 0.3 + step, y: 0.04 + step, w: 0.6, h: 0.72 };
+  // Module windows open nearly full-screen, like a magazine page (still movable and resizable).
+  return { x: 0.03 + step / 2, y: 0.02 + step / 2, w: 0.92, h: 0.92 };
 }
 
 export function useWindowShell(known: readonly string[]) {
