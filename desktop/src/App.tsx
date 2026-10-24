@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { SystemProgressCore } from "./components/core/SystemProgressCore";
 import { NeuralCore } from "./components/core/NeuralCore";
@@ -22,27 +22,28 @@ import { HomeConversation } from "./components/chat/HomeConversation";
 import type { ChatPhoto } from "./core/photos";
 import type { ChatFile } from "./core/sharedFiles";
 import type { ChatMessage, HistoryState } from "./components/chat/HomeConversation";
-import { CalendarPanel } from "./components/calendar/CalendarPanel";
-import { FilesPanel } from "./components/files/FilesPanel";
 import { useSpeech } from "./core/speech";
 import { useVoiceInput } from "./core/voiceInput";
 import type { Transcript, VoiceMode } from "./core/voiceInput";
 import { acceptsVoiceTurn, FOLLOW_UP_MS, isQuietVoiceAcknowledgement } from "./core/voiceAttention";
 import { ZAENIA_IDENTITY_DESCRIPTION, ZAENIA_IDENTITY_REPLY, isZaeniaIdentityQuestion } from "./core/identity";
 import type { CoreTelemetry, ModulePhase } from "./core/coreTelemetry";
-import { TasksDashboard } from "./components/tasks/TasksDashboard";
-import { StatusPanel } from "./components/status/StatusPanel";
-import { SecurityPanel } from "./components/security/SecurityPanel";
 import { SECURITY_CHECK_EVENT } from "./components/status/SecurityChecks";
-import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
-import { NewsPanel } from './components/news/NewsPanel';
 import { NewsRail } from './components/news/NewsRail';
 import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
 import './styles/module-looks.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
+// Module windows load when first opened, so the core appears sooner.
+const CalendarPanel = lazy(() => import("./components/calendar/CalendarPanel").then(module => ({ default: module.CalendarPanel })));
+const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
+const TasksDashboard = lazy(() => import("./components/tasks/TasksDashboard").then(module => ({ default: module.TasksDashboard })));
+const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(module => ({ default: module.StatusPanel })));
+const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
+const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
+const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
 import { useCoreStartup } from "./core/startup";
 import { skipWhileAway, useAppInBackground } from "./core/appBackground";
 import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
@@ -1033,7 +1034,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const tab = tabAppearance(appearance, id);
     return <div className={`glass-module glass-module--${id}`} data-look={tab.look} style={tab.style as CSSProperties}>
       {masthead && id !== "news" && <ModuleMasthead label={sections[id].label} title={sections[id].title} description={sections[id].description}/>}
-      {sectionBody(id)}
+      <Suspense fallback={<p className="hint">Loading…</p>}>{sectionBody(id)}</Suspense>
     </div>;
   }
 

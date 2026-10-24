@@ -38,8 +38,17 @@ class GameCoachTest(unittest.TestCase):
         self.coach = GameCoach(folder=Path(self.folder.name), game_state=lambda: self.state,
                                capture=lambda monitor: Image.new("RGB", (64, 36)), monitor=lambda: {"number": 1},
                                title=lambda app: "Counter-Strike 2",
-                               describe=lambda jpeg, previous, prompt: "Grey pushes B site with the AWP.\nLOOKUP: AWP",
+                               describe=self.describe,
                                look_up=look_up, review=review, clock=lambda: self.now)
+
+        self.screens = ["SCREEN: playing\nGrey pushes B site with the AWP and {n}.\nLOOKUP: AWP"]
+        self.looks = 0
+
+    def describe(self, jpeg, previous, prompt):
+        events = ("trades a teammate", "plants the bomb", "saves his rifle", "rotates through mid", "buys armour",
+                  "flanks through tunnels", "throws a smoke", "wins a clutch")
+        self.looks += 1
+        return self.screens[0].format(n=events[(self.looks - 1) % len(events)])
 
     def tearDown(self):
         self.folder.cleanup()
@@ -127,3 +136,32 @@ class WebLookupTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CoachTuningTest(GameCoachTest):
+    """Lessons from the first real session (Stellaris, 24 Oct)."""
+
+    def test_menus_and_loading_are_not_play(self):
+        self.screens = ["SCREEN: menu\nThe Stellaris main menu.\nLOOKUP: none"]
+        self.coach.step(); self.play(8); self.state = {}; self.coach.step()
+        self.assertEqual(self.reviewed, [])  # nothing to judge, so no "indecisive" verdict
+
+    def test_menu_screens_are_looked_at_less_often(self):
+        self.screens = ["SCREEN: loading\nLoading."]
+        self.coach.step(); self.play(6)  # 6 x 21 s = 126 s
+        self.assertLessEqual(self.looks, 3)
+
+    def test_repeated_identical_notes_are_dropped(self):
+        self.screens = ["SCREEN: playing\nGrey holds the A long angle with the rifle.\nLOOKUP: none"]
+        self.coach.step(); self.play(4)
+        self.assertEqual(self.coach.status()["session"]["moments"], 1)
+
+    def test_unrelated_web_results_are_ignored(self):
+        from core.assistant_platform.game_coach import _relevant
+        self.assertFalse(_relevant({"title": "Eurasian bittern", "summary": "A wading bird."}, "Stellaris"))
+        self.assertTrue(_relevant({"title": "Stellaris", "summary": "A 2016 grand strategy video game."}, "game"))
+        self.assertTrue(_relevant({"title": "AWP", "summary": "A sniper rifle in Counter-Strike."}, "Counter-Strike 2"))
+
+    def test_review_items_are_plain_sentences(self):
+        from core.assistant_platform.game_coach import _flat
+        self.assertEqual(_flat({"decision": "Pushed B early", "outcome": "won the round"}), "Pushed B early; won the round")

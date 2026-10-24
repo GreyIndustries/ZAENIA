@@ -3,9 +3,9 @@ import type { CSSProperties } from "react";
 import { api, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import "./NewsPanel.css";
-import previewArtA from "../../assets/jarvis-hologram.png";
-import previewArtB from "../../assets/core/warehouse-clean.png";
-import previewArtC from "../../assets/neural-core-sphere.png";
+import previewArtA from "../../assets/jarvis-hologram.webp";
+import previewArtB from "../../assets/core/warehouse-clean.webp";
+import previewArtC from "../../assets/neural-core-sphere.webp";
 
 type Story = { title: string; link: string; summary?: string; image?: string | null; published?: string | null; sources: string[]; links: Record<string, string>; coverage: number };
 type SourceStatus = { name: string; focus: string[]; why: string; ok?: boolean; error?: string; checkedAt?: string };
