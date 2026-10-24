@@ -9,12 +9,13 @@ const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/cor
   compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
 }).outputText;
 vm.runInNewContext(code, { exports: exportsObject });
-const { parseAppearance, parseAppearanceCommand, DEFAULT_APPEARANCE } = exportsObject;
+const { parseAppearance, parseAppearanceCommand, tabAppearance, ACCENTS, DEFAULT_APPEARANCE } = exportsObject;
+const plain = value => JSON.parse(JSON.stringify(value));
 let checks = 0;
 const check = run => { run(); checks++; };
 const base = { ...DEFAULT_APPEARANCE };
 
-check(() => assert.deepEqual({ ...parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}') }, { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora' }));
+check(() => assert.deepEqual(plain(parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}')), { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora', tabs: {} }));
 check(() => assert.deepEqual({ ...parseAppearance('not json') }, base));
 check(() => assert.equal(parseAppearanceCommand('make it blue', base).accent, 'blue'));
 check(() => assert.equal(parseAppearanceCommand('change the color to red', base).accent, 'crimson'));
@@ -26,4 +27,13 @@ for (const text of ['add a task to buy blue paint', 'what color is the sky', 'I 
   check(() => assert.equal(parseAppearanceCommand(text, base) === null || text === 'what color is the sky', true, text));
 }
 check(() => assert.equal(parseAppearanceCommand('add a task to buy blue paint', base), null));
+// More colours, and each tab's own style and colour.
+check(() => assert.ok(ACCENTS.length >= 28 && new Set(ACCENTS.map(a => a.id)).size === ACCENTS.length));
+check(() => assert.deepEqual(plain(parseAppearance('{"tabs":{"tasks":{"look":"hud","color":"rose"},"news":{"look":"bogus"},"nope":{"color":"mint"}}}').tabs), { tasks: { look: 'hud', color: 'rose' } }));
+check(() => assert.equal(tabAppearance({ ...base, look: 'neon', tabs: { tasks: { look: 'hud' } } }, 'tasks').look, 'hud'));
+check(() => assert.equal(tabAppearance({ ...base, look: 'neon', tabs: {} }, 'notes').look, 'neon'));
+check(() => assert.equal(tabAppearance({ ...base, tabs: { notes: { color: 'mint' } } }, 'notes').style['--accent'], '#9cf5c8'));
+check(() => { const next = parseAppearanceCommand('make the tasks tab pink', base); assert.equal(next.tabs.tasks.color, 'pink'); assert.equal(next.accent, 'amber'); });
+check(() => assert.equal(parseAppearanceCommand('make it teal', base).accent, 'teal'));
+check(() => assert.equal(parseAppearanceCommand('open the files window', base), null));
 console.log(`${checks} appearance checks passed.`);

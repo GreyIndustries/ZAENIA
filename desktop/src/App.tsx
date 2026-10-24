@@ -42,9 +42,10 @@ import './styles/module-looks.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import { useAssistantInbox } from "./core/followThrough";
 import { useCoreStartup } from "./core/startup";
+import { skipWhileAway, useAppInBackground } from "./core/appBackground";
 import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
 import { layoutAck, parseLayoutCommand } from "./core/layoutCommands";
-import { ACCENTS, appearanceStyle, DEFAULT_APPEARANCE, parseAppearance, parseAppearanceCommand } from "./core/appearance";
+import { ACCENTS, appearanceStyle, tabAppearance, DEFAULT_APPEARANCE, parseAppearance, parseAppearanceCommand } from "./core/appearance";
 import type { Appearance } from "./core/appearance";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
@@ -452,7 +453,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     };
     // Phones pause timers in the background; refresh as soon as the app is back.
     const onVisible = () => { if (!document.hidden) void getStatus(); };
-    void getStatus(); const id = window.setInterval(() => void getStatus(), 8_000);
+    // Every 8 s in use; every 32 s while the window is in the background.
+    const away = { n: 0 };
+    void getStatus(); const id = window.setInterval(() => { if (!skipWhileAway(away, 4)) void getStatus(); }, 8_000);
     document.addEventListener("visibilitychange", onVisible);
     return () => { mounted = false; controller?.abort(); window.clearInterval(id); document.removeEventListener("visibilitychange", onVisible); };
   }, [source, onAuthLost]);
@@ -978,6 +981,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     preparingSpeech: speech.loading !== null,
   });
   const workspaceMotion = useWorkspaceMotion(voicePhase, motion, startup.ready);
+  const coreBusy = sending || listen.status === "hearing" || pcVoice?.state === "hearing" || pcVoice?.state === "replying";
+  // Window unfocused or hidden while ZAE is idle: the core holds still and animations pause.
+  const background = useAppInBackground(voicePhase !== "idle" || coreBusy);
   const readFollowUntil = useCallback(() => followUntil.current, []);
   // Only the app's own always-on microphone uses this window; the PC voice service keeps its own.
   const showFollowUp = listen.mode === "always" && !pcTakesOver && !openMic;
@@ -1010,7 +1016,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
   // Every module shares the Tech News look: a masthead and glass panels.
   function glassBody(id: Section, masthead = true): ReactNode {
-    return <div className={`glass-module glass-module--${id}`}>
+    const tab = tabAppearance(appearance, id);
+    return <div className={`glass-module glass-module--${id}`} data-look={tab.look} style={tab.style as CSSProperties}>
       {masthead && id !== "news" && <ModuleMasthead label={sections[id].label} title={sections[id].title} description={sections[id].description}/>}
       {sectionBody(id)}
     </div>;
@@ -1030,7 +1037,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase} data-look={appearance.look}>
+  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}>
     <CoreBackdrop/>
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
@@ -1090,7 +1097,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           {stageSection === "overview"
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
-          {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} processing={sending || listen.status === "hearing" || pcVoice?.state === "hearing" || pcVoice?.state === "replying"} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
+          {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
           {!windowed && section !== "overview" && glassBody(section, false)}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
             {shell.windows.filter(win => !win.minimized).map(win => <AppWindow key={win.id} win={win} title={sections[win.id as Section].title} label={sections[win.id as Section].label}
