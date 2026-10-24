@@ -14,7 +14,7 @@ _DEEP = re.compile(
     r"\b(?:explain|elaborate|in (?:depth|detail)|more detail|deeper|go deeper|dig (?:in|deeper)|"
     r"break (?:it|that|this) down|walk me through|step by step|full (?:explanation|answer|rundown|picture)|"
     r"the long version|teach me|help me understand|how does (?:it|that|this) work|why (?:is|does|did|would|do)|"
-    r"compare|pros and cons|differences? between|write (?:a|me)|draft|plan (?:for|out)|list (?:all|every))\b")
+    r"pros and cons|write (?:a|me)|draft|plan (?:for|out)|list (?:all|every))\b")
 _MORE = re.compile(
     r"^(?:(?:ok(?:ay)?|and|so|alright|right|sure|yeah|yes)[, ]+)?(?:why\??|how so\??|how\??|go on|keep going|continue|"
     r"(?:tell|show) me more|more|say more|expand(?: on (?:that|it|this))?|elaborate|explain(?: (?:that|it|this|more|further))?|"

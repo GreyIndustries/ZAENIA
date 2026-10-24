@@ -11,13 +11,14 @@ from core.personal_memory.speech_style import SpeechStyle
 
 class ReplyShapeTest(unittest.TestCase):
     def test_brief_by_default(self):
-        for text in ("what time is my meeting", "is the server up?", "hey zae", "add milk to my list"):
+        for text in ("what time is my meeting", "is the server up?", "hey zae", "add milk to my list",
+                     "whats the difference between ram and vram"):
             self.assertFalse(wants_depth(text), text)
             self.assertIn("brief", reply_guide(text))
 
     def test_depth_when_asked(self):
         for text in ("why?", "explain that", "tell me more", "go deeper", "walk me through the setup",
-                     "how does it work", "ok why", "what do you mean?", "compare kokoro and piper"):
+                     "how does it work", "ok why", "what do you mean?", "pros and cons of 64gb"):
             self.assertTrue(wants_depth(text), text)
             self.assertNotIn("REPLY SHAPE: brief", reply_guide(text, has_previous_answer=True))
 
