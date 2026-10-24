@@ -160,7 +160,31 @@ def transcribe(audio: Any, wake: bool = False) -> dict[str, Any]:
         raise
     except Exception as error:
         raise VoiceUnavailable(f"Speech recognition failed ({type(error).__name__}).") from error
-    return interpret(text, bool(wake))
+    result = interpret(text, bool(wake))
+    if result["text"] and app_mic_requires_voice():
+        # His voice was verified above: learn his speaking pace (a running
+        # average only) and note these words came from speech, not typing.
+        try:
+            from core.personal_memory.speech_style import mark_spoken, speech_style
+            mark_spoken(result["text"])
+            speech_style().observe_speech(len(result["text"].split()), voiced_seconds(pcm))
+        except Exception:
+            pass
+    return result
+
+
+def voiced_seconds(pcm: bytes, threshold: int = 500) -> float:
+    """Seconds of the clip that hold speech (20 ms frames above a quiet level)."""
+    import array
+    samples = array.array("h")
+    samples.frombytes(pcm[: len(pcm) - len(pcm) % 2])
+    frame = SAMPLE_RATE // 50
+    voiced = 0
+    for start in range(0, len(samples) - frame + 1, frame):
+        chunk = samples[start:start + frame]
+        if (sum(value * value for value in chunk) / frame) ** 0.5 > threshold:
+            voiced += 1
+    return voiced / 50.0
 
 
 # How to start the PC voice service by hand on this OS.

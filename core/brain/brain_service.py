@@ -522,6 +522,11 @@ class BrainService:
             authorize_memory(self.memory_authorizer, "memory.read")
             from core.personal_memory.owner_profile import owner_profile
             owner = owner_profile().context(question)
+            # How he talks, so her replies match it.
+            from core.personal_memory.speech_style import speech_style
+            style = speech_style().hint()
+            if style:
+                owner = f"{owner}\n\n{style}" if owner else style
         except Exception:
             owner = None
         screen = None
@@ -808,6 +813,11 @@ class BrainService:
             learner().observe(owner_words(question))
             from core.personal_memory.owner_profile import owner_profile
             owner_profile().observe(owner_words(question), channel=self.learning_channel)
+        except Exception:
+            pass
+        try:
+            from core.personal_memory.speech_style import speech_style
+            speech_style().observe_text(owner_words(question), spoken=str(self.learning_channel) != "typed")
         except Exception:
             pass
 

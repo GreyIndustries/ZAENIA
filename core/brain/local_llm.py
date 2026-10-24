@@ -187,6 +187,14 @@ def build_messages(
         }
     )
 
+    # Brief first, deeper on request, in a way that matches how Zack talks.
+    messages.append(
+        {
+            "role": "system",
+            "content": reply_guide_for(user_text, recent_messages),
+        }
+    )
+
     messages.append(
         {
             "role": "user",
@@ -195,6 +203,13 @@ def build_messages(
     )
 
     return messages
+
+
+def reply_guide_for(user_text: str, recent_messages: list[dict[str, str]] | None) -> str:
+    # How he talks (learned, memory.read) arrives with the behavior context.
+    from core.brain.reply_shape import reply_guide
+    answered = any(item.get("role") == "assistant" and item.get("content") for item in (recent_messages or []))
+    return reply_guide(user_text, has_previous_answer=answered)
 
 
 def clock_context(now: datetime | None = None) -> str:
