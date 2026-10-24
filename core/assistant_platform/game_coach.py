@@ -126,7 +126,7 @@ class GameCoach:
     def __init__(self, *, folder: Path = GAMING_DIR, game_state: Callable[[], dict[str, Any]] | None = None,
                  capture: Callable[[dict[str, int]], Any] | None = None, monitor: Callable[[], dict[str, int] | None] = _game_monitor,
                  title: Callable[[str | None], str] = _game_title, describe: Callable[[bytes, str | None, str], str] | None = None,
-                 look_up: Callable[[str], dict[str, str] | None] | None = None,
+                 look_up: Callable[..., dict[str, str] | None] | None = None,
                  review: Callable[[str, list[dict[str, str]], str | None], dict[str, Any]] = review_local,
                  private: Callable[[dict[str, int]], bool] | None = None, clock: Callable[[], float] = time.monotonic):
         self.folder = Path(folder)
@@ -218,7 +218,7 @@ class GameCoach:
         game = self.title(app)
         info = None
         if self.look_up is not None:
-            found = self.look_up(f"{game} video game")
+            found = self.look_up(game, "video game")
             if found:
                 info = f"{found['title']}: {found['summary'][:400]} ({found['source']})"
         with self.lock:
@@ -245,7 +245,7 @@ class GameCoach:
             return
         moment = {"at": _now_iso(), "text": text[:400]}
         if term and self.look_up is not None:
-            found = self.look_up(f"{term} {session['game']}")
+            found = self.look_up(term, session["game"])
             if found:
                 moment["web"] = f"{found['title']}: {found['summary'][:240]}"
         with self.lock:

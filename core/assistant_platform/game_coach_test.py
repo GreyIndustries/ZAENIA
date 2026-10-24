@@ -31,8 +31,8 @@ class GameCoachTest(unittest.TestCase):
             return {"style": "Aggressive entry player.", "decisions": ["Pushed B early"], "strengths": ["aim"],
                     "mistakes": ["overpeeks"], "tips": ["Hold angles longer"], "profile": f"Aggressive (was {profile})"}
 
-        def look_up(term):
-            self.lookups.append(term)
+        def look_up(term, hint=""):
+            self.lookups.append(f"{term} {hint}".strip())
             return {"title": term.title(), "summary": "A tactical shooter.", "source": "Wikipedia"}
 
         self.coach = GameCoach(folder=Path(self.folder.name), game_state=lambda: self.state,
@@ -101,8 +101,10 @@ class WebLookupTest(unittest.TestCase):
 
         def fetch(url):
             calls.append(url)
-            if "opensearch" in url:
-                return ["elden", ["Elden Ring"], [""], [""]]
+            if "duckduckgo" in url:
+                return {}
+            if "list=search" in url:
+                return {"query": {"search": [{"title": "Elden Ring"}]}}
             if "rest_v1" in url:
                 return {"title": "Elden Ring", "extract": "Elden Ring is a 2022 action role-playing game.", "type": "standard"}
             return {}
@@ -111,11 +113,11 @@ class WebLookupTest(unittest.TestCase):
             lookup = WebLookup(fetch=fetch, cache_file=Path(folder) / "cache.json", clock=lambda: now[0])
             self.assertIn("action role-playing", lookup.lookup("Elden Ring")["summary"])
             self.assertEqual(lookup.lookup("elden ring")["title"], "Elden Ring")  # cached
-            self.assertEqual(len(calls), 2)
+            self.assertEqual(len(calls), 3)
             self.assertIsNone(lookup.lookup("Malenia"))  # too soon after the last request
             now[0] += 30
             lookup.lookup("Malenia")
-            self.assertEqual(len(calls), 4)
+            self.assertEqual(len(calls), 6)
 
     def test_split_lookup(self):
         self.assertEqual(split_lookup("Error 0x80070005 in installer.\nLOOKUP: 0x80070005"), ("Error 0x80070005 in installer.", "0x80070005"))
