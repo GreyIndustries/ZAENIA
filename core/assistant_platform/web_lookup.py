@@ -47,8 +47,8 @@ def _get_json(url: str) -> Any:
 
 
 def _wikipedia(term: str, fetch: Callable[[str], Any]) -> dict[str, str] | None:
-    found = fetch("https://en.wikipedia.org/w/api.php?action=opensearch&limit=1&namespace=0&format=json&search=" + quote(term))
-    titles = found[1] if isinstance(found, list) and len(found) > 1 else []
+    found = fetch("https://en.wikipedia.org/w/api.php?action=query&list=search&srlimit=1&format=json&srsearch=" + quote(term))
+    titles = [hit.get("title") for hit in ((found or {}).get("query") or {}).get("search") or [] if hit.get("title")]
     if not titles:
         return None
     page = fetch("https://en.wikipedia.org/api/rest_v1/page/summary/" + quote(str(titles[0]).replace(" ", "_")))
@@ -81,12 +81,17 @@ class WebLookup:
         except (OSError, ValueError):
             return {}
 
-    def lookup(self, term: str) -> dict[str, str] | None:
-        """A short summary of `term` from the web, or None (private, rate-limited, offline or not found)."""
+    def lookup(self, term: str, hint: str = "") -> dict[str, str] | None:
+        """A short summary of `term` from the web, or None (private, rate-limited, offline or not found).
+
+        `hint` narrows the Wikipedia search ("video game", the game's name);
+        DuckDuckGo is asked about the term alone first.
+        """
         clean = safe_term(term)
+        hint = safe_term(hint) or "" if hint else ""
         if clean is None:
             return None
-        key = clean.casefold()
+        key = f"{clean} | {hint}".casefold()
         with _LOCK:
             cache = self._cache()
             hit = cache.get(key)
@@ -96,9 +101,9 @@ class WebLookup:
                 return None
             self.last_request = self.clock()
         result = None
-        for source in (_wikipedia, _duckduckgo):
+        for source, words in ((_duckduckgo, clean), (_wikipedia, f"{clean} {hint}".strip())):
             try:
-                result = source(clean, self.fetch)
+                result = source(words, self.fetch)
             except Exception:
                 result = None
             if result:
