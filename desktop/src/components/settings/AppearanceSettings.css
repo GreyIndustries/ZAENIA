@@ -42,3 +42,6 @@
 .appearance-settings__tab .appearance-settings__select{height:30px;font-size:11px;min-width:0;width:100%}
 .appearance-settings__tab-name{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-size:11px;color:#dbe6f4}
 .appearance-settings__tab-name i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(160,205,255,.45);flex:none}
+
+/* Core icons all in one colour: the blue ones take the amber tone, which the accent then re-tints. */
+.zaenia-app--orbs-match .core-orb--blue{--tone:255,166,62;--ink:#ffc768}

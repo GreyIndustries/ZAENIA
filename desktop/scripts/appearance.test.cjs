@@ -15,7 +15,7 @@ let checks = 0;
 const check = run => { run(); checks++; };
 const base = { ...DEFAULT_APPEARANCE };
 
-check(() => assert.deepEqual(plain(parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}')), { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora', tabs: {} }));
+check(() => assert.deepEqual(plain(parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}')), { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora', tabs: {}, orbs: 'mixed' }));
 check(() => assert.deepEqual({ ...parseAppearance('not json') }, base));
 check(() => assert.equal(parseAppearanceCommand('make it blue', base).accent, 'blue'));
 check(() => assert.equal(parseAppearanceCommand('change the color to red', base).accent, 'crimson'));
@@ -36,4 +36,8 @@ check(() => assert.equal(tabAppearance({ ...base, tabs: { notes: { color: 'mint'
 check(() => { const next = parseAppearanceCommand('make the tasks tab pink', base); assert.equal(next.tabs.tasks.color, 'pink'); assert.equal(next.accent, 'amber'); });
 check(() => assert.equal(parseAppearanceCommand('make it teal', base).accent, 'teal'));
 check(() => assert.equal(parseAppearanceCommand('open the files window', base), null));
+check(() => assert.equal(parseAppearance('{"orbs":"match"}').orbs, 'match'));
+check(() => assert.equal(parseAppearanceCommand('make the core icons the same colour', base).orbs, 'match'));
+check(() => assert.equal(parseAppearanceCommand('make the core icons the same colour', base).accent, 'amber'));
+check(() => assert.equal(parseAppearanceCommand('give the icons two colours again', { ...base, orbs: 'match' }).orbs, 'mixed'));
 console.log(`${checks} appearance checks passed.`);
