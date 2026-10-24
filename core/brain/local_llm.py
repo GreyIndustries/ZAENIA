@@ -195,14 +195,17 @@ def build_messages(
         }
     )
 
-    # The local model follows a short cue in the message itself far better than
-    # a system rule; only the model sees it, memory keeps his words unchanged.
+    # A short, direct cue right before his message keeps the local model brief.
+    # His message itself always goes last and unchanged (closure_check).
     from core.brain.reply_shape import brief_cue
     cue = brief_cue(user_text)
+    if cue:
+        messages.append({"role": "system", "content": cue})
+
     messages.append(
         {
             "role": "user",
-            "content": f"{user_text}\n\n{cue}" if cue else user_text,
+            "content": user_text,
         }
     )
 

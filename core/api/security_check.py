@@ -47,6 +47,11 @@ LEAK = re.compile(r"(^|/)(data/|\.env$|[^/]*\.vault$|passkey\.hash$|master\.salt
                   r"credentials\.json$|token\.json$|[^/]*\.pem$|[^/]*\.key$)", re.I)
 
 
+def _command(module: str, *args: str) -> str:
+    """A command that works as typed in PowerShell, from any folder."""
+    return f'cd "{PROJECT_ROOT}"; .\.venv\Scripts\python.exe -m {" ".join((module,) + args)}'
+
+
 def _check(group: str, check_id: str, title: str, status: str, detail: str = "", fix: str = "") -> dict[str, str]:
     return {"group": group, "id": check_id, "title": title, "status": status, "detail": detail, "fix": fix}
 
@@ -61,7 +66,7 @@ def _run_suite(module: str, title: str, covers: str,
                       env={**os.environ, "PYTHONIOENCODING": "utf-8"}, **NO_WINDOW)
     except subprocess.TimeoutExpired:
         return _check("tests", check_id, title, "fail", f"Did not finish within {SUITE_TIMEOUT} seconds.",
-                      f"Run python -m {module} at the PC to see where it stops.")
+                      f"In PowerShell at the PC, run {_command(module)} to see where it stops.")
     except OSError as error:
         return _check("tests", check_id, title, "fail", f"Could not start ({type(error).__name__}).")
     seconds = time.monotonic() - started
@@ -79,7 +84,7 @@ def _run_suite(module: str, title: str, covers: str,
     failed = re.findall(r"FAILED CHECK: ([\w.]+)", output)
     detail = (f"{len(failed)} check(s) failed: {', '.join(failed[:6])}." if failed
               else "The suite reported a failure.")
-    return _check("tests", check_id, title, "fail", detail, f"Run python -m {module} at the PC for the full output.")
+    return _check("tests", check_id, title, "fail", detail, f"In PowerShell at the PC, run {_command(module)} for the full output.")
 
 
 def _secure_files() -> list[dict[str, str]]:
@@ -96,7 +101,7 @@ def _secure_files() -> list[dict[str, str]]:
         ("passkey", "Owner passkey", (PASSKEY_FILE, SALT_FILE), "fail", "At the PC, run ZÆNIA's security setup to create the passkey."),
         ("rules_vault", "Security rules vault", (VAULT_FILE,), "fail", "Create the rules vault with the security setup."),
         ("moral_vault", "Moral-code vault", (MORAL_VAULT_FILE,), "fail", "Create the moral-code policy with the security setup."),
-        ("api_token", "API token", (API_TOKEN_HASH_FILE,), "warn", "Create one at the PC: python -m core.api.auth create"),
+        ("api_token", "API token", (API_TOKEN_HASH_FILE,), "warn", "Create one in PowerShell at the PC: " + _command("core.api.auth", "create")),
     )
     for check_id, title, paths, missing_level, fix in files:
         linked = [path.name for path in paths if path.is_symlink()]

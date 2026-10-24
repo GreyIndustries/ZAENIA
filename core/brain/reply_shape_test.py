@@ -44,8 +44,11 @@ class ReplyShapeTest(unittest.TestCase):
                 mock.patch("core.foundation.moral_code.engine.guidance_for_generation", return_value="guidance"):
             brief = local_llm.build_messages("how far is the moon")
             deep = local_llm.build_messages("explain how tides work")
-        self.assertTrue(brief[-1]["content"].startswith("how far is the moon\n\n(Answer in one or two"))
-        self.assertEqual(deep[-1]["content"], "explain how tides work")
+        # His words always go last, unchanged; the cue is a system line just before them.
+        self.assertEqual(brief[-1], {"role": "user", "content": "how far is the moon"})
+        self.assertEqual(brief[-2], {"role": "system", "content": "Reply to his next message in one or two short sentences."})
+        self.assertEqual(deep[-1], {"role": "user", "content": "explain how tides work"})
+        self.assertNotIn("one or two short sentences", deep[-2]["content"])
 
 
 class SpeechStyleTest(unittest.TestCase):
