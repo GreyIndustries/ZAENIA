@@ -270,3 +270,28 @@ Requested by Grey on 2026-10-21: a fresh, inspiring glass layout for Tech News; 
 Still open for Grey: app-microphone voice policy (a/b/c); stale `behavior_profile.yaml`; pushing feature/claude-development to GitHub.
 
 2026-10-21 | v1.5 | Claude | Tech News redesign, read-only email summaries, audit rotation. No ADR change.
+
+## 22. Status & Security tab and security self-check — Claude, 2026-10-24 (v1.6)
+
+Requested by Grey on 2026-10-24: rename System Status to Status & Security, and let ZAE run security checks on herself, with every report shown on that tab.
+
+- **Security self-check (Execution and security, read-only, `core/api/security_check.py`).** Each run does two things:
+  - It runs the three existing isolated suites (`core.foundation.self_test`, `closure_check`, `integration_check`) as subprocesses. They use their own temporary data folders.
+  - It checks the live setup read-only: data/secure is a plain folder; the passkey, salt, rules vault, moral-code vault and API token files are present (existence only, contents never read); `load_api_settings` binds to localhost; git ignores the private paths and tracks no secret-looking files (by name); the audit log is recording and rotating; and it counts failed sign-ins, denials and voice rejections over 24 h (thresholds give warnings).
+  - A report (check names, pass/warn/fail, plain-language fixes) is saved to `data/security_checks/<UTC id>.json` (gitignored), and the newest 50 are kept. Each run writes one `security.self_check` audit event, which is labelled in Security activity.
+- **When it runs:**
+  - from the "Run security check" button;
+  - from chat or voice ("run a security check", desktop app);
+  - from the system brief's Fix it (suggested when no check has run for a week, flagged as attention when the latest failed);
+  - automatically once a day while the server runs (first look 3 minutes after startup, then hourly).
+  - One check runs at a time, and manual runs are limited to one per 10 minutes.
+- **Routes:** `GET /api/security/checks`, `GET /api/security/checks/{id}` and `POST /api/security/checks`, all on the existing `status.read`. Grey chose this over a new desktop-only capability, so `auth.py`, capabilities, gates and rules are unchanged.
+- **Brain:** when asked about her security checks, the latest report is given as reference context, and she reports only those results.
+- **Clients:**
+  - The tab is renamed Status & Security.
+  - The tab shows the latest result, every saved report (expandable, grouped into isolated tests, live setup and last 24 hours) and the Security activity list, which moved here from the System window.
+- **Tests:** `core/api/security_check_test.py` (10 tests) covers pass, missing setup, a failing suite, a missing test file, timeouts, pruning, report-id path safety, the rate limit, one-at-a-time runs, brain context and route capabilities. Full suite: 618 OK, 13 skipped. Desktop: tsc OK, 74 + 25 UI checks, build OK.
+- **Real run against an empty isolated data folder:** 15 checks in 23 s.
+- **Known limitation:** in this worktree the three suites stop on the gitignored private `core/foundation/moral_code/charter.json`, and the report names the missing file. On the live install, where the file exists, they are expected to run but were not run there in this session.
+
+2026-10-24 | v1.6 | Claude | Status & Security tab, read-only security self-check with saved reports. No ADR change; no permission change.

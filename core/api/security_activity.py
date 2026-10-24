@@ -48,9 +48,10 @@ EVENT_LABELS = {
     "ui.calendar_changed": "Calendar changed from the app",
     "assistant.memory_changed": "Memory changed",
     "speaker_calibration": "Voice calibration",
+    "security.self_check": "Security self-check ran",
 }
 SEVERITY = {"scoped_client_denied": "warn", "unattended_brief_denied": "warn", "speaker_rejected": "warn",
-            "verification_failed": "warn", "missing_or_ambiguous_approved_device": "warn"}
+            "verification_failed": "warn", "missing_or_ambiguous_approved_device": "warn", "self_check_fail": "warn"}
 
 
 def _tail_lines(path: Path, limit: int | None = None) -> list[str]:

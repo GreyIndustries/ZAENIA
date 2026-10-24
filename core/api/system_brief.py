@@ -107,6 +107,20 @@ def build_system_brief(mode: str) -> dict[str, Any]:
     if overdue:
         items.append(_item("attention", "tasks", f"{overdue} overdue task(s)", fix="Open Tasks to update or complete them.", action="open_tasks"))
 
+    try:
+        from core.api.security_check import list_reports
+        latest = (list_reports(1) or [None])[0]
+    except Exception:
+        latest = None
+    if latest is None or (_hours_since(latest.get("at")) or 0) > 7 * 24:
+        items.append(_item("improve", "security", "Run a security self-check",
+                           "No check in the last week." if latest else "ZAE hasn't checked her own security yet.",
+                           "Press Fix it, or open Status & Security and run one. It also runs daily while the server is on.",
+                           "run_security_check"))
+    elif latest["status"] == "fail":
+        items.append(_item("attention", "security", f"Security self-check: {latest['headline']}",
+                           "Open Status & Security to see which checks failed and how to fix them.", action="open_status"))
+
     # Improvements for ZÆNIA itself.
     from core.api.desktop_key import is_paired
     if not is_paired():
