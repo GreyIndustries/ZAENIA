@@ -32,6 +32,7 @@ import { ZAENIA_IDENTITY_DESCRIPTION, ZAENIA_IDENTITY_REPLY, isZaeniaIdentityQue
 import type { CoreTelemetry, ModulePhase } from "./core/coreTelemetry";
 import { TasksDashboard } from "./components/tasks/TasksDashboard";
 import { StatusPanel } from "./components/status/StatusPanel";
+import { SECURITY_CHECK_EVENT } from "./components/status/SecurityChecks";
 import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { NewsPanel } from './components/news/NewsPanel';
@@ -50,7 +51,6 @@ import type { Appearance } from "./core/appearance";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
-import { SecurityActivity } from "./components/settings/SecurityActivity";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
@@ -59,11 +59,11 @@ type Section = "overview" | "status" | "tasks" | "calendar" | "files" | "system"
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news";
 type VisualMode = "blend" | "progress";
 
-// The Conversation tab is replaced by System Status. Conversations live in the
+// The Conversation tab is replaced by Status & Security. Conversations live in the
 // chat box under the core: its thread opens above the chat bar.
 const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
-  { id: "status", label: "System Status", short: "Status", icon: "pulse" },
+  { id: "status", label: "Status & Security", short: "Status", icon: "pulse" },
   { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
   { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
@@ -74,7 +74,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
 ];
 const sections: Record<Section, { title: string; label: string; description: string }> = {
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
-  status: { title: "System Status", label: "READINESS CODEX", description: "Module readiness and Codex connection reports, alongside the visual core startup state." },
+  status: { title: "Status & Security", label: "READINESS & SECURITY", description: "Module readiness, ZAE's security self-checks and their reports, and recent security activity." },
   tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
@@ -667,6 +667,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail sign-in. It's read-only; click Allow in your browser."; }
     if (action === "open_files") { openSection("files"); return "Files are up."; }
     if (action === "open_tasks") { openSection("tasks"); return "Tasks are up."; }
+    if (action === "open_status") { openSection("status"); return "Status & Security is up."; }
+    if (action === "run_security_check") {
+      openSection("status");
+      void api("POST", "/api/security/checks")
+        .then(() => window.dispatchEvent(new Event(SECURITY_CHECK_EVENT)), failure => setVoiceNote(errorText(failure)));
+      return "Running a security check, sir. It takes about half a minute; the report will be on Status & Security.";
+    }
     return null;
   }
   const FIX_COMMANDS: [RegExp, string][] = [
@@ -676,6 +683,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     [/^(?:please )?(?:connect|link|set up|sync) (?:my )?(?:g ?mail|e-?mail|inbox)\b/, "connect_gmail"],
     [/^(?:please )?(?:train|retrain|calibrate|re-?enroll) (?:my |your )?voice\b|^voice training\b/, "voice_training"],
     [/^(?:please )?(?:connect|link|set up|sync) (?:my )?google(?: calendar)?\b/, "connect_google"],
+    [/^(?:please )?(?:can you |could you )?(?:run|do|start|perform)(?: a| an| your)? (?:security (?:check|scan|self[- ]?check|test)|self[- ]?check)\b|^check (?:your|my) security\b/, "run_security_check"],
   ];
 
   /** One message to ZÆNIA, typed or spoken. Sending while she's busy interrupts her. */
@@ -1008,12 +1016,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           <AppearanceSettings value={appearance} onChange={setAppearance}/>
           <ScreenWatchSettings/>
           <GameCoachSettings/>
-          <SecurityActivity/>
           <div className="detail-panel__block"><div className="section-heading"><span className="subheading">VISUAL SOURCE</span><span>LOCAL</span></div><h2>Neural Core</h2><p>The sphere and its six nerves are one network. Signals leave the nucleus and travel each branch to its module.</p><div className="mode-grid">{([{id:"blend",label:"Neural View"},{id:"progress",label:"Technical"}] as {id:VisualMode;label:string}[]).map(o=><button key={o.id} type="button" className={mode===o.id?"choice choice--active":"choice"} onClick={()=>{setMode(o.id);openSection("overview");}} aria-pressed={mode===o.id}>{o.label}</button>)}</div>
             <button className="setting-row" type="button" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}><span className="setting-row__icon"><Icon name="bolt" size={18}/></span><span className="setting-row__content"><strong>Ambient motion</strong><small>Rotation and travelling signals</small></span><span className={`switch ${motion?"switch--on":""}`}><i/></span></button>
             <WorkspaceMotionControls settings={workspaceMotion.settings} toggle={workspaceMotion.toggle} resize={workspaceMotion.resize} reset={workspaceMotion.reset}/></div>
           <div className="detail-panel__block status-block"><div className="section-heading"><span className="subheading">MODULE STATUS</span><span>{String(readyCount).padStart(2,"0")} / {String(moduleTotal).padStart(2,"0")}</span></div><div className="module-list">{telemetry?.modules.map(m=><button type="button" className="module-button" key={m.id} title={m.detail} onClick={()=>{setSelectedModule(m.id);openSection("system");}}><span className={`module-item__dot module-item__dot--${m.phase}`}/><span>{m.name}</span><small className={`module-phase module-phase--${m.phase}`}>{phaseLabels[m.phase]}</small></button>)??<div className="hint">Status feed unavailable.</div>}</div></div>
-          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in System Status.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
+          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in Status & Security.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
   </>;
 
   // Every module shares the Tech News look: a masthead and glass panels.

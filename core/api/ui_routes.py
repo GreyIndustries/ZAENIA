@@ -53,6 +53,9 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/gaming/coach", "status.read"),
         ("GET", r"/api/news/tech", "status.read"),
         ("GET", r"/api/security/activity", "status.read"),
+        ("GET", r"/api/security/checks", "status.read"),
+        ("GET", r"/api/security/checks/\d{8}T\d{6}Z", "status.read"),
+        ("POST", r"/api/security/checks", "status.read"),
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
@@ -359,6 +362,28 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def security_activity(limit: int = Query(default=60, ge=1, le=300)) -> dict[str, Any]:
         from core.api.security_activity import recent_activity
         return recent_activity(limit=limit)
+
+    # Security self-check: read-only, isolated tests plus live-setup checks (core/api/security_check.py).
+    @router.get("/api/security/checks")
+    def security_check_state() -> dict[str, Any]:
+        from core.api.security_check import security_checks
+        return security_checks().state()
+
+    @router.get("/api/security/checks/{report_id}")
+    def security_check_report(report_id: str) -> dict[str, Any]:
+        from core.api.security_check import load_report
+        report = load_report(report_id)
+        if report is None:
+            raise HTTPException(404, "No such security report.")
+        return report
+
+    @router.post("/api/security/checks")
+    def security_check_run() -> dict[str, Any]:
+        from core.api.security_check import security_checks
+        result = security_checks().start_check("manual", mode())
+        if not result["started"] and result.get("retryAfter"):
+            raise HTTPException(429, result["reason"])
+        return {**result, **security_checks().state()}
 
     @router.get("/api/news/tech")
     def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),

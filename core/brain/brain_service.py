@@ -556,7 +556,13 @@ class BrainService:
             mail = email_context(question)
         except Exception:
             mail = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail) if part]
+        security = None
+        try:
+            from core.api.security_check import security_check_context
+            security = security_check_context(question)
+        except Exception:
+            security = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(
