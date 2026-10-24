@@ -12,9 +12,11 @@ export type LookChoice = "aurora" | "hud" | "editorial" | "neon";
 /** One module window's own style and colour; anything unset follows the app-wide choice. */
 export type TabStyle = { look?: LookChoice; color?: AccentChoice };
 export type TabId = "status" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news";
-export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice; tabs: Partial<Record<TabId, TabStyle>> };
+export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice; tabs: Partial<Record<TabId, TabStyle>>;
+  /** The six icons around the core: amber and blue ("mixed"), or all in the accent colour ("match"). */
+  orbs: "mixed" | "match" };
 
-export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora", tabs: {} };
+export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora", tabs: {}, orbs: "mixed" };
 
 export const TABS: { id: TabId; label: string }[] = [
   { id: "status", label: "Status" }, { id: "tasks", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "notes", label: "Notes" },
@@ -117,6 +119,7 @@ export function parseAppearance(raw: string | null): Appearance {
       glow: clampNumber(saved.glow, 40, 140, 100),
       look: isLook(saved.look) ? saved.look : "aurora",
       tabs: parseTabs(saved.tabs),
+      orbs: saved.orbs === "match" ? "match" : "mixed",
     };
   } catch { return { ...DEFAULT_APPEARANCE }; }
 }
@@ -140,7 +143,7 @@ export function parseAppearanceCommand(input: string, current: Appearance): Appe
   // or are a short "make it blue" style command.
   // "Make the tasks tab blue" changes one window's colour instead of the whole app.
   const tab = TABS.find(item => new RegExp(`\\b${item.label.toLowerCase().split(" ")[0]}\\b (?:tab|window|module|panel)\\b`).test(text));
-  if (!tab && !/\b(?:colou?r|theme|accent|font|text|glow)\b/.test(text) && !/^(?:\w+[, ]+)?make (?:it|everything|the ui|the app|zae) \w+(?: please)?[.!]?$/.test(text.trim())) return null;
+  if (!tab && !/\b(?:colou?rs?|theme|accent|font|text|glow)\b/.test(text) && !/^(?:\w+[, ]+)?make (?:it|everything|the ui|the app|zae) \w+(?: please)?[.!]?$/.test(text.trim())) return null;
   const next = { ...current };
   let changed = false;
   for (const accent of ACCENTS) {
@@ -161,5 +164,10 @@ export function parseAppearanceCommand(input: string, current: Appearance): Appe
   if (/\bsmaller text\b|\btext smaller\b/.test(text)) { next.size = Math.max(85, current.size - 10); changed = true; }
   if (/\b(?:more|brighter|stronger) glow\b/.test(text)) { next.glow = Math.min(140, current.glow + 20); changed = true; }
   if (/\b(?:less|dimmer|softer) glow\b/.test(text)) { next.glow = Math.max(40, current.glow - 20); changed = true; }
+  // "Make the core icons the same colour" / "... two colours again".
+  if (/\b(?:core |module )?(?:icons?|orbs?)\b/.test(text)) {
+    if (/\b(?:same|one|matching|single) colou?r\b|\bmatch\b/.test(text)) { next.orbs = "match"; changed = true; }
+    else if (/\b(?:two|different|mixed|original) colou?rs?\b/.test(text)) { next.orbs = "mixed"; changed = true; }
+  }
   return changed ? next : null;
 }

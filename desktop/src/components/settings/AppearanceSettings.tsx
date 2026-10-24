@@ -32,6 +32,12 @@ export function AppearanceSettings({ value, onChange }: { value: Appearance; onC
         <i style={{ background: accent.swatch, boxShadow: `0 0 10px ${accent.swatch}` }}/><span>{accent.label}</span>
       </button>)}
     </div>
+    <div className="appearance-settings__label">CORE ICONS</div>
+    <div className="choice-row" role="radiogroup" aria-label="Core icon colours">
+      {([["mixed", "Amber and blue"], ["match", `All ${accentName.toLowerCase()}`]] as const).map(([id, label]) =>
+        <button key={id} type="button" role="radio" aria-checked={value.orbs === id} className={value.orbs === id ? "choice choice--active" : "choice"}
+          onClick={() => onChange({ ...value, orbs: id })}>{label}</button>)}
+    </div>
     <div className="appearance-settings__label">EACH TAB <strong>{customised ? `${customised} customised` : "following the app"}</strong></div>
     <div className="appearance-settings__tabs">
       {TABS.map(tab => {
