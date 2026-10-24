@@ -35,6 +35,7 @@ import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
 import './styles/module-looks.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
+import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
 // Module windows load when first opened, so the core appears sooner.
 const CalendarPanel = lazy(() => import("./components/calendar/CalendarPanel").then(module => ({ default: module.CalendarPanel })));
@@ -44,6 +45,9 @@ const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(mo
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
 const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
+const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
+const MusicPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.MusicPanel })));
+const FitnessPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.FitnessPanel })));
 import { useCoreStartup } from "./core/startup";
 import { skipWhileAway, useAppInBackground } from "./core/appBackground";
 import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
@@ -57,7 +61,7 @@ import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness";
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
 type VisualMode = "blend" | "progress";
 
@@ -70,6 +74,9 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
   { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
+  { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
+  { id: 'music', label: 'Music', short: 'Music', icon: 'pulse' },
+  { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
   { id: "news", label: "Tech News", short: "News", icon: "news" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
@@ -82,13 +89,16 @@ const sections: Record<Section, { title: string; label: string; description: str
   tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
+  workbench: { title: 'Workbench', label: 'PROJECTS & INVENTIONS', description: 'Project notes, sketches, blueprint references and experiments, organized by subject.' },
+  music: { title: 'Music', label: 'CREATE & RELEASE', description: 'GarageBand projects, production progress, release links and dated song statistics.' },
+  fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Food intake, exercise, energy estimates and training plans from your sources.' },
   news: { title: 'Tech News', label: 'TRACKED SOURCES', description: 'Headlines from ten credible tech newsrooms, checked every 30 minutes. Stories several sources report are marked.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "calendar", "notes", "news", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "calendar", "notes", "workbench", "music", "fitness", "news", "assistant", "files", "system"];
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -260,6 +270,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const windowed = !isPhone;
   const shell = useWindowShell(WINDOW_IDS);
   const attendedTab = useRef<string | null>(null);
+  const personalDrafts = useRef<PersonalDraftCache>({});
   const layerRef = useRef<HTMLDivElement | null>(null);
   const platformRuntime = usePlatformRuntime();
   const [hands, setHands] = useState(false);
@@ -1041,6 +1052,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   function sectionBody(id: Section): ReactNode {
     switch (id) {
       case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
+      case 'workbench': return <WorkbenchPanel drafts={personalDrafts.current}/>;
+      case 'music': return <MusicPanel drafts={personalDrafts.current}/>;
+      case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;

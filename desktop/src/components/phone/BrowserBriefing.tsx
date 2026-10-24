@@ -3,7 +3,7 @@ import { api, briefingAudio, BridgeError, errorText } from "../../core/bridge";
 import { SILENT_WAV } from "../../core/speech";
 import "./BrowserBriefing.css";
 
-type Brief = { session_id: string; generated_at: string; briefing_text: string; audio_ready: boolean };
+type Brief = { session_id: string; generated_at: string; briefing_text: string; audio_ready: boolean; needs_answer?: boolean; question_type?: string };
 type Props = { onAuthLost?: () => void; onActive: (active: boolean) => void; beforePlay: () => void };
 
 /** On-demand, full calendar/weather/traffic brief in the existing browser app. */
@@ -74,6 +74,18 @@ export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
     finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   }
 
+  async function answer(value: string) {
+    if (!brief || inFlight.current) return;
+    inFlight.current = true; setBusy(true); setError(null); audio.current?.pause();
+    try {
+      const next = await api<Brief>('POST', '/api/briefing/answer', { session_id: brief.session_id, answer: value }, { timeoutMs: 150_000 });
+      if (!mounted.current) return;
+      setBrief(next); setNote(null);
+      if (next.audio_ready) await loadAudio(next);
+    } catch (failure) { failed(failure); }
+    finally { inFlight.current = false; if (mounted.current) setBusy(false); }
+  }
+
   async function played() {
     setPlaying(false);
     if (!brief || audio.current?.src === SILENT_WAV || acknowledged.current.has(brief.session_id)) return;
@@ -92,6 +104,10 @@ export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
       <div className="browser-briefing__head"><strong>Your briefing</strong><button type="button" disabled={busy} onClick={() => void generate()}>{busy ? "Preparing…" : "Refresh"}</button></div>
       {busy && <p role="status">Checking your schedule, weather and traffic…</p>}
       {brief && <><p className="browser-briefing__text">{brief.briefing_text}</p><small>Updated {new Date(brief.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></>}
+      {brief?.needs_answer && <div className="platform-inline" aria-label="Answer briefing question">
+        <button disabled={busy} type="button" onClick={() => void answer('yes')}>{brief.question_type === 'calendar_completion' ? 'Completed' : 'Yes'}</button>
+        <button disabled={busy} type="button" onClick={() => void answer('not yet')}>Not yet</button>
+      </div>}
       <audio ref={audio} controls={Boolean(url)} hidden={!url} preload="none" onPlay={() => { if (objectUrl.current && audio.current?.src === objectUrl.current) { beforePlay(); setPlaying(true); } }}
         onPause={() => setPlaying(false)} onEnded={() => void played()} onError={() => { if (url) { setPlaying(false); setError("Audio couldn't play. Try loading it again."); } }}/>
       {note && <p role="status">{note}</p>}

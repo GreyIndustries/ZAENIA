@@ -23,6 +23,17 @@ PACIFIC = ZoneInfo("America/Los_Angeles")
 _LOCK = threading.RLock()
 
 
+def with_completion_context(raw, day):
+    from core.calendar_context.calendar_context import build_calendar_context
+    today = raw.get('calendar_context') or {}
+    previous = build_calendar_context(day - timedelta(days=1))
+    raw['completion_context'] = {**today, 'events':[
+        *[{**event,'date':event.get('date') or previous.get('date')} for event in previous.get('events',[]) if previous.get('enabled') is not False],
+        *[{**event,'date':event.get('date') or today.get('date') or day.isoformat()} for event in today.get('events',[])],
+    ]}
+    return raw
+
+
 def build_fresh_briefing(day) -> tuple[dict, dict]:
     """Build the drive briefing with Google Calendar read live.
 
@@ -35,15 +46,15 @@ def build_fresh_briefing(day) -> tuple[dict, dict]:
     private iCal URL never leaves this machine.
     """
     try:
-        events = get_google_events_between(start_date=day, days=2)
+        events = get_google_events_between(start_date=day-timedelta(days=1), days=3)
     except Exception as error:
         print("CarPlay calendar refresh skipped:", type(error).__name__)
         sync = {"success": False, "reason": f"Google Calendar refresh skipped ({type(error).__name__}); using saved calendar."}
-        return sync, build_drive_briefing(include_traffic_force=True, calendar_date=day)
-    dates = [(day + timedelta(days=offset)).isoformat() for offset in range(2)]
+        return sync, with_completion_context(build_drive_briefing(include_traffic_force=True, calendar_date=day),day)
+    dates = [(day + timedelta(days=offset)).isoformat() for offset in range(-1,2)]
     sync = {"success": True, "reason": f"Google Calendar read live with {len(events)} event(s)."}
     with google_events_overlay(events, dates, GOOGLE_SYNC_SOURCE):
-        raw = build_drive_briefing(include_traffic_force=True, calendar_date=day)
+        raw = with_completion_context(build_drive_briefing(include_traffic_force=True, calendar_date=day),day)
     return sync, raw
 
 
@@ -63,8 +74,10 @@ def clean_speech(text: str) -> str:
 
 def answer_value(text: str) -> str:
     words = set(re.findall(r"[a-z]+", text.lower()))
-    yes = bool(words & {"yes", "yeah", "yep"})
-    no = bool(words & {"no", "nope", "nah", "not"})
+    yes = bool(words & {"yes", "yeah", "yep", "completed", "done", "finished"})
+    no = bool(words & {"no", "nope", "nah", "not", "unfinished", "incomplete"})
+    if no:
+        return "no"
     return "yes" if yes and not no else "no" if no and not yes else "unknown"
 
 
@@ -199,7 +212,10 @@ def calendar_lines(context: dict, now: datetime, full: bool, announced: dict) ->
 class BriefingSessions:
     """Persistent delivery state. Audio generation alone never consumes a slot."""
 
-    def __init__(self, directory: Path | None = None, clock=None, handoff_loader=None):
+    def __init__(self, directory: Path | None = None, clock=None, handoff_loader=None, completion=None):
+        from core.calendar_context.completion import CalendarCompletion
+        from core.assistant_platform.store import PlatformStore
+        self.completion = completion or CalendarCompletion(PlatformStore(Path(directory) / "completion.sqlite3" if directory is not None else None))
         self.directory = directory or ROOT / "data" / "carplay_sessions"
         self.directory.mkdir(parents=True, exist_ok=True)
         self.clock = clock or (lambda: datetime.now(PACIFIC))
@@ -256,7 +272,11 @@ class BriefingSessions:
             row = db.execute("SELECT payload FROM days WHERE day=?", (now.date().isoformat(),)).fetchone()
         state = json.loads(row[0]) if row else {}
         value = answer_value(answer) if parent else "unknown"
-        slots, ask = slots_for(now, state, value)
+        event_answer = bool(parent and parent.get("completionQuestion"))
+        if event_answer and value != "unknown":
+            self.completion.answer(parent["completionQuestion"], value, now)
+        force_full = force_full or bool(parent and parent.get("forceFull"))
+        slots, ask = slots_for(now, state, "unknown" if event_answer else value)
         sync, raw = {"success": True, "reason": "Departure confirmation."}, {}
         started = time.monotonic()
         if not parent:
@@ -268,7 +288,7 @@ class BriefingSessions:
             # Calendar and weather are refreshed again after dictation so the final brief is current.
             sync, raw = build_fresh_briefing(now.date())
             ask = False  # An unclear answer falls back, it never causes a prompt loop.
-            if value != "yes" and now.hour * 60 + now.minute < 1020:
+            if not event_answer and value != "yes" and now.hour * 60 + now.minute < 1020:
                 slots = []
         kind = "full" if force_full else "question" if ask else "full" if slots else "short"
         snapshot, event_updates = {}, {}
@@ -305,6 +325,15 @@ class BriefingSessions:
                     snapshot["weather"] = dict(weather, temperature=baseline["temperature"])
                 if not weather["hourly_available"]:
                     snapshot["weather"]["wet_soon"] = baseline.get("wet_soon")
+        completion_question = None
+        if kind != "question" and not parent:
+            completion_question = self.completion.due(raw.get('completion_context') or raw.get("calendar_context") or {}, now)
+            if completion_question:
+                text = clean_speech(text + " Has " + completion_question["title"] + " been completed?")
+                kind = "question"
+        if event_answer:
+            acknowledgement = "Marked complete. " if value == "yes" else "I'll leave it unfinished. " if value == "no" else "I couldn't tell whether it was completed, so I left it unchanged. "
+            text = acknowledgement + text
         if kind != 'question' and self.handoff_loader is not None:
             try: handoff=self.handoff_loader()
             except Exception: handoff=None # Optional task context cannot break a driving briefing.
@@ -325,10 +354,12 @@ class BriefingSessions:
                     "audio_endpoint": "/api/carplay/audio?session_id=" + session_id,
                     "traffic_included": bool(raw.get("traffic_included", False)),
                     "traffic_window": str(raw["traffic_window"]) if raw.get("traffic_window") else None,
-                    "session_id": session_id, "briefing_type": kind, "needs_answer": kind == "question"}
+                    "session_id": session_id, "briefing_type": kind, "needs_answer": kind == "question",
+                    "question_type": "calendar_completion" if completion_question else "departure" if kind == "question" else None}
         session = {"generated_at": now.isoformat(), "day": now.date().isoformat(), "briefing_type": kind,
                    "slots": slots, "snapshot": snapshot, "events": event_updates,
-                   "audio_path": str(audio_path), "response": response, "played": False}
+                   "audio_path": str(audio_path), "response": response, "played": False,
+                   "completionQuestion": completion_question, "forceFull": force_full}
         with self.connect() as db:
             db.execute("INSERT INTO sessions VALUES (?,?,?)", (session_id, request_id, json.dumps(session)))
         return response
@@ -343,7 +374,9 @@ class BriefingSessions:
             if session["played"]:
                 return {"success": True, "already_recorded": True}
             self.require_recent(session)
-            if session["briefing_type"] != "question":
+            if session.get("completionQuestion"):
+                self.completion.asked(session["completionQuestion"], self.clock())
+            if session["briefing_type"] != "question" or session.get("completionQuestion"):
                 row = db.execute("SELECT payload FROM days WHERE day=?", (session["day"],)).fetchone()
                 state = json.loads(row[0]) if row else {}
                 for slot in session["slots"]:

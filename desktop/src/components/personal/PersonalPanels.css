@@ -1,0 +1,43 @@
+.personal-panel { min-width:0; }
+.personal-panel label { display:grid; gap:6px; font-size:.82rem; margin:10px 0; }
+.personal-panel input,.personal-panel select,.personal-panel textarea { box-sizing:border-box; width:100%; min-width:0; color:inherit; background:rgba(5,12,20,.72); border:1px solid rgba(186,201,220,.25); border-radius:8px; padding:9px 11px; font:inherit; }
+.personal-panel textarea { resize:vertical; }
+.personal-panel fieldset { min-width:0; padding:0; border:0; }
+.personal-panel .platform-check { display:flex; align-items:center; }
+.personal-panel input[type=checkbox] { width:auto; }
+.personal-panel a { color:#95d5ff; text-decoration:underline; overflow-wrap:anywhere; }
+.personal-panel button { max-width:100%; }
+.personal-panel small { color:#b4c0cd; line-height:1.5; }
+.personal-tabs { display:flex; flex-wrap:wrap; gap:6px; margin:16px 0; }
+.personal-tabs button[aria-pressed=true] { border-color:var(--accent,#f2b95f); background:rgba(242,185,95,.18); }
+.personal-forum { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr)); grid-auto-flow:row dense; gap:12px; margin:16px 0; align-items:stretch; }
+.personal-forum .personal-project { --card-color:#f2b95f; text-align:left; display:flex; flex-direction:column; gap:12px; min-height:120px; padding:18px; border:1px solid color-mix(in srgb,var(--card-color) 60%,transparent); border-left:4px solid var(--card-color); background:linear-gradient(135deg,color-mix(in srgb,var(--card-color) 13%,#121c29),#0f1825); color:#f0f3f8; border-radius:12px; overflow:hidden; }
+.personal-project strong { font-size:1.12rem; overflow-wrap:anywhere; }
+.personal-project span { margin-top:auto; color:#c1ccda; font-size:.75rem; }
+.personal-forum .personal-project--large { grid-column:span 2; min-height:180px; }
+.personal-forum .personal-project--small { min-height:95px; }
+.personal-forum .personal-project--blue { --card-color:#75cfff; }
+.personal-forum .personal-project--green { --card-color:#a5eeaa; }
+.personal-forum .personal-project--rose { --card-color:#f49cb8; }
+.personal-forum .personal-project--violet { --card-color:#b5a5ff; }
+.personal-editor,.personal-source,.personal-resources { padding:18px; margin:20px 0; border:1px solid rgba(166,188,210,.2); border-radius:12px; background:rgba(5,12,22,.35); }
+.personal-editor h3 { margin-top:0; }
+.personal-fields { display:flex; flex-wrap:wrap; gap:12px; align-items:end; }
+.personal-fields > label { flex:1 1 150px; }
+.personal-fields > button { margin-bottom:10px; }
+.personal-actions { margin-top:18px; padding-top:12px; border-top:1px solid rgba(166,188,210,.2); }
+.personal-sketch svg { width:100%; aspect-ratio:5/3; display:block; border:1px solid #537080; border-radius:8px; touch-action:none; cursor:crosshair; }
+.personal-reference { margin:16px 0; }
+.personal-reference img { display:block; max-width:100%; max-height:600px; object-fit:contain; border-radius:8px; }
+.personal-table-wrap { overflow-x:auto; margin-top:15px; }
+.personal-panel table { border-collapse:collapse; width:100%; font-size:.8rem; }
+.personal-panel th,.personal-panel td { text-align:left; padding:9px; border-bottom:1px solid #314050; }
+.personal-two { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; }
+.personal-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(145px,1fr)); gap:10px; margin:20px 0 12px; }
+.personal-metrics > div { display:grid; gap:9px; padding:14px; border:1px solid #354456; border-radius:10px; background:rgba(12,22,34,.7); }
+.personal-metrics strong { font-size:1.15rem; }
+.personal-entries { display:grid; gap:7px; margin-top:10px; }
+.personal-entries button { text-align:left; display:grid; gap:5px; padding:12px; }
+.personal-step { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #314050; }
+.personal-step > label:not(.platform-check) { flex:1 1 180px; }
+@media(max-width:700px) { .personal-two { grid-template-columns:1fr; }.personal-forum .personal-project--large { grid-column:auto; }.personal-editor,.personal-source { padding:12px; }.personal-panel .platform-panel__heading { flex-wrap:wrap; } }

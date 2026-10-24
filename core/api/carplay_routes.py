@@ -49,9 +49,12 @@ def create_carplay_router(auth_dependency: AuthDependency, *, handoff_loader=Non
 
     @router.post("/api/briefing/answer", response_model=CarPlayBriefingResponse)
     @router.post("/api/carplay/answer", response_model=CarPlayBriefingResponse)
-    def answer_departure(request: CarPlayAnswerRequest):
+    def answer_departure(http_request: Request, request: CarPlayAnswerRequest):
         try:
-            return sessions().start(parent_id=request.session_id, answer=request.answer)
+            result = sessions().start(parent_id=request.session_id, answer=request.answer)
+            if http_request.url.path == "/api/briefing/answer":
+                return dict(result, audio_endpoint="/api/briefing/audio?session_id=" + result["session_id"])
+            return result
         except Exception as error:
             failure(error)
 

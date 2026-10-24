@@ -227,7 +227,7 @@ class ContinuityTests(Fixture):
         from core.personal_memory.insights import InsightStore
         record=self.record(); memory=MemoryStore(self.root/'memory.sqlite3'); insights=InsightStore(self.root/'insights.json')
         payload=capture_profile(self.store,memory_store=memory,insights=insights)
-        self.assertEqual(payload['version'],3);self.assertNotIn('operator_root',payload);self.assertNotIn('missions',payload)
+        self.assertEqual(payload['version'],4);self.assertNotIn('operator_root',payload);self.assertNotIn('missions',payload)
         raw=encode_profile(payload,'isolated portable passphrase');self.assertNotIn(b'Complete the lab report',raw)
         decoded=decode_profile(raw,'isolated portable passphrase'); target=PlatformStore(self.root/'destination/store.sqlite3')
         counts=restore_profile(decoded,target,memory_store=memory,insight_store=insights)

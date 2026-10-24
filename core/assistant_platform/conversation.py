@@ -10,6 +10,10 @@ def require(authorize, operation):
 
 
 def read_or_start(message, authorize):
+    from core.assistant_platform.personal_tools import personal_answer
+    personal = personal_answer(message, authorize)
+    if personal is not None:
+        return personal
     query = " ".join(message.split()).strip(" .!?")
     learn = re.fullmatch(r'(?:please )?(?:learn(?: from| this)?|download and learn(?: from)?|add to (?:your|my) (?:knowledge|library))[: ]+(https://\S+)', query, re.I)
     if learn:

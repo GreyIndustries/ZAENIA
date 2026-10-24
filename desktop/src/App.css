@@ -495,3 +495,11 @@
 
 /* Background: window unfocused or hidden and ZAE idle. Every animation holds where it is (no jump), and resumes when you come back. */
 .zaenia-app--background *,.zaenia-app--background *::before,.zaenia-app--background *::after{animation-play-state:paused!important}
+
+/* Keep every module reachable as the desktop navigation grows. */
+.zaenia-app:not(.zaenia-app--phone) .sidebar{max-height:calc(100dvh - 88px);min-height:0;overflow:hidden}
+.zaenia-app:not(.zaenia-app--phone) .sidebar__nav{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.zaenia-app:not(.zaenia-app--phone) .sidebar__nav .nav-item{flex-shrink:0}
+
+.zaenia-app--phone .sidebar__nav{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+.zaenia-app--phone .sidebar__nav .nav-item{flex:0 0 70px;min-width:70px}

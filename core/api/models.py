@@ -21,6 +21,7 @@ class CarPlayBriefingResponse(BaseModel):
     session_id: str = ""
     briefing_type: str = "full"
     needs_answer: bool = False
+    question_type: str | None = None
 
 
 class CarPlayConnectionRequest(BaseModel):

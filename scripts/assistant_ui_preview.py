@@ -47,6 +47,24 @@ def main():
         platform=PlatformService(PlatformStore(root/"platform/state.sqlite3"),JobManager())
         from core.assistant_platform.notes import Notes
         Notes(platform.store).save({'title':'Preview: ideas for later','body':'Keep useful ideas, project details and things to revisit here.\nThis is isolated sample data.','pinned':True})
+        from core.assistant_platform.personal_tools import PersonalTools
+        personal = PersonalTools(platform.store)
+        personal.save('workbench', {'title':'Preview: portable sensor','category':'Tech','color':'blue','size':'large','status':'Prototype',
+            'body':'Project notes, measurements and experiments live here. This is isolated sample data.', 'boardWidth':120.0,
+            'strokes':[{'color':'#75cfff','width':2.0,'points':[[200.0,200.0],[800.0,200.0],[800.0,400.0],[200.0,400.0],[200.0,200.0]]}],
+            'scenarios':'Compare enclosure materials in a CAD solver, then record measured results.'})
+        personal.save('workbench', {'title':'Preview: biology notebook','category':'Biology','color':'green','size':'small'})
+        personal.save('workbench', {'title':'Preview: AI experiment','category':'AI','color':'violet','size':'medium'})
+        personal.save('music', {'title':'Preview: First Light','stage':'Mixing','bpm':96.0,'key':'D minor','body':'Fixture project only.',
+            'stats':[{'platform':'YouTube','date':now.date().isoformat(),'metric':'Views','value':120,'source':'Isolated sample count, lifetime'}]})
+        from zoneinfo import ZoneInfo
+        day=datetime.now(ZoneInfo('America/Los_Angeles')).date().isoformat()
+        personal.save('food',{'title':'Preview: meal','date':day,'calories':520.0,'protein':32.0,'fiber':9.0})
+        personal.save('exercise',{'title':'Preview: walk','date':day,'minutes':30.0,'calories':130.0})
+        personal.save('plans',{'title':'Preview: weekly routine','schedule':'Monday / Wednesday / Friday','sourceName':'Isolated sample',
+            'sourceText':'Squats: 3 x 10 reps\nWalk: 20 minutes','steps':[{'exercise':'Squats','prescription':'3 x 10 reps'},{'exercise':'Walk','prescription':'20 minutes'}]})
+        from types import SimpleNamespace
+        stack.enter_context(patch('core.tech_news.service.tech_news',return_value=SimpleNamespace(headlines=lambda **kw:{'stories':[],'sources':[],'updatedAt':None})))
         platform.operator.create('Preview: research to document',[
             {'tool':'web.read','args':{'url':'https://docs.python.org/3/library/pathlib.html'}},
             {'tool':'evidence.summarize','args':{'sourceStep':0}},
@@ -63,6 +81,8 @@ def main():
         stack.enter_context(patch("core.assistant_platform.service.existing_platform",return_value=platform))
         stack.enter_context(patch("core.brain.brain_service.BrainService",Brain))
         stack.enter_context(patch("core.personal_memory.insights.DEFAULT_PATH",root/"insights.json"))
+        from core.personal_memory.owner_profile import OwnerProfile
+        stack.enter_context(patch('core.personal_memory.owner_profile.owner_profile',return_value=OwnerProfile(root/'owner-profile.sqlite3',extract=lambda text:[])))
         from core.calendar_context import duty_status
         stack.enter_context(patch.object(duty_status,'DUTY_FILE',root/'duty/overrides.json'))
         def preview_calendar(start,days):

@@ -58,7 +58,7 @@ def decode_profile(raw, passphrase):
 
 
 def validate_profile(payload):
-    if not isinstance(payload, dict) or set(payload)-{"version","createdAt","memories","insights","projects","workspaces","uiSettings","continuity","notes"} or payload.get("version") not in {1,2,3}:
+    if not isinstance(payload, dict) or set(payload)-{"version","createdAt","memories","insights","projects","workspaces","uiSettings","continuity","notes","personal","calendarCompletions"} or payload.get("version") not in {1,2,3,4}:
         raise ValueError("Unsupported profile contents.")
     from core.personal_memory.store import validate_memory
     from core.personal_memory.insights import _BLOCKED, KINDS
@@ -93,6 +93,28 @@ def validate_profile(payload):
         validate_note(item)
         if not isinstance(item.get('id'),str) or not re.fullmatch('[a-f0-9]{32}',item['id']) or item['id'] in identifiers:raise ValueError('Invalid or repeated note ID.')
         identifiers.add(item['id'])
+    from core.assistant_platform.personal_tools import COLLECTIONS, validate_record
+    personal=payload.get('personal',{})
+    if not isinstance(personal,dict) or set(personal)-set(COLLECTIONS):raise ValueError('Invalid personal collections.')
+    for collection,items in personal.items():
+        if not isinstance(items,list) or len(items)>2000:raise ValueError('Invalid personal collection size.')
+        identifiers=set()
+        for item in items:
+            validate_record(collection,{key:value for key,value in item.items() if key not in {'id','revision','updatedAt','createdAt'}})
+            if not isinstance(item.get('id'),str) or not re.fullmatch('[a-f0-9]{32}',item['id']) or item['id'] in identifiers:raise ValueError('Invalid personal item ID.')
+            identifiers.add(item['id'])
+    completions=payload.get('calendarCompletions',[])
+    if not isinstance(completions,list) or len(completions)>2000:raise ValueError('Invalid calendar completion collection.')
+    identifiers=set()
+    for item in completions:
+        if not isinstance(item,dict) or not isinstance(item.get('id'),str) or not re.fullmatch('[a-f0-9]{64}',item['id']) or item['id'] in identifiers or type(item.get('completed')) is not bool:raise ValueError('Invalid calendar completion.')
+        if set(item)-{'id','revision','updatedAt','key','title','date','askedAt','answeredAt','completed'}:raise ValueError('Unsupported calendar completion data.')
+        for key in ('askedAt','answeredAt'):
+            if item.get(key) and datetime.fromisoformat(item[key]).tzinfo is None:raise ValueError('Completion timestamps need a timezone.')
+        if not isinstance(item.get('title'),str) or len(item['title'])>200:raise ValueError('Invalid calendar completion title.')
+        from datetime import date
+        date.fromisoformat(item['date'])
+        identifiers.add(item['id'])
     return payload
 
 
@@ -101,10 +123,12 @@ def capture_profile(store, *, ui=None, memory_store=None, insights=None):
     from core.personal_memory.insights import DEFAULT_PATH as INSIGHTS_PATH, InsightStore
     memories = memory_store.list(limit=1000) if memory_store is not None else MemoryStore().list(limit=1000) if MEMORY_PATH.exists() else []
     learned = insights.list(limit=200) if insights is not None else InsightStore().list(limit=200) if INSIGHTS_PATH.exists() else []
-    return validate_profile({"version": 3, "createdAt": datetime.now(timezone.utc).isoformat(),
+    from core.assistant_platform.personal_tools import COLLECTIONS
+    return validate_profile({"version": 4, "createdAt": datetime.now(timezone.utc).isoformat(),
         "memories": memories, "insights": learned, "projects": store.list("project"),
         "workspaces": [{**item, "apps": []} for item in store.list("workspace")],
-        "uiSettings": ui_preferences(ui or {}),"continuity":store.list('continuity'),'notes':store.list('note')})
+        "uiSettings": ui_preferences(ui or {}),"continuity":store.list('continuity'),'notes':store.list('note'),
+        'personal':{collection:store.list(kind) for collection,kind in COLLECTIONS.items()},'calendarCompletions':store.list('calendar_completion')})
 
 
 def restore_profile(payload, store, *, mode="merge", memory_store=None, insight_store=None):
@@ -113,7 +137,7 @@ def restore_profile(payload, store, *, mode="merge", memory_store=None, insight_
     from core.personal_memory import MemoryStore
     from core.personal_memory.insights import InsightStore
     memories = memory_store or MemoryStore()
-    counts = {"memories":0,"insights":0,"projects":0,"workspaces":0,"continuity":0,"notes":0,"skipped":0}
+    counts = {"memories":0,"insights":0,"projects":0,"workspaces":0,"continuity":0,"notes":0,"personal":0,"calendarCompletions":0,"skipped":0}
     for item in payload["memories"]:
         if memories.get(item["key"]) and mode=="merge": counts["skipped"]+=1; continue
         memories.upsert(item["key"],item["value"],item["category"]); counts["memories"]+=1
@@ -152,6 +176,15 @@ def restore_profile(payload, store, *, mode="merge", memory_store=None, insight_
     for item in payload.get('notes',[]):
         if store.get('note',item['id']) and mode=='merge':counts['skipped']+=1;continue
         store.put('note',{**validate_note(item),'createdAt':str(item.get('createdAt') or payload['createdAt'])},item['id']);counts['notes']+=1
+    from core.assistant_platform.personal_tools import COLLECTIONS,validate_record
+    for collection,items in payload.get('personal',{}).items():
+        for item in items:
+            if store.get(COLLECTIONS[collection],item['id']) and mode=='merge':counts['skipped']+=1;continue
+            safe=validate_record(collection,{key:value for key,value in item.items() if key not in {'id','revision','updatedAt','createdAt'}})
+            store.put(COLLECTIONS[collection],{**safe,'createdAt':str(item.get('createdAt') or payload['createdAt'])},item['id']);counts['personal']+=1
+    for item in payload.get('calendarCompletions',[]):
+        if store.get('calendar_completion',item['id']) and mode=='merge':counts['skipped']+=1;continue
+        store.put('calendar_completion',item,item['id']);counts['calendarCompletions']+=1
     return counts
 
 

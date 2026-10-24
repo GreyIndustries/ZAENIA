@@ -10,6 +10,7 @@ type CalendarEvent = {
 type DutyStatus = "on_duty" | "off_duty" | "class" | "leave";
 type CalendarReply = { start: string; days: number; events: CalendarEvent[]; dayStatus: Record<string, string>; dutyOverrides?: Record<string, DutyStatus>; dutyRevision?: number; google: "live" | "unavailable"; notice: string | null };
 type Draft = { id: number; day: string; title: string };
+type Completion = { id: string; revision: number; title: string; completed: boolean };
 
 const DRAFT_KEY = "zaenia-ui-v3-events";
 const sourceLabel: Record<CalendarEvent["source"], string> = { zaenia: "ZÆNIA", google: "Google", calendar: "Calendar file", recurring: "Repeats" };
@@ -49,6 +50,23 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
   const [duty, setDuty] = useState<DutyStatus | "automatic">("automatic");
   const [savingDuty, setSavingDuty] = useState(false);
   const [dutyNotice, setDutyNotice] = useState<string | null>(null);
+  const [completions, setCompletions] = useState<Completion[]>([]);
+  const [completionNotice, setCompletionNotice] = useState('');
+  const [savingCompletion, setSavingCompletion] = useState(false);
+  const [completionRefresh, setCompletionRefresh] = useState(0);
+  useEffect(() => {
+    let active = true; setCompletions([]); setCompletionNotice('');
+    if (LIVE_API) void api<{ items: Completion[] }>('GET', `/api/platform/calendar-completions?day=${selected}`)
+      .then(result => { if (active) setCompletions(result.items); }, () => { if (active) setCompletionNotice('Completion records are unavailable. Your calendar is still shown.'); });
+    return () => { active = false; };
+  }, [selected, completionRefresh, refreshVersion]);
+  async function reopenCompletion(item: Completion) {
+    if (savingCompletion) return;
+    setSavingCompletion(true);
+    try { await api('PUT', `/api/platform/calendar-completions/${item.id}`, { completed: false, revision: item.revision }); setCompletionRefresh(value => value + 1); }
+    catch (failure) { setCompletionNotice(errorText(failure)); }
+    finally { setSavingCompletion(false); }
+  }
   useEffect(() => { setDuty(data?.dutyOverrides?.[selected] ?? "automatic"); }, [selected, data?.dutyRevision]);
   useEffect(() => { setDutyNotice(null); }, [selected]);
   const changeMonth = (offset: number) => { const next = new Date(month.getFullYear(), month.getMonth() + offset, 1); setMonth(next); setSelected(dayKey(next)); };
@@ -159,6 +177,12 @@ export function CalendarPanel({ refreshVersion = 0 }: { refreshVersion?: number 
         <small>Your choice applies to this date and takes priority over inferred status. Events and reminders stay scheduled.</small>
       </form>
       {dutyNotice && <p className="cal-panel__notice" role="status">{dutyNotice}</p>}
+      <details><summary>Briefing completion checks ({completions.filter(item => item.completed).length} completed)</summary>
+        <p>Past events are checked during your brief. Completed occurrences stay quiet; a later recurrence is tracked separately.</p>
+        <button type="button" onClick={() => setCompletionRefresh(value => value + 1)}>Refresh completion checks</button>
+        {completionNotice && <p role="status">{completionNotice}</p>}
+        {completions.map(item => <p key={item.id}>{item.title} · {item.completed ? 'Completed' : 'Unfinished'} {item.completed && <button type="button" disabled={savingCompletion} onClick={() => void reopenCompletion(item)}>Reopen</button>}</p>)}
+      </details>
       {dayEvents.length === 0 && dayDrafts.length === 0 && <p className="cal-panel__empty">{loading ? "Loading…" : "Nothing scheduled."}</p>}
       <ul className="cal-panel__list">
         {dayEvents.map(item => <li key={`${item.id}-${item.date}`} className={`cal-panel__event cal-panel__event--${item.source}`}>

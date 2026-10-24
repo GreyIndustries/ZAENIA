@@ -175,6 +175,9 @@ export function Dock({ windows, titles, active, onOpen, onClose, onMinimize, onC
 
 /** Which workspace a sentence is about, so the shell can bring it forward. */
 export function windowForText(text: string): string | null {
+  if (/\b(workbench|project board|blueprints?)\b/i.test(text)) return 'workbench';
+  if (/\b(music|songs?|garageband)\b/i.test(text)) return 'music';
+  if (/\b(fitness|nutrition|workouts?)\b/i.test(text)) return 'fitness';
   const words = text.toLowerCase();
   if (/\b(notes?|notebook)\b/.test(words)) return 'notes';
   if (/\b(tech news|headlines)\b/.test(words)) return 'news';

@@ -10,6 +10,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 ID = r"[A-Za-z0-9_-]{1,100}"
 PATTERNS = [
+    ('GET',r'calendar-completions', 'calendar.read'),
+    ('PUT',r'calendar-completions/[a-f0-9]{64}', 'ui.calendar.write'),
+    ('GET',r'personal/fitness-summary', 'memory.read'),
+    ('GET',rf'personal/(?:workbench|music|food|exercise|plans|fitness-settings)(?:/{ID})?', 'memory.read'),
+    ('POST',r'personal/(?:workbench|music|food|exercise|plans|fitness-settings|training-source)', 'memory.write'),
+    ('PUT',rf'personal/(?:workbench|music|food|exercise|plans|fitness-settings)/{ID}', 'memory.write'),
     ('GET',r'knowledge(?:/search)?|scripture(?:/status)?', 'memory.read'),
     ('POST',r'knowledge', 'memory.write'),
     ('DELETE',rf'knowledge/{ID}', 'memory.write'),
@@ -66,7 +72,7 @@ class TargetBody(Body):
 
 class WorkspaceBody(Body):
     name: str = Field(min_length=1,max_length=80)
-    windows: list[dict[str,Any]] = Field(default_factory=list,max_length=7)
+    windows: list[dict[str,Any]] = Field(default_factory=list,max_length=12)
     apps: list[str] = Field(default_factory=list,max_length=12)
     projectId: str | None = Field(default=None,max_length=64)
     note: str = Field(default="",max_length=2000)
@@ -330,4 +336,8 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
     router.include_router(create_operator_router(get,authorize,desktop,call))
     from core.api.notes_routes import create_notes_router
     router.include_router(create_notes_router(get,call))
+    from core.api.personal_tools_routes import create_personal_tools_router
+    router.include_router(create_personal_tools_router(get,call))
+    from core.api.personal_tools_routes import create_completion_router
+    router.include_router(create_completion_router(get,call))
     return router

@@ -32,6 +32,7 @@ check(() => assert.ok(ACCENTS.length >= 28 && new Set(ACCENTS.map(a => a.id)).si
 check(() => assert.deepEqual(plain(parseAppearance('{"tabs":{"tasks":{"look":"hud","color":"rose"},"news":{"look":"bogus"},"nope":{"color":"mint"}}}').tabs), { tasks: { look: 'hud', color: 'rose' } }));
 check(() => assert.equal(tabAppearance({ ...base, look: 'neon', tabs: { tasks: { look: 'hud' } } }, 'tasks').look, 'hud'));
 check(() => assert.equal(tabAppearance({ ...base, look: 'neon', tabs: {} }, 'notes').look, 'neon'));
+check(() => assert.deepEqual(plain(parseAppearance('{"tabs":{"workbench":{"color":"blue"},"music":{"look":"hud"},"fitness":{"color":"mint"}}}').tabs), { workbench: { color: 'blue' }, music: { look: 'hud' }, fitness: { color: 'mint' } }));
 check(() => assert.equal(tabAppearance({ ...base, tabs: { notes: { color: 'mint' } } }, 'notes').style['--accent'], '#9cf5c8'));
 check(() => { const next = parseAppearanceCommand('make the tasks tab pink', base); assert.equal(next.tabs.tasks.color, 'pink'); assert.equal(next.accent, 'amber'); });
 check(() => assert.equal(parseAppearanceCommand('make it teal', base).accent, 'teal'));

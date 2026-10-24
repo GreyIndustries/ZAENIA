@@ -17,6 +17,9 @@ expect('shrink and put in left corner', [{ kind: 'place', target: 'focused', spo
 expect('Zae, move the calendar to the right', [{ kind: 'place', target: 'calendar', spot: 'right', small: false }]);
 expect('put the core in the bottom right corner', [{ kind: 'place', target: 'core', spot: 'bottom-right', small: true }]);
 expect('open my calendar', [{ kind: 'open', target: 'calendar' }]);
+expect('open my workbench', [{ kind: 'open', target: 'workbench' }]);
+expect('open my music', [{ kind: 'open', target: 'music' }]);
+expect('show fitness', [{ kind: 'open', target: 'fitness' }]);
 expect('can you pull up my tasks please', [{ kind: 'open', target: 'tasks' }]);
 expect('show system status', [{ kind: 'open', target: 'status' }]);
 expect('clear the workspace', [{ kind: 'clear' }]);
