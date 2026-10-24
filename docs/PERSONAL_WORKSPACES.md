@@ -1,6 +1,6 @@
 # Personal workspaces — October 24, 2026
 
-Development branch: `feature/codex-personal-workspaces-20261024`. Source implementation and local preview; merging and replacing the installed desktop executable require owner approval under AGENTS.md. Existing authentication is preserved. No files from the owner's cleanup list were deleted.
+Development branch: `feature/codex-personal-workspaces-20261024`. Source implementation, local preview and compiled release executable; merging and replacing the installed desktop executable require owner approval under AGENTS.md. Existing authentication is preserved. No files from the owner's cleanup list were deleted.
 
 ## Workbench
 
@@ -74,6 +74,7 @@ Suggested starting pair: Concepts Free for iPad idea sketches, FreeCAD on Window
 - Browser fixture: saved project board width and measured stroke length; read song provenance; saved a food entry and observed totals update from 520/32/9 to 620 kcal/40 g protein/12 g fiber; extracted two source exercises; saved a separate completed-session snapshot before resetting its checklist.
 - Complete Python discovery initially stopped at PyTorch import (`WinError 1455`). Broader checks exclude `core/conversation_runtime`; do not treat those omitted microphone/torch modules as reverified.
 - Final broader Python run: **661 tests, OK, one skipped**, with `core/conversation_runtime` excluded. Existing security suites: **45/45 self checks, 63/63 closure checks, 16/16 integration checks**. No live service calls or commands were executed by those security suites.
+- After owner-approved closure of external capture helpers, the **complete automated discovery run passed: 661 tests, one skipped, with no module exclusions**, including successful imports of the runtime modules that depend on PyTorch. This clears the previous import/allocation failure; the manual microphone scripts are not live voice-recognition acceptance tests and were not run interactively.
 - Responsive browser check at 390 × 844: readable scrollable module navigation, fitness cards within the screen, document content width equal to the 390 px viewport. Desktop navigation also scrolls as the module count grows. A phone screenshot with sample data is saved outside the source repository.
-- Native Tauri build: the production frontend phase passed; Rust compilation failed with an allocation error under current Windows commit pressure, even with one worker and offline cached dependencies. **No new desktop executable is claimed as successfully built or installed.** Finishing that artifact requires enough committed-memory headroom, then rerunning the build.
+- Native Tauri build: the initial attempt failed with a memory allocation error. After the owner-approved capture-helper shutdown freed committed-memory headroom, the optimized release build **passed** using `npm run tauri build -- --no-bundle`, one build worker and cached dependencies. Artifact: `desktop/src-tauri/target/release/desktop.exe`. The executable was not launched or installed; its build result does not replace live microphone/voice acceptance testing.
 - No owner API/listener shutdown, account connection, CAD installation, cleanup deletion or branch merge was performed. Replacing/restarting the owner-authenticated installation remains separate from source verification.
