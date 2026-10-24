@@ -127,3 +127,7 @@
 .glass-module :is(input,select,textarea):focus{border-color:color-mix(in srgb,var(--accent) 65%,transparent)!important;
   box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent)!important}
 @media(prefers-reduced-motion:reduce){.glass-masthead::before{animation:none}}
+/* A narrow System window: one column, so nothing scrolls sideways. */
+.glass-module--system{container-type:inline-size}
+.glass-module--system .core-settings{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+@container (max-width:640px){.glass-module--system .core-settings>.detail-panel__block:first-child,.glass-module--system .core-settings>.status-block{grid-column:auto}}

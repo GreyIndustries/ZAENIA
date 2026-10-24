@@ -13,7 +13,7 @@
 .appearance-settings__look--neon{background:linear-gradient(135deg,rgba(255,80,200,.18),rgba(80,200,255,.18))}
 
 /* ---------------------------------------------------------------- HOLO HUD */
-[data-look="hud"] .glass-module,[data-look="hud"] .news{--edge:rgba(90,220,255,.45);font-family:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace}
+[data-look="hud"],[data-look="hud"] .news{--edge:rgba(90,220,255,.45);font-family:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace}
 [data-look="hud"] .glass-masthead,[data-look="hud"] .news__masthead{border-radius:4px!important;background:linear-gradient(90deg,rgba(0,170,255,.12),transparent 70%)!important;
   border:1px solid rgba(90,220,255,.5)!important;box-shadow:inset 0 0 30px rgba(0,180,255,.12)!important;padding:16px 18px!important}
 [data-look="hud"] .glass-masthead::before{display:none}
@@ -21,17 +21,17 @@
 [data-look="hud"] :is(.glass-masthead__title,.news__title){background:none!important;color:#bff4ff!important;-webkit-text-fill-color:#bff4ff;
   text-transform:uppercase;letter-spacing:.12em!important;font-size:22px!important;text-shadow:0 0 14px rgba(80,220,255,.6)}
 [data-look="hud"] :is(.glass-masthead__kicker,.news__kicker){color:#5fe3ff!important;letter-spacing:.3em}
-[data-look="hud"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+[data-look="hud"] :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
   .cal-panel__list>li,.files-panel__side,.files-panel__main,.files-panel__banner,.readiness-summary>div,.readiness-modules>article,.codex-connection,
   .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
 [data-look="hud"] :is(.news__hero,.news__card,.news__quick){
   border-radius:3px!important;background:rgba(0,20,36,.55)!important;border:1px solid rgba(90,220,255,.35)!important;
   box-shadow:inset 0 0 18px rgba(0,170,255,.08)!important;backdrop-filter:blur(6px)!important;
   clip-path:polygon(0 10px,10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px))}
-[data-look="hud"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
+[data-look="hud"] :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
 [data-look="hud"] :is(.news__pill,.news__refresh){border-radius:2px!important;text-transform:uppercase;letter-spacing:.12em;font-size:10px!important;
   background:rgba(0,30,50,.6)!important;border:1px solid rgba(90,220,255,.45)!important;color:#9fefff!important}
-[data-look="hud"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="hud"] .news__pill--on{
+[data-look="hud"] :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="hud"] .news__pill--on{
   background:rgba(60,220,255,.22)!important;color:#e9fdff!important;box-shadow:0 0 12px rgba(60,220,255,.35)!important}
 [data-look="hud"] .news__card::after,[data-look="hud"] .news__hero::after{background:linear-gradient(180deg,rgba(0,15,30,.1),rgba(0,15,30,.9))!important}
 [data-look="hud"] .news__img{filter:saturate(.6) hue-rotate(160deg) brightness(.85) contrast(1.1)}
@@ -44,25 +44,25 @@
 [data-look="editorial"] .glass-masthead::before,[data-look="editorial"] .glass-masthead::after{display:none}
 [data-look="editorial"] .news__masthead{border-bottom:2px solid #e0a353;padding-bottom:12px}
 [data-look="editorial"] :is(.glass-masthead__kicker,.news__kicker){font-family:Georgia,serif;font-style:italic;letter-spacing:.06em;text-transform:none;font-size:12px}
-[data-look="editorial"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+[data-look="editorial"] :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
   .cal-panel__list>li,.files-panel__side,.files-panel__main,.readiness-summary>div,.readiness-modules>article,.codex-connection,
   .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
 [data-look="editorial"] :is(.news__card,.news__quick){
   border-radius:6px!important;background:#0c121c!important;border:1px solid rgba(255,255,255,.07)!important;box-shadow:none!important;backdrop-filter:none!important}
 [data-look="editorial"] .news__hero{border-radius:6px!important}
-[data-look="editorial"] :is(.news__hero h3,.news__card h4,.glass-module h2){font-family:Georgia,Cambria,serif!important;letter-spacing:0!important}
-[data-look="editorial"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
+[data-look="editorial"] :is(.news__hero h3,.news__card h4,h2){font-family:Georgia,Cambria,serif!important;letter-spacing:0!important}
+[data-look="editorial"] :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),
 [data-look="editorial"] .news__pill{border-radius:4px!important;background:transparent!important;border:1px solid rgba(255,255,255,.18)!important}
-[data-look="editorial"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="editorial"] .news__pill--on{
+[data-look="editorial"] :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="editorial"] .news__pill--on{
   background:#f6efe4!important;color:#111!important;border-color:#f6efe4!important}
-[data-look="editorial"] :is(.glass-module,.news) :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:none!important}
+[data-look="editorial"] :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:none!important}
 
 /* ------------------------------------------------------------- NEON BENTO */
 [data-look="neon"] :is(.glass-masthead__title,.news__title){background:linear-gradient(90deg,#ff6ad5,#c774e8,#8795e8,#94d0ff)!important;
   -webkit-background-clip:text!important;background-clip:text!important;font-size:32px!important;font-weight:800!important}
 [data-look="neon"] .glass-masthead{background:linear-gradient(135deg,rgba(255,106,213,.25),rgba(135,149,232,.18) 50%,rgba(148,208,255,.22))!important;
   border:0!important;border-radius:26px!important;box-shadow:0 0 0 1px rgba(255,255,255,.12),0 18px 50px rgba(199,116,232,.25)!important}
-[data-look="neon"] .glass-module :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
+[data-look="neon"] :is(.assistant-panel__section,.task-create,.task-details,.task-card,.task-history,.cal-panel__body,.cal-panel__form,.cal-panel__duty,
   .cal-panel__list>li,.files-panel__side,.files-panel__main,.readiness-summary>div,.readiness-modules>article,.codex-connection,
   .system-brief,.platform-card,.knowledge-panel,.detail-panel__block,.platform-panel,.notes-list,.notes-editor,.system-module,.file-detail),
 [data-look="neon"] :is(.news__hero,.news__card,.news__quick){
@@ -71,9 +71,9 @@
   box-shadow:0 10px 34px rgba(135,149,232,.18)!important}
 [data-look="neon"] .news__card:nth-child(3n+1){background:linear-gradient(160deg,rgba(255,106,213,.28),#0b1020 60%) padding-box,linear-gradient(135deg,#ff6ad5,#8795e8) border-box!important}
 [data-look="neon"] .news__card:nth-child(3n+2){background:linear-gradient(160deg,rgba(148,208,255,.25),#0b1020 60%) padding-box,linear-gradient(135deg,#94d0ff,#4fe39a) border-box!important}
-[data-look="neon"] .glass-module :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),[data-look="neon"] .news__pill{border-radius:999px!important}
-[data-look="neon"] .glass-module :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="neon"] .news__pill--on{
+[data-look="neon"] :is(.choice,.platform-tabs button,.assistant-panel__actions button,.task-toolbar button,button[type="submit"]),[data-look="neon"] .news__pill{border-radius:999px!important}
+[data-look="neon"] :is(.choice--active,button[type="submit"]:not(:disabled)),[data-look="neon"] .news__pill--on{
   background:linear-gradient(90deg,#ff6ad5,#8795e8)!important;color:#fff!important;box-shadow:0 0 16px rgba(255,106,213,.45)!important}
-[data-look="neon"] :is(.glass-module,.news) :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:translateY(-4px) scale(1.01)!important;
+[data-look="neon"] :is(.task-card,.readiness-modules>article,.news__card,.news__hero):hover{transform:translateY(-4px) scale(1.01)!important;
   box-shadow:0 18px 44px rgba(255,106,213,.28)!important}
-@media(prefers-reduced-motion:reduce){[data-look] :is(.glass-module,.news) *:hover{transform:none!important}}
+@media(prefers-reduced-motion:reduce){[data-look] *:hover{transform:none!important}}

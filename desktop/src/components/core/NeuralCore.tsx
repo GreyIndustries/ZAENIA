@@ -11,6 +11,8 @@ type Props = {
   telemetry: CoreTelemetry | null;
   source: "preview" | "local";
   motion: boolean;
+  /** App in the background and ZAE idle: the core holds still and draws nothing new. */
+  paused?: boolean;
   processing?: boolean;
   startup: { progress: number; ready: boolean };
   onSelect?: (section: Section) => void;
@@ -68,7 +70,7 @@ function usePrefersReducedMotion() {
  * the branches belong to the organism. Module orbs and labels sit on top as
  * real buttons for keyboard and screen-reader access.
  */
-export function NeuralCore({ telemetry, source, motion, processing = false, startup, onSelect, phase = "idle", followUntil }: Props) {
+export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<NeuralField | null>(null);
@@ -97,8 +99,8 @@ export function NeuralCore({ telemetry, source, motion, processing = false, star
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate, processing, phase });
-  }, [startup.progress, animate, processing, phase, layout]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase });
+  }, [startup.progress, animate, paused, processing, phase, layout]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 

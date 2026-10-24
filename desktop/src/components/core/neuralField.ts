@@ -717,18 +717,22 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     ctx.globalCompositeOperation = "source-over";
   };
 
+  // Frames are requested only while something moves. A still core (motion
+  // off, or the app in the background) draws once and then costs nothing;
+  // setState, setLayout or the window becoming visible wakes the loop again.
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(loop); };
   const loop = (now: number) => {
-    raf = requestAnimationFrame(loop);
+    raf = 0;
     if (!L || document.hidden) { last = now; return; }
     const elapsed = now - last;
+    const progressChanged = drawnProgress !== state.progress;
+    if (!state.motion && !progressChanged && !dirty) return;
     // ~33 fps while you're using the app or she's busy; ~11 fps in the
     // background (window not focused and she's not thinking or speaking).
     const background = !document.hasFocus() && state.phase !== "thinking" && state.phase !== "speaking" && !state.processing;
-    if (elapsed < (background ? 90 : 30)) return;
+    if (state.motion && elapsed < (background ? 90 : 30)) { schedule(); return; }
     last = now;
     const dt = Math.min(64, elapsed);
-    const progressChanged = drawnProgress !== state.progress;
-    if (!state.motion && !progressChanged && !dirty) return;
     if (state.motion) {
       const pe = smooth(clamp(state.progress / 100));
       const rate = (state.processing ? 1.8 : 1) + thk * 0.6 + spk * 0.4;
@@ -751,8 +755,11 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     draw();
     drawnProgress = state.progress;
     dirty = false;
+    if (state.motion) schedule();
   };
-  raf = requestAnimationFrame(loop);
+  const onVisibility = () => { if (!document.hidden) { dirty = true; schedule(); } };
+  document.addEventListener("visibilitychange", onVisibility);
+  schedule();
 
   return {
     setLayout(next) {
@@ -765,15 +772,19 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       geo = BRANCHES.map((b, i) => buildBranch(b, next.orbs[i], next, i));
       fans = next.compact ? [] : [buildFan(-1, next), buildFan(1, next)];
       dirty = true;
+      schedule();
     },
     setState(next) {
       state = next;
       // Without motion the phase still shows, just without easing.
       if (!next.motion) { lis = next.phase === "listening" ? 1 : 0; thk = next.phase === "thinking" ? 1 : 0; spk = next.phase === "speaking" ? 1 : 0; }
       dirty = true;
+      schedule();
     },
     destroy() {
       cancelAnimationFrame(raf);
+      raf = 0;
+      document.removeEventListener("visibilitychange", onVisibility);
     },
   };
 }
