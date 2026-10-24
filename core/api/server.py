@@ -142,6 +142,8 @@ def create_app(
         def start_assistant_worker():
             followthrough().start()
             game_mode.start()  # frees the brain while a full-screen game is in front
+            from core.assistant_platform.game_coach import game_coach
+            game_coach().start()  # watches Grey play and learns his style (game mode only; can be turned off)
             from core.tech_news.service import tech_news
             tech_news().start()  # tech headlines every 30 minutes (optional, online)
             from core.email_watch.service import email_watch
@@ -150,6 +152,8 @@ def create_app(
         @application.on_event("shutdown")
         def stop_assistant_worker():
             game_mode.stop()
+            from core.assistant_platform.game_coach import game_coach
+            game_coach().stop()  # reviews a game still in progress
             from core.tech_news.service import tech_news
             tech_news().stop()
             from core.email_watch.service import email_watch

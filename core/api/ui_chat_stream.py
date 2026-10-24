@@ -146,6 +146,22 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return
+        from core.assistant_platform.game_coach import coach_command, game_coach
+        coaching = coach_command(message)
+        if coaching is not None and authorize is not None:
+            # "Watch me play" / "stop watching me play".
+            try:
+                authorize("assistant.desktop.manage")
+                game_coach().set_enabled(coaching)
+                answer = ("On it. I'll watch when a game is full screen and review how you played afterwards."
+                          if coaching else "Done. I won't watch your games.")
+            except PermissionError:
+                answer = "The game coach isn't available with the current permissions."
+            route = "game_coach"
+            yield _line({"type": "route", "route": route})
+            yield _line({"type": "delta", "text": answer})
+            yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
+            return
         if not images and SCREEN_QUESTION.search(message) and watcher().latest_frame_b64():
             # A question about the watched monitor: show her the latest capture.
             images = [watcher().latest_frame_b64()]
