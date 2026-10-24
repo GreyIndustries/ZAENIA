@@ -37,6 +37,15 @@ class ReplyShapeTest(unittest.TestCase):
         self.assertEqual(messages[-2]["role"], "system")
         self.assertIn("last answer", messages[-2]["content"])
 
+    def test_brief_turns_carry_a_cue_for_the_model(self):
+        from core.brain import local_llm
+        with mock.patch("core.foundation.moral_code.vault.default_charter"), \
+                mock.patch("core.foundation.moral_code.engine.guidance_for_generation", return_value="guidance"):
+            brief = local_llm.build_messages("how far is the moon")
+            deep = local_llm.build_messages("explain how tides work")
+        self.assertTrue(brief[-1]["content"].startswith("how far is the moon\n\n(Answer in one or two"))
+        self.assertEqual(deep[-1]["content"], "explain how tides work")
+
 
 class SpeechStyleTest(unittest.TestCase):
     def setUp(self):

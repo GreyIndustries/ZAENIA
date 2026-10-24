@@ -32,6 +32,14 @@ def is_follow_up_for_more(text: str) -> bool:
     return bool(_MORE.match(" ".join(str(text).casefold().split())))
 
 
+BRIEF_CUE = "(Answer in one or two short sentences.)"
+
+
+def brief_cue(text: str) -> str | None:
+    """The cue added after his message for the model when a brief answer is right."""
+    return None if wants_depth(text) else BRIEF_CUE
+
+
 def reply_guide(text: str, has_previous_answer: bool = False, style_hint: str | None = None) -> str:
     if wants_depth(text):
         if is_follow_up_for_more(text) and has_previous_answer:
