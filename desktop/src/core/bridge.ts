@@ -207,6 +207,15 @@ export async function openProfileTool(mode: "export" | "restore" | "rollback" | 
   catch (error) { throw fromTauri(error); }
 }
 
+export type SecurityTool = "unlock_passkey" | "unlock_voice" | "token_rotate" | "token_revoke" | "pair_desktop"
+  | "phrase_setup" | "phrase_reset" | "mic_change" | "mic_reset" | "phone_voice_on" | "phone_voice_off";
+/** Desktop only: the Security tab's owner console. The passkey or phrase is entered there, never this page. */
+export async function openSecurityTool(mode: SecurityTool, request?: string): Promise<void> {
+  if (!IN_TAURI) throw new BridgeError("The Security tab opens only in the ZÆNIA desktop app on the PC.", "forbidden");
+  try { await invoke("run_security_tool", { mode, request: request ?? null }); }
+  catch (error) { throw fromTauri(error); }
+}
+
 /** Desktop only: open the ZÆNIA Voice window on the PC (the passkey is typed there). */
 export async function startVoiceService(): Promise<void> {
   if (!IN_TAURI) throw new BridgeError("Start the PC voice service from the desktop app.", "forbidden");

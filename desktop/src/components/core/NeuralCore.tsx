@@ -6,7 +6,7 @@ import { BRANCHES, computeLayout, createNeuralField } from "./neuralField";
 import type { BranchKey, FieldLayout, NeuralField, VoicePhase } from "./neuralField";
 import "./NeuralCore.css";
 
-type Section = "status" | "tasks" | "calendar" | "files" | "system";
+type Section = "status" | "security" | "tasks" | "calendar" | "files" | "system";
 type Props = {
   telemetry: CoreTelemetry | null;
   source: "preview" | "local";
@@ -39,7 +39,7 @@ function useFollowUpLeft(followUntil: (() => number) | undefined, phase: VoicePh
 
 const phaseName: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 const target: Record<BranchKey, Section> = {
-  security: "status", calendar: "calendar", status: "status", files: "files", tasks: "tasks", system: "system",
+  security: "security", calendar: "calendar", status: "status", files: "files", tasks: "tasks", system: "system",
 };
 
 function ModuleIcon({ name }: { name: BranchKey }) {

@@ -56,6 +56,13 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/security/checks", "status.read"),
         ("GET", r"/api/security/checks/\d{8}T\d{6}Z", "status.read"),
         ("POST", r"/api/security/checks", "status.read"),
+        # The locked Security tab (security_unlock.py): desktop key plus an unlock session.
+        ("GET", r"/api/security/summary", "status.read"),
+        ("POST", r"/api/security/unlock", "status.read"),
+        ("GET", r"/api/security/unlock/[0-9a-f]{32}", "status.read"),
+        ("POST", r"/api/security/session", "status.read"),
+        ("POST", r"/api/security/session/lock", "status.read"),
+        ("POST", r"/api/security/full", "status.read"),
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
@@ -99,6 +106,10 @@ class EventCreate(BaseModel):
     time: str = Field(min_length=3, max_length=5)
     recurrence: str = Field(default="none", max_length=10)
     fromConversation: bool = False
+
+
+class SecuritySession(BaseModel):
+    session: str = Field(min_length=20, max_length=100)
 
 
 class PhotoHistoryTurn(BaseModel):
@@ -384,6 +395,60 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         if not result["started"] and result.get("retryAfter"):
             raise HTTPException(429, result["reason"])
         return {**result, **security_checks().state()}
+
+    # Status tab: the overall security level only; the details are on the locked Security tab.
+    @router.get("/api/security/summary")
+    def security_summary() -> dict[str, Any]:
+        from core.api.security_posture import summary
+        return summary(mode())
+
+    def require_security_desktop(x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY")) -> None:
+        from core.api.desktop_key import is_paired, verify
+        if not is_paired():
+            raise HTTPException(403, "The desktop app isn't paired yet. At the PC run: python -m core.api.server pair-desktop")
+        if not verify(x_zaenia_desktop_key):
+            raise HTTPException(403, "The Security tab opens only in the ZÆNIA desktop app on the PC.")
+
+    def security_session(body: SecuritySession, *, touch: bool = False) -> dict[str, Any]:
+        from core.api.security_unlock import security_unlock
+        session = security_unlock().check(body.session, touch=touch)
+        if session is None:
+            raise HTTPException(401, "The Security tab is locked. Unlock it with your passkey or your spoken phrase.")
+        return session
+
+    @router.post("/api/security/unlock", dependencies=[Depends(require_security_desktop)])
+    def security_unlock_begin() -> dict[str, Any]:
+        from core.api.security_unlock import security_unlock
+        return security_unlock().begin()
+
+    @router.get("/api/security/unlock/{request_id}", dependencies=[Depends(require_security_desktop)])
+    def security_unlock_poll(request_id: str) -> dict[str, Any]:
+        from core.api.security_unlock import security_unlock
+        return security_unlock().poll(request_id)
+
+    @router.post("/api/security/session", dependencies=[Depends(require_security_desktop)])
+    def security_session_touch(body: SecuritySession) -> dict[str, Any]:
+        """Activity on the open tab: restarts its 10-minute idle timer."""
+        return security_session(body, touch=True)
+
+    @router.post("/api/security/session/lock", dependencies=[Depends(require_security_desktop)])
+    def security_session_lock(body: SecuritySession) -> dict[str, Any]:
+        from core.api.security_unlock import security_unlock
+        security_unlock().lock_session(body.session)
+        return {"locked": True}
+
+    @router.post("/api/security/full", dependencies=[Depends(require_security_desktop)])
+    def security_full(body: SecuritySession, request: Request) -> dict[str, Any]:
+        session = security_session(body)
+        from core.api.security_activity import recent_activity
+        from core.api.security_posture import full_view
+        mobile_sessions = None
+        auth = getattr(request.app.state, "mobile_auth", None)
+        if auth is not None:
+            with auth.lock:
+                auth._purge()
+                mobile_sessions = len(auth.sessions)
+        return {**full_view(mode(), mobile_sessions=mobile_sessions), "activity": recent_activity(limit=300), "session": session}
 
     @router.get("/api/news/tech")
     def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),

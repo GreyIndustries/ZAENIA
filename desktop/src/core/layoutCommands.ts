@@ -3,7 +3,7 @@
  * "open my calendar", "shrink and put it in the left corner",
  * "move tasks to the right", "clear the workspace", "hide the sidebar".
  */
-export type LayoutTarget = "status" | "tasks" | "calendar" | "assistant" | "files" | "system" | "core" | "focused" | "notes" | "news";
+export type LayoutTarget = "status" | "security" | "tasks" | "calendar" | "assistant" | "files" | "system" | "core" | "focused" | "notes" | "news";
 export type Spot = "left" | "right" | "top" | "bottom" | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 export type LayoutAction =
   | { kind: "open"; target: LayoutTarget }
@@ -19,6 +19,7 @@ export type LayoutAction =
 const TARGETS: [RegExp, LayoutTarget][] = [
   [/\b(?:notes?|notebook)\b/, 'notes'],
   [/\b(?:news|headlines)\b/, 'news'],
+  [/\b(?:security|security tab|vulnerabilit(?:y|ies))\b/, "security"],
   [/\b(?:system status|status|health|diagnostics?)\b/, "status"],
   [/\b(?:tasks?|to-?dos?|task list)\b/, "tasks"],
   [/\b(?:calendar|schedule|agenda|events?)\b/, "calendar"],

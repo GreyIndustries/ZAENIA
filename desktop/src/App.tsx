@@ -32,6 +32,7 @@ import { ZAENIA_IDENTITY_DESCRIPTION, ZAENIA_IDENTITY_REPLY, isZaeniaIdentityQue
 import type { CoreTelemetry, ModulePhase } from "./core/coreTelemetry";
 import { TasksDashboard } from "./components/tasks/TasksDashboard";
 import { StatusPanel } from "./components/status/StatusPanel";
+import { SecurityPanel } from "./components/security/SecurityPanel";
 import { SECURITY_CHECK_EVENT } from "./components/status/SecurityChecks";
 import { AssistantPanel } from "./components/assistant/AssistantPanel";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
@@ -55,15 +56,16 @@ import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news";
-type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news";
+type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
 type VisualMode = "blend" | "progress";
 
-// The Conversation tab is replaced by Status & Security. Conversations live in the
-// chat box under the core: its thread opens above the chat bar.
+// Conversations live in the chat box under the core: its thread opens above the
+// chat bar. Security is its own tab, locked behind the passkey or spoken phrase.
 const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
-  { id: "status", label: "Status & Security", short: "Status", icon: "pulse" },
+  { id: "status", label: "Status", short: "Status", icon: "pulse" },
+  { id: "security", label: "Security", short: "Security", icon: "shield" },
   { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
   { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
@@ -74,17 +76,18 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
 ];
 const sections: Record<Section, { title: string; label: string; description: string }> = {
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
-  status: { title: "Status & Security", label: "READINESS & SECURITY", description: "Module readiness, ZAE's security self-checks and their reports, and recent security activity." },
+  status: { title: "Status", label: "READINESS", description: "Live module readiness, PC load and ZAE's overall security level." },
+  security: { title: "Security", label: "LOCKED · OWNER ONLY", description: "Live attack resistance, weak spots and how to fix them, improvements over time, security checks and the full activity log." },
   tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   news: { title: 'Tech News', label: 'TRACKED SOURCES', description: 'Headlines from ten credible tech newsrooms, checked every 30 minutes. Stories several sources report are marked.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
-  system: { title: "System", label: "DIAGNOSTICS", description: "Preview module states and optional read-only local status telemetry. Sample values are not live measurements." },
+  system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "tasks", "calendar", "notes", "news", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "calendar", "notes", "news", "assistant", "files", "system"];
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -117,6 +120,7 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     plus: <path d="M12 5v14M5 12h14"/>,
     trash: <><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v7M14 11v7"/></>,
     pulse: <path d="M3 12h4l2.5-6 4 12 2.5-6H21"/>,
+    shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6Z"/><path d="m9 12 2 2 4-4"/></>,
     chevron: <path d="m6 9 6 6 6-6"/>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 13h18M10 16.5h4"/></>,
   };
@@ -195,6 +199,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }, []);
   const [mode, setMode] = useState<VisualMode>("blend");
   const [motion, setMotion] = useState(true);
+  // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
   const [startupReplay, setStartupReplay] = useState(0);
   const startup = useCoreStartup(startupReplay);
@@ -667,12 +672,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail sign-in. It's read-only; click Allow in your browser."; }
     if (action === "open_files") { openSection("files"); return "Files are up."; }
     if (action === "open_tasks") { openSection("tasks"); return "Tasks are up."; }
-    if (action === "open_status") { openSection("status"); return "Status & Security is up."; }
+    if (action === "open_status") { openSection("status"); return "Status is up."; }
+    if (action === "open_security") { openSection("security"); return "Security is up. Unlock it with your passkey or your phrase."; }
     if (action === "run_security_check") {
-      openSection("status");
       void api("POST", "/api/security/checks")
         .then(() => window.dispatchEvent(new Event(SECURITY_CHECK_EVENT)), failure => setVoiceNote(errorText(failure)));
-      return "Running a security check, sir. It takes about half a minute; the report will be on Status & Security.";
+      return "Running a security check, sir. It takes about half a minute; the report will be on the Security tab.";
     }
     return null;
   }
@@ -1020,7 +1025,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             <button className="setting-row" type="button" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}><span className="setting-row__icon"><Icon name="bolt" size={18}/></span><span className="setting-row__content"><strong>Ambient motion</strong><small>Rotation and travelling signals</small></span><span className={`switch ${motion?"switch--on":""}`}><i/></span></button>
             <WorkspaceMotionControls settings={workspaceMotion.settings} toggle={workspaceMotion.toggle} resize={workspaceMotion.resize} reset={workspaceMotion.reset}/></div>
           <div className="detail-panel__block status-block"><div className="section-heading"><span className="subheading">MODULE STATUS</span><span>{String(readyCount).padStart(2,"0")} / {String(moduleTotal).padStart(2,"0")}</span></div><div className="module-list">{telemetry?.modules.map(m=><button type="button" className="module-button" key={m.id} title={m.detail} onClick={()=>{setSelectedModule(m.id);openSection("system");}}><span className={`module-item__dot module-item__dot--${m.phase}`}/><span>{m.name}</span><small className={`module-phase module-phase--${m.phase}`}>{phaseLabels[m.phase]}</small></button>)??<div className="hint">Status feed unavailable.</div>}</div></div>
-          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p><div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled={!canGoLive} title={canGoLive?"Use the live ZÆNIA status feed":"Live status is available inside the desktop app"}>Live</button></div><div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in Status & Security.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
+          <div className="detail-panel__block"><span className="subheading">SYSTEM DATA</span><p>{source==="preview"?"Sample values. Switch to Live for real readiness from the ZÆNIA server.":connection}</p>{!canGoLive && <div className="choice-row"><button className={source==="preview"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("preview")}>Preview</button><button className={source==="local"?"choice choice--active":"choice"} type="button" onClick={()=>setSource("local")} disabled title="Live status is available inside the desktop app">Live</button></div>}<div className="startup-control"><span>{startup.ready ? "STARTUP COMPLETE" : "STARTING CORE"} <strong>{startup.progress}%</strong></span><progress max="100" value={startup.progress}/><button className="choice" type="button" onClick={()=>setStartupReplay(v=>v+1)}>Replay 7-second startup</button><small>Visual startup only. Service readiness is shown in Status & Security.</small></div>{onForgetPhone && <div className="phone-forget"><button className={`choice${confirmForget ? " choice--danger" : ""}`} type="button" onClick={()=>{ if (confirmForget) onForgetPhone(); else setConfirmForget(true); }}>{confirmForget ? "Tap again to forget" : "Forget this phone"}</button><small>Signs out this phone. Reconnect with your voice or access token.</small></div>}</div>
   </>;
 
   // Every module shares the Tech News look: a masthead and glass panels.
@@ -1036,7 +1041,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     switch (id) {
       case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
       case 'news': return <NewsPanel/>;
-      case "status": return <StatusPanel onFix={runFix} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
+      case "security": return <SecurityPanel/>;
+      case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
       case "tasks": return <TasksDashboard remote={LIVE_API} refreshVersion={actionRefresh.tasks}/>;
       case "calendar": return <CalendarPanel refreshVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;

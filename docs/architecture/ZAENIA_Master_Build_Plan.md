@@ -295,3 +295,41 @@ Requested by Grey on 2026-10-24: rename System Status to Status & Security, and 
 - **Known limitation:** in this worktree the three suites stop on the gitignored private `core/foundation/moral_code/charter.json`, and the report names the missing file. On the live install, where the file exists, they are expected to run but were not run there in this session.
 
 2026-10-24 | v1.6 | Claude | Status & Security tab, read-only security self-check with saved reports. No ADR change; no permission change.
+
+## 23. Locked Security tab and live attack resistance — Claude, 2026-10-24 (v1.7)
+
+Requested by Grey on 2026-10-24. Security becomes its own tab, opened only with the passkey or the spoken phrase. Status keeps only the overall security level. Grey's choices: the passkey is typed in an owner console window, never the app; the phrase works only together with his voice; the tab holds views plus owner actions; it locks after 10 minutes without activity.
+
+- **Unlock (Execution and security, `core/api/security_unlock.py`).** The desktop app (desktop key required) asks for an unlock request, which is a random 32-hex id held in server RAM for 3 minutes. It then opens `scripts/security_console.ps1` through the Tauri command `run_security_tool`.
+  - **Passkey:** the console checks it with `require_passkey` plus `consume_fresh_auth`, bound to `security.tab.open` and the request id. Rate limiting and auditing are unchanged.
+  - **Spoken phrase:** one recording from the approved mic, kept in RAM only. It must match the phrase hash (`voice_passkey.phrase_matches`) **and** the enrolled voice (`mobile_auth.LocalSpeaker`, the account-sealed reference from `mobile_voice_profile`). The phrase alone never unlocks.
+  - On success the console writes a one-time grant file in `data/secure/security_unlock/`. The server accepts it only for a request it issued, written after that request, then deletes it. It returns a session token once.
+  - Sessions are kept in RAM as hashes, at most 3. Activity pings reset a 10-minute idle timer, and a restart locks the tab. Audit events: `security.tab_unlocked`, `security.tab_unlock_failed`.
+- **Threat-model note.** A grant file can be written by anything already running as Grey's Windows account. That process could also read the desktop key, so the unlock is a UI-visibility gate on this PC, not a new privilege. The tab shows information and opens consoles. Every change (rotate or revoke the token, re-pair the desktop, set up or remove the phrase, change or remove the mic, turn the voice check on or off) still asks for a fresh passkey in its own console, using the existing CLIs.
+- **Live attack resistance (`core/api/security_posture.py`).** Read-only, nothing secret is read. Each area is rated strong, fair or weak from live readings:
+  - Network: the actual listening addresses on the API port (psutil), Tailscale serve and Funnel status, and the Windows Firewall profiles.
+  - Passkey guessing: the sign-in counter (read-only SQLite), plus failed sign-ins and unlocks over 24 h.
+  - Secrets at rest: presence of the secret files, and links.
+  - App and phone access: API token and desktop key age, phone voice sign-in, and active phone sessions.
+  - Voice impersonation: calibration genuine and impostor margins, and rejections over 24 h.
+  - Server mode.
+  - Security code tests and git privacy, both from the latest check.
+  - Audit trail: last write and archive.
+  - Signs of attack over 24 h.
+  - Package vulnerabilities are marked "not measured", because they can't be checked offline, and are left out of the score.
+  - The score averages strong 100, fair 60 and weak 20. Any weak area makes the overall level weak.
+- **Recommendations:** weak areas and failed checks first, then fair areas and warnings, with duplicates removed.
+- **Improvements:** each saved check now stores a compact posture, so the tab shows a strength trend and what got stronger, weaker, fixed or broken since the previous check.
+- **Routes**, all on the existing `status.read`, so capabilities, gates and rules are unchanged:
+  - `GET /api/security/summary`: level only, for the Status tab and the phone.
+  - `POST /api/security/unlock`, `GET /api/security/unlock/{id}`, `POST /api/security/session` (activity), `POST /api/security/session/lock` and `POST /api/security/full`. These also need the desktop key, and `full` needs a live session.
+  - The existing `/api/security/checks` and `/api/security/activity` stay on `status.read`, so chat and voice can still run and report checks.
+- **UI:**
+  - The Security tab (`components/security/SecurityPanel.tsx`) has a lock screen with two unlock buttons; then strength gauge and areas, recommendations, improvements, the security checks, the full activity log with filter and search, and the owner actions.
+  - The Status tab shows `SecuritySummary`: level, score, areas to improve and last check, plus an Open Security button.
+  - "Open security" works by voice or typing, and the core's security branch opens the tab.
+  - The live app no longer offers the Preview (sample data) switch. Sample values remain only in the browser preview without a server.
+- **Tests:** `security_unlock_test.py` (6) and `security_posture_test.py` (5). Full suite 629 OK, 13 skipped. In the worktree the foundation self-test and closure check stop at the missing local `charter.json`, a known worktree gap; they run in the live install's security check. Desktop: tsc OK, UI checks pass, web and desktop builds OK.
+- **Verified live:** not yet. Live unlock by passkey and by phrase plus voice needs Grey at the PC.
+
+2026-10-24 | v1.7 | Claude | Locked Security tab (passkey, or phrase plus voice), live attack-resistance assessment, recommendations, improvements; Status shows level only. No ADR change; no capability change.

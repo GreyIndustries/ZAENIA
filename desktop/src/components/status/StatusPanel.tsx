@@ -1,6 +1,5 @@
 import type { CoreTelemetry } from "../../core/coreTelemetry";
-import { SecurityActivity } from "../settings/SecurityActivity";
-import { SecurityChecks } from "./SecurityChecks";
+import { SecuritySummary } from "../security/SecuritySummary";
 import { SystemBrief } from "./SystemBrief";
 import "./StatusPanel.css";
 
@@ -15,8 +14,8 @@ const modules = [
   { id: "carplay", title: "CarPlay brief", note: "The brief made for the car" },
 ];
 type Voice = { play: (key: string, text: string) => void; stop: () => void; playing: string | null; loading: string | null };
-type Props = { telemetry: CoreTelemetry | null; source: "preview" | "local"; connection: string; startupReady: boolean; voice?: Voice; onFix?: (action: string) => void };
-export function StatusPanel({ telemetry, source, connection, startupReady, voice, onFix }: Props) {
+type Props = { telemetry: CoreTelemetry | null; source: "preview" | "local"; connection: string; startupReady: boolean; voice?: Voice; onFix?: (action: string) => void; onOpenSecurity?: () => void };
+export function StatusPanel({ telemetry, source, connection, startupReady, voice, onFix, onOpenSecurity }: Props) {
   const verified = source === "local" && telemetry !== null;
   // Same rule as Core Status: a module counts when it is ready or working.
   const readyCount = verified ? modules.filter(module => { const phase = telemetry.modules.find(item => item.id === module.id)?.phase; return phase === "ready" || phase === "working"; }).length : 0;
@@ -24,7 +23,7 @@ export function StatusPanel({ telemetry, source, connection, startupReady, voice
   return <div className="section-content readiness-panel">
     <div className="section-content__tag">READINESS CODEX <span>{verified ? "LIVE STATUS FEED" : "AWAITING VERIFIED STATUS"}</span></div>
     {source === "local" && <SystemBrief voice={voice} onFix={onFix}/>}
-    {source === "local" && <SecurityChecks/>}
+    {source === "local" && <SecuritySummary onOpen={onOpenSecurity}/>}
     <div className="readiness-summary">
       <div><span>Visual core</span><strong>{startupReady ? "Online" : "Starting"}</strong><small>Seven-second interface startup</small></div>
       <div><span>Verified modules</span><strong>{readyCount} / {modules.length}</strong><small>{verified ? `Reported live by the ZÆNIA server · ${telemetry.diagnostics.toLowerCase()}` : "Preview values are not counted"}</small></div>
@@ -43,6 +42,5 @@ export function StatusPanel({ telemetry, source, connection, startupReady, voice
       {codex && <small>Last connector check: <time dateTime={codex.checkedAt}>{new Date(codex.checkedAt).toLocaleString()}</time></small>}
       <p className="readiness-feed">{source === "local" ? connection : "Choose Live under System Data to read real status from the ZÆNIA server."}</p>
     </section>
-    {source === "local" && <div className="security-activity-panel"><SecurityActivity/></div>}
   </div>;
 }

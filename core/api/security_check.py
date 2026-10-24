@@ -219,6 +219,11 @@ def run_security_check(trigger: str = "manual", *, mode: str = "", now: datetime
                      else f"{counts['fail']} check{'s' if counts['fail'] != 1 else ''} failed." if counts["fail"]
                      else f"Passed with {counts['warn']} warning{'s' if counts['warn'] != 1 else ''}."),
     }
+    try:  # live strength at the time of this check, so later checks can show what improved
+        from core.api.security_posture import assess, compact
+        report["posture"] = compact(assess(mode, report=report))
+    except Exception:
+        pass
     _save(report)
     try:
         from core.foundation.security.audit import audit
@@ -352,7 +357,7 @@ def security_check_context(question: str) -> str | None:
         return None
     reports = list_reports(1)
     if not reports:
-        return "SECURITY SELF-CHECK: no check has run yet. Say so; it can be started from the Status & Security tab."
+        return "SECURITY SELF-CHECK: no check has run yet. Say so; it can be started from the Security tab."
     report = load_report(reports[0]["id"]) or {}
     problems = [f"- {check['title']}: {check['status'].upper()}. {check['detail']}"
                 for check in report.get("checks", []) if check.get("status") != "pass"]
