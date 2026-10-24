@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest import mock
 
 from core.voice_listener.ambient import AmbientContext, AmbientJudge, AmbientSettings, might_need_help
 
@@ -16,6 +17,12 @@ def judge_with(verdict, now, **settings):
 
 
 class AmbientTest(unittest.TestCase):
+    def setUp(self):
+        # Hermetic: a real game in front of the PC turns on game mode (name required).
+        patcher = mock.patch("core.assistant_platform.game_mode.active", return_value=False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_help_cues_are_self_talk_not_others_or_chatter(self):
         for text in ["where did I put my keys", "ugh why won't this build", "I can't remember the wifi password",
                      "I need to call the dentist tomorrow", "is it going to rain later"]:

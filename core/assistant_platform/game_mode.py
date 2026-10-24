@@ -35,7 +35,9 @@ STALE_SECONDS = 30.0
 
 # Full-screen windows that are not games: the desktop itself, ZAE, lock screen.
 _NOT_GAMES = {"explorer.exe", "desktop.exe", "zaenia.exe", "lockapp.exe", "searchhost.exe",
-              "startmenuexperiencehost.exe", "shellexperiencehost.exe", "textinputhost.exe", "claude.exe"}
+              "startmenuexperiencehost.exe", "shellexperiencehost.exe", "textinputhost.exe", "claude.exe",
+              # Hosts Windows Store apps (Settings, Photos, Calculator...): maximised, it looked like a game.
+              "applicationframehost.exe"}
 
 
 def fullscreen_app() -> str | None:
