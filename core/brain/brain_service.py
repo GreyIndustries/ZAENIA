@@ -541,13 +541,22 @@ class BrainService:
             news = news_context(question)
         except Exception:
             news = None
+        gaming = None
+        try:
+            # Notes on how Grey plays are personal: memory.read like his profile.
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.read")
+            from core.assistant_platform.game_coach import gaming_context
+            gaming = gaming_context(question)
+        except Exception:
+            gaming = None
         mail = None
         try:
             from core.email_watch.service import email_context
             mail = email_context(question)
         except Exception:
             mail = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, news, mail) if part]
+        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(

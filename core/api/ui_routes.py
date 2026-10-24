@@ -50,12 +50,14 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/voice/status", "status.read"),
         ("GET", r"/api/weather/now", "status.read"),
         ("GET", r"/api/screen/watch", "status.read"),
+        ("GET", r"/api/gaming/coach", "status.read"),
         ("GET", r"/api/news/tech", "status.read"),
         ("GET", r"/api/security/activity", "status.read"),
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
+        ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
     )
 )
 
@@ -120,6 +122,11 @@ class DutyStatusUpdate(BaseModel):
     date: str = Field(min_length=10,max_length=10)
     status: Literal['on_duty','off_duty','class','leave'] | None
     revision: int = Field(ge=0,strict=True)
+
+
+class GameCoachRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+    on: bool
 
 
 class ScreenWatchRequest(BaseModel):
@@ -378,6 +385,18 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
         audit("assistant.screen_watch", operation="assistant.desktop.manage", reason_code="started" if body.on else "stopped")
+        return result
+
+    @router.get("/api/gaming/coach")
+    def gaming_coach_status() -> dict[str, Any]:
+        from core.assistant_platform.game_coach import game_coach
+        return game_coach().status()
+
+    @router.post("/api/gaming/coach")
+    def gaming_coach(body: GameCoachRequest) -> dict[str, Any]:
+        from core.assistant_platform.game_coach import game_coach
+        result = game_coach().set_enabled(body.on)
+        audit("assistant.game_coach", operation="assistant.desktop.manage", reason_code="on" if body.on else "off")
         return result
 
     @router.get("/api/weather/now")
