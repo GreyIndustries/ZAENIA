@@ -11,7 +11,7 @@ export type AccentChoice = "amber" | "gold" | "crimson" | "violet" | "blue" | "c
 export type LookChoice = "aurora" | "hud" | "editorial" | "neon";
 /** One module window's own style and colour; anything unset follows the app-wide choice. */
 export type TabStyle = { look?: LookChoice; color?: AccentChoice };
-export type TabId = "status" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news";
+export type TabId = "status" | "security" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news";
 export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice; tabs: Partial<Record<TabId, TabStyle>>;
   /** The six icons around the core: amber and blue ("mixed"), or all in the accent colour ("match"). */
   orbs: "mixed" | "match" };
@@ -19,7 +19,7 @@ export type Appearance = { font: FontChoice; size: number; accent: AccentChoice;
 export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora", tabs: {}, orbs: "mixed" };
 
 export const TABS: { id: TabId; label: string }[] = [
-  { id: "status", label: "Status" }, { id: "tasks", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "notes", label: "Notes" },
+  { id: "status", label: "Status" }, { id: "security", label: "Security" }, { id: "tasks", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "notes", label: "Notes" },
   { id: "assistant", label: "Assistant" }, { id: "files", label: "Files" }, { id: "system", label: "System" }, { id: "news", label: "Tech News" },
 ];
 

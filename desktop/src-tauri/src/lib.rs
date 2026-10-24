@@ -448,6 +448,37 @@ fn restart_server() -> Result<(), String> {
     run_restart_script(&root)
 }
 
+/// Security-tab owner console: unlocking with the passkey or the spoken phrase,
+/// and the passkey-protected security changes. Receives only a fixed mode and,
+/// for unlocking, the server's opaque request ID; secrets are typed there, never here.
+#[tauri::command]
+fn run_security_tool(mode: String, request: Option<String>) -> Result<(), String> {
+    const MODES: [&str; 11] = ["unlock_passkey", "unlock_voice", "token_rotate", "token_revoke", "pair_desktop",
+        "phrase_setup", "phrase_reset", "mic_change", "mic_reset", "phone_voice_on", "phone_voice_off"];
+    let request = request.unwrap_or_default();
+    if !MODES.contains(&mode.as_str())
+        || (mode.starts_with("unlock_") && (request.len() != 32 || !request.chars().all(|c| c.is_ascii_hexdigit())))
+        || (!mode.starts_with("unlock_") && !request.is_empty()) {
+        return Err("Choose a security action from the Security tab.".to_string());
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().and_then(|desktop| desktop.parent())
+        .ok_or_else(|| "Could not locate the project.".to_string())?;
+    let script = root.join("scripts").join("security_console.ps1");
+    if !script.is_file() { return Err("The security console is missing.".to_string()); }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let mut command = std::process::Command::new("powershell.exe");
+        command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]).arg(script).args(["-Mode", &mode]);
+        if !request.is_empty() { command.args(["-Request", &request]); }
+        command.current_dir(root).creation_flags(0x0000_0010).spawn()
+            .map_err(|_| "Could not open the security console.".to_string())?;
+        Ok(())
+    }
+    #[cfg(not(windows))]
+    { Err("Run the security commands in an interactive owner terminal on this platform.".to_string()) }
+}
+
 /// Fixed local owner console; receives only a mode and an opaque request ID.
 #[tauri::command]
 fn run_profile_tool(mode: String, request: String) -> Result<(), String> {
@@ -518,7 +549,8 @@ pub fn run() {
                 connect_google_calendar,
                 connect_gmail,
                 open_voice_training,
-                run_profile_tool
+                run_profile_tool,
+                run_security_tool
             ]
         )
         .run(

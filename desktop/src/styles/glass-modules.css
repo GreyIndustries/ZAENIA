@@ -97,6 +97,7 @@
    and hover edges), and a soft glowing banner behind the masthead. */
 .glass-module{--accent:#e0a353;--accent-2:#ffd9a6}
 .glass-module--status{--accent:#5fd6ff;--accent-2:#b9efff}
+.glass-module--security{--accent:#ff8a6b;--accent-2:#ffd2c2}
 .glass-module--tasks{--accent:#4fdc9b;--accent-2:#b8f5d6}
 .glass-module--calendar{--accent:#6aa8ff;--accent-2:#c4dcff}
 .glass-module--notes{--accent:#b48cff;--accent-2:#e2d2ff}

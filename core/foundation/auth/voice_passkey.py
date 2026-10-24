@@ -65,6 +65,10 @@ def get_allowed_mic_index() -> int:
     return devices[0]["index"]
 
 def listen_for_phrase(seconds: int = 5) -> str:
+    return record_phrase(seconds)[1]
+
+def record_phrase(seconds: int = 5) -> tuple[bytes, str]:
+    """One recording from the approved mic: the 16 kHz PCM (RAM only, never saved) and its words."""
     if type(seconds) is not int or not 1 <= seconds <= 15:
         raise ValueError("Recording duration must be between 1 and 15 seconds.")
     if not model_exists():
@@ -83,16 +87,18 @@ def listen_for_phrase(seconds: int = 5) -> str:
         except queue.Full:
             pass
     parts = []
+    chunks: list[bytes] = []
     deadline = time.monotonic()+seconds
     print("Listening through the approved microphone...")
     with sd.RawInputStream(device=device,samplerate=16000,blocksize=8000,dtype="int16",channels=1,callback=callback):
         while time.monotonic()<deadline:
             try: data=audio.get(timeout=min(0.25,max(0.001,deadline-time.monotonic())))
             except queue.Empty: continue
+            chunks.append(data)
             if recognizer.AcceptWaveform(data):
                 parts.append(json.loads(recognizer.Result()).get("text",""))
         parts.append(json.loads(recognizer.FinalResult()).get("text",""))
-    return normalize_phrase(" ".join(parts))
+    return b"".join(chunks), normalize_phrase(" ".join(parts))
 
 def voice_phrase_exists() -> bool:
     reject_link(VOICE_PHRASE_FILE)
@@ -119,7 +125,12 @@ def create_voice_phrase(passphrase: str | None = None) -> None:
 def verify_voice_phrase() -> bool:
     if not voice_phrase_exists():
         raise RuntimeError("Voice phrase has not been enrolled.")
-    spoken = listen_for_phrase()
+    return phrase_matches(listen_for_phrase())
+
+def phrase_matches(spoken: str) -> bool:
+    """Compare already-heard words with the enrolled phrase hash (audited)."""
+    if not voice_phrase_exists():
+        raise RuntimeError("Voice phrase has not been enrolled.")
     if not spoken:
         return False
     try:
