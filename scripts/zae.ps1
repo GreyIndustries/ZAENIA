@@ -40,15 +40,15 @@ function Confirm-Step([string]$Question) {
     return $answer -match '^(y|yes)$'
 }
 
-function Git { & git -C $Root @args }
+function Invoke-Git { & git.exe -C $Root @args }
 
 # ---------------------------------------------------------------- status
 function Show-Status {
     Title "ZAE status"
-    $branch = (Git rev-parse --abbrev-ref HEAD).Trim()
-    $commit = (Git log -1 --format="%h  %s  (%cr)").Trim()
+    $branch = (Invoke-Git rev-parse --abbrev-ref HEAD).Trim()
+    $commit = (Invoke-Git log -1 --format="%h  %s  (%cr)").Trim()
     Say ("  Code:    branch " + $branch + ", " + $commit)
-    $changed = @(Git status --porcelain)
+    $changed = @(Invoke-Git status --porcelain)
     if ($changed.Count) { Warn ("" + $changed.Count + " file(s) changed locally and not committed. Updates wait until this is clean.") }
     else { Good "No uncommitted changes." }
 
@@ -71,7 +71,7 @@ function Show-Status {
     $latest = Get-ChildItem $checks -Filter *.json -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1
     if ($latest) { Say ("  Last security check: " + $latest.LastWriteTime.ToString("g") + " (details on the Security tab)") }
 
-    $tags = @(Git tag --list "zae-rollback-*" --sort=-creatordate | Select-Object -First 1)
+    $tags = @(Invoke-Git tag --list "zae-rollback-*" --sort=-creatordate | Select-Object -First 1)
     if ($tags.Count -and $tags[0]) { Say ("  Latest restore point: " + $tags[0]) }
 }
 
@@ -140,28 +140,28 @@ function Invoke-Restart {
 # ---------------------------------------------------------------- update
 function Invoke-Update {
     Title ("Update from GitHub: " + $Branch)
-    if (@(Git status --porcelain).Count) { Bad "There are uncommitted local changes. Commit or undo them first (see docs/SELF_SERVICE.md)."; return }
-    if ((Git rev-parse --abbrev-ref HEAD).Trim() -ne "main") { Bad "The live install should be on main. Run: git -C $Root switch main"; return }
-    Git fetch origin --prune 2>&1 | Out-Null
-    $incoming = @(Git log --oneline ("HEAD..origin/" + $Branch))
+    if (@(Invoke-Git status --porcelain).Count) { Bad "There are uncommitted local changes. Commit or undo them first (see docs/SELF_SERVICE.md)."; return }
+    if ((Invoke-Git rev-parse --abbrev-ref HEAD).Trim() -ne "main") { Bad "The live install should be on main. Run: git -C $Root switch main"; return }
+    Invoke-Git fetch origin --prune 2>&1 | Out-Null
+    $incoming = @(Invoke-Git log --oneline ("HEAD..origin/" + $Branch))
     if (-not $incoming.Count) { Good "Already up to date. Nothing new on that branch."; return }
     Say ("  New on " + $Branch + ":")
     $incoming | Select-Object -First 20 | ForEach-Object { Say ("    " + $_) }
     if (-not (Confirm-Step "Bring these in, test them and install?")) { Warn "Cancelled. Nothing changed."; return }
 
     $tag = "zae-rollback-" + (Get-Date -Format "yyyyMMdd-HHmmss")
-    Git tag $tag | Out-Null
+    Invoke-Git tag $tag | Out-Null
     Good ("Restore point saved: " + $tag)
 
-    Git merge --no-edit ("origin/" + $Branch) 2>&1 | Out-Null
+    Invoke-Git merge --no-edit ("origin/" + $Branch) 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
-        Git merge --abort 2>&1 | Out-Null
+        Invoke-Git merge --abort 2>&1 | Out-Null
         Bad "The new work conflicts with this install, so nothing was changed. Ask Claude or Codex to rebase their branch on main."
         return
     }
     Good "Merged"
 
-    $changedFiles = @(Git diff --name-only $tag HEAD)
+    $changedFiles = @(Invoke-Git diff --name-only $tag HEAD)
     if ($changedFiles | Where-Object { $_ -like "requirements*.txt" }) {
         Say "  Python packages changed: installing..."
         & $Python -m pip install -q -r (Join-Path $Root "requirements.txt") 2>&1 | Out-Null
@@ -173,7 +173,7 @@ function Invoke-Update {
 
     if (-not (Invoke-Tests)) {
         Bad "A test failed, so the update is being undone."
-        Git reset --hard $tag 2>&1 | Out-Null
+        Invoke-Git reset --hard $tag 2>&1 | Out-Null
         Good ("Back to " + $tag + ". ZAE is exactly as before. Send the FAIL lines above to Claude or Codex.")
         return
     }
@@ -185,15 +185,15 @@ function Invoke-Update {
 # ---------------------------------------------------------------- rollback
 function Invoke-Rollback {
     Title "Undo an update"
-    $tags = @(Git tag --list "zae-rollback-*" --sort=-creatordate | Select-Object -First 5)
+    $tags = @(Invoke-Git tag --list "zae-rollback-*" --sort=-creatordate | Select-Object -First 5)
     if (-not $tags.Count -or -not $tags[0]) { Warn "There's no restore point yet (one is made by every update)."; return }
     $target = if ($To) { $To } else { $tags[0] }
-    if ($tags -notcontains $target -and -not (Git tag --list $target)) { Bad ("No restore point named " + $target); return }
+    if ($tags -notcontains $target -and -not (Invoke-Git tag --list $target)) { Bad ("No restore point named " + $target); return }
     Say "  Restore points (newest first):"
     $tags | ForEach-Object { Say ("    " + $_) }
-    if (@(Git status --porcelain).Count) { Bad "There are uncommitted local changes; commit or undo them first."; return }
+    if (@(Invoke-Git status --porcelain).Count) { Bad "There are uncommitted local changes; commit or undo them first."; return }
     if (-not (Confirm-Step ("Go back to " + $target + "? Your data, memory and settings are not affected"))) { Warn "Cancelled."; return }
-    Git reset --hard $target 2>&1 | Out-Null
+    Invoke-Git reset --hard $target 2>&1 | Out-Null
     Good ("Code is back at " + $target)
     if (Invoke-Build) { Invoke-Restart }
 }
