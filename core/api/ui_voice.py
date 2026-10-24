@@ -161,6 +161,17 @@ def transcribe(audio: Any, wake: bool = False) -> dict[str, Any]:
     except Exception as error:
         raise VoiceUnavailable(f"Speech recognition failed ({type(error).__name__}).") from error
     result = interpret(text, bool(wake))
+    if result["text"]:
+        # The PC voice service may be answering this same sentence: answer once.
+        try:
+            from core.voice_listener.service_status import claim_turn
+            claimed = claim_turn("app", result["text"], wait_for_pc=True,
+                                 record=bool(result["forZae"] or result["conversational"] or wake))
+        except Exception:
+            claimed = True
+        if not claimed:
+            return {**result, "text": "", "command": "", "addressed": False, "forZae": False,
+                    "rejected": "pc_answering", "message": "ZAE's PC voice is already answering that."}
     if result["text"] and app_mic_requires_voice():
         # His voice was verified above: learn his speaking pace (a running
         # average only) and note these words came from speech, not typing.
