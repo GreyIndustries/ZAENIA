@@ -359,6 +359,8 @@ def create_app(
     application.include_router(create_assistant_router(require_api_authentication, followthrough, authorize_sources=authorize_operation))
     application.include_router(create_platform_router(require_api_authentication,authorize_operation,provider=platform_provider))
 
+    from core.api.tools_routes import create_tools_router
+    application.include_router(create_tools_router(require_api_authentication))
     from core.api.selfcare_routes import create_selfcare_router
     application.include_router(create_selfcare_router(require_api_authentication))
     from core.api.research_routes import create_research_router

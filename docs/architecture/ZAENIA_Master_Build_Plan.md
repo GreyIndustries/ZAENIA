@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.0  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.1  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -440,4 +440,40 @@ Requested by Grey on 2026-10-25, modelled on the Quantum app's Research page. Hi
 - **Live checks (2026-10-25):** Library 40 results in 15 s (Gutendex timed out, the same as in Quantum). Library of Congress facets ~1 s. Internet Archive decades ~56 s the first time, then baseline cached. LoC samples 23 s. GDELT 50 articles. Facts vs opinion on llama3.1:8b in 37 s, correct.
 
 2026-10-25 | v2.0 | Claude | Research tabs (Library, Historical connections, Notebook) and one News page with world feeds, world search and a reader. New optional online sources (Gutenberg, Open Library, Internet Archive, Library of Congress, GDELT, Wikipedia), all keyless and read-only. No ADR change; no capability change.
+
+## 27. Quantum-style tabs — Claude, 2026-10-25 (v2.1)
+
+Grey compared ZAE with his brother's "Quantum" app and answered a question card about each of its sidebar tabs. His decisions: no full-page Chat; Protocols and Self-Sustain go inside Status; Reminders go inside Tasks & Calendar; the Vault goes in Settings (System merged into Settings); Tools and Labs (chemistry, physics) go in Workbench; Code Doctor (for his projects and ZAE's code), Suggestions and Arena become new tabs; Source merges into Files; keep the sidebar Run check box and a fuller status bar. Research is one tab with Historical Connections, Notebook, News and The Library as tabs along the top. A Scripture & ancient tab is offered on a card and waiting on Grey's answer.
+
+- **Page tabs** (`components/shell/PageTabs.tsx`) for Status (Overview / Protocols / Self-Sustain), Settings (System & appearance / Vault), Workbench (Projects / Tools / Labs), Files (Files / Source) and Research.
+- **Protocols** (`protocols.py`): phrase-started routines made of fixed safe steps (say, open tab, remind, ask, headlines, game coach, stop screen watch). They run in the chat path before the brain. Steps can't run programs, change security or send messages.
+- **Reminders** (`reminders.py`): "remind me in N minutes / at TIME [tomorrow] to …" plus a Reminders view. Each reminder fires as a follow-through notice (spoken when that's on) and, optionally, as a text from the phone line.
+- **Self-Sustain** (`selfcare.py`):
+  - nightly zip of `data/` to `%USERPROFILE%\ZAENIA Backups`, keeping 14 (models, voices and caches are left out);
+  - Back up now;
+  - an optional 5-minute watchdog scheduled task (`scripts/zae_watchdog.ps1`) that restarts the server in token mode after two missed health checks;
+  - health warnings;
+  - restore only from the console, with the passkey.
+- **Vault** (`core/api/vault.py`): AES-256-GCM items, titles included, under a random key sealed with DPAPI. It needs the desktop key and the Security tab's unlock session. Opening, saving and deleting items is audited. Notebook "Save to Vault" uses it.
+- **Workbench Tools** (`core/science.ts`, client-only):
+  - a safe calculator (recursive-descent parser, no `eval`);
+  - a 13-category unit converter, a timer and stopwatch, Ohm's law and number bases;
+  - CODATA constants and 18 science/tech resource links.
+- **Workbench Labs:**
+  - a 118-element periodic table;
+  - molar mass and moles, ideal gas law, dilution and pH;
+  - a projectile simulator, pendulum, energy and wave calculators;
+  - Ask ZAE.
+- **Code Doctor** (`code_doctor.py`): a static scan that never runs project code (Python ast checks, JSON/YAML loading, TODOs, secret-looking strings, large files). Projects are limited to C:\Projects, Documents, Desktop, source and ZAE herself.
+  - Explain and Fix use her local brain.
+  - A fix is shown as a diff and applied only from the desktop app, with a backup and a hash check against the reviewed file.
+  - Her security code (core/foundation, voice_security, telephony, auth, vault, security routes) and `data/` are review-only.
+- **Suggestions** (`suggestions.py`): her brain proposes up to 5 ideas from her calendar, tasks, reminders, health and game-coach notes. Each needs Grey's approval: an approved "day" idea with a time sets a reminder, and approved "ZAE" ideas form an improvement list.
+- **Arena** (`arena.py`): sends the same question to 2–3 local models in turn, using ZAE's system prompt, with timing and tokens per second. Grey's votes feed a leaderboard. "Use as her brain" writes `data/ui/brain_model.json`, which `local_llm.get_brain_settings` prefers; the configured model stays the fallback.
+- **Status bar and Run check:** `/api/status/bar` reports the model and whether it's loaded, voice, PC voice, mode, CPU, RAM, GPU (nvidia-smi), disk, last backup, phone line and game mode. The sidebar box shows the latest security self-check and a Run check button.
+- **Historical Connections extras:** a per-term summary (total, first seen, peak, spikes, trend), a newspaper language filter, and Suggest keywords and Translate titles (her brain).
+- **Capabilities:** existing ones only. Files and her brain can be changed only through the desktop key (`/api/code/apply`, `/api/arena/brain`).
+- **Tests:** selfcare_test 7, vault_test 2, tools_test 6, science.test.cjs 18. The full suite is 705 OK.
+
+2026-10-25 | v2.1 | Claude | Quantum-style tabs per Grey's answers: Research page tabs, Status (Protocols, Self-Sustain), Reminders, Settings with the Vault, Workbench Tools and Labs, Code Doctor, Suggestions, Arena, Source in Files, status bar, Run check. No ADR change; no capability change.
 

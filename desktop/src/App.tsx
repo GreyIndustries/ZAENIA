@@ -61,12 +61,13 @@ import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { PageTabs } from "./components/shell/PageTabs";
 import { VaultPanel } from "./components/settings/VaultPanel";
 import { LabsPanel, ToolsPanel } from "./components/personal/WorkbenchTools";
+import { ArenaPanel, CodeDoctorPanel, SourceSearch, SuggestionsPanel } from "./components/tools/ToolTabs";
 import { ProtocolsPanel, SelfSustainPanel } from "./components/status/StatusExtras";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
 type VisualMode = "blend" | "progress";
 
@@ -83,6 +84,9 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
   { id: "news", label: "News", short: "News", icon: "news" },
   { id: "research", label: "Research", short: "Research", icon: "clock" },
+  { id: "codedoctor", label: "Code Doctor", short: "Code", icon: "files" },
+  { id: "suggestions", label: "Suggestions", short: "Ideas", icon: "bolt" },
+  { id: "arena", label: "Arena", short: "Arena", icon: "pulse" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "Settings", short: "Settings", icon: "system" },
@@ -101,13 +105,16 @@ const sections: Record<Section, { title: string; label: string; description: str
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
   history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
+  codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS', description: "Scan your projects or ZAE's own code for bugs, have her explain them, and review a proposed fix before it's applied." },
+  suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
+  arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY', description: 'Historical connections, your research notebook, the news reader and the library, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "codedoctor", "suggestions", "arena", "assistant", "files", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research" };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
@@ -1079,6 +1086,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'history':
       case 'notebook':
       case 'research': return <ResearchPage/>;
+      case 'codedoctor': return <CodeDoctorPanel/>;
+      case 'suggestions': return <SuggestionsPanel/>;
+      case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <PageTabs id="status" tabs={[
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
@@ -1088,7 +1098,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "tasks":
       case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
-      case "files": return <FilesPanel onPendingChange={setPendingFiles}/>;
+      case "files": return <PageTabs id="files" tabs={[
+        { id: "files", label: "Files", render: () => <FilesPanel onPendingChange={setPendingFiles}/> },
+        { id: "source", label: "Source", render: () => <SourceSearch/> },
+      ]}/>;
       case "system": return <PageTabs id="settings" tabs={[
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },

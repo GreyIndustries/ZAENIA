@@ -45,6 +45,16 @@ def _game_keep_alive(default: str) -> str:
         return default
 
 
+def _arena_choice() -> str | None:
+    """A brain Grey picked in the Arena (data/ui/brain_model.json); the configured one is the fallback."""
+    try:
+        import json
+        value = json.loads((Path(__file__).resolve().parents[2] / "data" / "ui" / "brain_model.json").read_text(encoding="utf-8")).get("model")
+        return str(value) if value else None
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
 def get_brain_settings() -> dict[str, Any]:
     config = load_brain_config()
 
@@ -54,11 +64,11 @@ def get_brain_settings() -> dict[str, Any]:
     )
 
     return {
-        "model": brain.get(
+        "model": _arena_choice() or brain.get(
             "model",
             "qwen3:8b",
         ),
-        "fallback_model": str(brain.get("fallback_model") or ""),
+        "fallback_model": str(brain.get("fallback_model") or brain.get("model") or ""),
         "endpoint": brain.get(
             "endpoint",
             "http://127.0.0.1:11434/api/chat",

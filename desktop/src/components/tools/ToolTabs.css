@@ -1,0 +1,11 @@
+.cd-finding{font-size:11px;margin-top:2px;color:#a9bdd3}
+.cd-finding--error{color:#ff9d8f}.cd-finding--warn{color:#ffd28c}
+.cd-diff{margin:0;max-height:46vh;overflow:auto;padding:10px;border-radius:10px;background:#050c16;border:1px solid rgba(143,202,255,.18);font:12px/1.45 "Cascadia Mono",Consolas,monospace;white-space:pre}
+.cd-add{color:#7fe3a8}.cd-del{color:#ff9d8f}
+.cd-path{white-space:nowrap;color:#8fcaff;font-family:"Cascadia Mono",Consolas,monospace;font-size:11px}
+.wb-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.sg-tag{align-self:flex-start;font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:9px}
+.sg-tag--day{color:#bff0f2;background:rgba(79,195,200,.2)}.sg-tag--zae{color:#dcd5ff;background:rgba(157,140,255,.22)}
+.ar-answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px}
+.ar-winner{border-color:var(--accent,#e0a353)!important;box-shadow:0 0 18px color-mix(in srgb,var(--accent,#e0a353) 30%,transparent)}
+.ar-model{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;border:1px solid rgba(143,202,255,.2)}
