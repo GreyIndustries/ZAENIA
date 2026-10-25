@@ -115,6 +115,28 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     """A protocol phrase ("goodnight") or "remind me ..." is handled here, before the brain."""
     if authorize is None:
         return None
+    from core.research.agent import chat_command
+    web = chat_command(message)
+    if web is not None:
+        kind, text = web
+        try:
+            if kind == "research":
+                authorize("chat.reply")
+                from core.research.agent import agent
+                agent().start(text)
+                return (f"On it. I'm researching {text} on the web; I'll let you know when it's ready. "
+                        "It's in Research, under Web agent."), "web_agent", ["research"]
+            authorize("memory.write")
+            from core.research.agent import watch
+            if kind == "watch":
+                watch().add(text)
+                return f"I'll keep an eye on {text} and tell you when there's news.", "web_agent", []
+            watch().remove(next((t["id"] for t in watch().list() if t["topic"].casefold() == text.casefold()), text))
+            return f"I've stopped watching {text}.", "web_agent", []
+        except PermissionError:
+            return "Web research isn't available with the current permissions.", "web_agent", []
+        except ValueError as error:
+            return str(error), "web_agent", []
     from core.assistant_platform import reminders as nudges
     request = nudges.parse_request(message)
     if request is not None:

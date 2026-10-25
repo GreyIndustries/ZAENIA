@@ -82,6 +82,13 @@ def gather_context() -> str:
             lines.append(f"Last game review ({last.get('game')}): {last.get('style', '')} Tips: {'; '.join(last.get('tips') or [])}")
     except Exception:
         pass
+    try:
+        from core.research.agent import watch
+        latest = watch().latest()
+        if latest:
+            lines.append("Watch-list news: " + " | ".join(latest))
+    except Exception:
+        pass
     lines.append("Local time: " + datetime.now().astimezone().strftime("%A %d %B, %I:%M %p"))
     return "\n".join(lines)
 

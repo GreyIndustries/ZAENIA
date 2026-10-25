@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 HEX = r"^[0-9a-f]{32}$"
@@ -46,6 +46,16 @@ class TranslateBody(BaseModel):
     target: str = Field(default="English", max_length=30)
     source: str = Field(default="auto", max_length=30)
     style: str = Field(default="natural", max_length=10)
+
+
+class AgentBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(min_length=3, max_length=500)
+
+
+class WatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    topic: str = Field(min_length=2, max_length=120)
 
 
 class TopicBody(BaseModel):
@@ -159,6 +169,47 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
             return {"stories": timeline.world_news(q, days)}
         except Exception as error:
             raise _fail(error) from error
+
+    @router.get("/agent")
+    def agent_jobs() -> dict[str, Any]:
+        from core.research.agent import agent, watch
+        return {"jobs": agent().list(), "watch": watch().list()}
+
+    @router.post("/agent")
+    def agent_start(body: AgentBody) -> dict[str, Any]:
+        from core.research.agent import agent
+        try:
+            return agent().start(body.question)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.delete("/agent/{job_id}")
+    def agent_delete(job_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        from core.research.agent import agent
+        agent().delete(job_id)
+        return {"ok": True}
+
+    @router.post("/watch")
+    def watch_add(body: WatchBody) -> dict[str, Any]:
+        from core.research.agent import watch
+        try:
+            return watch().add(body.topic)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.post("/watch/{topic_id}/check")
+    def watch_check(topic_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        from core.research.agent import watch
+        try:
+            return {"finding": watch().check(topic_id)}
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.delete("/watch/{topic_id}")
+    def watch_remove(topic_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        from core.research.agent import watch
+        watch().remove(topic_id)
+        return {"ok": True}
 
     @router.get("/translate/languages")
     def languages() -> dict[str, Any]:

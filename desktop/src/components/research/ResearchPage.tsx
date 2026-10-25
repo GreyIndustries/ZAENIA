@@ -5,12 +5,13 @@ const HistoryPanel = lazy(() => import("./HistoryPanel").then(module => ({ defau
 const NotebookPanel = lazy(() => import("./NotebookPanel").then(module => ({ default: module.NotebookPanel })));
 const NewsPanel = lazy(() => import("../news/NewsPanel").then(module => ({ default: module.NewsPanel })));
 const LibraryPanel = lazy(() => import("./LibraryPanel").then(module => ({ default: module.LibraryPanel })));
+const WebAgentPanel = lazy(() => import("./WebAgentPanel").then(module => ({ default: module.WebAgentPanel })));
 const TranslatePanel = lazy(() => import("./TranslatePanel").then(module => ({ default: module.TranslatePanel })));
 const ScripturePanel = lazy(() => import("./ScripturePanel").then(module => ({ default: module.ScripturePanel })));
 
-export type ResearchTab = "history" | "notebook" | "news" | "library" | "scripture" | "translate";
+export type ResearchTab = "history" | "notebook" | "news" | "library" | "scripture" | "translate" | "agent";
 const TABS: { id: ResearchTab; label: string }[] = [
-  { id: "history", label: "Historical Connections" }, { id: "notebook", label: "Notebook" },
+  { id: "agent", label: "Web agent" }, { id: "history", label: "Historical Connections" }, { id: "notebook", label: "Notebook" },
   { id: "news", label: "News" }, { id: "library", label: "The Library" }, { id: "scripture", label: "Scripture & ancient" },
   { id: "translate", label: "Translate" },
 ];
@@ -41,7 +42,7 @@ function OpenedTab({ active, id }: { active: boolean; id: ResearchTab }) {
   if (!opened) return null;
   return <div role="tabpanel" hidden={!active}>
     <Suspense fallback={<p className="research__empty">Loading…</p>}>
-      {id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : id === "scripture" ? <ScripturePanel/> : id === "translate" ? <TranslatePanel/> : <LibraryPanel/>}
+      {id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : id === "scripture" ? <ScripturePanel/> : id === "translate" ? <TranslatePanel/> : id === "agent" ? <WebAgentPanel/> : <LibraryPanel/>}
     </Suspense>
   </div>;
 }

@@ -308,6 +308,11 @@ class BriefingSessions:
                 if weather and weather["wet_soon"] and weather["wet_soon"] != weather["family"]:
                     parts.append(f"{weather['wet_soon'].capitalize()} is forecast within the next two hours.")
                 parts.append(traffic or "I could not check the latest traffic.")
+                try:
+                    from core.research.agent import watch
+                    parts.append(watch().briefing_line())
+                except Exception:
+                    pass
             else:
                 weather_lines = weather_updates(weather, old.get("weather"))
                 parts = list(weather_lines)

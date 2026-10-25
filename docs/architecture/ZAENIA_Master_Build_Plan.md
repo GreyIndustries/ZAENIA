@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.4  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.5  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -525,3 +525,24 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - The buttons are Think of suggestions, Upgrades & new features, and Just my day; these call `POST /api/suggestions/think` with `{focus}`.
   - Filters are All, Your day, Upgrade and New feature.
 - **Tests:** tools_test adds two tests.
+
+### 27.4 Web agent and watch list — Claude, 2026-10-25 (v2.5)
+
+- Grey asked for an agent that takes information from the internet, and chose "Both" on the card: research on request plus a watch list.
+- `core/research/agent.py`:
+  - **Research:** `Agent.start(question)`:
+    - Her brain plans up to 3 search queries. It is given today's date, and years she adds on her own are dropped, because her model's knowledge is dated.
+    - Search uses DuckDuckGo's plain HTML results (POST, honest ZAENIA user agent). Ads, video sites and PDFs are skipped.
+    - She reads up to 6 pages, at most 2 per site, through `web.safe_url`.
+    - The answer comes from her local brain, with [n] citations. Page text is wrapped as untrusted data.
+    - It runs in the background, and a follow-through notice is posted when it's done.
+  - **Watch list:** `Watch`:
+    - Up to 30 topics, each checked about once a day by a server thread that runs every 30 minutes and skips while a game is running.
+    - Sources: Google News' RSS search feed (past week) and recent DuckDuckGo results.
+    - Only unseen links are summarised. "NOTHING NEW" means no finding.
+    - New findings go to follow-through, a line in the full spoken briefing, and the Suggestions context.
+  - **Chat and voice commands:** "research …", "look into …", "watch the topic …", "keep an eye on news about …", "stop watching the topic …". These go through `ui_chat_stream._protocol_or_reminder` and need chat.reply or memory.write.
+- **Routes:** `/api/research/agent` (GET list, POST start, DELETE id) and `/api/research/watch` (POST add, POST {id}/check, DELETE id).
+- **UI:** "Web agent" is the first Research tab. It shows the answer with clickable citations, the sources, Add to notebook, the watch list with Check now, and earlier research.
+- **Not used:** sending a browser-like user agent to get Bing's news feed was refused as bot-check circumvention. ZAE identifies herself honestly.
+- **Tests:** agent_test 6. A live run took 16 seconds and gave a cited answer from 6 pages.

@@ -89,6 +89,18 @@ def post_json(url: str, body: dict[str, Any], timeout: float = 20) -> Any:
     return reply.json()
 
 
+def post_form_text(url: str, form: dict[str, str], timeout: float = 20) -> str:
+    """POST a search form (DuckDuckGo's plain HTML results only take POST). Same public-address rule as GET."""
+    import requests
+    if not safe_url(url):
+        raise ValueError("That address isn't a public web page.")
+    reply = requests.post(url, data=form, timeout=timeout, allow_redirects=False,
+                          headers={"User-Agent": USER_AGENT, "Accept": "text/html"})
+    reply.raise_for_status()
+    reply.encoding = reply.encoding or "utf-8"
+    return reply.text[:MAX_BYTES]
+
+
 def get_text(url: str, timeout: float = 20) -> str:
     reply = _get(url, timeout=timeout)
     reply.encoding = reply.encoding or "utf-8"
