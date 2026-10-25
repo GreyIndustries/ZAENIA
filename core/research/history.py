@@ -60,8 +60,13 @@ def _remember(key: str, value: Any) -> None:
             pass
 
 
-def _loc_decades(term: str | None, get: Callable) -> dict[str, int]:
+LANGUAGES = ("english", "spanish", "german", "french", "italian", "norwegian", "polish")
+
+
+def _loc_decades(term: str | None, get: Callable, language: str = "") -> dict[str, int]:
     params = {"fo": "json", "c": 1, "at": "facets"}
+    if language:
+        params["fa"] = f"language:{language}"
     if term:
         params["q"] = f'"{term}"'
     data = get(LOC, params, timeout=60)
@@ -109,7 +114,7 @@ def _gdelt_years(term: str, get: Callable) -> dict[str, float]:
     return {year: round(sum(values) / len(values), 4) for year, values in sorted(years.items()) if year.isdigit() and values}
 
 
-def track(text: str, source: str = "newspapers", get: Callable = web.get_json) -> dict[str, Any]:
+def track(text: str, source: str = "newspapers", get: Callable = web.get_json, language: str = "") -> dict[str, Any]:
     """A timeline per term: [{period, count, rate}]."""
     terms = terms_from(text)
     if source not in SOURCES:
@@ -120,11 +125,13 @@ def track(text: str, source: str = "newspapers", get: Callable = web.get_json) -
             years = _gdelt_years(term, get)
             series.append({"term": term, "points": [{"period": year, "count": None, "rate": value} for year, value in years.items()]})
         return {"source": source, "label": SOURCES[source], "unit": "% of all world news coverage", "series": series}
-    counter = _loc_decades if source == "newspapers" else _archive_decades
-    cached = _cache().get(f"baseline:{source}")
+    language = language if source == "newspapers" and language in LANGUAGES else ""
+    counter = (lambda term, fetch: _loc_decades(term, fetch, language)) if source == "newspapers" else _archive_decades
+    key = f"baseline:{source}" + (f":{language}" if language else "")
+    cached = _cache().get(key)
     baseline = cached or counter(None, get)
     if not cached and baseline:
-        _remember(f"baseline:{source}", baseline)
+        _remember(key, baseline)
     with ThreadPoolExecutor(max_workers=3) as pool:
         counts = list(pool.map(lambda term: counter(term, get), terms))
     for term, found in zip(terms, counts):
@@ -135,12 +142,15 @@ def track(text: str, source: str = "newspapers", get: Callable = web.get_json) -
     return {"source": source, "label": SOURCES[source], "unit": "per million pages (relative)", "series": series}
 
 
-def samples(term: str, source: str, period: str, get: Callable = web.get_json) -> list[dict[str, str]]:
+def samples(term: str, source: str, period: str, get: Callable = web.get_json, language: str = "") -> list[dict[str, str]]:
     """What was written then: up to 8 rows of {when, what, where, url}."""
     term = " ".join(str(term).split())[:60]
     start = int(str(period)[:4])
     if source == "newspapers":
-        data = get(LOC, {"q": f'"{term}"', "dates": f"{start}/{start + 9}", "fo": "json", "c": 8}, timeout=60)
+        params = {"q": f'"{term}"', "dates": f"{start}/{start + 9}", "fo": "json", "c": 8}
+        if language in LANGUAGES:
+            params["fa"] = f"language:{language}"
+        data = get(LOC, params, timeout=60)
         rows = []
         for item in data.get("results") or []:
             where = ", ".join(str(x).title() for x in (item.get("location_city") or [])[:1] + (item.get("location_state") or [])[:1])

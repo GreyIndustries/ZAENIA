@@ -23,6 +23,9 @@ TASKS = {
     "what_happened": ("These are things written about '{term}' in {period}. Explain briefly what was going on in the world "
                       "then that made people write about it, using the samples and general historical knowledge, and "
                       "say clearly which parts come from the samples."),
+    "suggest": ("Suggest 6 related words or short phrases worth tracking through old newspapers and books alongside "
+                "'{term}' (older spellings, synonyms, related events). Reply with one per line, no numbering or commentary."),
+    "translate": "Translate each line into plain English, keeping one line per input line and the same order. Reply with the translations only.",
     # Notebook
     "nb_summary": "Summarise what these sources say about the topic, as bullets, noting where they agree.",
     "nb_compare": "Compare the sources: where they agree, where they disagree, and which seem most reliable and why.",

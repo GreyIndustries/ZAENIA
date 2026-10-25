@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 
 export type Topic = { id: string; name: string; sources: number; updatedAt?: string };
-export type AnalysisTask = "summary" | "facts_opinion" | "book" | "ask" | "what_happened"
+export type AnalysisTask = "summary" | "facts_opinion" | "book" | "ask" | "what_happened" | "suggest" | "translate"
   | "nb_summary" | "nb_compare" | "nb_claims" | "nb_timeline" | "nb_patterns" | "nb_next";
 export type Material = { text?: string; url?: string; kind?: "article" | "book"; title?: string; term?: string; period?: string; topicId?: string };
 

@@ -119,19 +119,20 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
             raise _fail(error) from error
 
     @router.get("/history")
-    def history(terms: str = Query(min_length=1, max_length=200), source: str = Query(default="newspapers", max_length=12)) -> dict[str, Any]:
+    def history(terms: str = Query(min_length=1, max_length=200), source: str = Query(default="newspapers", max_length=12),
+                language: str = Query(default="", max_length=12)) -> dict[str, Any]:
         from core.research import history as timeline
         try:
-            return timeline.track(terms, source)
+            return timeline.track(terms, source, language=language)
         except Exception as error:
             raise _fail(error) from error
 
     @router.get("/history/samples")
     def history_samples(term: str = Query(min_length=1, max_length=60), source: str = Query(max_length=12),
-                        period: str = Query(pattern=r"^\d{4}s?$")) -> dict[str, Any]:
+                        period: str = Query(pattern=r"^\d{4}s?$"), language: str = Query(default="", max_length=12)) -> dict[str, Any]:
         from core.research import history as timeline
         try:
-            return {"rows": timeline.samples(term, source, period)}
+            return {"rows": timeline.samples(term, source, period, language=language)}
         except Exception as error:
             raise _fail(error) from error
 

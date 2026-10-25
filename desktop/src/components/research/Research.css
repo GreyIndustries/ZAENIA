@@ -60,3 +60,14 @@
 .research__chart figcaption em{margin-left:auto;color:#8ea4c0}
 @container (max-width:900px){.research__split,.research__split--even,.research__three{grid-template-columns:minmax(0,1fr)}}
 .glass-module--library,.glass-module--history,.glass-module--notebook{container-type:inline-size}
+/* Research page: its parts as tabs along the top. */
+.research-page{display:flex;flex-direction:column;gap:12px;min-height:0}
+.research-page__tabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:12px;align-self:flex-start;border:1px solid rgba(143,202,255,.18);background:rgba(8,18,32,.6)}
+.research-page__tab{border:0;border-radius:9px;padding:7px 16px;font:inherit;font-size:12px;color:#c4d6ea;background:transparent;cursor:pointer}
+.research-page__tab--on{color:#0b1020;background:var(--accent,#e0a353);font-weight:600}
+.research-page__tab:focus-visible{outline:2px solid #ffc16e;outline-offset:2px}
+.glass-module--research{container-type:inline-size}
+
+.research__summary{display:flex;flex-direction:column;gap:3px;padding:8px 12px;border-radius:10px;border:1px solid rgba(143,202,255,.16);background:rgba(8,18,32,.55);font-size:12px}
+.research__summary div{display:flex;gap:8px;flex-wrap:wrap}
+.research__summary span{color:#b9cde3}

@@ -44,9 +44,7 @@ const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(mo
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
 const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
-const LibraryPanel = lazy(() => import("./components/research/LibraryPanel").then(module => ({ default: module.LibraryPanel })));
-const HistoryPanel = lazy(() => import("./components/research/HistoryPanel").then(module => ({ default: module.HistoryPanel })));
-const NotebookPanel = lazy(() => import("./components/research/NotebookPanel").then(module => ({ default: module.NotebookPanel })));
+const ResearchPage = lazy(() => import("./components/research/ResearchPage").then(module => ({ default: module.ResearchPage })));
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
 const MusicPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.MusicPanel })));
 const FitnessPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.FitnessPanel })));
@@ -59,11 +57,12 @@ import type { Appearance } from "./core/appearance";
 import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
+import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research";
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
 type VisualMode = "blend" | "progress";
 
@@ -79,9 +78,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: 'music', label: 'Music', short: 'Music', icon: 'pulse' },
   { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
   { id: "news", label: "News", short: "News", icon: "news" },
-  { id: "library", label: "Library", short: "Library", icon: "files" },
-  { id: "history", label: "Historical connections", short: "History", icon: "clock" },
-  { id: "notebook", label: "Notebook", short: "Notebook", icon: "notes" },
+  { id: "research", label: "Research", short: "Research", icon: "clock" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "System", short: "System", icon: "system" },
@@ -100,14 +97,15 @@ const sections: Record<Section, { title: string; label: string; description: str
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
   history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
+  research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY', description: 'Historical connections, your research notebook, the news reader and the library, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "library", "history", "notebook", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "assistant", "files", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
-const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks" };
+const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research" };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -1066,9 +1064,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'music': return <MusicPanel drafts={personalDrafts.current}/>;
       case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
-      case 'library': return <LibraryPanel/>;
-      case 'history': return <HistoryPanel/>;
-      case 'notebook': return <NotebookPanel/>;
+      case 'library':
+      case 'history':
+      case 'notebook':
+      case 'research': return <ResearchPage/>;
       case "security": return <SecurityPanel/>;
       case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
       case "tasks":
@@ -1129,6 +1128,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     {!sidebarHidden && <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar__group-label">WORKSPACE</div>
       <nav className="sidebar__nav">{nav.map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "files" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}</nav>
+      <SidebarCheck/>
       <div className="sidebar__bottom"><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
     </aside>}
     <main className="workspace">
@@ -1188,7 +1188,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
               meterRef: listen.meterRef, note: voiceNote, error: listen.error, followUp: followUp && listen.mode === "always", openMic, bargeIn: listen.bargeIn,
               pc: pcVoice, pcTakesOver, canStartPc: IN_TAURI && pcVoice !== null && !pcVoice.running, startPc: () => void startPcVoice() }}
           />
-          <div className="stage-footer"><div><span className="stage-footer__line"/>{source==="preview"?"VISUAL PREVIEW ACTIVE":live?"LIVE STATUS":"STATUS OFFLINE"}<span className="stage-footer__dim"> / {photos.length ? "PHOTO CONVERSATION · THIS SESSION ONLY" : LIVE_API ? "CONVERSATION SAVED IN ZÆNIA MEMORY" : "PREVIEW"}</span></div><button type="button" className="text-action" onClick={()=>openSection(section==="system"?"overview":"system")}>{section==="system"?"BACK TO CORE":"SYSTEM DETAILS"} <Icon name="arrow" size={17}/></button></div>
+          <div className="stage-footer"><StatusBar micListening={listen.mode === "always" || listen.status === "hearing"}/><button type="button" className="text-action" onClick={()=>openSection(section==="system"?"overview":"system")}>{section==="system"?"BACK TO CORE":"SYSTEM DETAILS"} <Icon name="arrow" size={17}/></button></div>
         </section>
         {/* Desktop: tech headlines down the right side (hide with the › button). */}
         {!isPhone && <NewsRail onOpenAll={() => openSection("news")}/>}

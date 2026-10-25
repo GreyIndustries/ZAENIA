@@ -58,6 +58,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/security/checks", "status.read"),
         # The locked Security tab (security_unlock.py): desktop key plus an unlock session.
         ("GET", r"/api/security/summary", "status.read"),
+        ("GET", r"/api/status/bar", "status.read"),
         ("POST", r"/api/security/unlock", "status.read"),
         ("GET", r"/api/security/unlock/[0-9a-f]{32}", "status.read"),
         ("POST", r"/api/security/session", "status.read"),
@@ -412,6 +413,11 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         return {**result, **security_checks().state()}
 
     # Status tab: the overall security level only; the details are on the locked Security tab.
+    @router.get("/api/status/bar")
+    def status_bar() -> dict[str, Any]:
+        from core.api.status_bar import status_bar as read
+        return read(mode())
+
     @router.get("/api/security/summary")
     def security_summary() -> dict[str, Any]:
         from core.api.security_posture import summary

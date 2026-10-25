@@ -107,6 +107,7 @@
 .glass-module--library{--accent:#d9a25f;--accent-2:#f6dcb4}
 .glass-module--history{--accent:#4fc3c8;--accent-2:#bff0f2}
 .glass-module--notebook{--accent:#9d8cff;--accent-2:#dcd5ff}
+.glass-module--research{--accent:#4fc3c8;--accent-2:#bff0f2}
 
 .glass-masthead{position:relative;isolation:isolate;padding:22px 22px 18px;border-radius:22px;overflow:hidden;
   border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);
