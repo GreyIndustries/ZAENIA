@@ -2,14 +2,15 @@ import { useState } from "react";
 import type { TaskRecord } from "../../core/taskModel";
 import { CalendarPanel } from "../calendar/CalendarPanel";
 import { TasksDashboard } from "../tasks/TasksDashboard";
+import { RemindersPanel } from "../status/StatusExtras";
 import "./PlanPanel.css";
 
-type View = "both" | "calendar" | "tasks";
+type View = "both" | "calendar" | "tasks" | "reminders";
 const VIEW_KEY = "zaenia.planView";
-const VIEWS: { id: View; label: string }[] = [{ id: "both", label: "Both" }, { id: "calendar", label: "Calendar" }, { id: "tasks", label: "Tasks" }];
+const VIEWS: { id: View; label: string }[] = [{ id: "both", label: "Both" }, { id: "calendar", label: "Calendar" }, { id: "tasks", label: "Tasks" }, { id: "reminders", label: "Reminders" }];
 
 function readView(): View {
-  try { const saved = localStorage.getItem(VIEW_KEY); return saved === "calendar" || saved === "tasks" ? saved : "both"; }
+  try { const saved = localStorage.getItem(VIEW_KEY); return saved === "calendar" || saved === "tasks" || saved === "reminders" ? saved : "both"; }
   catch { return "both"; }
 }
 
@@ -29,12 +30,13 @@ export function PlanPanel({ remote, tasksVersion = 0, calendarVersion = 0 }: { r
     </div>
     <div className="plan-panel__cols">
       {/* Both stay mounted (one hidden by CSS), so task deadlines still show on the calendar. */}
-      <section className="plan-panel__col plan-panel__col--calendar" aria-label="Calendar" hidden={view === "tasks"}>
+      <section className="plan-panel__col plan-panel__col--calendar" aria-label="Calendar" hidden={view === "tasks" || view === "reminders"}>
         <CalendarPanel refreshVersion={calendarVersion} tasks={tasks}/>
       </section>
-      <section className="plan-panel__col plan-panel__col--tasks" aria-label="Tasks" hidden={view === "calendar"}>
+      <section className="plan-panel__col plan-panel__col--tasks" aria-label="Tasks" hidden={view === "calendar" || view === "reminders"}>
         <TasksDashboard remote={remote} refreshVersion={tasksVersion} onTasks={setTasks}/>
       </section>
+      {view === "reminders" && <section className="plan-panel__col" aria-label="Reminders"><RemindersPanel/></section>}
     </div>
   </div>;
 }

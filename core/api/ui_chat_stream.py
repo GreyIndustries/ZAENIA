@@ -111,6 +111,57 @@ def _conversation_hooks(name: str) -> None:
         pass
 
 
+def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) -> tuple[str, str, list[str]] | None:
+    """A protocol phrase ("goodnight") or "remind me ..." is handled here, before the brain."""
+    if authorize is None:
+        return None
+    from core.assistant_platform import reminders as nudges
+    request = nudges.parse_request(message)
+    if request is not None:
+        try:
+            authorize("ui.tasks.write")
+            when, what = request
+            nudges.reminders().add(what, when)
+            return f"I'll remind you at {nudges.spoken_time(when)}: {what}.", "reminder", []
+        except PermissionError:
+            return "Reminders aren't available with the current permissions.", "reminder", []
+        except ValueError as error:
+            return str(error), "reminder", []
+    from core.assistant_platform.protocols import protocols, run
+    found = protocols().match(message)
+    if found is None:
+        return None
+
+    def ask(question: str) -> str:
+        authorize("chat.reply")
+        return str(_brain(authorize).ask(question, remember=False).get("answer") or "")
+
+    def set_reminder(when: str, text: str) -> str:
+        authorize("ui.tasks.write")
+        parsed = nudges.parse_request(f"remind me in {when} minutes to {text}" if when.isdigit() else f"remind me at {when} to {text}")
+        if parsed is None:
+            raise ValueError(f"I couldn't read the time {when!r}")
+        nudges.reminders().add(parsed[1], parsed[0])
+        return f"Reminder set for {nudges.spoken_time(parsed[0])}."
+
+    def headlines() -> list[str]:
+        from core.tech_news.service import tech_news
+        return [story["title"] for story in tech_news().headlines(limit=3)["stories"]]
+
+    def coach(on: bool) -> None:
+        authorize("assistant.desktop.manage")
+        from core.assistant_platform.game_coach import game_coach
+        game_coach().set_enabled(on)
+
+    def stop_watch() -> None:
+        authorize("assistant.desktop.manage")
+        from core.assistant_platform.screen_watch import watcher
+        watcher().stop()
+
+    result = run(found, ask=ask, set_reminder=set_reminder, headlines=headlines, coach=coach, stop_watch=stop_watch)
+    return result["reply"], "protocol", result["open"]
+
+
 def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | None = None, conversation_id: str | None = None, images: list[str] | None = None, photo_history: list[dict] | None = None, files: list[tuple[str, bytes]] | None = None) -> Iterator[bytes]:
     stop = threading.Event()
     with _ACTIVE_LOCK:
@@ -143,6 +194,15 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                 answer = str(error)
             route = "screen_watch"
             yield _line({"type": "route", "route": route})
+            yield _line({"type": "delta", "text": answer})
+            yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
+            return
+        quick = _protocol_or_reminder(message, authorize)
+        if quick is not None:
+            answer, route, tabs = quick
+            yield _line({"type": "route", "route": route})
+            if tabs:
+                yield _line({"type": "protocol", "open": tabs})
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return

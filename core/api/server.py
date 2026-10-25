@@ -134,6 +134,18 @@ def create_app(
                 followthrough_instance = FollowThroughService(calendar_loader=events, task_loader=tasks)
         return followthrough_instance
 
+    def reminder_due(record: dict) -> None:
+        followthrough().post("reminder", f"{record['id']}:{record['due']}", "Reminder", record["text"])
+        if "phone" in record.get("channels", []):
+            try:
+                from core.telephony.settings import auth_token, load, ready
+                from core.telephony.twilio import TwilioClient
+                config = load()
+                if ready(config):
+                    TwilioClient(config["account_sid"], auth_token()).send_sms(config["zae_number"], config["owner_numbers"][0], "Reminder: " + record["text"])
+            except Exception:
+                pass
+
     if start_followthrough:
         from core.assistant_platform.game_mode import GameModeMonitor
         game_mode = GameModeMonitor()
@@ -142,6 +154,10 @@ def create_app(
         def start_assistant_worker():
             followthrough().start()
             game_mode.start()  # frees the brain while a full-screen game is in front
+            from core.assistant_platform.reminders import reminders
+            reminders().start(reminder_due)  # time-based nudges: on screen, spoken, and texted if asked
+            from core.assistant_platform.selfcare import NIGHTLY
+            NIGHTLY.start()  # nightly backup of data/
             from core.assistant_platform.game_coach import game_coach
             game_coach().start()  # watches Grey play and learns his style (game mode only; can be turned off)
             from core.tech_news.service import tech_news
@@ -343,6 +359,8 @@ def create_app(
     application.include_router(create_assistant_router(require_api_authentication, followthrough, authorize_sources=authorize_operation))
     application.include_router(create_platform_router(require_api_authentication,authorize_operation,provider=platform_provider))
 
+    from core.api.selfcare_routes import create_selfcare_router
+    application.include_router(create_selfcare_router(require_api_authentication))
     from core.api.research_routes import create_research_router
     application.include_router(create_research_router(require_api_authentication))
 

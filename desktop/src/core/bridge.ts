@@ -264,6 +264,7 @@ export type StreamEvent =
   | { type: "route"; route: string }
   | { type: "delta"; text: string }
   | { type: "proposal"; proposal: AssistantProposal }
+  | { type: "protocol"; open: string[] }
   | { type: "done"; reply: string; interrupted: boolean; route?: string }
   | { type: "error"; detail: string };
 export type ChatStream = { done: Promise<void>; cancel: () => void; id: string };

@@ -58,6 +58,8 @@ import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
+import { PageTabs } from "./components/shell/PageTabs";
+import { ProtocolsPanel, SelfSustainPanel } from "./components/status/StatusExtras";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
@@ -835,6 +837,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : "tasks");
           if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
         }
+      } else if (event.type === "protocol") {
+        // A protocol ("goodnight") can open tabs as one of its steps.
+        for (const tab of event.open) if (tab in sections) openSection(tab as Section);
       } else if (event.type === "done") {
         outcome.reply = event.reply;
         outcome.interrupted = event.interrupted;
@@ -1069,7 +1074,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'notebook':
       case 'research': return <ResearchPage/>;
       case "security": return <SecurityPanel/>;
-      case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
+      case "status": return <PageTabs id="status" tabs={[
+        { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
+        { id: "protocols", label: "Protocols", render: () => <ProtocolsPanel/> },
+        { id: "selfsustain", label: "Self-Sustain", render: () => <SelfSustainPanel/> },
+      ]}/>;
       case "tasks":
       case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;

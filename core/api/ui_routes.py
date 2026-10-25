@@ -69,6 +69,17 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
+        # Reminders, Protocols, Self-Sustain (selfcare_routes.py).
+        ("GET", r"/api/reminders", "tasks.read"),
+        ("POST", r"/api/reminders", "ui.tasks.write"),
+        ("DELETE", r"/api/reminders/[0-9a-f]{32}", "ui.tasks.write"),
+        ("GET", r"/api/protocols", "status.read"),
+        ("POST", r"/api/protocols", "assistant.desktop.manage"),
+        ("PUT", r"/api/protocols/[0-9a-f]{32}", "assistant.desktop.manage"),
+        ("DELETE", r"/api/protocols/[0-9a-f]{32}", "assistant.desktop.manage"),
+        ("GET", r"/api/selfcare", "status.read"),
+        ("POST", r"/api/selfcare/backup", "assistant.desktop.manage"),
+        ("POST", r"/api/selfcare/watchdog", "assistant.desktop.manage"),
         # Research (research_routes.py): public sources are reads; the notebook is memory; her analysis is a chat reply.
         ("GET", r"/api/research/library", "status.read"),
         ("POST", r"/api/research/library/read", "status.read"),
