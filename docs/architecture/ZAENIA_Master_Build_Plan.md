@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.2  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.3  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -493,3 +493,18 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - The status bar uses larger chips.
 - **Tests:** scripture_test 4. The full suite passes.
 
+
+### 27.2 Translate tab, Jewish texts and the Quran — Claude, 2026-10-25 (v2.3)
+
+- Grey answered "both" on the card offering the two extras seen in the Quantum screenshots.
+- **Translate** is the sixth Research tab (`TranslatePanel.tsx`, `POST /api/research/translate`, chat.reply; `GET /api/research/translate/languages`, status.read):
+  - Paste text or give a web address (fetched through `web.safe_url`, read as text).
+  - From (detect or one of 30 languages, including Latin, Ancient Greek, Biblical Hebrew and Aramaic), To, and Style (natural, literal, with notes).
+  - `analyze.translate` runs on her local brain only, in paragraph pieces of about 3,500 characters, up to 40,000 characters. The text is wrapped as untrusted data.
+  - Copy, swap languages to translate back, and Add to notebook.
+- **Scripture source picker:** Bible, Jewish texts or Quran.
+  - **Jewish texts:** Sefaria's free API (Mishnah, Talmud by daf, Midrash, Pirkei Avot and more), Hebrew/Aramaic beside English, up to 30 segments. Footnotes, markup and cantillation are stripped. Search uses Sefaria's search API (`web.post_json`, same public-address rule).
+  - **Quran:** alquran.cloud. Uthmani Arabic, transliteration, Pickthall, Yusuf Ali and Saheeh International; references like `2:255` or `36:1-12`. Search uses its English search.
+  - **Bible:** a new Hebrew column gives full Masoretic verses from Sefaria for the Old Testament.
+  - Right-to-left columns render right to left. Marks remember their source. "Traditions" now covers Jewish commentators and Sunni, Shia and Sufi tafsir. "More sites" adds Quran.com.
+- **Tests:** scripture_test 7, research_test adds translation. The full suite passes (713).

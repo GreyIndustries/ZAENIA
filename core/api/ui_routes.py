@@ -111,6 +111,8 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/research/scripture/marks", "memory.write"),
         ("DELETE", r"/api/research/scripture/marks/[0-9a-f]{32}", "memory.write"),
         ("POST", r"/api/research/analyze", "chat.reply"),
+        ("POST", r"/api/research/translate", "chat.reply"),
+        ("GET", r"/api/research/translate/languages", "status.read"),
         ("GET", r"/api/research/notebook", "memory.read"),
         ("POST", r"/api/research/notebook", "memory.write"),
         ("GET", r"/api/research/notebook/[0-9a-f]{32}", "memory.read"),

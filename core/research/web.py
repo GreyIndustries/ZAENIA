@@ -75,6 +75,20 @@ def get_json(url: str, params: dict[str, Any] | None = None, timeout: float = 15
     return reply.json()
 
 
+def post_json(url: str, body: dict[str, Any], timeout: float = 20) -> Any:
+    """POST for search APIs that only take POST (Sefaria). Same public-address rule as GET."""
+    import requests
+    if not safe_url(url):
+        raise ValueError("That address isn't a public web page.")
+    reply = requests.post(url, json=body, timeout=timeout, allow_redirects=False,
+                          headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
+    reply.raise_for_status()
+    if len(reply.content) > MAX_BYTES:
+        raise ValueError("The answer was too large.")
+    reply.encoding = "utf-8"
+    return reply.json()
+
+
 def get_text(url: str, timeout: float = 20) -> str:
     reply = _get(url, timeout=timeout)
     reply.encoding = reply.encoding or "utf-8"

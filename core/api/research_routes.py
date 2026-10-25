@@ -34,8 +34,18 @@ class AnalyzeBody(BaseModel):
 
 class MarkBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    reference: str = Field(min_length=3, max_length=60)
+    reference: str = Field(min_length=1, max_length=80)
     note: str = Field(default="", max_length=1000)
+    source: str = Field(default="bible", pattern=r"^(bible|jewish|quran)$")
+
+
+class TranslateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(default="", max_length=200_000)
+    url: str = Field(default="", max_length=1000)
+    target: str = Field(default="English", max_length=30)
+    source: str = Field(default="auto", max_length=30)
+    style: str = Field(default="natural", max_length=10)
 
 
 class TopicBody(BaseModel):
@@ -150,22 +160,50 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
         except Exception as error:
             raise _fail(error) from error
 
-    @router.get("/scripture")
-    def scripture_passage(ref: str = Query(min_length=3, max_length=60), translations: str = Query(default="WEB,KJV", max_length=60),
-                          interlinear: bool = True) -> dict[str, Any]:
-        from core.research import scripture
+    @router.get("/translate/languages")
+    def languages() -> dict[str, Any]:
+        from core.research.analyze import LANGUAGES, STYLES
+        return {"languages": list(LANGUAGES), "styles": list(STYLES)}
+
+    @router.post("/translate")
+    def translate(body: TranslateBody) -> dict[str, Any]:
+        from core.research import analyze as brain
         try:
-            found = scripture.passage(ref, [t.strip().upper() for t in translations.split(",") if t.strip()], interlinear=interlinear)
+            title = ""
+            text = body.text
+            if not text and body.url:
+                found = article(body.url)
+                text, title = found["text"], found.get("title", "")
+            result = brain.translate(text, body.target, body.source, body.style)
+            result["title"] = title
+            result["original"] = text[:200_000] if body.url else ""
+            return result
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.get("/scripture")
+    def scripture_passage(ref: str = Query(min_length=1, max_length=80), translations: str = Query(default="WEB,KJV", max_length=80),
+                          interlinear: bool = True, source: str = Query(default="bible", pattern=r"^(bible|jewish|quran)$")) -> dict[str, Any]:
+        from core.research import scripture
+        wanted = [t.strip().upper() for t in translations.split(",") if t.strip()]
+        try:
+            if source == "jewish":
+                found = scripture.jewish(ref)
+            elif source == "quran":
+                found = scripture.quran(ref, wanted)
+            else:
+                found = scripture.passage(ref, wanted, interlinear=interlinear)
         except Exception as error:
             raise _fail(error) from error
         found["text"] = scripture.passage_text(found)
         return found
 
     @router.get("/scripture/search")
-    def scripture_search(q: str = Query(min_length=2, max_length=200)) -> dict[str, Any]:
+    def scripture_search(q: str = Query(min_length=2, max_length=200),
+                         source: str = Query(default="bible", pattern=r"^(bible|jewish|quran)$")) -> dict[str, Any]:
         from core.research import scripture
         try:
-            return {"results": scripture.search(q)}
+            return {"results": scripture.search(q, source=source)}
         except Exception as error:
             raise _fail(error) from error
 
@@ -178,7 +216,7 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
     def scripture_mark(body: MarkBody) -> dict[str, Any]:
         from core.research.scripture import Marks
         try:
-            return Marks().add(body.reference, body.note)
+            return Marks().add(body.reference, body.note, body.source)
         except Exception as error:
             raise _fail(error) from error
 

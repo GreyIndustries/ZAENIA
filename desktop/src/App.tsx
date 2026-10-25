@@ -113,7 +113,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS', description: "Scan your projects or ZAE's own code for bugs, have her explain them, and review a proposed fix before it's applied." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
   arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
-  research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY', description: 'Historical connections, your research notebook, the news reader and the library, analysed by ZAE on your PC. Free, legal sources only.' },
+  research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },

@@ -1,9 +1,14 @@
 """Scripture & ancient texts for the Research page.
 
-Offline (on this PC): STEP Bible interlinear Hebrew (TAHOT) and Greek (TAGNT)
-with transliteration, glosses and Strong's numbers, plus the ASV 1901 and
-WEB Classic texts, with full-text word search. Online, public domain only:
-KJV, Young's Literal (NT), Bible in Basic English and Darby from bible-api.com.
+Bible. Offline (on this PC): STEP Bible interlinear Hebrew (TAHOT) and Greek
+(TAGNT) with transliteration, glosses and Strong's numbers, plus the ASV 1901
+and WEB Classic texts, with full-text word search. Online, public domain only:
+KJV, Young's Literal (NT), Bible in Basic English and Darby from bible-api.com,
+and the full Hebrew verses (Masoretic text) from Sefaria.
+Jewish texts (Mishnah, Talmud, Midrash, Pirkei Avot and more): Sefaria's free
+API, Hebrew/Aramaic with English. Quran: Arabic (Uthmani), transliteration and
+the Pickthall, Yusuf Ali and Saheeh International translations from
+alquran.cloud.
 Bookmarks ("My marks") are kept in data/scripture/marks.json. Explanations
 come from ZAE's own brain (core.research.analyze).
 """
@@ -22,6 +27,14 @@ from core.research import web
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MARKS_FILE = PROJECT_ROOT / "data" / "scripture" / "marks.json"
 ONLINE = {"KJV": "kjv", "YLT": "ylt", "BBE": "bbe", "DARBY": "darby"}
+SEFARIA = "https://www.sefaria.org/api/v3/texts/"
+QURAN_EDITIONS = {"AR": "quran-uthmani", "TR": "en.transliteration", "PICKTHALL": "en.pickthall",
+                  "YUSUFALI": "en.yusufali", "SAHIH": "en.sahih"}
+_QURAN_REF = re.compile(r"^\s*(?:(?:surah|sura|quran|qur'an)\s+)?(?P<surah>\d{1,3})(?:\s*[:.]\s*(?P<a1>\d{1,3})(?:\s*-\s*(?P<a2>\d{1,3}))?)?\s*$", re.I)
+_TAGS = re.compile(r"<[^>]+>")
+_INLINE = re.compile(r"</?(?:b|i|em|strong|small|big|span|u)(?:\s[^>]*)?>")
+_FOOTNOTES = re.compile(r'<sup class="footnote-marker">.*?</sup>|<i class="footnote">.*?</i>', re.S)
+_CANTILLATION = re.compile("[\u0591-\u05AF\u05BD\u05C0\u05C3]")
 OFFLINE = {"WEB": "WEB-Classic", "ASV": "ASV1901"}
 _REF = re.compile(r"^\s*(?P<book>[1-3]?\s*[A-Za-z]+(?:\s+(?:of\s+)?[A-Za-z]+){0,2})[ .]+(?P<chapter>\d{1,3})(?:[.:](?P<v1>\d{1,3})(?:\s*-\s*(?P<v2>\d{1,3}))?)?\s*$")
 MAX_VERSES = 30
@@ -80,17 +93,130 @@ def passage(reference: str, translations: list[str], *, interlinear: bool = True
         for verse in verses:
             verse["texts"][short] = by_verse.get(verse["verse"], "")
     language = "Greek" if any(w["dataset"] == "TAGNT" for v in verses for w in v["words"]) else "Hebrew" if any(v["words"] for v in verses) else ""
+    if "HEB" in translations:
+        try:
+            versions = _sefaria(f"{title or book}.{chapter}.{first}-{last}", ["hebrew"], get)[1]
+            hebrew = next((v for v in versions if v.get("language") == "he"), {})
+            lines = _segments(hebrew.get("text"))
+        except Exception:
+            lines = []  # the New Testament isn't on Sefaria; the column just says "not available"
+        for index, verse in enumerate(verses):
+            verse["texts"]["HEB"] = lines[index] if index < len(lines) else ""
     return {"reference": label, "book": title or book, "chapter": chapter, "verses": verses, "originalLanguage": language,
+            "source": "bible", "rtl": ["HEB"],
             "credit": "Interlinear: STEP Bible / Tyndale House Cambridge (CC BY 4.0). ASV 1901, WEB Classic (public domain, offline). "
-                      "KJV, YLT, BBE, Darby via bible-api.com (public domain)."}
+                      "KJV, YLT, BBE, Darby via bible-api.com (public domain). Hebrew verses: Miqra according to the Masorah via Sefaria (CC BY-SA)."}
 
 
-def search(words: str, limit: int = 40) -> list[dict[str, str]]:
-    from core.foundation.moral_code.scripture_context import Corpus
+def _clean(text: Any) -> str:
+    return " ".join(_CANTILLATION.sub("", _TAGS.sub(" ", _INLINE.sub("", _FOOTNOTES.sub("", str(text or ""))))).replace("&nbsp;", " ").split())
+
+
+def _segments(text: Any) -> list[str]:
+    """Sefaria text is a string (one segment) or a list, sometimes nested (a whole chapter of a two-level ref)."""
+    if isinstance(text, list):
+        out: list[str] = []
+        for item in text:
+            out.extend(_segments(item) if isinstance(item, list) else [_clean(item)])
+        return out
+    return [_clean(text)] if text else []
+
+
+def _sefaria(reference: str, versions: list[str], get: Callable) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    ref = " ".join(str(reference).split())[:80].replace(" ", "_")
+    if not ref or not re.fullmatch(r"[\w'.,:\-]+", ref):
+        raise ValueError("Use a reference like Pirkei Avot 1, Mishnah Berakhot 1:1, Berakhot 2a or Genesis Rabbah 1:1.")
+    data = get(SEFARIA + ref, {"version": versions}, timeout=20)
+    if not isinstance(data, dict) or data.get("error"):
+        raise ValueError(f"Sefaria doesn't know that reference: {str(data.get('error', '')).strip() if isinstance(data, dict) else ''}".rstrip(": "))
+    return data, list(data.get("versions") or [])
+
+
+def jewish(reference: str, *, get: Callable = web.get_json) -> dict[str, Any]:
+    """A Jewish text from Sefaria, Hebrew/Aramaic beside English, up to MAX_VERSES segments."""
+    data, versions = _sefaria(reference, ["english", "hebrew"], get)
+    by_lang = {v.get("language"): v for v in versions}
+    english, hebrew = _segments(by_lang.get("en", {}).get("text")), _segments(by_lang.get("he", {}).get("text"))
+    count = min(max(len(english), len(hebrew)), MAX_VERSES)
+    if not count:
+        raise ValueError("Sefaria has no text for that reference.")
+    start = data.get("sections") or []
+    first = int(start[-1]) if start and str(start[-1]).isdigit() and len(start) == len(data.get("sectionNames") or start) else 1
+    verses = [{"verse": first + i, "texts": {"EN": english[i] if i < len(english) else "", "HE": hebrew[i] if i < len(hebrew) else ""}, "words": []}
+              for i in range(count)]
+    credit = "; ".join(f"{'English' if lang == 'en' else 'Hebrew/Aramaic'}: {v.get('versionTitle')} ({v.get('license') or 'see Sefaria'})"
+                       for lang, v in by_lang.items() if v)
+    return {"reference": data.get("ref") or reference, "heReference": data.get("heRef", ""), "book": data.get("book") or reference,
+            "chapter": 0, "verses": verses, "originalLanguage": "", "source": "jewish", "rtl": ["HE"],
+            "credit": f"Sefaria.org (free API). {credit}." + (" Showing the first 30 segments." if max(len(english), len(hebrew)) > MAX_VERSES else "")}
+
+
+def parse_quran(reference: str) -> tuple[int, int, int | None]:
+    match = _QURAN_REF.match(str(reference))
+    if not match:
+        raise ValueError("Use a surah and verses, like 1, 2:255 or 36:1-12.")
+    surah = int(match.group("surah"))
+    first = int(match.group("a1") or 1)
+    last = int(match.group("a2")) if match.group("a2") else first if match.group("a1") else None
+    if not 1 <= surah <= 114:
+        raise ValueError("The Quran has 114 surahs.")
+    if last is not None and (last < first or last - first >= MAX_VERSES):
+        raise ValueError(f"Up to {MAX_VERSES} verses at a time.")
+    return surah, first, last
+
+
+def quran(reference: str, translations: list[str], *, get: Callable = web.get_json) -> dict[str, Any]:
+    surah, first, last = parse_quran(reference)
+    wanted = [short for short in QURAN_EDITIONS if short in translations] or ["AR", "PICKTHALL"]
+    limit = (last - first + 1) if last else MAX_VERSES
+    data = get(f"https://api.alquran.cloud/v1/surah/{surah}/editions/" + ",".join(QURAN_EDITIONS[s] for s in wanted),
+               {"offset": first - 1, "limit": limit}, timeout=20)
+    editions = data.get("data") if isinstance(data, dict) else None
+    if not editions or not editions[0].get("ayahs"):
+        raise ValueError("That surah doesn't have those verses.")
+    verses: dict[int, dict[str, Any]] = {}
+    for short, edition in zip(wanted, editions):
+        for ayah in edition.get("ayahs") or []:
+            number = int(ayah["numberInSurah"])
+            verses.setdefault(number, {"verse": number, "texts": {}, "words": []})["texts"][short] = " ".join(str(ayah.get("text", "")).lstrip("\ufeff").split())
+    ordered = [verses[n] for n in sorted(verses)]
+    head = editions[0]
+    end = ordered[-1]["verse"]
+    more = "" if last or end >= int(head.get("numberOfAyahs") or end) else f" (first {MAX_VERSES} of {head.get('numberOfAyahs')} verses)"
+    return {"reference": f"Surah {surah} ({head.get('englishName')}) {first}" + (f"-{end}" if end > first else "") + more,
+            "book": f"Surah {head.get('englishName')}", "chapter": surah, "verses": ordered, "originalLanguage": "", "source": "quran", "rtl": ["AR"],
+            "meaning": head.get("englishNameTranslation", ""),
+            "credit": "alquran.cloud: Uthmani Arabic text; transliteration; Pickthall (1930) and Yusuf Ali (1934) translations; "
+                      "Saheeh International (used for reading, not redistributed)."}
+
+
+def search(words: str, limit: int = 40, source: str = "bible", *, get: Callable = web.get_json,
+           post: Callable = web.post_json) -> list[dict[str, str]]:
     text = " ".join(str(words).split())[:200]
     if not text:
         raise ValueError("Type a word or phrase to search for.")
-    return Corpus().search(text, limit=max(1, min(limit, 100)))
+    limit = max(1, min(limit, 100))
+    if source == "quran":
+        data = get(f"https://api.alquran.cloud/v1/search/{text}/all/en.pickthall", timeout=20)
+        matches = (data.get("data") or {}).get("matches") or [] if isinstance(data, dict) and data.get("code") == 200 else []
+        return [{"reference": f"{m['surah']['number']}:{m['numberInSurah']}", "edition": f"Surah {m['surah'].get('englishName', '')}",
+                 "text": m.get("text", "")} for m in matches[:limit]]
+    if source == "jewish":
+        data = post("https://www.sefaria.org/api/search-wrapper", {"query": text, "type": "text", "size": limit, "field": "naive_lemmatizer",
+                                                                   "source_proj": True, "filters": [], "filter_fields": []})
+        seen: set[str] = set()
+        results = []
+        for hit in (data.get("hits") or {}).get("hits") or []:
+            found = hit.get("_source") or {}
+            ref = found.get("ref")
+            if not ref or ref in seen:
+                continue
+            seen.add(ref)
+            snippet = ((hit.get("highlight") or {}).get("naive_lemmatizer") or [found.get("exact", "")])[0]
+            results.append({"reference": ref, "edition": str(found.get("version") or "")[:60], "text": _clean(snippet)[:300]})
+        return results
+    from core.foundation.moral_code.scripture_context import Corpus
+    return Corpus().search(text, limit=limit)
 
 
 def passage_text(found: dict[str, Any]) -> str:
@@ -117,9 +243,12 @@ class Marks:
         except (OSError, ValueError):
             return []
 
-    def add(self, reference: str, note: str = "") -> dict[str, Any]:
-        parse_reference(reference)
-        record = {"id": uuid.uuid4().hex, "reference": " ".join(reference.split())[:60], "note": str(note)[:1000],
+    def add(self, reference: str, note: str = "", source: str = "bible") -> dict[str, Any]:
+        if source == "bible":
+            parse_reference(reference)
+        elif source not in ("jewish", "quran") or not reference.strip():
+            raise ValueError("Unknown source.")
+        record = {"id": uuid.uuid4().hex, "reference": " ".join(reference.split())[:80], "note": str(note)[:1000], "source": source,
                   "at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
         from core.foundation.security.io import atomic_write
         with _LOCK:
@@ -152,5 +281,6 @@ MORE_SITES = [
     ("STEP Bible", "https://www.stepbible.org/?q=reference={q}"),
     ("Bible Gateway", "https://www.biblegateway.com/passage/?search={q}"),
     ("Sefaria (Jewish texts)", "https://www.sefaria.org/search?q={q}"),
+    ("Quran.com", "https://quran.com/search?q={q}"),
     ("CCEL (early church writings)", "https://www.ccel.org/search?qu={q}"),
 ]

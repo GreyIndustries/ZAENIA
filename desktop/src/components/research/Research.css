@@ -84,3 +84,9 @@
 .sc-orig{font-size:17px;font-family:"SBL Hebrew","SBL Greek","Times New Roman",serif;color:#fff}
 .sc-word small{font-size:9.5px;color:#9fb6cf}
 .sc-left{max-height:72vh;overflow:auto}
+.sc-rtl p{font-family:"SBL Hebrew","Ezra SIL","Traditional Arabic","Amiri","Times New Roman",serif;font-size:17px;line-height:1.8}
+/* Translate */
+.research__split--halves{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.research__paste textarea{min-height:260px;resize:vertical;line-height:1.55}
+.research .research__result--tall{max-height:60vh}
+.research__bar label.research__meta{display:inline-flex;align-items:center;gap:6px;margin:0}
