@@ -343,6 +343,14 @@ def create_app(
     application.include_router(create_assistant_router(require_api_authentication, followthrough, authorize_sources=authorize_operation))
     application.include_router(create_platform_router(require_api_authentication,authorize_operation,provider=platform_provider))
 
+    # ZAE's phone line (Twilio). Public only through Tailscale Funnel's /phone
+    # path; every request must carry Twilio's signature. Off until set up.
+    from core.telephony.routes import create_phone_router
+    def phone_notice(title: str, message: str) -> None:
+        import uuid
+        followthrough().post("phone", uuid.uuid4().hex, title, message)
+    application.include_router(create_phone_router(authorize_operation, phone_notice))
+
     if include_phone_app:
         # The phone web app's files are public UI code with no secrets; its
         # status and chat calls still go through the token-protected routes.
