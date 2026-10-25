@@ -498,7 +498,8 @@
 
 /* Keep every module reachable as the desktop navigation grows. */
 .zaenia-app:not(.zaenia-app--phone) .sidebar{max-height:calc(100dvh - 88px);min-height:0;overflow:hidden}
-.zaenia-app:not(.zaenia-app--phone) .sidebar__nav{min-height:0;overflow-y:auto;overscroll-behavior:contain}
+.zaenia-app:not(.zaenia-app--phone) .sidebar__nav{min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none}
+.zaenia-app:not(.zaenia-app--phone) .sidebar__nav::-webkit-scrollbar{display:none}
 .zaenia-app:not(.zaenia-app--phone) .sidebar__nav .nav-item{flex-shrink:0}
 
 .zaenia-app--phone .sidebar__nav{overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
