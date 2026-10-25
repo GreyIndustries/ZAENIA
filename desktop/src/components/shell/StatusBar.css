@@ -11,3 +11,8 @@
 .sidebar-check button{padding:7px;border-radius:8px;border:1px solid rgba(143,202,255,.25);background:rgba(16,32,52,.85);color:#e0ecf8;font:inherit;font-size:11px;cursor:pointer}
 .sidebar-check button:disabled{opacity:.55;cursor:default}
 @media(max-width:1000px){.sidebar-check{display:none}}
+/* Fuller status bar at the very bottom of the app (Grey, 2026-10-25). */
+.stage-footer{flex:0 0 auto!important;min-height:38px!important;padding:6px 0 4px;font-size:12px!important;letter-spacing:0!important;align-items:center}
+.stage-footer .status-bar{flex:1;gap:6px 10px;font-size:11.5px;color:#c5d6e8}
+.stage-footer .status-bar span{padding:4px 9px;border-radius:999px;background:rgba(8,18,32,.72);border:1px solid rgba(143,202,255,.16)}
+.sidebar__bottom .sidebar-check{margin:0 0 10px}

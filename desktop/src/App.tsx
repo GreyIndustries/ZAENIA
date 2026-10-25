@@ -1164,8 +1164,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     {!sidebarHidden && <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar__group-label">WORKSPACE</div>
       <nav className="sidebar__nav">{nav.map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "files" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}</nav>
-      <SidebarCheck/>
-      <div className="sidebar__bottom"><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
+      <div className="sidebar__bottom"><SidebarCheck/><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
     </aside>}
     <main className="workspace">
       <div className="dashboard">

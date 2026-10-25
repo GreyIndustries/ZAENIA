@@ -139,3 +139,19 @@
 .glass-module--system{container-type:inline-size}
 .glass-module--system .core-settings{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
 @container (max-width:640px){.glass-module--system .core-settings>.detail-panel__block:first-child,.glass-module--system .core-settings>.status-block{grid-column:auto}}
+
+/* No empty space (Grey, 2026-10-25): module windows use their full width, and
+   card grids flow like a masonry wall so short cards don't leave gaps. */
+.glass-module .section-content,.glass-module .assistant-panel,.glass-module .files-panel{max-width:none!important;margin-left:0!important;margin-right:0!important;width:100%!important}
+.glass-module{container-type:inline-size}
+@container (min-width:900px){
+  .glass-module .assistant-panel__sections{display:block!important;columns:2 380px;column-gap:16px}
+  .glass-module--system .core-settings{display:block!important;columns:2 360px;column-gap:14px}
+}
+@container (min-width:1250px){
+  .glass-module .assistant-panel__sections{columns:3 360px}
+  .glass-module--system .core-settings{columns:3 340px}
+}
+.glass-module .assistant-panel__sections>*,.glass-module--system .core-settings>*{break-inside:avoid;margin:0 0 14px!important;display:inline-block;width:100%;box-sizing:border-box}
+/* The appearance block spans the full width so its swatches and tab rows spread out instead of making one tall column. */
+.glass-module--system .core-settings>.appearance-settings:first-child{column-span:all;display:flex!important}
