@@ -149,10 +149,6 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     <canvas ref={canvasRef} className="neural-core__canvas" aria-hidden="true"/>
     {unavailable && <div className="neural-core__fallback">Core visual unavailable. Module navigation remains available.</div>}
     {layout && <>
-      <div className={`core-boot ${startup.ready ? "core-boot--done" : ""}`} style={{ left: layout.cx, top: layout.cy }} aria-hidden="true">
-        <strong>{startup.progress}</strong>
-        <span>INITIALISING</span>
-      </div>
       {startup.ready && <>
         <svg className={`core-hud${animate ? " core-hud--motion" : ""}`} style={{ left: layout.cx, top: layout.cy, width: layout.r * 2.56, height: layout.r * 2.56 }} viewBox="0 0 200 200" aria-hidden="true">
           <circle className="core-hud__ticks" cx="100" cy="100" r="97"/>
