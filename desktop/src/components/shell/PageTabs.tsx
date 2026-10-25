@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import type { ReactNode } from "react";
 import "../research/Research.css";
 
@@ -19,6 +19,6 @@ export function PageTabs({ id, tabs }: { id: string; tabs: { id: string; label: 
       {tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id}
         className={tab === item.id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(item.id)}>{item.label}</button>)}
     </nav>
-    {tabs.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="tabpanel" hidden={tab !== item.id}>{item.render()}</div>)}
+    {tabs.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="tabpanel" hidden={tab !== item.id}><Suspense fallback={<p className="research__empty">Loading…</p>}>{item.render()}</Suspense></div>)}
   </div>;
 }
