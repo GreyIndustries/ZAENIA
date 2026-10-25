@@ -1,10 +1,10 @@
 /* Status bar along the bottom and the sidebar's health-check box. */
-.status-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;min-width:0;font-size:10.5px;letter-spacing:.02em;color:#9fb6cf}
-.status-bar span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-.status-bar__dot{width:7px;height:7px;border-radius:50%;flex:none;background:#5d6b7d}
-.status-bar__dot--good{background:#4fe39a;box-shadow:0 0 6px #4fe39a99}
-.status-bar__dot--warn{background:#ffb347;box-shadow:0 0 6px #ffb34799}
-.status-bar__dot--bad{background:#ff6b5a;box-shadow:0 0 6px #ff6b5a99}
+.zae-status{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;min-width:0;font-size:10.5px;letter-spacing:.02em;color:#9fb6cf}
+.zae-status span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.zae-status__dot{width:7px;height:7px;border-radius:50%;flex:none;background:#5d6b7d}
+.zae-status__dot--good{background:#4fe39a;box-shadow:0 0 6px #4fe39a99}
+.zae-status__dot--warn{background:#ffb347;box-shadow:0 0 6px #ffb34799}
+.zae-status__dot--bad{background:#ff6b5a;box-shadow:0 0 6px #ff6b5a99}
 .sidebar-check{display:flex;flex-direction:column;gap:6px;margin:10px 4px 6px;padding:10px;border-radius:12px;border:1px solid color-mix(in srgb,var(--accent,#e0a353) 40%,transparent);background:rgba(8,18,32,.6)}
 .sidebar-check__state{display:flex;align-items:center;gap:6px;font-size:11px;color:#cfe0f2}
 .sidebar-check small{font-size:10px;color:#8ea4c0}
@@ -13,6 +13,6 @@
 @media(max-width:1000px){.sidebar-check{display:none}}
 /* Fuller status bar at the very bottom of the app (Grey, 2026-10-25). */
 .stage-footer{flex:0 0 auto!important;min-height:38px!important;padding:6px 0 4px;font-size:12px!important;letter-spacing:0!important;align-items:center}
-.stage-footer .status-bar{flex:1;gap:6px 10px;font-size:11.5px;color:#c5d6e8}
-.stage-footer .status-bar span{padding:4px 9px;border-radius:999px;background:rgba(8,18,32,.72);border:1px solid rgba(143,202,255,.16)}
+.stage-footer .zae-status{flex:1;gap:6px 10px;font-size:11.5px;color:#c5d6e8}
+.stage-footer .zae-status span{padding:4px 9px;border-radius:999px;background:rgba(8,18,32,.72);border:1px solid rgba(143,202,255,.16)}
 .sidebar__bottom .sidebar-check{margin:0 0 10px}

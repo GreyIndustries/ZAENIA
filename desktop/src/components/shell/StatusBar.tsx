@@ -11,7 +11,7 @@ type Bar = {
 type Level = { level: string; score: number };
 type Checks = { running: boolean; retryAfter: number; latest: { status: string; at?: string; counts?: Record<string, number> } | null; error?: string | null };
 
-const dot = (state: "good" | "warn" | "bad" | "off") => <i className={`status-bar__dot status-bar__dot--${state}`} aria-hidden="true"/>;
+const dot = (state: "good" | "warn" | "bad" | "off") => <i className={`zae-status__dot zae-status__dot--${state}`} aria-hidden="true"/>;
 const ago = (iso: string | null | undefined) => {
   if (!iso) return "never";
   const hours = (Date.now() - Date.parse(iso)) / 3_600_000;
@@ -34,11 +34,11 @@ export function StatusBar({ micListening }: { micListening: boolean }) {
     const id = window.setInterval(() => { if (!skipWhileAway(away, 4)) load(); }, 15_000);
     return () => { alive = false; window.clearInterval(id); };
   }, []);
-  if (!LIVE_API) return <div className="status-bar">{dot("off")}Preview: live status shows in the desktop and phone apps.</div>;
-  if (!bar) return <div className="status-bar">{dot("off")}Checking ZAE…</div>;
+  if (!LIVE_API) return <div className="zae-status">{dot("off")}Preview: live status shows in the desktop and phone apps.</div>;
+  if (!bar) return <div className="zae-status">{dot("off")}Checking ZAE…</div>;
   const ram = bar.ramUsedGb / Math.max(1, bar.ramTotalGb);
   const backupAge = bar.backup ? (Date.now() - Date.parse(bar.backup)) / 3_600_000 : Infinity;
-  return <div className="status-bar" role="status" aria-label="ZAE status">
+  return <div className="zae-status" role="status" aria-label="ZAE status">
     <span title={bar.loaded.length ? `Loaded now: ${bar.loaded.join(", ")}` : "Brain unloaded (loads when you talk to her)"}>{dot(bar.loaded.length ? "good" : "off")}Model {bar.model}</span>
     <span>{dot("good")}Voice {bar.voice}</span>
     <span>{dot(micListening ? "good" : "off")}Mic {micListening ? "listening" : "off"}</span>
