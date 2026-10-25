@@ -30,7 +30,6 @@ import { ZAENIA_IDENTITY_DESCRIPTION, ZAENIA_IDENTITY_REPLY, isZaeniaIdentityQue
 import type { CoreTelemetry, ModulePhase } from "./core/coreTelemetry";
 import { SECURITY_CHECK_EVENT } from "./components/status/SecurityChecks";
 import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
-import { NewsRail } from './components/news/NewsRail';
 import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
 import './styles/module-looks.css';
@@ -1227,8 +1226,6 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           />
           <div className="stage-footer"><StatusBar micListening={listen.mode === "always" || listen.status === "hearing"}/><button type="button" className="text-action" onClick={()=>openSection(section==="system"?"overview":"system")}>{section==="system"?"BACK TO CORE":"SYSTEM DETAILS"} <Icon name="arrow" size={17}/></button></div>
         </section>
-        {/* Desktop: tech headlines down the right side (hide with the › button). */}
-        {!isPhone && <NewsRail onOpenAll={() => openSection("news")}/>}
         {isPhone && <aside
           id="core-panel"
           className="detail-panel"
