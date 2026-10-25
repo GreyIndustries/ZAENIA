@@ -5,11 +5,12 @@ const HistoryPanel = lazy(() => import("./HistoryPanel").then(module => ({ defau
 const NotebookPanel = lazy(() => import("./NotebookPanel").then(module => ({ default: module.NotebookPanel })));
 const NewsPanel = lazy(() => import("../news/NewsPanel").then(module => ({ default: module.NewsPanel })));
 const LibraryPanel = lazy(() => import("./LibraryPanel").then(module => ({ default: module.LibraryPanel })));
+const ScripturePanel = lazy(() => import("./ScripturePanel").then(module => ({ default: module.ScripturePanel })));
 
-export type ResearchTab = "history" | "notebook" | "news" | "library";
+export type ResearchTab = "history" | "notebook" | "news" | "library" | "scripture";
 const TABS: { id: ResearchTab; label: string }[] = [
   { id: "history", label: "Historical Connections" }, { id: "notebook", label: "Notebook" },
-  { id: "news", label: "News" }, { id: "library", label: "The Library" },
+  { id: "news", label: "News" }, { id: "library", label: "The Library" }, { id: "scripture", label: "Scripture & ancient" },
 ];
 const KEY = "zaenia.researchTab";
 
@@ -38,7 +39,7 @@ function OpenedTab({ active, id }: { active: boolean; id: ResearchTab }) {
   if (!opened) return null;
   return <div role="tabpanel" hidden={!active}>
     <Suspense fallback={<p className="research__empty">Loading…</p>}>
-      {id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : <LibraryPanel/>}
+      {id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : id === "scripture" ? <ScripturePanel/> : <LibraryPanel/>}
     </Suspense>
   </div>;
 }

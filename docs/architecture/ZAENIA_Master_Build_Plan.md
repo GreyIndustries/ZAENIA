@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.1  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.2  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -476,4 +476,20 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
 - **Tests:** selfcare_test 7, vault_test 2, tools_test 6, science.test.cjs 18. The full suite is 705 OK.
 
 2026-10-25 | v2.1 | Claude | Quantum-style tabs per Grey's answers: Research page tabs, Status (Protocols, Self-Sustain), Reminders, Settings with the Vault, Workbench Tools and Labs, Code Doctor, Suggestions, Arena, Source in Files, status bar, Run check. No ADR change; no capability change.
+
+### 27.1 Scripture & ancient, layout clean-up — Claude, 2026-10-25 (v2.2)
+
+- **Scripture & ancient** is the fifth Research tab; Grey picked "Add it" on the card. `core/research/scripture.py`:
+  - **Passages:** passages up to 30 verses (a whole chapter stops at its last verse). Each verse shows the offline STEP interlinear (Hebrew TAHOT / Greek TAGNT: transliteration, gloss, Strong's number, morphology), offline ASV 1901 and WEB Classic, and online public-domain KJV, YLT, BBE and Darby from bible-api.com.
+  - **Search:** offline word search across the corpus.
+  - **Bookmarks:** "My marks" in `data/scripture/marks.json`.
+  - **Ancient texts:** a list of public-domain works (Apocrypha, Enoch, Josephus, the Apostolic Fathers, Eusebius, Philo, the Talmud and others) found through the Library catalogues.
+  - **ZAE explains:** Explain, Traditions, Compare wording, Cross-refs, Word study (click an original word) and Translate original, all on her local brain. Read aloud uses her Kokoro voice.
+  - **Routes:** `/api/research/scripture*`, using memory.read / memory.write like the existing scripture route.
+- **Layout (Grey: "no empty spaces"):**
+  - Module windows use their full width; the 810 px and 1120 px caps no longer apply inside glass windows.
+  - Settings and Assistant cards flow in 2–3 columns with no gaps, and the appearance block spans the full width.
+  - The Run check box moved to the bottom of the sidebar.
+  - The status bar uses larger chips.
+- **Tests:** scripture_test 4. The full suite passes.
 
