@@ -164,6 +164,12 @@
 .progress-stage--top-left~.home-chat--float .home-chat__log,
 .progress-stage--left~.home-chat--float .home-chat__log,
 .progress-stage--bottom-left~.home-chat--float .home-chat__log{left:0;right:auto;width:min(330px,30%);max-height:min(48vh,440px)}
+/* Room for whole replies (Grey, 2026-10-25): a taller, wider column that scrolls only for very long answers. */
+.zaenia-app .main-stage .home-chat--float .home-chat__log{max-height:min(74vh,860px);width:min(460px,36%);overflow-y:auto;justify-content:flex-start;scrollbar-width:thin}
+.zaenia-app .main-stage .home-chat--float .home-chat__log>:first-child{margin-top:auto}
+.zaenia-app .progress-stage--top-left~.home-chat--float .home-chat__log,
+.zaenia-app .progress-stage--left~.home-chat--float .home-chat__log,
+.zaenia-app .progress-stage--bottom-left~.home-chat--float .home-chat__log{width:min(420px,32%);max-height:min(72vh,820px)}
 .home-chat__photos{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px solid rgba(143,202,255,.25);border-radius:12px;background:rgba(8,18,34,.92);font-size:12px;pointer-events:auto;margin-bottom:8px}
 .home-chat__photo-list,.message__photos{display:flex;gap:6px;flex-wrap:wrap}
 .home-chat__photo{position:relative}

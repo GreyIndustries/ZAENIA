@@ -187,13 +187,20 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
   };
   const logRef = useRef<HTMLDivElement | null>(null);
   const shownCount = useRef(0);
+  const pinnedReply = useRef(-1);
   const tail = messages.length ? messages[messages.length - 1].text.length : 0;
   // New messages scroll into view; a streaming reply follows along unless you scrolled up to read.
+  // A reply taller than the space stays pinned at its first line, so you read it from the start.
   useEffect(() => {
     const log = logRef.current;
     if (!log) return;
     const added = messages.length !== shownCount.current;
     shownCount.current = messages.length;
+    const last = log.lastElementChild as HTMLElement | null;
+    if (last && last.offsetHeight > log.clientHeight - 8) {
+      if (pinnedReply.current !== messages.length) { pinnedReply.current = messages.length; log.scrollTop = last.offsetTop - 4; }
+      return;
+    }
     if (added || log.scrollHeight - log.scrollTop - log.clientHeight < 140) log.scrollTop = log.scrollHeight;
   }, [messages.length, tail, sending, history]);
 
