@@ -151,8 +151,6 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     {layout && <>
       {startup.ready && <>
         <svg className={`core-hud${animate ? " core-hud--motion" : ""}`} style={{ left: layout.cx, top: layout.cy, width: layout.r * 2.56, height: layout.r * 2.56 }} viewBox="0 0 200 200" aria-hidden="true">
-          <circle className="core-hud__ticks" cx="100" cy="100" r="97"/>
-          <circle className="core-hud__segments" cx="100" cy="100" r="92"/>
           {following && <circle className="core-hud__follow" cx="100" cy="100" r="88" pathLength="100" strokeDasharray={`${(followLeft / 30000 * 100).toFixed(2)} 100`}/>}
         </svg>
         <div className="core-state" role="status" aria-live="polite" style={{ left: layout.cx, top: layout.cy + layout.r * (layout.compact ? 1.04 : 1.2) }}>
