@@ -4,9 +4,6 @@ import './KnowledgePanel.css';
 
 type Source = { id: string; title: string; url: string; kind: string; learned: string; characters: number; truncated: number };
 type Match = { title: string; url: string; excerpt: string };
-type Word = { original: string; transliteration: string; gloss: string; lexical?: string; morphology?: string; lexical_and_morphology?: string; raw_reference: string };
-type Passage = { reference: string; book_name: string; words: Word[]; translations: Record<string,string>; source_credit: string; variant_warning: string };
-type BibleStatus = { available: boolean; books: number; credit: string; source: string };
 
 export function KnowledgePanel() {
   const [sources, setSources] = useState<Source[]>([]);
@@ -15,9 +12,6 @@ export function KnowledgePanel() {
   const [content, setContent] = useState('');
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
-  const [reference, setReference] = useState('John 1:1');
-  const [passage, setPassage] = useState<Passage | null>(null);
-  const [bible, setBible] = useState<BibleStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -25,15 +19,9 @@ export function KnowledgePanel() {
   useEffect(() => {
     if (!LIVE_API) return;
     let active = true;
-    void Promise.allSettled([
-      api<{sources:Source[]}>('GET','/api/platform/knowledge'),
-      api<BibleStatus>('GET','/api/platform/scripture/status'),
-    ]).then(([library, scripture]) => {
-      if (!active) return;
-      if (library.status === 'fulfilled') setSources(library.value.sources);
-      else setError(errorText(library.reason));
-      if (scripture.status === 'fulfilled') setBible(scripture.value);
-    });
+    api<{sources:Source[]}>('GET','/api/platform/knowledge').then(
+      library => { if (active) setSources(library.sources); },
+      failure => { if (active) setError(errorText(failure)); });
     return () => { active = false; };
   }, []);
   async function run(action: () => Promise<void>) {
@@ -43,7 +31,7 @@ export function KnowledgePanel() {
     finally { setBusy(false); }
   }
   const disabled = busy || !LIVE_API;
-  return <>
+  return (
     <section className="assistant-panel__section knowledge-panel" aria-labelledby="knowledge-heading" aria-busy={busy}>
       <header className="assistant-panel__heading"><h2 id="knowledge-heading">Learning library</h2><span>{sources.length} sources</span></header>
       <p className="assistant-panel__note">Give Zae a webpage or downloaded text to learn from. She saves searchable excerpts on this PC and uses relevant sources in future answers. This expands her reference library; it does not retrain her model.</p>
@@ -91,21 +79,5 @@ export function KnowledgePanel() {
       </article>)}</div>
       {!sources.length && <p className="assistant-panel__empty">No downloaded sources yet. You can also say “learn from” followed by a webpage address.</p>}
     </section>
-    <section className="assistant-panel__section knowledge-panel" aria-labelledby="interlinear-heading">
-      <header className="assistant-panel__heading"><h2 id="interlinear-heading">Interlinear Bible</h2><span>{bible ? `${bible.books} books · Offline` : 'Checking corpus…'}</span></header>
-      <p className="assistant-panel__note">Hebrew and Greek words, transliteration, English glosses, Strong’s references and morphology. English translations: ASV 1901 and WEB Classic. You can also ask Zae about a specific verse in chat.</p>
-      <form className="assistant-panel__form" onSubmit={event => { event.preventDefault(); void run(async () => {
-        const result=await api<Passage>('GET',`/api/platform/scripture?reference=${encodeURIComponent(reference)}`); setPassage(result);
-      }); }}>
-        <label>Bible verse<input value={reference} onChange={event => setReference(event.target.value)} placeholder="Genesis 1:1" maxLength={80} disabled={disabled}/></label>
-        <button type="submit" disabled={disabled || !reference.trim()}>Read interlinear</button>
-      </form>
-      {passage && <div className="knowledge-panel__passage"><h3>{passage.book_name} · {passage.reference}</h3>
-        {Object.entries(passage.translations).map(([edition,translation]) => <p key={edition}><strong>{edition}</strong> {translation}</p>)}
-        <div className="knowledge-panel__table"><table><thead><tr><th>Original</th><th>Transliteration</th><th>English gloss</th><th>Strong’s / morphology</th><th>Source / variant</th></tr></thead><tbody>{passage.words.map((word,index) => <tr key={index}><td lang={word.raw_reference.startsWith('Gen') ? 'he' : undefined} dir="auto">{word.original}</td><td>{word.transliteration}</td><td>{word.gloss}</td><td>{word.lexical_and_morphology || `${word.lexical} · ${word.morphology}`}</td><td>{word.raw_reference}</td></tr>)}</tbody></table></div>
-        <p className="assistant-panel__note">{passage.variant_warning}</p><small>{passage.source_credit}</small>
-      </div>}
-      <p className="assistant-panel__note"><a href="https://github.com/STEPBible/STEPBible-Data" target="_blank" rel="noreferrer">STEP Bible / Tyndale House Cambridge · CC BY 4.0</a>. Glosses and textual variants are source evidence; interpretation should consider context.</p>
-    </section>
-  </>;
+  );
 }

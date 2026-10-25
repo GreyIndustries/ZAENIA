@@ -166,6 +166,7 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
     {actionError && <p className="assistant-panel__error" role="alert">{actionError}</p>}
     {message && <p className="assistant-panel__success" role="status">{message}</p>}
     <div className="assistant-panel__sections">
+      <div className="assistant-panel__col">
       <KnowledgePanel/>
       <section className="assistant-panel__section" aria-labelledby="assistant-memory-heading" aria-busy={loading}>
         <header className="assistant-panel__heading"><h2 id="assistant-memory-heading">Personal memory</h2><span>{memories?.length ?? "—"} saved</span></header>
@@ -205,6 +206,8 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
         </ul>
         {memories && memories.length >= 100 && <p className="assistant-panel__note">Showing the 100 most recently updated memories.</p>}
       </section>
+      </div>
+      <div className="assistant-panel__col">
       <section className="assistant-panel__section" aria-labelledby="assistant-learned-heading" aria-busy={loading}>
         <header className="assistant-panel__heading"><h2 id="assistant-learned-heading">What ZÆNIA has learned</h2><span>{insights?.length ?? "—"} points</span></header>
         <p className="assistant-panel__note">{learning
@@ -243,6 +246,8 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
         </div>}
       </section>
       <ProfileReview/>
+      </div>
+      <div className="assistant-panel__col">
       <section className="assistant-panel__section" aria-labelledby="assistant-followthrough-heading" aria-busy={loading}>
         <header className="assistant-panel__heading"><h2 id="assistant-followthrough-heading">Follow-through</h2><span>{inbox?.unreadCount ?? "—"} unread</span></header>
         <p className="assistant-panel__note">Keep ZAE’s local service running and this app connected for reminders about saved ZAE events and task deadlines.</p>
@@ -281,6 +286,7 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
         </ul>
         <p className="assistant-panel__note">Calendar reminders: one hour, 15 minutes, and scheduled start. Tasks: one hour before the deadline and once overdue. Missed reminders catch up for 24 hours.</p>
       </section>
+      </div>
     </div>
   </div>;
 }

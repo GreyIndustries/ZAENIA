@@ -53,3 +53,12 @@
 .assistant-panel :focus-visible{outline:2px solid #ffc16e;outline-offset:3px}
 @media(max-width:950px){.assistant-panel__sections{grid-template-columns:1fr}.assistant-panel__list{max-height:460px}}
 @media(max-width:600px){.assistant-panel__section{padding:13px}.assistant-panel__form{padding:11px}.assistant-panel__form input:not([type=checkbox]),.assistant-panel__form select,.assistant-panel__form textarea{font-size:16px}.assistant-panel__heading h2{font-size:16px}.assistant-panel__list{max-height:none}.assistant-panel__top{align-items:center}.assistant-panel__top .section-content__tag{line-height:1.7}.assistant-panel__top .section-content__tag span{display:block}}
+
+/* Three columns whose last card stretches to the tallest column, so nothing is left empty (Grey, 2026-10-25). */
+.assistant-panel__sections{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;align-items:stretch!important}
+.assistant-panel__col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.assistant-panel__col>*{margin:0!important}
+.assistant-panel__col>:last-child{flex:1 1 auto;display:flex;flex-direction:column}
+@container (max-width:1150px){.assistant-panel__sections{grid-template-columns:repeat(2,minmax(0,1fr))!important}.assistant-panel__col:last-child{grid-column:1/-1}}
+@container (max-width:720px){.assistant-panel__sections{grid-template-columns:minmax(0,1fr)!important}}
+@media(max-width:950px){.assistant-panel__sections{grid-template-columns:minmax(0,1fr)!important}}
