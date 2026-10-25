@@ -13,6 +13,41 @@ const KIND_HELP: Record<string, string> = {
 const blank = (): Omit<Protocol, "id"> => ({ name: "", phrases: [""], steps: [{ kind: "say", value: "" }], enabled: true });
 
 /** Protocols: routines started by a phrase ("goodnight"). */
+type Gpu = { name: string; vramGb: number | null; driver: string | null; integrated: boolean; display: string | null };
+type Specs = { cpu: { name: string; cores: number; threads: number; maxGhz: number }; ram: { totalGb: number; sticks: number; speedMts: number; kind: string; model: string };
+  gpus: Gpu[]; board: string; bios: string | null; drives: { name: string; type: string; sizeGb: number }[];
+  volumes: { letter: string; label: string; sizeGb: number; freeGb: number }[]; os: string; at: number };
+
+/** This PC: the parts ZAE knows about, read from Windows. */
+export function PcSpecsPanel() {
+  const [data, setData] = useState<Specs | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async (refresh = false) => {
+    setBusy(true); setError(null);
+    try { setData(await api<Specs>("GET", `/api/pc/specs${refresh ? "?refresh=true" : ""}`, undefined, { timeoutMs: 90_000 })); }
+    catch (failure) { setError(errorText(failure)); } finally { setBusy(false); }
+  }, []);
+  useEffect(() => { if (LIVE_API) void load(); }, [load]);
+  if (!LIVE_API) return <div className="research"><p className="research__note">This PC's specs show in the desktop app.</p></div>;
+  const row = (label: string, value: string) => <div className="pc-spec"><span>{label}</span><strong>{value}</strong></div>;
+  return <div className="research">
+    <p className="research__note">What ZAE knows about your PC, read from Windows on this PC (no serial numbers, nothing sent anywhere). She uses it to answer questions like “can my PC run this?” and for upgrade suggestions.</p>
+    <div className="research__actions"><button type="button" disabled={busy} onClick={() => void load(true)}>{busy ? "Reading…" : "Read again"}</button>
+      {data && <span className="research__meta">Read {new Date(data.at * 1000).toLocaleString()}</span>}</div>
+    {error && <p className="research__error" role="alert">{error}</p>}
+    {data && <div className="wb-cards">
+      <div className="research__side"><h3>Processor</h3>{row("CPU", data.cpu.name)}{row("Cores / threads", `${data.cpu.cores} / ${data.cpu.threads}`)}{row("Max clock", `${data.cpu.maxGhz} GHz`)}</div>
+      <div className="research__side"><h3>Memory</h3>{row("RAM", `${data.ram.totalGb} GB ${data.ram.kind}`)}{row("Speed", `${data.ram.speedMts} MT/s`)}{row("Sticks", `${data.ram.sticks} × ${data.ram.model}`)}</div>
+      {data.gpus.map(gpu => <div className="research__side" key={gpu.name}><h3>{gpu.integrated ? "Integrated graphics" : "Graphics card"}</h3>{row("GPU", gpu.name)}
+        {gpu.vramGb ? row("VRAM", `${gpu.vramGb} GB`) : null}{gpu.driver ? row("Driver", gpu.driver) : null}{gpu.display ? row("Display", gpu.display) : null}</div>)}
+      <div className="research__side"><h3>System</h3>{row("Motherboard", data.board)}{data.bios ? row("BIOS", data.bios) : null}{row("Windows", data.os)}</div>
+      <div className="research__side"><h3>Storage</h3>{data.drives.map(d => <div key={d.name}>{row(d.name, `${d.type} · ${d.sizeGb} GB`)}</div>)}
+        {data.volumes.map(v => <div key={v.letter}>{row(`${v.letter}: ${v.label}`, `${v.freeGb} of ${v.sizeGb} GB free`)}</div>)}</div>
+    </div>}
+  </div>;
+}
+
 export function ProtocolsPanel() {
   const [state, setState] = useState<ProtocolState | null>(null);
   const [draft, setDraft] = useState<(Omit<Protocol, "id"> & { id?: string }) | null>(null);

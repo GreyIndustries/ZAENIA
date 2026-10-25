@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.5  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.6  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -546,3 +546,17 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
 - **UI:** "Web agent" is the first Research tab. It shows the answer with clickable citations, the sources, Add to notebook, the watch list with Check now, and earlier research.
 - **Not used:** sending a browser-like user agent to get Bing's news feed was refused as bot-check circumvention. ZAE identifies herself honestly.
 - **Tests:** agent_test 6. A live run took 16 seconds and gave a cited answer from 6 pages.
+
+### 27.5 PC specs — Claude, 2026-10-25 (v2.6)
+
+- Grey asked for ZAE to know his computer's specs.
+- `core/assistant_platform/pc_specs.py` reads the PC with one PowerShell CIM query plus nvidia-smi:
+  - CPU, RAM sticks, GPUs with VRAM, driver and display, motherboard and BIOS, drives and free space, and the Windows build.
+  - It never reads serial numbers, user names or network details.
+  - The result is cached for a day in `data/ui/pc_specs.json` and warmed at server start-up.
+- **Where ZAE uses it:**
+  - **Her answers:** `pc_context()` adds the specs, plus live load from the status bar, to her brain context. This only happens when a question is about the PC, its parts or what it can run.
+  - **Upgrade suggestions:** the suggestions context also gets the specs.
+- **Route:** `GET /api/pc/specs[?refresh=true]` (status.read).
+- **UI:** Status > This PC shows the parts, with a "Read again" button.
+- **Tests:** pc_specs_test 2.

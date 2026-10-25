@@ -173,6 +173,11 @@ def gather_system_context(versions: Callable[[], dict[str, Any]] | None = None) 
     except Exception:
         pass
     try:
+        from core.assistant_platform.pc_specs import specs, summary
+        lines.append("THIS PC'S PARTS:\n" + summary(specs()))
+    except Exception:
+        pass
+    try:
         from core.api.status_bar import status_bar
         bar = status_bar()
         gpu = bar.get("gpu") or {}

@@ -87,6 +87,15 @@ def create_selfcare_router(require_api_authentication: Callable[..., None]) -> A
         protocols().delete(protocol_id)
         return {"ok": True}
 
+    @router.get("/api/pc/specs")
+    def pc_specs(refresh: bool = False) -> dict[str, Any]:
+        from core.assistant_platform.pc_specs import specs, summary
+        try:
+            data = specs(refresh=refresh)
+        except Exception as error:
+            raise HTTPException(502, f"Couldn't read this PC's parts ({type(error).__name__}).") from error
+        return {**data, "summary": summary(data)}
+
     @router.get("/api/selfcare")
     def selfcare_state() -> dict[str, Any]:
         from core.assistant_platform.selfcare import health

@@ -97,3 +97,4 @@
 .wa-topics{max-height:none}
 .research .wa-topic{padding:10px;gap:6px}
 .wa-topic .research__result{max-height:220px}
+.pc-spec{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid rgba(143,202,255,.08);font-size:12.5px}.pc-spec span{color:#9fb6cf}.pc-spec strong{text-align:right;font-weight:600;color:#e8f1fb}

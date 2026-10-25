@@ -44,6 +44,7 @@ const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").t
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
 const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
 const ProtocolsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.ProtocolsPanel })));
+const PcSpecsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.PcSpecsPanel })));
 const SelfSustainPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.SelfSustainPanel })));
 const VaultPanel = lazy(() => import("./components/settings/VaultPanel").then(module => ({ default: module.VaultPanel })));
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
@@ -1100,6 +1101,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
         { id: "protocols", label: "Protocols", render: () => <ProtocolsPanel/> },
         { id: "selfsustain", label: "Self-Sustain", render: () => <SelfSustainPanel/> },
+        { id: "pc", label: "This PC", render: () => <PcSpecsPanel/> },
       ]}/>;
       case "tasks":
       case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;

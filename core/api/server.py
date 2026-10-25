@@ -164,6 +164,8 @@ def create_app(
             tech_news().start()  # tech headlines every 30 minutes (optional, online)
             from core.email_watch.service import email_watch
             email_watch().start()  # important-email summaries every 5 minutes, once Gmail is connected
+            from core.assistant_platform.pc_specs import warm
+            warm()  # reads the PC's parts once so she can answer about them
             from core.research.agent import watch
             watch().start()  # watch-list topics checked about once a day (online; skipped while gaming)
             from core.api.security_check import security_checks
