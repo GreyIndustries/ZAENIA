@@ -26,6 +26,19 @@ TASKS = {
     "suggest": ("Suggest 6 related words or short phrases worth tracking through old newspapers and books alongside "
                 "'{term}' (older spellings, synonyms, related events). Reply with one per line, no numbering or commentary."),
     "translate": "Translate each line into plain English, keeping one line per input line and the same order. Reply with the translations only.",
+    # Scripture & ancient texts (the passage arrives with every translation and the original words)
+    "sc_explain": ("Explain this passage plainly: what it says, its setting in the book, and what the key words mean in the "
+                   "original language. Separate what the text says from interpretation."),
+    "sc_traditions": ("How do different traditions read this passage: Jewish, Catholic, Eastern Orthodox and Protestant (and "
+                      "scholarly historical-critical reading where relevant)? Be fair to each and say where they agree."),
+    "sc_compare": ("Compare the wording of the translations given, verse by verse. Point out real differences in meaning, why "
+                   "they differ (the original word, manuscript differences, translation philosophy) and which is most literal."),
+    "sc_crossrefs": ("List 6-10 cross-references (other passages with the same words, themes or quotations) as references with "
+                     "one line each on the connection. Only give references you're confident exist."),
+    "sc_wordstudy": ("Do a word study of '{term}' in this passage: the original word, Strong's number, root meaning, range of "
+                     "meaning, and how it is used elsewhere. Use the interlinear data given."),
+    "sc_translate": ("Translate the original-language words given into plain, literal English yourself, word by word and then "
+                     "as a smooth sentence, noting any word with more than one possible meaning."),
     # Notebook
     "nb_summary": "Summarise what these sources say about the topic, as bullets, noting where they agree.",
     "nb_compare": "Compare the sources: where they agree, where they disagree, and which seem most reliable and why.",

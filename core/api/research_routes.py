@@ -32,6 +32,12 @@ class AnalyzeBody(BaseModel):
     topicId: str = Field(default="", max_length=32)
 
 
+class MarkBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reference: str = Field(min_length=3, max_length=60)
+    note: str = Field(default="", max_length=1000)
+
+
 class TopicBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=120)
@@ -143,6 +149,44 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
             return {"stories": timeline.world_news(q, days)}
         except Exception as error:
             raise _fail(error) from error
+
+    @router.get("/scripture")
+    def scripture_passage(ref: str = Query(min_length=3, max_length=60), translations: str = Query(default="WEB,KJV", max_length=60),
+                          interlinear: bool = True) -> dict[str, Any]:
+        from core.research import scripture
+        try:
+            found = scripture.passage(ref, [t.strip().upper() for t in translations.split(",") if t.strip()], interlinear=interlinear)
+        except Exception as error:
+            raise _fail(error) from error
+        found["text"] = scripture.passage_text(found)
+        return found
+
+    @router.get("/scripture/search")
+    def scripture_search(q: str = Query(min_length=2, max_length=200)) -> dict[str, Any]:
+        from core.research import scripture
+        try:
+            return {"results": scripture.search(q)}
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.get("/scripture/marks")
+    def scripture_marks() -> dict[str, Any]:
+        from core.research.scripture import ANCIENT, MORE_SITES, Marks
+        return {"marks": Marks().list()[::-1], "ancient": ANCIENT, "sites": [{"name": n, "url": u} for n, u in MORE_SITES]}
+
+    @router.post("/scripture/marks")
+    def scripture_mark(body: MarkBody) -> dict[str, Any]:
+        from core.research.scripture import Marks
+        try:
+            return Marks().add(body.reference, body.note)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.delete("/scripture/marks/{mark_id}")
+    def scripture_unmark(mark_id: str) -> dict[str, Any]:
+        from core.research.scripture import Marks
+        Marks().delete(mark_id)
+        return {"ok": True}
 
     @router.get("/notebook")
     def topics() -> dict[str, Any]:
