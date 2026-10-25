@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.3  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.4  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -508,3 +508,20 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - **Bible:** a new Hebrew column gives full Masoretic verses from Sefaria for the Old Testament.
   - Right-to-left columns render right to left. Marks remember their source. "Traditions" now covers Jewish commentators and Sunni, Shia and Sufi tafsir. "More sites" adds Quran.com.
 - **Tests:** scripture_test 7, research_test adds translation. The full suite passes (713).
+
+### 27.3 Suggestions for upgrades and new features — Claude, 2026-10-25 (v2.4)
+
+- Grey asked for her suggestions to also cover upgrading the system and new features.
+- **Kinds of suggestion:** each suggestion is now one of three kinds: *Your day*, *Upgrade* or *New feature*. Older "ZAE herself" items show as features.
+- **What upgrade ideas are based on:** `gather_system_context()` gives her:
+  - Python, her key packages and Ollama, each against its latest release. Package versions come from PyPI and the Ollama version from GitHub releases; both are public and cached for 12 hours in `data/ui/upgrade_check.json`.
+  - Her local models and the brain model in use.
+  - RAM, GPU memory and free disk; Node; and her health issues.
+  - The list of what the app already has, so she doesn't suggest existing features.
+  - Earlier upgrade and feature ideas, so she doesn't repeat them.
+- **Detail on upgrade and feature ideas:** each carries *how* (one or two sentences) and *effort* (small, medium or large).
+- **Upgrade plan:** approving an upgrade or feature puts it on her upgrade plan. "Copy upgrade plan" gives a list to paste to Claude or Codex.
+- **Page:**
+  - The buttons are Think of suggestions, Upgrades & new features, and Just my day; these call `POST /api/suggestions/think` with `{focus}`.
+  - Filters are All, Your day, Upgrade and New feature.
+- **Tests:** tools_test adds two tests.

@@ -24,6 +24,11 @@ class ApplyBody(ProjectBody):
     oldHash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 
+class ThinkBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    focus: str = Field(default="all", pattern=r"^(all|day|system)$")
+
+
 class DecideBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
@@ -136,14 +141,15 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
     # ---- Suggestions
     @router.get("/api/suggestions")
     def suggestion_list() -> dict[str, Any]:
-        from core.assistant_platform.suggestions import suggestions
-        return {"suggestions": suggestions().list()[::-1]}
+        from core.assistant_platform.suggestions import suggestions, upgrade_plan
+        items = suggestions().list()
+        return {"suggestions": items[::-1], "plan": upgrade_plan(items)}
 
     @router.post("/api/suggestions/think")
-    def suggestion_think() -> dict[str, Any]:
+    def suggestion_think(body: ThinkBody | None = None) -> dict[str, Any]:
         from core.assistant_platform.suggestions import suggestions
         try:
-            return {"new": suggestions().think(_ask_brain)}
+            return {"new": suggestions().think(_ask_brain, focus=(body.focus if body else "all"))}
         except Exception as error:
             raise _bad(error) from error
 

@@ -74,6 +74,38 @@ class SuggestionsTest(unittest.TestCase):
             self.assertEqual(done["outcome"], "set 9pm pack gym bag")
             self.assertEqual(box.decide(fresh[1]["id"], False)["status"], "dismissed")
 
+    def test_upgrades_and_features(self):
+        from core.assistant_platform import suggestions as module
+        with tempfile.TemporaryDirectory() as folder:
+            box = Suggestions(Path(folder) / "s.json")
+            prompts = []
+            reply = json.dumps({"suggestions": [
+                {"for": "upgrade", "title": "Update torch", "why": "2.6 is out.", "how": "Run zae.ps1 update.", "effort": "Medium"},
+                {"for": "feature", "title": "Morning briefing", "why": "You ask daily.", "effort": "huge"},
+                {"for": "day", "title": "Gym", "why": "x", "remind": "6pm|gym"}]})
+            fresh = box.think(lambda prompt: prompts.append(prompt) or reply, context=lambda: "torch 2.5 (latest 2.6)", focus="system")
+            self.assertEqual([(s["for"], s["effort"]) for s in fresh], [("upgrade", "medium"), ("feature", "")])
+            self.assertIn("UPGRADE", prompts[0]); self.assertNotIn("DAY (", prompts[0])
+            box.decide(fresh[0]["id"], True)
+            self.assertEqual(box.list()[0]["outcome"], "Added to ZAE's upgrade plan.")
+            plan = module.upgrade_plan(box.list())
+            self.assertIn("Upgrade [medium]: Update torch. 2.6 is out. How: Run zae.ps1 update.", plan)
+            box.think(lambda prompt: prompts.append(prompt) or "{}", context=str, focus="all")
+            self.assertIn("Don't repeat these earlier ideas: Morning briefing; Update torch", prompts[1])
+            with self.assertRaises(ValueError):
+                box.think(lambda prompt: "{}", context=str, focus="weird")
+
+    def test_system_context_reports_versions_and_existing_features(self):
+        from core.assistant_platform import suggestions as module
+        versions = lambda: {"python": "3.13.15", "packages": [{"name": "torch", "installed": "2.5", "latest": "2.6"},
+                                                               {"name": "fastapi", "installed": "1.0", "latest": "1.0"}],
+                            "ollama": {"installed": "0.12.0", "latest": "0.13.1"}}
+        text = module.gather_system_context(versions)
+        self.assertIn("Packages with newer releases: torch 2.5 (latest 2.6)", text)
+        self.assertIn("Packages up to date: fastapi", text)
+        self.assertIn("Ollama 0.12.0 (latest 0.13.1)", text)
+        self.assertIn("WHAT THE APP ALREADY HAS", text)
+
 
 class ArenaTest(unittest.TestCase):
     def test_rounds_votes_board_and_brain_override(self):

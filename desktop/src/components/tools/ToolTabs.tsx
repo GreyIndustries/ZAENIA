@@ -80,45 +80,65 @@ export function CodeDoctorPanel() {
 }
 
 // ---------------------------------------------------------------- Suggestions
-type Suggestion = { id: string; for: "day" | "zae"; title: string; why: string; remind: string; status: "new" | "approved" | "dismissed"; outcome?: string; created: string };
+type Kind = "day" | "upgrade" | "feature";
+type Suggestion = { id: string; for: Kind | "zae"; title: string; why: string; how?: string; effort?: string; remind: string; status: "new" | "approved" | "dismissed"; outcome?: string; created: string };
+const KIND_LABEL: Record<Kind, string> = { day: "Your day", upgrade: "Upgrade", feature: "New feature" };
+const kindOf = (item: Suggestion): Kind => item.for === "zae" ? "feature" : item.for;
 
 export function SuggestionsPanel() {
   const [items, setItems] = useState<Suggestion[]>([]);
-  const [busy, setBusy] = useState(false);
+  const [plan, setPlan] = useState("");
+  const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [show, setShow] = useState<"new" | "approved" | "dismissed">("new");
-  const load = useCallback(() => api<{ suggestions: Suggestion[] }>("GET", "/api/suggestions").then(reply => setItems(reply.suggestions), failure => setError(errorText(failure))), []);
+  const [kind, setKind] = useState<Kind | "all">("all");
+  const load = useCallback(() => api<{ suggestions: Suggestion[]; plan?: string }>("GET", "/api/suggestions").then(reply => { setItems(reply.suggestions); setPlan(reply.plan ?? ""); }, failure => setError(errorText(failure))), []);
   useEffect(() => { if (LIVE_API) void load(); }, [load]);
-  const think = async () => {
-    setBusy(true); setError(null);
-    try { await api("POST", "/api/suggestions/think", {}, { timeoutMs: 300_000 }); await load(); }
-    catch (failure) { setError(errorText(failure)); } finally { setBusy(false); }
+  const think = async (focus: "all" | "day" | "system", label: string) => {
+    setBusy(label); setError(null); setNote(null);
+    try { const reply = await api<{ new: Suggestion[] }>("POST", "/api/suggestions/think", { focus }, { timeoutMs: 300_000 }); setShow("new"); setNote(reply.new.length ? `${reply.new.length} new idea${reply.new.length === 1 ? "" : "s"}.` : "Nothing new this time."); await load(); }
+    catch (failure) { setError(errorText(failure)); } finally { setBusy(null); }
   };
   const decide = async (id: string, approve: boolean) => {
     try { await api("POST", `/api/suggestions/${id}`, { approve }); await load(); } catch (failure) { setError(errorText(failure)); }
   };
+  const copyPlan = async () => {
+    try { await navigator.clipboard.writeText(plan); setNote("Upgrade plan copied. Paste it to Claude or Codex to have it built."); } catch { setError("Couldn't copy the plan."); }
+  };
   if (!LIVE_API) return needServer;
-  const shown = items.filter(item => item.status === show);
-  const copyList = items.filter(item => item.status === "approved" && item.for === "zae").map(item => `- ${item.title}: ${item.why}`).join("\n");
+  const inView = items.filter(item => item.status === show);
+  const shown = inView.filter(item => kind === "all" || kindOf(item) === kind);
   return <div className="research">
-    <p className="research__note">ZAE's own ideas for your day and for herself, from your calendar, tasks, reminders and her health. Nothing happens unless you approve it. Approving a “your day” idea with a time sets the reminder; approved “ZAE herself” ideas become her improvement list for Claude or Codex.</p>
+    <p className="research__note">ZAE's own ideas: for your day (from your calendar, tasks and reminders), upgrades to her system (from the versions of Python, her packages, Ollama and her models against the latest releases, and your PC's RAM, GPU and disk) and new features she could have. Nothing happens unless you approve it. Approving a day idea with a time sets the reminder; approved upgrades and features go on her upgrade plan.</p>
     <div className="research__actions">
-      <button type="button" className="research__primary" disabled={busy} onClick={() => void think()}>{busy ? "Thinking…" : "Think of suggestions"}</button>
+      <button type="button" className="research__primary" disabled={!!busy} onClick={() => void think("all", "everything")}>{busy === "everything" ? "Thinking…" : "Think of suggestions"}</button>
+      <button type="button" disabled={!!busy} onClick={() => void think("system", "system")}>{busy === "system" ? "Checking her system…" : "Upgrades & new features"}</button>
+      <button type="button" disabled={!!busy} onClick={() => void think("day", "day")}>{busy === "day" ? "Thinking…" : "Just my day"}</button>
+    </div>
+    <div className="research__actions">
       {(["new", "approved", "dismissed"] as const).map(item => <button type="button" key={item} aria-pressed={show === item} className={show === item ? "research__primary" : ""} onClick={() => setShow(item)}>
         {item === "new" ? "New" : item === "approved" ? "Approved" : "Dismissed"} ({items.filter(entry => entry.status === item).length})</button>)}
-      {show === "approved" && copyList && <button type="button" onClick={() => void navigator.clipboard?.writeText(`Improvements Grey approved for ZAE:\n${copyList}`)}>Copy improvement list</button>}
+      <span className="research__meta" style={{ margin: "0 4px" }}>Show</span>
+      {(["all", "day", "upgrade", "feature"] as const).map(item => <button type="button" key={item} aria-pressed={kind === item} className={kind === item ? "research__primary" : ""} onClick={() => setKind(item)}>
+        {item === "all" ? "All" : KIND_LABEL[item]} ({item === "all" ? inView.length : inView.filter(entry => kindOf(entry) === item).length})</button>)}
+      {show === "approved" && plan && <button type="button" onClick={() => void copyPlan()}>Copy upgrade plan</button>}
     </div>
+    {busy && <p className="research__working" role="status">{busy === "system" ? "ZAE is checking her versions, models and your PC, then thinking…" : "ZAE is thinking…"}</p>}
+    {note && <p className="research__meta">✓ {note}</p>}
     {error && <p className="research__error" role="alert">{error}</p>}
     {!shown.length && <p className="research__empty">{show === "new" ? "No new suggestions. Ask her to think of some." : "Nothing here yet."}</p>}
-    <div className="wb-cards">{shown.map(item => <div className="research__side" key={item.id}>
-      <span className={`sg-tag sg-tag--${item.for}`}>{item.for === "day" ? "Your day" : "ZAE herself"}</span>
-      <h3>{item.title}</h3>
-      <p>{item.why}</p>
-      {item.remind && <p className="research__meta">Reminder if approved: {item.remind.replace("|", " · ")}</p>}
-      {item.outcome && <p className="research__meta">✓ {item.outcome}</p>}
-      {item.status === "new" && <div className="research__actions"><button type="button" className="research__primary" onClick={() => void decide(item.id, true)}>Approve</button>
-        <button type="button" onClick={() => void decide(item.id, false)}>Dismiss</button></div>}
-    </div>)}</div>
+    <div className="wb-cards">{shown.map(item => { const k = kindOf(item);
+      return <div className="research__side" key={item.id}>
+        <span className="sg-tags"><span className={`sg-tag sg-tag--${k}`}>{KIND_LABEL[k]}</span>{item.effort && <span className="sg-tag sg-tag--effort">{item.effort} effort</span>}</span>
+        <h3>{item.title}</h3>
+        <p>{item.why}</p>
+        {item.how && <p className="research__meta"><strong>How:</strong> {item.how}</p>}
+        {item.remind && <p className="research__meta">Reminder if approved: {item.remind.replace("|", " · ")}</p>}
+        {item.outcome && <p className="research__meta">✓ {item.outcome}</p>}
+        {item.status === "new" && <div className="research__actions"><button type="button" className="research__primary" onClick={() => void decide(item.id, true)}>Approve</button>
+          <button type="button" onClick={() => void decide(item.id, false)}>Dismiss</button></div>}
+      </div>; })}</div>
   </div>;
 }
 
