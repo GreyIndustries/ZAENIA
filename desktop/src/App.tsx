@@ -59,6 +59,8 @@ import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { PageTabs } from "./components/shell/PageTabs";
+import { VaultPanel } from "./components/settings/VaultPanel";
+import { LabsPanel, ToolsPanel } from "./components/personal/WorkbenchTools";
 import { ProtocolsPanel, SelfSustainPanel } from "./components/status/StatusExtras";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -83,7 +85,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "research", label: "Research", short: "Research", icon: "clock" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
-  { id: "system", label: "System", short: "System", icon: "system" },
+  { id: "system", label: "Settings", short: "Settings", icon: "system" },
 ];
 const sections: Record<Section, { title: string; label: string; description: string }> = {
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
@@ -92,7 +94,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   tasks: { title: "Tasks & Calendar", label: "PLAN", description: "Your schedule and your tasks side by side. Task deadlines show on the calendar; everything is kept on your PC, so the phone and desktop match." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
-  workbench: { title: 'Workbench', label: 'PROJECTS & INVENTIONS', description: 'Project notes, sketches, blueprint references and experiments, organized by subject.' },
+  workbench: { title: 'Workbench', label: 'PROJECTS · TOOLS · LABS', description: 'Projects and inventions, science and tech tools, and chemistry and physics labs, with ZAE to explain.' },
   music: { title: 'Music', label: 'CREATE & RELEASE', description: 'GarageBand projects, production progress, release links and dated song statistics.' },
   fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Food intake, exercise, energy estimates and training plans from your sources.' },
   news: { title: 'News', label: 'TECH & WORLD', description: 'Tech and world headlines from sixteen credible newsrooms, checked every 30 minutes, plus a keyword search of news sites worldwide. Open a story to read it without ads and have ZAE summarise it.' },
@@ -102,7 +104,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY', description: 'Historical connections, your research notebook, the news reader and the library, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
-  system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
+  system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
 };
 // On desktop every workspace page opens as a window over the core.
 const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "assistant", "files", "system"];
@@ -1065,7 +1067,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   function sectionBody(id: Section): ReactNode {
     switch (id) {
       case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
-      case 'workbench': return <WorkbenchPanel drafts={personalDrafts.current}/>;
+      case 'workbench': return <PageTabs id="workbench" tabs={[
+        { id: "projects", label: "Projects", render: () => <WorkbenchPanel drafts={personalDrafts.current}/> },
+        { id: "tools", label: "Tools", render: () => <ToolsPanel/> },
+        { id: "labs", label: "Labs", render: () => <LabsPanel/> },
+      ]}/>;
       case 'music': return <MusicPanel drafts={personalDrafts.current}/>;
       case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
@@ -1083,7 +1089,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
       case "files": return <FilesPanel onPendingChange={setPendingFiles}/>;
-      case "system": return <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></>;
+      case "system": return <PageTabs id="settings" tabs={[
+        { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
+        { id: "vault", label: "Vault", render: () => <VaultPanel/> },
+      ]}/>;
       default: return null;
     }
   }

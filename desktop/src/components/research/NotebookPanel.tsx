@@ -3,6 +3,7 @@ import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import type { AnalysisTask, Topic } from "./researchShared";
 import { AnalysisResult, NeedsServer, UNTRUSTED_NOTE, useAnalysis } from "./researchShared";
+import { securitySession } from "../security/SecurityPanel";
 import "./Research.css";
 
 type Source = { id: string; title: string; kind: string; url: string; meta: string; chars: number; addedAt: string };
@@ -76,6 +77,15 @@ export function NotebookPanel() {
     try { await api("POST", "/api/platform/notes", { title: `Research: ${current.name}`.slice(0, 160), body, pinned: false, archived: false, reference: false }); setSaved("Saved to Notes"); }
     catch (failure) { setError(errorText(failure)); }
   };
+  const saveToVault = async () => {
+    if (!current) return;
+    const session = securitySession();
+    if (!session) { setError("Unlock the Vault first: Settings → Vault (or the Security tab)."); return; }
+    const body = [notes, analysis.result ? `\n\nZAE's analysis:\n${analysis.result}` : "",
+      current.sources.length ? `\n\nSources:\n${current.sources.map(source => `- ${source.title}${source.url ? ` (${source.url})` : ""}`).join("\n")}` : ""].join("");
+    try { await api("POST", "/api/vault/save", { session, title: `Research: ${current.name}`.slice(0, 200), text: body }, { desktop: true }); setSaved("Saved to the Vault"); }
+    catch (failure) { setError(errorText(failure)); }
+  };
   if (!LIVE_API) return <div className="research"><NeedsServer what="The Notebook"/></div>;
   const chosen = current?.sources.find(source => source.id === selectedSource);
 
@@ -122,7 +132,8 @@ export function NotebookPanel() {
         </div>
         <AnalysisResult {...analysis}/>
         <div className="research__actions">
-          <button type="button" className="research__primary" disabled={!current} onClick={() => void saveToNotes()}>Save to Notes</button>
+          <button type="button" className="research__primary" disabled={!current} onClick={() => void saveToVault()}>Save to Vault</button>
+          <button type="button" disabled={!current} onClick={() => void saveToNotes()}>Save to Notes</button>
           <button type="button" disabled={!notes && !analysis.result} onClick={() => void navigator.clipboard?.writeText([notes, analysis.result].filter(Boolean).join("\n\n"))}>Copy</button>
         </div>
       </section>

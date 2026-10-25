@@ -23,6 +23,9 @@ const when = (at: string) => new Date(at).toLocaleString([], { month: "short", d
 // The unlock session lives only in this app's memory (never saved), so reopening
 // the window within the idle time stays unlocked; the server enforces the timer.
 let heldSession: string | null = null;
+/** The Vault (in Settings) shares this unlock. */
+export const securitySession = () => heldSession;
+export const setSecuritySession = (next: string | null) => { heldSession = next; };
 
 const ACTIONS: { mode: SecurityTool; title: string; note: string; danger?: boolean }[] = [
   { mode: "token_rotate", title: "Rotate API token", note: "New token for the phone; the old one stops working." },
@@ -44,7 +47,7 @@ function Gauge({ score, level }: { score: number; level: Level }) {
   </div>;
 }
 
-function Locked({ onUnlocked }: { onUnlocked: (session: string) => void }) {
+export function Locked({ onUnlocked }: { onUnlocked: (session: string) => void }) {
   const [waiting, setWaiting] = useState<"passkey" | "voice" | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const request = useRef<string | null>(null);

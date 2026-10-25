@@ -64,6 +64,11 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/security/session", "status.read"),
         ("POST", r"/api/security/session/lock", "status.read"),
         ("POST", r"/api/security/full", "status.read"),
+        # The Vault (vault.py): desktop key plus a live Security unlock session, like /api/security/full.
+        ("POST", r"/api/vault/list", "status.read"),
+        ("POST", r"/api/vault/item", "status.read"),
+        ("POST", r"/api/vault/save", "status.read"),
+        ("POST", r"/api/vault/delete", "status.read"),
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
@@ -137,6 +142,18 @@ class EventCreate(BaseModel):
 
 class SecuritySession(BaseModel):
     session: str = Field(min_length=20, max_length=100)
+
+
+class VaultRequest(SecuritySession):
+    id: str = Field(default="", max_length=32)
+
+
+class VaultSave(SecuritySession):
+    title: str = Field(min_length=1, max_length=200)
+    text: str = Field(default="", max_length=2_000_000)
+    name: str = Field(default="", max_length=200)
+    data: str = Field(default="", max_length=21_000_000)
+    mime: str = Field(default="", max_length=100)
 
 
 class PhotoHistoryTurn(BaseModel):
@@ -481,6 +498,45 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
                 auth._purge()
                 mobile_sessions = len(auth.sessions)
         return {**full_view(mode(), mobile_sessions=mobile_sessions), "activity": recent_activity(limit=300), "session": session}
+
+    @router.post("/api/vault/list", dependencies=[Depends(require_security_desktop)])
+    def vault_list(body: VaultRequest) -> dict[str, Any]:
+        security_session(body, touch=True)
+        from core.api.vault import vault
+        return {"items": vault().list()}
+
+    @router.post("/api/vault/item", dependencies=[Depends(require_security_desktop)])
+    def vault_item(body: VaultRequest) -> dict[str, Any]:
+        security_session(body, touch=True)
+        from core.api.vault import vault
+        try:
+            item = vault().get(body.id)
+        except KeyError as error:
+            raise HTTPException(404, "No such vault item.") from error
+        audit("vault.item_opened", operation="vault.read", reason_code="owner_session")
+        return item
+
+    @router.post("/api/vault/save", dependencies=[Depends(require_security_desktop)])
+    def vault_save(body: VaultSave) -> dict[str, Any]:
+        security_session(body, touch=True)
+        from core.api.vault import vault
+        try:
+            saved = vault().save(title=body.title, text=body.text, name=body.name, data_b64=body.data, mime=body.mime)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        audit("vault.item_saved", operation="vault.write", reason_code="owner_session")
+        return saved
+
+    @router.post("/api/vault/delete", dependencies=[Depends(require_security_desktop)])
+    def vault_delete(body: VaultRequest) -> dict[str, Any]:
+        security_session(body, touch=True)
+        from core.api.vault import vault
+        try:
+            vault().delete(body.id)
+        except KeyError as error:
+            raise HTTPException(404, "No such vault item.") from error
+        audit("vault.item_deleted", operation="vault.write", reason_code="owner_session")
+        return {"ok": True}
 
     @router.get("/api/news/tech")
     def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),

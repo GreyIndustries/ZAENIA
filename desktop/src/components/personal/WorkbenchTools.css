@@ -1,0 +1,24 @@
+/* Workbench Tools and Labs. */
+.wb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;align-items:start}
+.wb-card{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px solid rgba(143,202,255,.16);background:rgba(8,18,32,.55);color:#d9e6f4;min-width:0}
+.wb-card--wide{grid-column:1/-1}
+.wb-card h3{margin:0;font-size:14px;color:var(--accent-2,#ffd9a6)}
+.wb-card input,.wb-card select{min-width:0;flex:1 1 80px;padding:7px 9px;border-radius:8px;border:1px solid rgba(143,202,255,.25);background:rgba(8,20,36,.75);color:#e8f1fb;font:inherit;font-size:13px}
+.wb-card input[type=range]{padding:0;flex:1 1 120px}
+.wb-card button{padding:7px 11px;border-radius:8px;border:1px solid rgba(143,202,255,.25);background:rgba(16,32,52,.85);color:#dbe8f6;font:inherit;font-size:12px;cursor:pointer}
+.wb-result{margin:0;font-size:15px;font-variant-numeric:tabular-nums;color:#f2f7fd}
+.wb-result--big{font-size:30px;letter-spacing:.04em}
+.wb-filter{align-self:flex-start;max-width:260px}
+.wb-links{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px}
+.wb-links button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left}
+.wb-links small{font-size:10px;color:#8ea4c0}
+.wb-elements{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;max-height:280px;overflow:auto}
+.wb-element{display:flex;flex-direction:column;align-items:center;padding:4px 0!important}
+.wb-element small{font-size:8px;color:#9fb6cf}
+.wb-element strong{font-size:14px}
+.wb-element--alkali{background:rgba(255,107,90,.18)!important}.wb-element--alkaline{background:rgba(255,179,71,.18)!important}
+.wb-element--transition{background:rgba(95,214,255,.14)!important}.wb-element--post-transition{background:rgba(127,227,168,.14)!important}
+.wb-element--metalloid{background:rgba(195,139,255,.16)!important}.wb-element--nonmetal{background:rgba(255,236,120,.14)!important}
+.wb-element--halogen{background:rgba(255,140,200,.16)!important}.wb-element--noble{background:rgba(143,202,255,.2)!important}
+.wb-element--lanthanide,.wb-element--actinide{background:rgba(200,160,120,.16)!important}
+.wb-plot{width:100%;height:180px;border-radius:8px;background:rgba(4,10,20,.6)}
