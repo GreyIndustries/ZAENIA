@@ -22,7 +22,7 @@ export const TABS: { id: TabId; label: string }[] = [
   { id: 'workbench', label: 'Workbench' }, { id: 'music', label: 'Music' }, { id: 'fitness', label: 'Fitness & Health' },
   { id: "status", label: "Status" }, { id: "security", label: "Security" }, { id: "tasks", label: "Tasks & Calendar" }, { id: "notes", label: "Notes" },
   { id: "assistant", label: "Assistant" }, { id: "files", label: "Files" }, { id: "system", label: "System" }, { id: "news", label: "News" },
-  { id: "research", label: "Research" }, { id: "codedoctor", label: "Code Doctor" }, { id: "suggestions", label: "Suggestions" }, { id: "arena", label: "Arena" },
+  { id: "research", label: "Research" }, { id: "codedoctor", label: "Code Doctor" }, { id: "arena", label: "Arena" },
 ];
 
 /** Window styles for every module (Tech News included). */

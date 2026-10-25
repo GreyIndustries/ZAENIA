@@ -90,7 +90,6 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "news", label: "News", short: "News", icon: "news" },
   { id: "research", label: "Research", short: "Research", icon: "clock" },
   { id: "codedoctor", label: "Code Doctor", short: "Code", icon: "files" },
-  { id: "suggestions", label: "Suggestions", short: "Ideas", icon: "bolt" },
   { id: "arena", label: "Arena", short: "Arena", icon: "pulse" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
@@ -110,7 +109,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
   history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
-  codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS', description: "Scan your projects or ZAE's own code for bugs, have her explain them, and review a proposed fix before it's applied." },
+  codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
   arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
@@ -119,9 +118,9 @@ const sections: Record<Section, { title: string; label: string; description: str
   system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "codedoctor", "suggestions", "arena", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "codedoctor", "arena", "assistant", "files", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
-const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research" };
+const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research", suggestions: "codedoctor" };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -1091,8 +1090,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'history':
       case 'notebook':
       case 'research': return <ResearchPage/>;
-      case 'codedoctor': return <CodeDoctorPanel/>;
-      case 'suggestions': return <SuggestionsPanel/>;
+      case 'codedoctor':
+      case 'suggestions': return <PageTabs id="codedoctor" tabs={[
+        { id: "doctor", label: "Code Doctor", render: () => <CodeDoctorPanel/> },
+        { id: "suggestions", label: "Suggestions", render: () => <SuggestionsPanel/> },
+      ]}/>;
       case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <PageTabs id="status" tabs={[
