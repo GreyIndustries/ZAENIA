@@ -221,8 +221,11 @@ async fn zaenia_api(
         || route.starts_with("/api/speak")
         || route.starts_with("/api/voice")
         || route.starts_with("/api/briefing")
-        || route.starts_with("/api/calendar");
-    call_api(method, &path, body, if slow { 150 } else { 30 }).await
+        || route.starts_with("/api/calendar")
+        || route.starts_with("/api/research");
+    // Her research analysis reads long material on the local brain.
+    let slowest = route == "/api/research/analyze";
+    call_api(method, &path, body, if slowest { 300 } else if slow { 150 } else { 30 }).await
 }
 
 

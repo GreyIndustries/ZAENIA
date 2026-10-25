@@ -68,6 +68,21 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
+        # Research (research_routes.py): public sources are reads; the notebook is memory; her analysis is a chat reply.
+        ("GET", r"/api/research/library", "status.read"),
+        ("POST", r"/api/research/library/read", "status.read"),
+        ("GET", r"/api/research/article", "status.read"),
+        ("GET", r"/api/research/history", "status.read"),
+        ("GET", r"/api/research/history/samples", "status.read"),
+        ("GET", r"/api/research/worldnews", "status.read"),
+        ("POST", r"/api/research/analyze", "chat.reply"),
+        ("GET", r"/api/research/notebook", "memory.read"),
+        ("POST", r"/api/research/notebook", "memory.write"),
+        ("GET", r"/api/research/notebook/[0-9a-f]{32}", "memory.read"),
+        ("DELETE", r"/api/research/notebook/[0-9a-f]{32}", "memory.write"),
+        ("PUT", r"/api/research/notebook/[0-9a-f]{32}/notes", "memory.write"),
+        ("POST", r"/api/research/notebook/[0-9a-f]{32}/sources", "memory.write"),
+        ("DELETE", r"/api/research/notebook/[0-9a-f]{32}/sources/[0-9a-f]{32}", "memory.write"),
     )
 )
 

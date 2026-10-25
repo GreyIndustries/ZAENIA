@@ -68,3 +68,34 @@ sources:
     focus: [security]
     why: Investigative security journalism by Brian Krebs.
     enabled: false
+
+  # World and science news (the News tab covers more than tech since 2026-10-25).
+  - name: BBC World
+    url: https://feeds.bbci.co.uk/news/world/rss.xml
+    focus: [world]
+    why: Public broadcaster with strict editorial guidelines and a large foreign desk.
+
+  - name: NPR News
+    url: https://feeds.npr.org/1001/rss.xml
+    focus: [world, us]
+    why: Non-profit public radio newsroom with a public ethics code.
+
+  - name: The Guardian World
+    url: https://www.theguardian.com/world/rss
+    focus: [world]
+    why: Reader-funded newsroom with a published editorial code and readers' editor.
+
+  - name: Al Jazeera
+    url: https://www.aljazeera.com/xml/rss/all.xml
+    focus: [world]
+    why: Wide coverage of the Middle East, Africa and Asia; read alongside others for balance.
+
+  - name: PBS NewsHour
+    url: https://www.pbs.org/newshour/feeds/rss/headlines
+    focus: [us, world]
+    why: Public television news with documented editorial standards.
+
+  - name: Science Daily
+    url: https://www.sciencedaily.com/rss/all.xml
+    focus: [science]
+    why: Research news drawn from university and institute press releases.

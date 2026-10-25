@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 1.9  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.0  |  Date: 2026-10-24 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -420,4 +420,24 @@ Requested by Grey on 2026-10-24: combine the Tasks and Calendar tabs and tighten
   - Consistent with ADR-002 (optional, replaceable external service). Grey approved the integration on 2026-10-24 ("both for both questions").
 
 2026-10-24 | v1.9 | Claude | Combined Tasks & Calendar tab, denser layout, wider sidebar, Twilio phone line (owner-verified calls, answering service, answer-only texts, passkey-gated outbound). No ADR change; no capability change (phone routes are signature-gated and use existing chat.reply and memory capabilities for the brain).
+
+## 26. Research tabs and one News page — Claude, 2026-10-25 (v2.0)
+
+Requested by Grey on 2026-10-25, modelled on the Quantum app's Research page. His answers: Research becomes **Notebook**, **Historical connections** (Quantum's History patterns) and **Library** (Books & archives) as left-sidebar tabs; News reader merges into Tech News, renamed **News**, with a longer page; summaries use her own brain.
+
+- **Backend (`core/research/`, docs/RESEARCH.md).**
+  - `library.py`: Gutenberg (gutendex), Open Library and Internet Archive, searched in parallel. Free books are sorted first, and catalogues that fail are reported as skipped. Wikipedia overview. Book text is read only from Gutenberg and Internet Archive hosts, with Gutenberg boilerplate removed.
+  - `history.py`: Library of Congress date facets (one request per term), Internet Archive per-decade counts, and GDELT timelinevol by year. Rates are relative to cached baselines. Samples per period. GDELT world search is English only and limited to 1 request per 5 s.
+  - `notebook.py`: topics, sources (20k-character excerpts) and notes, stored in `data/research/notebook.json`.
+  - `analyze.py`: local brain tasks (summary, facts vs opinion, book scan, ask, "what happened then", and six notebook analyses). Material is wrapped as untrusted, and long text is sampled from its beginning, middle and end.
+  - `web.py`: fetches only public addresses (no loopback, private, link-local or Tailscale ranges), re-checks after redirects, caps responses at 4 MB, retries dropped connections, and extracts readable text with lxml without running scripts.
+- **Routes:** `/api/research/*` (`research_routes.py`), using existing capabilities: public reads `status.read`, the notebook `memory.read` / `memory.write`, and analysis `chat.reply`. The desktop bridge allows 300 s for `/api/research/analyze`.
+- **Clients:**
+  - Library, Historical connections and Notebook windows, with an SVG timeline chart and "Add to notebook" from every source.
+  - News has 16 feeds (6 new world/US/science: BBC World, NPR News, Guardian World, Al Jazeera, PBS NewsHour, Science Daily), new topic pills, 50 stories, a world-search box and a reader pane (read, summarise, facts vs opinion, ask, open, add to notebook).
+  - Notebook "Save to Vault" saves to ZAE Notes until a Vault tab exists.
+- **Tests:** `research_test.py` (10: catalogue merge and skips, book host allowlist, private-URL refusal, readable extraction, per-million rates, GDELT averaging, notebook CRUD, untrusted prompt, route capabilities); tech_news source test updated to 16. Full suite 690 OK.
+- **Live checks (2026-10-25):** Library 40 results in 15 s (Gutendex timed out, the same as in Quantum). Library of Congress facets ~1 s. Internet Archive decades ~56 s the first time, then baseline cached. LoC samples 23 s. GDELT 50 articles. Facts vs opinion on llama3.1:8b in 37 s, correct.
+
+2026-10-25 | v2.0 | Claude | Research tabs (Library, Historical connections, Notebook) and one News page with world feeds, world search and a reader. New optional online sources (Gutenberg, Open Library, Internet Archive, Library of Congress, GDELT, Wikipedia), all keyless and read-only. No ADR change; no capability change.
 

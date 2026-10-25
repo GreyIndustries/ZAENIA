@@ -11,7 +11,7 @@ export type AccentChoice = "amber" | "gold" | "crimson" | "violet" | "blue" | "c
 export type LookChoice = "aurora" | "hud" | "editorial" | "neon";
 /** One module window's own style and colour; anything unset follows the app-wide choice. */
 export type TabStyle = { look?: LookChoice; color?: AccentChoice };
-export type TabId = "status" | "security" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news" | "workbench" | "music" | "fitness";
+export type TabId = "status" | "security" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook";
 export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice; tabs: Partial<Record<TabId, TabStyle>>;
   /** The six icons around the core: amber and blue ("mixed"), or all in the accent colour ("match"). */
   orbs: "mixed" | "match" };
@@ -20,8 +20,9 @@ export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, acce
 
 export const TABS: { id: TabId; label: string }[] = [
   { id: 'workbench', label: 'Workbench' }, { id: 'music', label: 'Music' }, { id: 'fitness', label: 'Fitness & Health' },
-  { id: "status", label: "Status" }, { id: "security", label: "Security" }, { id: "tasks", label: "Tasks" }, { id: "calendar", label: "Calendar" }, { id: "notes", label: "Notes" },
-  { id: "assistant", label: "Assistant" }, { id: "files", label: "Files" }, { id: "system", label: "System" }, { id: "news", label: "Tech News" },
+  { id: "status", label: "Status" }, { id: "security", label: "Security" }, { id: "tasks", label: "Tasks & Calendar" }, { id: "notes", label: "Notes" },
+  { id: "assistant", label: "Assistant" }, { id: "files", label: "Files" }, { id: "system", label: "System" }, { id: "news", label: "News" },
+  { id: "library", label: "Library" }, { id: "history", label: "Historical connections" }, { id: "notebook", label: "Notebook" },
 ];
 
 /** Window styles for every module (Tech News included). */

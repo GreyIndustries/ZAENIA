@@ -44,6 +44,9 @@ const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(mo
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
 const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
+const LibraryPanel = lazy(() => import("./components/research/LibraryPanel").then(module => ({ default: module.LibraryPanel })));
+const HistoryPanel = lazy(() => import("./components/research/HistoryPanel").then(module => ({ default: module.HistoryPanel })));
+const NotebookPanel = lazy(() => import("./components/research/NotebookPanel").then(module => ({ default: module.NotebookPanel })));
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
 const MusicPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.MusicPanel })));
 const FitnessPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.FitnessPanel })));
@@ -60,7 +63,7 @@ import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook";
 type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
 type VisualMode = "blend" | "progress";
 
@@ -75,7 +78,10 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
   { id: 'music', label: 'Music', short: 'Music', icon: 'pulse' },
   { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
-  { id: "news", label: "Tech News", short: "News", icon: "news" },
+  { id: "news", label: "News", short: "News", icon: "news" },
+  { id: "library", label: "Library", short: "Library", icon: "files" },
+  { id: "history", label: "Historical connections", short: "History", icon: "clock" },
+  { id: "notebook", label: "Notebook", short: "Notebook", icon: "notes" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "System", short: "System", icon: "system" },
@@ -90,13 +96,16 @@ const sections: Record<Section, { title: string; label: string; description: str
   workbench: { title: 'Workbench', label: 'PROJECTS & INVENTIONS', description: 'Project notes, sketches, blueprint references and experiments, organized by subject.' },
   music: { title: 'Music', label: 'CREATE & RELEASE', description: 'GarageBand projects, production progress, release links and dated song statistics.' },
   fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Food intake, exercise, energy estimates and training plans from your sources.' },
-  news: { title: 'Tech News', label: 'TRACKED SOURCES', description: 'Headlines from ten credible tech newsrooms, checked every 30 minutes. Stories several sources report are marked.' },
+  news: { title: 'News', label: 'TECH & WORLD', description: 'Tech and world headlines from sixteen credible newsrooms, checked every 30 minutes, plus a keyword search of news sites worldwide. Open a story to read it without ads and have ZAE summarise it.' },
+  library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
+  history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
+  notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "library", "history", "notebook", "assistant", "files", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks" };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
@@ -1057,6 +1066,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'music': return <MusicPanel drafts={personalDrafts.current}/>;
       case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
+      case 'library': return <LibraryPanel/>;
+      case 'history': return <HistoryPanel/>;
+      case 'notebook': return <NotebookPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
       case "tasks":

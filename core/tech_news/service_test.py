@@ -80,9 +80,10 @@ class TechNewsTest(unittest.TestCase):
     def test_no_cache_says_so_instead_of_inventing(self):
         self.assertIn("no headlines are cached", news_context("latest tech news", self.news))
 
-    def test_shipped_source_list_has_ten_enabled_https_feeds(self):
+    def test_shipped_source_list_has_ten_tech_and_six_world_feeds(self):
         sources = load_sources()
-        self.assertEqual(len(sources), 10)
+        self.assertEqual(len(sources), 16)
+        self.assertEqual(sum(1 for s in sources if "world" in s.focus or "us" in s.focus or s.name == "Science Daily"), 6)
         self.assertTrue(all(s.url.startswith("https://") for s in sources))
 
 
