@@ -38,9 +38,8 @@ import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
 // Module windows load when first opened, so the core appears sooner.
-const CalendarPanel = lazy(() => import("./components/calendar/CalendarPanel").then(module => ({ default: module.CalendarPanel })));
+const PlanPanel = lazy(() => import("./components/plan/PlanPanel").then(module => ({ default: module.PlanPanel })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
-const TasksDashboard = lazy(() => import("./components/tasks/TasksDashboard").then(module => ({ default: module.TasksDashboard })));
 const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(module => ({ default: module.StatusPanel })));
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
@@ -71,8 +70,7 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
   { id: "status", label: "Status", short: "Status", icon: "pulse" },
   { id: "security", label: "Security", short: "Security", icon: "shield" },
-  { id: "tasks", label: "Tasks", short: "Tasks", icon: "tasks" },
-  { id: "calendar", label: "Calendar", short: "Calendar", icon: "calendar" },
+  { id: "tasks", label: "Tasks & Calendar", short: "Plan", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
   { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
   { id: 'music', label: 'Music', short: 'Music', icon: 'pulse' },
@@ -86,7 +84,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
   status: { title: "Status", label: "READINESS", description: "Live module readiness, PC load and ZAE's overall security level." },
   security: { title: "Security", label: "LOCKED · OWNER ONLY", description: "Live attack resistance, weak spots and how to fix them, improvements over time, security checks and the full activity log." },
-  tasks: { title: "Tasks", label: "PRODUCTIVITY", description: "Set priorities, track deadlines, and follow each task from pending to completed. Kept on your PC, so the phone and desktop share one list." },
+  tasks: { title: "Tasks & Calendar", label: "PLAN", description: "Your schedule and your tasks side by side. Task deadlines show on the calendar; everything is kept on your PC, so the phone and desktop match." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   workbench: { title: 'Workbench', label: 'PROJECTS & INVENTIONS', description: 'Project notes, sketches, blueprint references and experiments, organized by subject.' },
@@ -98,7 +96,9 @@ const sections: Record<Section, { title: string; label: string; description: str
   system: { title: "System", label: "DIAGNOSTICS", description: "Live module states from the ZÆNIA server, plus the core and appearance settings." },
 };
 // On desktop every workspace page opens as a window over the core.
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "calendar", "notes", "workbench", "music", "fitness", "news", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "assistant", "files", "system"];
+// Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
+const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks" };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -268,7 +268,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const isPhone = useIsPhone();
   // Desktop shell: pages open as movable windows; the phone keeps full screens.
   const windowed = !isPhone;
-  const shell = useWindowShell(WINDOW_IDS);
+  const shell = useWindowShell(WINDOW_IDS, WINDOW_ALIASES);
   const attendedTab = useRef<string | null>(null);
   const personalDrafts = useRef<PersonalDraftCache>({});
   const layerRef = useRef<HTMLDivElement | null>(null);
@@ -336,7 +336,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
   const stageSection: Section = windowed ? "overview" : section;
-  const openSection = (next: Section) => {
+  const openSection = (requested: Section) => {
+    const next = (WINDOW_ALIASES[requested] ?? requested) as Section;
     setSection(next);
     if (!windowed) return;
     if (next === "overview") shell.showDesktop(); else shell.open(next);
@@ -824,7 +825,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         const proposal = parseAssistantProposal(event.proposal);
         if (proposal && !reply.proposal) {
           reply.proposal = proposal;
-          if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : proposal.kind === "task.create" ? "tasks" : "calendar");
+          if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : "tasks");
           if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
         }
       } else if (event.type === "done") {
@@ -1058,8 +1059,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'news': return <NewsPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/>;
-      case "tasks": return <TasksDashboard remote={LIVE_API} refreshVersion={actionRefresh.tasks}/>;
-      case "calendar": return <CalendarPanel refreshVersion={actionRefresh.calendar}/>;
+      case "tasks":
+      case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
       case "files": return <FilesPanel onPendingChange={setPendingFiles}/>;
       case "system": return <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></>;

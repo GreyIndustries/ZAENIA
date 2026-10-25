@@ -1,0 +1,32 @@
+/* Tasks & Calendar: two columns when the window is wide enough, stacked otherwise. */
+.plan-panel{container-type:inline-size;display:flex;flex-direction:column;gap:10px;min-height:0}
+.plan-panel__switch{display:inline-flex;align-self:flex-start;gap:2px;padding:3px;border-radius:999px;border:1px solid rgba(143,202,255,.2);background:rgba(8,20,36,.6)}
+.plan-panel__view{border:0;border-radius:999px;padding:5px 14px;font:inherit;font-size:11px;letter-spacing:.06em;color:#a9c3dc;background:transparent;cursor:pointer}
+.plan-panel__view--on{color:#0b1020;background:var(--accent,#e0a353)}
+.plan-panel__view:focus-visible{outline:2px solid #ffc16e;outline-offset:2px}
+.plan-panel__cols{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+.plan-panel__col{min-width:0}
+.plan-panel__col[hidden]{display:none}
+@container (min-width:860px){
+  .plan-panel[data-view="both"] .plan-panel__cols{grid-template-columns:minmax(300px,.85fr) minmax(0,1.15fr)}
+}
+
+/* Denser layout inside the combined tab: less padding, smaller numbers, no repeated notes. */
+.plan-panel .section-content__tag{margin-bottom:8px}
+.plan-panel .task-stats{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:8px 0 10px}
+.plan-panel .task-stats>div,.plan-panel .task-stats>button{flex-direction:row;align-items:baseline;justify-content:space-between;gap:6px;padding:8px 10px}
+.plan-panel .task-stats strong{font-size:18px}
+.plan-panel .task-create{grid-template-columns:minmax(0,1fr) 100px 170px auto;gap:6px}
+.plan-panel .task-create button{height:36px}
+.plan-panel .task-dashboard input,.plan-panel .task-dashboard select{padding:8px}
+.plan-panel .task-toolbar{margin-top:10px;gap:6px}
+.plan-panel .task-card{padding:8px 8px;gap:8px}
+.plan-panel .task-title{gap:3px}
+.plan-panel .calendar-grid{gap:3px;margin-bottom:12px}
+.plan-panel .calendar-day{min-height:30px}
+.plan-panel .calendar-header{margin-bottom:8px}
+@container (max-width:560px){
+  .plan-panel .task-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .plan-panel .task-create{grid-template-columns:minmax(0,1fr) 100px}
+  .plan-panel .task-create input[type=datetime-local]{grid-column:1}
+}
