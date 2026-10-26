@@ -34,7 +34,7 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(training.default_weekdays(days, ["Tuesday"], ["Saturday"]), {"Tuesday": days[0]["label"], "Saturday": days[1]["label"]})
 
     def test_targets_need_inputs_then_compute(self):
-        self.assertEqual(training.targets(self.tracker.load()["profile"])["missing"], ["age", "sex", "height", "weight"])
+        self.assertEqual(training.targets(self.tracker.load()["profile"])["missing"], ["sex", "height", "weight"])
         profile = self.tracker.set_profile({"age": 30, "sex": "male", "heightIn": 70, "weightLb": 195.8, "goalWeightLb": 167, "rateLbPerWeek": 1})
         found = training.targets(profile)
         self.assertEqual((found["bmr"], found["maintenance"], found["dailyDeficit"], found["eat"], found["burn"], found["protein"]),

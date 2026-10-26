@@ -218,10 +218,12 @@ def default_weekdays(days: list[dict[str, Any]], gym: list[str], home: list[str]
 
 def targets(profile: dict[str, Any]) -> dict[str, Any]:
     """Calorie and protein targets from the profile; missing inputs are named instead of guessed."""
-    need = [name for name, key in (("age", "age"), ("sex", "sex"), ("height", "heightIn"), ("weight", "weightLb")) if not profile.get(key)]
+    need = [name for name, key in (("sex", "sex"), ("height", "heightIn"), ("weight", "weightLb")) if not profile.get(key)]
     if need:
         return {"ready": False, "missing": need}
-    kg, cm, age = profile["weightLb"] * 0.4536, profile["heightIn"] * 2.54, profile["age"]
+    # Age only shifts the estimate by about 5 kcal a year, so without it she assumes 30 and says so.
+    assumed_age = not profile.get("age")
+    kg, cm, age = profile["weightLb"] * 0.4536, profile["heightIn"] * 2.54, profile.get("age") or 30
     bmr = 10 * kg + 6.25 * cm - 5 * age + (5 if profile["sex"] == "male" else -161)
     maintenance = bmr * NEAT.get(profile.get("activity") or "light", 1.375)
     goal = profile.get("goalWeightLb")
@@ -237,8 +239,10 @@ def targets(profile: dict[str, Any]) -> dict[str, Any]:
     return {"ready": True, "bmr": round(bmr), "maintenance": round(maintenance), "dailyDeficit": round(deficit),
             "eat": round(eat), "burn": round(burn), "protein": protein, "weeksToGoal": round(weeks, 1) if weeks else None,
             "goalDate": (date.today() + timedelta(weeks=weeks)).isoformat() if weeks else None,
+            "assumedAge": assumed_age,
             "note": ("Eat about this many calories and burn about this many in exercise (lifting, cardio and steps) each day. "
-                     "Estimates from the Mifflin-St Jeor formula; adjust after two weeks of weigh-ins.")}
+                     "Estimates from the Mifflin-St Jeor formula; adjust after two weeks of weigh-ins."
+                     + (" Age not given, so 30 is assumed." if assumed_age else ""))}
 
 
 def burned(entry: dict[str, Any], weight_lb: float | None, height_in: float | None) -> dict[str, float]:

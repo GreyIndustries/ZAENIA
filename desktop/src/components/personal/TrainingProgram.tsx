@@ -14,7 +14,7 @@ type SetRow = { exercise: string; reps: number; weightLb: number };
 type Entry = { weightLb?: number; bodyFat?: number; steps?: number; workoutMinutes?: number; cardio?: Cardio[]; done?: Record<string, boolean>; sets?: SetRow[]; notes?: string };
 type Profile = { age: number | null; sex: string; heightIn: number | null; weightLb: number | null; bodyFat: number | null; goalWeightLb: number | null;
   rateLbPerWeek: number; activity: string; gymDays: string[]; homeDays: string[]; reminders: { workout: string; weighIn: string; food: string } };
-type Targets = { ready: boolean; missing?: string[]; bmr?: number; maintenance?: number; dailyDeficit?: number; eat?: number; burn?: number; protein?: number; weeksToGoal?: number | null; goalDate?: string | null; note?: string };
+type Targets = { ready: boolean; assumedAge?: boolean; missing?: string[]; bmr?: number; maintenance?: number; dailyDeficit?: number; eat?: number; burn?: number; protein?: number; weeksToGoal?: number | null; goalDate?: string | null; note?: string };
 type Source = { url: string; title: string; kind: string; suggested: { heightIn?: number; weightLb?: number; bodyFat?: number; advice?: string[] }; added: string };
 type Overview = { profile: Profile; targets: Targets; plans: { id: string; title: string }[]; planId: string; planTitle: string; days: Day[]; weekdays: Record<string, string>;
   calendar: { date: string; workout: string; planned: number; done: number; weighed: boolean; steps?: number | null; cardio: boolean }[]; month: string;
@@ -114,7 +114,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
     {note && <p className="tp-note">✓ {note}</p>}
     {setup && <TrainingSetup profile={info.profile} videoGoal={info.sources.map(s => s.suggested.weightLb).find(Boolean) ?? null}
       onClose={() => setSetup(false)} onSave={async changes => { await api("POST", `${PATH}/profile`, { changes }); setProfile(null); setNote("Got it. Your targets and calendar are updated."); await Promise.all([load(), loadDay()]); }}/>}
-    <div className="tp-row"><button type="button" onClick={() => setSetup(true)}>ZAE's setup questions</button></div>
+    {!info.targets.ready && <div className="tp-row"><button type="button" onClick={() => setSetup(true)}>ZAE's setup questions</button></div>}
 
     <div className="tp-top">
       <label>Program<select value={info.planId} onChange={event => void run("program", () => api("POST", `${PATH}/program`, { planId: event.target.value, weekdays: {} }))}>
@@ -124,7 +124,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
           <Bar label="Eat" value={eaten} target={targets.eat} unit="kcal"/>
           <Bar label="Burn (exercise)" value={burnedToday} target={targets.burn} unit="kcal"/>
           <Bar label="Protein" value={view?.eaten?.protein ?? 0} target={targets.protein} unit="g"/>
-          <small className="tp-muted">Maintenance ≈ {targets.maintenance} kcal · goal deficit {targets.dailyDeficit} kcal/day{targets.goalDate ? ` · goal around ${targets.goalDate}` : ""}. Estimates.</small>
+          <small className="tp-muted">{targets.assumedAge ? "Age not given, so 30 is assumed. " : ""}Maintenance ≈ {targets.maintenance} kcal · goal deficit {targets.dailyDeficit} kcal/day{targets.goalDate ? ` · goal around ${targets.goalDate}` : ""}. Estimates.</small>
         </> : <p className="tp-muted">ZAE needs your {targets?.missing?.join(", ")} for daily calorie targets. <button type="button" className="tp-primary" onClick={() => setSetup(true)}>Answer ZAE's questions</button></p>}
       </div>
     </div>

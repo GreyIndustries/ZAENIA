@@ -118,9 +118,9 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     from core.assistant_platform.training import setup_command, setup_missing
     if setup_command(message):
         # "Set up my training": her questions pop up in the Training program tab; the answers go straight in.
-        missing = setup_missing()
-        return ("Here are my questions. Fill them in and I'll set your calories, calendar and reminders."
-                if missing else "Your program's set up. I've opened the questions so you can change anything."), "training_setup", ["fitness"]
+        if setup_missing():
+            return "Here are my questions. Fill them in and I'll set your calories, calendar and reminders.", "training_setup", ["fitness"]
+        return ("You're already set up, so no questions needed. Change anything under Your stats & goal in the Training program."), "tab_action", ["fitness"]
     from core.assistant_platform import tab_actions
     target = tab_actions.parse(message)
     if target is not None:
