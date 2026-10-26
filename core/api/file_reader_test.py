@@ -76,7 +76,8 @@ class FileReaderTest(unittest.TestCase):
         if "couldn't be transcribed" in text:  # no Vosk model in a clean checkout
             self.skipTest(text)
         self.assertIn("0 min 1 s", text)
-        self.assertIn("ZAE can't watch videos", file_reader.extract("clip.mp4", b"\x00" * 10)[1])
+        if not file_reader.find_ffmpeg():
+            self.assertIn("needs FFmpeg", file_reader.extract("clip.mp4", b"\x00" * 10)[1])
 
     def test_unknown_binary_gets_type_and_strings(self):
         kind, text = extract_text("tool.exe", b"MZ\x90\x00" + b"\x00" * 20 + b"Hello from the program" + b"\x00" * 10)

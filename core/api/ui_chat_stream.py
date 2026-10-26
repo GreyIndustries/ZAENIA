@@ -115,6 +115,19 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     """A protocol phrase ("goodnight") or "remind me ..." is handled here, before the brain."""
     if authorize is None:
         return None
+    from core.assistant_platform import tab_actions
+    target = tab_actions.parse(message)
+    if target is not None:
+        # "Add it to my fitness tab": her last answer becomes a real record in that tab.
+        try:
+            authorize("memory.write")
+            from core.research.analyze import run_local
+            result = tab_actions.save(target, _brain(authorize).load_recent_messages(), ask=run_local)
+            return result["reply"], "tab_action", [result["tab"]]
+        except PermissionError:
+            return "Saving to your tabs isn't available with the current permissions.", "tab_action", []
+        except ValueError as error:
+            return str(error), "tab_action", []
     from core.research.agent import chat_command
     web = chat_command(message)
     if web is not None:
@@ -250,6 +263,7 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                 # Links he sends are read (page text, TikTok captions and spoken words, YouTube details)
                 # and answered from like shared files: data only, never instructions.
                 authorize("chat.reply")
+                yield _line({"type": "say", "text": "One sec, I'm reading that."})
                 files = link_reader.links_as_files(message)
                 route = "link"
                 yield _line({"type": "route", "route": route})

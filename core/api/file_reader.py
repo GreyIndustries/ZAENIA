@@ -130,6 +130,65 @@ def describe_image(raw: bytes, ask_vision: Callable[[str, str], str] | None = No
     return text.strip() or "(The vision model returned nothing for this image.)"
 
 
+CONVERT_AUDIO = {".m4a", ".aac", ".wma", ".amr", ".3gp"}
+
+
+def find_ffmpeg() -> str | None:
+    """FFmpeg on PATH, or where winget puts it (the server may have started before PATH was updated)."""
+    import os
+    import shutil
+    found = shutil.which("ffmpeg")
+    if found:
+        return found
+    for candidate in (Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links" / "ffmpeg.exe",
+                      Path("C:/ffmpeg/bin/ffmpeg.exe"), Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "ffmpeg" / "bin" / "ffmpeg.exe"):
+        if candidate.is_file():
+            return str(candidate)
+    packages = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Packages"
+    for match in sorted(packages.glob("Gyan.FFmpeg*/*/bin/ffmpeg.exe")) if packages.is_dir() else []:
+        return str(match)
+    return None
+
+
+def _ffmpeg(args: list[str], timeout: int = 180) -> "subprocess.CompletedProcess[bytes]":
+    import subprocess
+    return subprocess.run([find_ffmpeg() or "ffmpeg", "-hide_banner", "-nostdin", *args], capture_output=True, timeout=timeout,
+                          creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+
+
+def to_wav(raw: bytes, suffix: str) -> bytes:
+    """Any audio or video's sound as 16 kHz mono WAV (first 10 minutes), via FFmpeg."""
+    with tempfile.TemporaryDirectory() as folder:
+        source, target = Path(folder) / f"in{suffix}", Path(folder) / "out.wav"
+        source.write_bytes(raw)
+        _ffmpeg(["-i", str(source), "-t", "600", "-vn", "-ac", "1", "-ar", "16000", str(target)])
+        if not target.is_file():
+            raise ValueError("FFmpeg couldn't read the sound.")
+        return target.read_bytes()
+
+
+def watch_video(raw: bytes, suffix: str, ask_vision: Callable[[str, str], str] | None = None, frames: int = 4) -> str:
+    """A video, as well as this PC can: what's said (transcribed) and what's on screen at a few moments (vision model)."""
+    with tempfile.TemporaryDirectory() as folder:
+        source = Path(folder) / f"in{suffix}"
+        source.write_bytes(raw)
+        probe = _ffmpeg(["-i", str(source)], timeout=60).stderr.decode("utf-8", "replace")
+        match = re.search(r"Duration: (\d+):(\d+):(\d+(?:\.\d+)?)", probe)
+        seconds = int(match.group(1)) * 3600 + int(match.group(2)) * 60 + float(match.group(3)) if match else 0.0
+        parts = [f"Video, about {int(seconds) // 60} min {int(seconds) % 60} s."]
+        try:
+            parts.append(transcribe_audio(to_wav(raw, suffix), ".wav").split("\n", 1)[-1])
+        except Exception:
+            parts.append("(No sound could be transcribed.)")
+        for index in range(frames if seconds else 1):
+            at = seconds * (index + 0.5) / frames if seconds else 0
+            image = Path(folder) / f"frame{index}.jpg"
+            _ffmpeg(["-ss", f"{at:.2f}", "-i", str(source), "-frames:v", "1", "-vf", "scale=960:-2", str(image)], timeout=60)
+            if image.is_file():
+                parts.append(f"[on screen at {int(at)} s] " + describe_image(image.read_bytes(), ask_vision))
+    return "\n\n".join(parts)
+
+
 def transcribe_audio(raw: bytes, suffix: str) -> str:
     """Speech in an audio file, transcribed on this PC with the Vosk model (first 10 minutes)."""
     import numpy as np
@@ -224,16 +283,20 @@ def extract(name: str, raw: bytes, *, ask_vision: Callable[[str, str], str] | No
             return "SQLite database", "\n\n".join(out) or "(No tables.)"
         if suffix in IMAGE_TYPES:
             return "image", describe_image(raw, ask_vision)
-        if suffix in AUDIO_TYPES or suffix in (".m4a", ".aac", ".wma"):
-            if suffix in (".m4a", ".aac", ".wma"):
-                return "audio", f"({suffix} audio needs a converter this PC doesn't have; save it as MP3 or WAV and share it again.)"
+        if suffix in AUDIO_TYPES or suffix in CONVERT_AUDIO:
             try:
+                if suffix in CONVERT_AUDIO:
+                    if not find_ffmpeg():
+                        return "audio", f"({suffix} audio needs FFmpeg, which isn't installed on this PC yet; or share it as MP3 or WAV.)"
+                    return "audio", transcribe_audio(to_wav(raw, suffix), ".wav")
                 return "audio", transcribe_audio(raw, suffix)
             except Exception as error:
                 return "audio", f"(This audio couldn't be transcribed on this PC: {type(error).__name__}.)"
         if suffix in VIDEO_TYPES:
-            return "video", (f"(A {suffix} video of {len(raw):,} bytes. ZAE can't watch videos on this PC yet; share its audio as MP3 "
-                             "or WAV for a transcript, or a screenshot for what's on screen.)")
+            if not find_ffmpeg():
+                return "video", (f"(A {suffix} video of {len(raw):,} bytes. ZAE needs FFmpeg to watch videos, and it isn't installed "
+                                 "on this PC yet. Share its audio as MP3 or WAV, or a screenshot, meanwhile.)")
+            return "video", watch_video(raw, suffix, ask_vision)
     except Exception as error:
         return suffix.lstrip(".") or "file", f"(This {suffix or 'file'} couldn't be read: {type(error).__name__}.)"
     return None

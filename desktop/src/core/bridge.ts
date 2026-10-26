@@ -265,6 +265,7 @@ export type StreamEvent =
   | { type: "delta"; text: string }
   | { type: "proposal"; proposal: AssistantProposal }
   | { type: "protocol"; open: string[] }
+  | { type: "say"; text: string }
   | { type: "clarify"; questions: { question: string; options: string[] }[]; original: string }
   | { type: "done"; reply: string; interrupted: boolean; route?: string }
   | { type: "error"; detail: string };

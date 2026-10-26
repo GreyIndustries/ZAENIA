@@ -29,6 +29,12 @@ function useRecords<T extends Base>(collection: string, drafts: PersonalDraftCac
     if (current === ticket.current) setListing(result);
   }
   useEffect(() => { void load().catch(e => setError(errorText(e))); return () => { ticket.current++; }; }, [collection, day, archived, offset]);
+  // ZAE saved something into this tab from the chat: show it without a manual refresh.
+  useEffect(() => {
+    const changed = () => { void load().catch(e => setError(errorText(e))); };
+    window.addEventListener('zae:records-changed', changed);
+    return () => window.removeEventListener('zae:records-changed', changed);
+  }, [collection, day, archived, offset]); // eslint-disable-line react-hooks/exhaustive-deps
   async function perform(action: () => Promise<void>) {
     if (locked.current) return;
     locked.current = true; setBusy(true); setError(''); setMessage('');

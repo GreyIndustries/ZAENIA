@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.8  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.9  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -599,3 +599,14 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
 - **Video:** not watched yet (there is no ffmpeg); she asks for the audio or a screenshot instead.
 - **Anything else:** its likely type (from magic bytes) and the readable strings inside.
 - **Tests:** file_reader_test 6; chat_files_test updated.
+
+### 27.8 Saving to tabs, voice pacing, FFmpeg — Claude, 2026-10-26 (v2.9)
+
+- **Saving to tabs** (Grey: she wrote a plan and then claimed she'd added it to Fitness, but nothing was saved): `core/assistant_platform/tab_actions.py`.
+  - **Phrases:** "add it / save that / put this to my fitness tab, workbench or notes (as a training plan / project / note)" and "save it as a training plan".
+  - **What it saves:** her last answer becomes a real record. The day headings and the exercises with sets and reps are parsed into plan steps. The shared link becomes the plan's source, and her brain writes a short title.
+  - **After saving:** the tab opens and its list reloads (`zae:records-changed`).
+  - **Permission and honesty:** the action needs memory.write. A new conversation rule forbids claiming a save, sync or change the app didn't do.
+- **Voice pacing:** she says "One sec." if nothing has arrived after 1.6 s, and the server can send a spoken status (a `say` event; "One sec, I'm reading that." for links). She then speaks about 240 characters, finishing the sentence, and ends with "The rest is on screen." The written reply and the Play button are unchanged.
+- **FFmpeg:** if installed (found on PATH or where winget puts it), she transcribes M4A, AAC and WMA audio. For video (mp4, mov, mkv…) she transcribes the speech and describes four moments with her vision model. Without FFmpeg she says it's needed.
+- **Tests:** tab_actions_test 3; file_reader_test updated.

@@ -788,6 +788,24 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const speakIt = speakReplies && LIVE_API;
     if (speakIt) speech.beginReply(key);
     let timer: number | null = null;
+    // Her voice keeps pace with what she's doing: "one sec" while she works, then the first couple of
+    // sentences out loud; a long answer's details stay on screen instead of being read out all at once.
+    const voice = { said: "", cut: false, filler: false, upTo: 0 };
+    const SPOKEN_LIMIT = 240;
+    const say = (words: string) => {
+      if (!speakIt || voice.cut) return;
+      const before = voice.said.length;
+      voice.said += words;
+      if (voice.said.length <= SPOKEN_LIMIT) { speech.feed(key, words); return; }
+      // Past the limit: finish the sentence she's in, then stop speaking.
+      const stop = voice.said.slice(SPOKEN_LIMIT - 1).search(/[.!?](?=\s|$)/);
+      if (stop < 0) { speech.feed(key, words); return; }
+      const keep = SPOKEN_LIMIT + stop;
+      if (keep > before) speech.feed(key, voice.said.slice(before, keep));
+      voice.cut = true;
+      voice.upTo = keep;
+    };
+    const filler = speakIt ? window.setTimeout(() => { if (!voice.said && !voice.filler) { voice.filler = true; speech.feed(key, "One sec. "); } }, 1600) : null;
 
     const draw = () => {
       timer = null;
@@ -801,6 +819,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     };
     const end = () => {
       if (timer !== null) { window.clearTimeout(timer); timer = null; }
+      if (filler !== null) window.clearTimeout(filler);
       streamRef.current = null;
       replyRef.current = null;
       sendingRef.current = false;
@@ -825,7 +844,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         if (reply.proposal && !interrupted && reply.proposal.kind !== "memory.forget") window.setTimeout(() => applyRef.current(id), 60);
       }
       if (speakIt) {
-        if (!streamed.trim() && text) speech.feed(key, text);
+        if (!streamed.trim() && text) say(text);
+        if (voice.cut && text.length - voice.upTo > 40) speech.feed(key, " The rest is on screen.");
         speech.finishReply(key);
       }
       end();
@@ -843,7 +863,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (!live()) return;
       if (event.type === "delta") {
         reply.text += event.text;
-        if (speakIt) speech.feed(key, event.text);
+        say(event.text);
         if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
       } else if (event.type === "proposal") {
         const proposal = parseAssistantProposal(event.proposal);
@@ -852,11 +872,15 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : "tasks");
           if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
         }
+      } else if (event.type === "say") {
+        // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
+        if (speakIt && !voice.said) { voice.filler = true; speech.feed(key, `${event.text} `); }
       } else if (event.type === "clarify") {
         setClarify({ original: event.original, questions: event.questions });
       } else if (event.type === "protocol") {
         // A protocol ("goodnight") can open tabs as one of its steps.
         for (const tab of event.open) if (tab in sections) openSection(tab as Section);
+        window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:records-changed")), 300);
       } else if (event.type === "done") {
         outcome.reply = event.reply;
         outcome.interrupted = event.interrupted;
