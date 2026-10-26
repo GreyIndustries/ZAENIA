@@ -117,17 +117,16 @@ def extract_text(name: str, raw: bytes) -> tuple[str, str]:
             return "spreadsheet", "\n".join(out)
         except Exception:
             return "spreadsheet", "(This spreadsheet could not be opened.)"
-    if suffix == ".zip":
-        try:
-            with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-                names = archive.namelist()[:300]
-            return "zip archive", "Files inside:\n" + "\n".join(names)
-        except zipfile.BadZipFile:
-            return "zip archive", "(This zip file could not be opened.)"
+    # PowerPoint, OpenDocument, e-books, web pages, RTF, email, notebooks, old Office, archives, databases,
+    # images (her vision model) and audio (on-PC transcription): see file_reader.
+    from core.api import file_reader
+    found = file_reader.extract(name, raw)
+    if found is not None:
+        return found
     text = _decode_text(raw)
     if text is not None:
         return "text", text
-    return "file", f"(A {suffix or 'binary'} file of {len(raw):,} bytes; ZAE can't read its contents.)"
+    return file_reader.fallback(name, raw)
 
 
 def save_copy(name: str, raw: bytes) -> Path:

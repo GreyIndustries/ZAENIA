@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.7  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.8  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -577,3 +577,25 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - **Prompt note:** the questions prompt is framed as "write clarifying questions". Asked to "make a fitness program", llama3.1:8b sometimes refused outright.
 - **reply_shape:** requests to make a program, plan and the like, and answered questions, get the full answer, not the two-line brief.
 - **Tests:** links_test 5; personal_tools_test adds cross-tags.
+
+### 27.7 Reading any file — Claude, 2026-10-26 (v2.8)
+
+- Grey asked for ZAE's reader to read any file. `core/api/file_reader.py` extends `chat_files.extract_text`, which already read text, code, PDF, Word and Excel.
+- **New document formats:**
+  - PowerPoint (slide text from the pptx XML).
+  - OpenDocument text, spreadsheets and slides.
+  - E-books (epub).
+  - HTML (all text, paragraphs kept).
+  - RTF, with font and colour tables removed.
+  - Jupyter notebooks.
+  - E-mail (.eml headers, body and attachment names).
+  - Old Office files (.doc, .xls, .ppt, .msg): the text strings found inside.
+- **Archives and databases:**
+  - zip: names plus the text of small text files inside.
+  - tar and gz.
+  - SQLite: tables, columns, row counts and the first rows, opened read-only from a temporary copy.
+- **Images:** gif, bmp, tiff and others (png, jpeg and webp still go to the photo path) are described, and their text copied, by the local vision model qwen3.5:4b.
+- **Audio:** wav, mp3, flac, ogg, opus and aiff are transcribed on the PC with the Vosk model (first 10 minutes). m4a, aac and wma need a converter the PC doesn't have, and ZAE says so.
+- **Video:** not watched yet (there is no ffmpeg); she asks for the audio or a screenshot instead.
+- **Anything else:** its likely type (from magic bytes) and the readable strings inside.
+- **Tests:** file_reader_test 6; chat_files_test updated.

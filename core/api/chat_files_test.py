@@ -41,7 +41,11 @@ class ChatFilesTest(unittest.TestCase):
 
     def test_binary_gets_a_note_not_garbage(self):
         kind, text = chat_files.extract_text("song.mp3", b"\x00\x01" * 100)
-        self.assertIn("can't read", text)
+        self.assertEqual(kind, "audio")
+        self.assertIn("couldn't be decoded", text)  # a broken MP3: a plain note, not bytes
+        kind, text = chat_files.extract_text("blob.bin", b"\x00\x01" * 100)
+        self.assertIn("binary file", text)
+        self.assertNotIn("\x00", text)
 
     def test_block_labels_files_as_data_and_clips(self):
         block, names = chat_files.files_block([("big.txt", b"a" * 50_000)], save=False)
