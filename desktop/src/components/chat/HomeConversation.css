@@ -200,3 +200,10 @@
 .home-chat__log--browse .message{opacity:1!important}
 .message__copy{margin-right:6px}
 .message__play+.message__play{margin-left:0}
+
+/* The chat box is a growing text area: Shift+Enter for a new line, Enter to send (Grey, 2026-10-26). */
+.zaenia-app .chat-dock{flex:0 0 auto;height:auto;align-items:flex-end}
+.chat-dock textarea{min-width:0;flex:1;align-self:center;resize:none;overflow-y:auto;max-height:240px;padding:9px 0;margin:0;
+  background:transparent;border:0;outline:none;color:#f4f7ff;font:inherit;font-size:13px;line-height:1.45;scrollbar-width:thin}
+.chat-dock textarea::placeholder{color:#83b5da}
+.zaenia-app--phone .home-chat__composer textarea{font-size:16px}

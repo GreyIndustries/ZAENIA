@@ -256,7 +256,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [voiceConversationActive, setVoiceConversationActive] = useState(false);
   const identityTimerRef = useRef<number | null>(null);
   const messageCounter = useRef(0);
-  const queryRef = useRef<HTMLInputElement | null>(null);
+  const queryRef = useRef<HTMLTextAreaElement | null>(null);
   const [history, setHistory] = useState<HistoryState>(LIVE_API ? "loading" : "preview");
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState(0);

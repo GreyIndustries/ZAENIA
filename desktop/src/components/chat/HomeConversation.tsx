@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ChangeEvent, ClipboardEvent, DragEvent, FormEvent, KeyboardEvent, RefObject } from "react";
 import { calendarWhenLabel, taskDeadlineLabel } from "../../core/assistantActions";
 import type { AssistantActionState, AssistantProposal } from "../../core/assistantActions";
@@ -47,7 +47,7 @@ type Props = {
   query: string;
   onQuery: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  inputRef: RefObject<HTMLInputElement | null>;
+  inputRef: RefObject<HTMLTextAreaElement | null>;
   live: boolean;
   history: HistoryState;
   voice: {
@@ -180,7 +180,7 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
     if (!Array.from(event.dataTransfer?.types ?? []).includes("Files")) return;
     event.preventDefault(); if (!dragging) setDragging(true);
   };
-  const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
+  const onPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const pasted = Array.from(event.clipboardData?.files ?? []);
     if (!pasted.length) return;
     event.preventDefault(); void attach(pasted);
@@ -189,8 +189,24 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
   const recall = useRef(-1);
   const unsent = useRef("");
   useEffect(() => { recall.current = -1; }, [messages.length]);
-  const recallKey = (event: KeyboardEvent<HTMLInputElement>) => {
+  // The box grows with what you type (up to about ten lines); Enter sends, Shift+Enter starts a new line.
+  useLayoutEffect(() => {
+    const box = inputRef.current;
+    if (!box) return;
+    box.style.height = "auto";
+    box.style.height = `${Math.min(box.scrollHeight, 240)}px`;
+  }, [query, inputRef]);
+  const recallKey = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+      return;
+    }
     if ((event.key !== "ArrowUp" && event.key !== "ArrowDown") || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    // In a multi-line message the arrows move between lines; history only from the first or last line.
+    const box = event.currentTarget;
+    if (event.key === "ArrowUp" && box.value.slice(0, box.selectionStart).includes("\n")) return;
+    if (event.key === "ArrowDown" && box.value.slice(box.selectionEnd).includes("\n")) return;
     const sent = messages.filter(message => message.role === "user" && message.text.trim()).map(message => message.text).reverse();
     if (!sent.length) return;
     const next = event.key === "ArrowUp" ? Math.min(recall.current + 1, sent.length - 1) : recall.current - 1;
@@ -329,7 +345,7 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
       <button type="button" className="home-chat__attach" aria-label="Share files or photos with Zae" title="Share files or photos (or drag them here, or paste)" disabled={sending || preparing || (photos.length >= 4 && files.length >= MAX_SHARED_FILES)} onClick={() => photoInput.current?.click()}>{preparing ? '…' : <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m21.4 11.6-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8l8.5-8.5a3.7 3.7 0 0 1 5.2 5.2l-8.5 8.5a1.8 1.8 0 0 1-2.6-2.6l7.8-7.8"/></svg>}</button>
       <span className="chat-dock__mark" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-5 4v-4H3V6a2 2 0 0 1 2-2Z"/></svg></span>
       <label htmlFor="zaenia-query" className="sr-only">Ask ZÆNIA</label>
-      <input id="zaenia-query" ref={inputRef} value={query} onChange={(event: ChangeEvent<HTMLInputElement>) => { recall.current = -1; onQuery(event.target.value); }} onPaste={onPaste} onKeyDown={recallKey}
+      <textarea id="zaenia-query" ref={inputRef} rows={1} value={query} onChange={(event: ChangeEvent<HTMLTextAreaElement>) => { recall.current = -1; onQuery(event.target.value); }} onPaste={onPaste} onKeyDown={recallKey}
         placeholder={listen.mode === "dictate" ? "Listening…" : busy ? "Type to interrupt, or press Esc to stop" : "Ask ZÆNIA anything…"} autoComplete="off" maxLength={4000} enterKeyHint="send"/>
       {listen.supported && <button type="button" className={`home-chat__mic${listen.mode === "dictate" ? " home-chat__mic--on" : ""}`}
         onClick={listen.dictate} aria-pressed={listen.mode === "dictate"}
