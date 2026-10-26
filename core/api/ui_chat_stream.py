@@ -187,7 +187,28 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     from core.assistant_platform.protocols import protocols, run
     found = protocols().match(message)
     if found is None:
-        return None
+        # Anything else a tab can do ("log 8000 steps", "mark squats done", "move Arc Reactor to prototype").
+        from core.assistant_platform import chat_actions
+        if not chat_actions.maybe(message):
+            return None
+        from core.research.analyze import run_local
+        try:
+            action = chat_actions.classify(message, run_local)
+        except Exception:
+            return None
+        if action is None:
+            return None
+        permission = ("ui.tasks.write" if action["action"].startswith(("task.", "reminder.")) else
+                      "chat.reply" if action["action"] in ("translate", "library.search", "suggestions.think") else
+                      "assistant.desktop.manage" if action["action"] == "codedoctor.scan" else "memory.write")
+        try:
+            authorize(permission)
+            result = chat_actions.run(action, ask=run_local)
+            return result["reply"], "tab_action", [result["tab"]] if result["tab"] else []
+        except PermissionError:
+            return "That isn't available with the current permissions.", "tab_action", []
+        except ValueError as error:
+            return str(error), "tab_action", []
 
     def ask(question: str) -> str:
         authorize("chat.reply")

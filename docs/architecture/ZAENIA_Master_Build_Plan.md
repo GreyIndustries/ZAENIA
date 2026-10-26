@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.2  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.3  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -681,3 +681,20 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
 - **Notes tab look:** a pinboard. Cards come in three sizes (from length and id) and five tints, slightly tilted.
 - **Notes API:** `Notes.create`, `set_body`, `append` and `find`; `POST /api/platform/notes/{id}/append`. Listing items carry `chars` and `tags`.
 - **Tests:** research_test (shared notebook notes), tab_actions_test (note commands), personal_tools_test.
+
+### 28.2 Everything from chat — Claude, 2026-10-26 (v3.3)
+
+- Grey asked to be able to do everything the tabs do from chat as well. Tasks, events, reminders, notes, plans, research and watch topics already had chat handlers. `core/assistant_platform/chat_actions.py` covers the rest:
+  - **Fitness:** log food (ZAE's estimate, labelled as one, when calories aren't given), log exercise, weight/body fat/steps, cardio and sets, and check off today's workout exercises.
+  - **Tasks and reminders:** mark a task done, change its priority or deadline, cancel a reminder.
+  - **Workbench and Music:** new project, change its stage.
+  - **Research:** translate text, find books in the Library.
+  - **Training program:** add a source link, improve the program from its sources.
+  - **Suggestions and Code Doctor:** think of suggestions, run Code Doctor on ZAE's code.
+- **How it decides:**
+  - A word check (an instruction verb plus a tab topic, not a question) decides whether to ask her brain at all.
+  - Her brain picks ONE action from the fixed catalogue as JSON, or "none". Unknown names are refused.
+  - Each action checks its permission (ui.tasks.write, memory.write, chat.reply, assistant.desktop.manage).
+  - The reply says exactly what was done and the tab opens.
+  - Nothing is deleted except a reminder he names.
+- **Tests:** chat_actions_test 4 (prefilter, catalogue-only classification, fitness logging, projects and tasks).
