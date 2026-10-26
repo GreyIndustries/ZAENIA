@@ -96,6 +96,9 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("PUT", r"/api/protocols/[0-9a-f]{32}", "assistant.desktop.manage"),
         ("DELETE", r"/api/protocols/[0-9a-f]{32}", "assistant.desktop.manage"),
         ("GET", r"/api/selfcare", "status.read"),
+        ("GET", r"/api/push/key", "status.read"),
+        ("POST", r"/api/push/(?:subscribe|unsubscribe)", "memory.write"),
+        ("POST", r"/api/push/test", "status.read"),
         ("POST", r"/api/selfcare/backup", "assistant.desktop.manage"),
         ("POST", r"/api/selfcare/watchdog", "assistant.desktop.manage"),
         # Research (research_routes.py): public sources are reads; the notebook is memory; her analysis is a chat reply.

@@ -18,3 +18,4 @@ recurring-ical-events
 python-dateutil
 piper-tts
 pypdf==6.21.1
+pywebpush

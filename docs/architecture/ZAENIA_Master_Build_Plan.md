@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.9  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.0  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -610,3 +610,39 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
 - **Voice pacing:** she says "One sec." if nothing has arrived after 1.6 s, and the server can send a spoken status (a `say` event; "One sec, I'm reading that." for links). She then speaks about 240 characters, finishing the sentence, and ends with "The rest is on screen." The written reply and the Play button are unchanged.
 - **FFmpeg:** if installed (found on PATH or where winget puts it), she transcribes M4A, AAC and WMA audio. For video (mp4, mov, mkv…) she transcribes the speech and describes four moments with her vision model. Without FFmpeg she says it's needed.
 - **Tests:** tab_actions_test 3; file_reader_test updated.
+
+### 27.9 Training program (live daily tracker) and phone notifications — Claude, 2026-10-26 (v3.0)
+
+- Grey asked for a live daily tracker: a calendar, calories to eat and burn based on the video, weight, height, steps and cardio, several source links, and phone reminders. His fitness-app screenshots are a soft reference.
+- **Tab:** Fitness & Health now opens on **Training program**. The old plan editor is "Edit plans".
+- `core/assistant_platform/training.py`, stored in `data/fitness/program.json`.
+- **Calendar and daily tracker:**
+  - The active plan's days ("Day 1 Chest and Triceps (Gym)") are grouped from its steps, dropping notes and titles.
+  - Days map to weekdays, defaulting to gym and home days or to Mon–Sun, and can be re-mapped.
+  - The month calendar shows each day's workout and how much of it is done, plus weigh-in and cardio marks.
+  - The daily tracker has check-offs and set logging (reps × lb), plus weight, body fat, steps, lifting minutes and cardio (type, miles, minutes).
+- **Targets:**
+  - Mifflin-St Jeor BMR × activity outside workouts gives maintenance.
+  - The goal pace sets the deficit (1 lb/week = 500 kcal/day), split into a burn target (40% of the deficit, 250–600) and an eat target (maintenance + burn − deficit, floored at 1500/1200).
+  - Protein is 1 g per lb of goal weight.
+  - Missing age, sex, height or weight are named rather than guessed.
+- **Burn estimates:**
+  - Steps: stride from height, 0.3 kcal/lb/mi.
+  - Runs: 0.63 kcal/lb/mi.
+  - Other cardio by net MET.
+  - Lifting: MET 5 × minutes, or 3 min per logged set.
+  - Food eaten and logged exercise come from the Log page.
+- **Dashboard:** weight trend, 30-day habit grids (workouts, weigh-ins) and weekly sets per muscle group (exercise keywords mapped to muscles).
+- **Sources:**
+  - Several links per program, read with `links.read_link` (TikTok spoken words included).
+  - Her brain extracts the target height, weight and body fat and the advice ("Use as my goal weight").
+  - "Improve my program from these sources" writes a new plan, keeps the old one and makes the new one active.
+- **Phone notifications** (`core/api/web_push.py`):
+  - Web Push with VAPID; the private key is DPAPI-protected and subscriptions are kept in `data/secure`.
+  - `public/sw.js` shows the notifications and `core/phonePush.ts` subscribes. On iPhone this needs iOS 16.4+ and ZAE opened from the Home Screen.
+  - What gets pushed:
+    - Every follow-through notice (reminders, e-mail, research ready), via `FollowThroughService.post`.
+    - Daily training reminders at his times (workout on training days, weigh-in if not logged, food).
+  - Routes: `/api/push/key|subscribe|unsubscribe|test`.
+  - Package: pywebpush (installed in the live venv, added to requirements.txt).
+- **Tests:** training_test 7, including push and reminders.

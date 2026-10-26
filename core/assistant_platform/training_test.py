@@ -1,0 +1,123 @@
+import json
+import tempfile
+import unittest
+from datetime import date
+from pathlib import Path
+from unittest import mock
+
+from core.assistant_platform import training
+from core.assistant_platform.store import PlatformStore
+
+STEPS = [{"exercise": "*Insomniac Spiderman Physique Training Program", "prescription": "Updated", "done": False},
+         {"exercise": "*Note", "prescription": "This program is based on a video game physique", "done": False},
+         {"exercise": "*Day 1", "prescription": "Chest and Triceps (Gym)", "done": False},
+         {"exercise": "Barbell Bench Press", "prescription": "3 sets of 8-12 reps", "done": False},
+         {"exercise": "Tricep Dips", "prescription": "3 sets of 12-15 reps", "done": False},
+         {"exercise": "Day 2: Shoulders (Home/Outdoor)", "prescription": "", "done": False},
+         {"exercise": "Push-ups", "prescription": "3 sets of 10-12 reps", "done": False}]
+
+
+class TrainingTest(unittest.TestCase):
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.path = Path(self.folder.name) / "program.json"
+        self.tracker = training.Training(self.path)
+
+    def tearDown(self):
+        self.folder.cleanup()
+
+    def test_plan_days_and_weekdays(self):
+        days = training.plan_days(STEPS)
+        self.assertEqual([d["label"] for d in days], ["Day 1 Chest and Triceps (Gym)", "Day 2 Shoulders (Home/Outdoor)"])
+        self.assertEqual([e["exercise"] for e in days[0]["exercises"]], ["Barbell Bench Press", "Tricep Dips"])
+        self.assertEqual(training.default_weekdays(days, [], []), {"Monday": days[0]["label"], "Tuesday": days[1]["label"]})
+        self.assertEqual(training.default_weekdays(days, ["Tuesday"], ["Saturday"]), {"Tuesday": days[0]["label"], "Saturday": days[1]["label"]})
+
+    def test_targets_need_inputs_then_compute(self):
+        self.assertEqual(training.targets(self.tracker.load()["profile"])["missing"], ["age", "sex", "height", "weight"])
+        profile = self.tracker.set_profile({"age": 30, "sex": "male", "heightIn": 70, "weightLb": 195.8, "goalWeightLb": 167, "rateLbPerWeek": 1})
+        found = training.targets(profile)
+        self.assertEqual((found["bmr"], found["maintenance"], found["dailyDeficit"], found["eat"], found["burn"], found["protein"]),
+                         (1854, 2550, 500, 2300, 250, 167))
+        self.assertAlmostEqual(found["weeksToGoal"], 28.8)
+        for bad in ({"age": 5}, {"sex": "x"}, {"activity": "lazy"}, {"gymDays": ["Funday"]}, {"reminders": {"workout": "6am"}}, {"nope": 1}):
+            with self.assertRaises(ValueError):
+                self.tracker.set_profile(bad)
+
+    def test_daily_log_burn_and_muscles(self):
+        today = date.today().isoformat()
+        self.tracker.log_day(today, {"weightLb": 195, "steps": 8000, "cardio": [{"type": "run", "miles": 2, "minutes": 20}],
+                                     "done": {"Barbell Bench Press": True}, "sets": [{"exercise": "Leg Curl", "reps": 10, "weightLb": 90}]})
+        data = self.tracker.load()
+        self.assertEqual(data["profile"]["weightLb"], 195)
+        burn = training.burned(data["days"][today], 195, 70)
+        self.assertEqual((burn["cardio"], burn["cardioMiles"]), (round(0.63 * 195 * 2), 2.0))
+        self.assertGreater(burn["steps"], 150)
+        muscles = training.muscle_sets(data["days"], today)
+        self.assertEqual((muscles["Hamstrings"], muscles["Biceps"]), (1, 0))  # leg curls are hamstrings, not biceps
+        with self.assertRaises(ValueError):
+            self.tracker.log_day(today, {"steps": -1})
+
+    def test_overview_calendar_with_a_saved_plan(self):
+        store = PlatformStore(Path(self.folder.name) / "p.sqlite3")
+        from core.assistant_platform.personal_tools import PersonalTools
+        plan = PersonalTools(store).save("plans", {"title": "Spider plan", "steps": STEPS, "sessions": []})
+        today = date.today()
+        self.tracker.log_day(today.isoformat(), {"done": {"Barbell Bench Press": True}, "weightLb": 194})
+        self.tracker.set_program(plan["id"], {training.WEEKDAYS[today.weekday()]: "Day 1 Chest and Triceps (Gym)"})
+        info = training.overview(store, self.path)
+        cell = next(c for c in info["calendar"] if c["date"] == today.isoformat())
+        self.assertEqual((cell["workout"], cell["planned"], cell["done"], cell["weighed"]), ("Day 1 Chest and Triceps (Gym)", 2, 1, True))
+        self.assertTrue(info["habits"]["workouts"][-1])
+        view = training.day_view(today.isoformat(), store, self.path)
+        self.assertEqual(view["workout"]["label"], "Day 1 Chest and Triceps (Gym)")
+
+    def test_sources_suggest_targets(self):
+        reader = lambda url: {"title": "Spidey", "kind": "TikTok video", "text": "He is 5ft 10 and weighs 167."}
+        ask = lambda prompt: json.dumps({"heightIn": 70, "weightLb": 167, "bodyFat": None, "advice": ["Train every muscle group"]})
+        source = self.tracker.add_source("https://www.tiktok.com/@a/video/1", reader=reader, ask=ask)
+        self.assertEqual(source["suggested"], {"heightIn": 70.0, "weightLb": 167.0, "advice": ["Train every muscle group"]})
+        self.tracker.remove_source("https://www.tiktok.com/@a/video/1")
+        self.assertEqual(self.tracker.load()["sources"], [])
+
+
+class PushTest(unittest.TestCase):
+    def test_subscribe_send_and_drop_gone_phones(self):
+        from core.api import web_push
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.asymmetric import ec
+        pem = ec.generate_private_key(ec.SECP256R1()).private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+        self.assertEqual(len(web_push.public_key(pem)), 87)
+        with tempfile.TemporaryDirectory() as folder:
+            subs = Path(folder) / "s.json"
+            web_push.subscribe({"endpoint": "https://push.example/a", "keys": {"p256dh": "k", "auth": "a"}}, path=subs)
+            web_push.subscribe({"endpoint": "https://push.example/b", "keys": {"p256dh": "k", "auth": "a"}}, path=subs)
+            with self.assertRaises(ValueError):
+                web_push.subscribe({"endpoint": "http://x"}, path=subs)
+            sent = []
+
+            class Gone(Exception):
+                response = type("R", (), {"status_code": 410})()
+
+            def push(subscription_info, data, **kwargs):
+                if subscription_info["endpoint"].endswith("b"):
+                    raise Gone()
+                sent.append(json.loads(data))
+            self.assertEqual(web_push.send("Reminder", "Stretch", push=push, path=subs, pem=pem), 1)
+            self.assertEqual(sent[0]["body"], "Stretch")
+            self.assertEqual([s["endpoint"] for s in web_push.subscriptions(subs)], ["https://push.example/a"])
+
+    def test_training_reminders_fire_once_in_their_window(self):
+        from datetime import datetime
+        from core.api import web_push
+        sent = []
+        reminders = web_push.TrainingReminders(clock=lambda: datetime(2026, 10, 26, 7, 5), sender=lambda title, body: sent.append(title))
+        fake = {"profile": {"reminders": {"workout": "", "weighIn": "07:00", "food": "20:00"}}, "days": {}}
+        with mock.patch("core.assistant_platform.training.Training.load", return_value=fake):
+            self.assertEqual(reminders.tick(), ["weighIn"])
+            self.assertEqual(reminders.tick(), [])
+        self.assertEqual(sent, ["Weigh-in"])
+
+
+if __name__ == "__main__":
+    unittest.main()

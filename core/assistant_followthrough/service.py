@@ -315,11 +315,18 @@ class FollowThroughService:
             settings = {**DEFAULT_SETTINGS, **json.loads(db.execute("SELECT body FROM settings WHERE id=1").fetchone()[0])}
             if not settings["enabled"]:
                 return None
-            db.execute("""INSERT OR IGNORE INTO notifications
+            added = db.execute("""INSERT OR IGNORE INTO notifications
                 (id,source,source_id,revision,kind,title,message,occurrence,lead_minutes,due,valid_until,created,state)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'ready')""",
                 (notice_id, source, str(source_id)[:200], "posted", f"{source}.important", str(title)[:500], str(message)[:2000],
-                 _iso(now), 0, stamp, stamp + hours * 3600, stamp))
+                 _iso(now), 0, stamp, stamp + hours * 3600, stamp)).rowcount
+        if added:
+            try:
+                # The same notice on his phone, when it's subscribed (web_push.py); never blocks or fails the post.
+                from core.api.web_push import notify
+                notify(str(title)[:80], str(message)[:240])
+            except Exception:
+                pass
         return notice_id
 
     def list_notifications(self, include_read: bool = False, limit: int = 100, now: datetime | None = None) -> dict[str, Any]:

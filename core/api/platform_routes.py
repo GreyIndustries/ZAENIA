@@ -13,6 +13,8 @@ PATTERNS = [
     ('GET',r'calendar-completions', 'calendar.read'),
     ('PUT',r'calendar-completions/[a-f0-9]{64}', 'ui.calendar.write'),
     ('GET',r'personal/fitness-summary', 'memory.read'),
+    ('GET',r'personal/training(?:/day)?', 'memory.read'),
+    ('POST',r'personal/training/(?:profile|program|day|source|improve)', 'memory.write'),
     ('GET',rf'personal/(?:workbench|music|food|exercise|plans|fitness-settings)(?:/{ID})?', 'memory.read'),
     ('POST',r'personal/(?:workbench|music|food|exercise|plans|fitness-settings|training-source)', 'memory.write'),
     ('PUT',rf'personal/(?:workbench|music|food|exercise|plans|fitness-settings)/{ID}', 'memory.write'),

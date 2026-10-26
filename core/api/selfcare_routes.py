@@ -101,6 +101,37 @@ def create_selfcare_router(require_api_authentication: Callable[..., None]) -> A
         from core.assistant_platform.selfcare import health
         return health()
 
+    # ---- Phone notifications (web_push.py)
+    @router.get("/api/push/key")
+    def push_key() -> dict[str, Any]:
+        from core.api import web_push
+        try:
+            return {"key": web_push.public_key(), "phones": len(web_push.subscriptions())}
+        except Exception as error:
+            raise HTTPException(502, f"Push keys unavailable ({type(error).__name__}).") from error
+
+    @router.post("/api/push/subscribe")
+    def push_subscribe(body: dict[str, Any]) -> dict[str, Any]:
+        from core.api import web_push
+        try:
+            return {"phones": web_push.subscribe(body.get("subscription") or {}, str(body.get("label") or "phone"))}
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+
+    @router.post("/api/push/unsubscribe")
+    def push_unsubscribe(body: dict[str, Any]) -> dict[str, Any]:
+        from core.api import web_push
+        web_push.unsubscribe(str(body.get("endpoint") or ""))
+        return {"ok": True}
+
+    @router.post("/api/push/test")
+    def push_test() -> dict[str, Any]:
+        from core.api import web_push
+        try:
+            return {"sent": web_push.send("ZAE", "Notifications are working. I'll remind you here.")}
+        except Exception as error:
+            raise HTTPException(502, f"Couldn't send ({type(error).__name__}).") from error
+
     @router.post("/api/selfcare/backup")
     def backup() -> dict[str, Any]:
         from core.assistant_platform.selfcare import backup_now

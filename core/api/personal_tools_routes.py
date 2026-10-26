@@ -22,6 +22,23 @@ class SourceBody(BaseModel):
     data: str = Field(default="", max_length=1400000)
 
 
+class TrainingBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    changes: dict = Field(default_factory=dict)
+
+
+class ProgramBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    planId: str = Field(default="", max_length=32)
+    weekdays: dict[str, str] = Field(default_factory=dict)
+
+
+class TrainingSourceBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(min_length=8, max_length=2000)
+    remove: bool = False
+
+
 class CompletionBody(BaseModel):
     model_config = ConfigDict(extra='forbid', strict=True)
     completed: bool
@@ -75,6 +92,46 @@ def create_personal_tools_router(get, call):
             result = draft_training_plan(content)
             return {**result, "sourceText": content, "sourceName": name or "Pasted text", "sourceUrl": url}
         return call(extract)
+
+    # ---- Training program: live daily tracker (core/assistant_platform/training.py)
+    @router.get("/training")
+    def training_overview(month: str = Query(default="", max_length=7)):
+        from core.assistant_platform.training import overview
+        return call(lambda: overview(get().store, month=month))
+
+    @router.get("/training/day")
+    def training_day(day: str = Query(min_length=10, max_length=10)):
+        from core.assistant_platform.training import day_view
+        return call(lambda: day_view(day, get().store))
+
+    @router.post("/training/profile")
+    def training_profile(body: TrainingBody):
+        from core.assistant_platform.training import training
+        return call(lambda: training().set_profile(body.changes))
+
+    @router.post("/training/program")
+    def training_program(body: ProgramBody):
+        from core.assistant_platform.training import training
+        return call(lambda: training().set_program(body.planId, body.weekdays))
+
+    @router.post("/training/day")
+    def training_log(body: TrainingBody, day: str = Query(min_length=10, max_length=10)):
+        from core.assistant_platform.training import training
+        return call(lambda: training().log_day(day, body.changes))
+
+    @router.post("/training/source")
+    def training_source(body: TrainingSourceBody):
+        from core.assistant_platform.training import training
+        if body.remove:
+            return call(lambda: (training().remove_source(body.url), {"ok": True})[1])
+        from core.research.analyze import run_local
+        return call(lambda: training().add_source(body.url, ask=run_local))
+
+    @router.post("/training/improve")
+    def training_improve():
+        from core.assistant_platform.training import improve_program
+        from core.research.analyze import run_local
+        return call(lambda: improve_program(get().store, run_local))
 
     @router.get("/{collection}")
     def listing(collection: str, day: str = Query(default="", max_length=10), archived: bool = False, offset: int = Query(default=0, ge=0, le=2000)):
