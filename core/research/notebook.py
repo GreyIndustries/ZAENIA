@@ -1,6 +1,11 @@
 """Research notebook: topics, the sources gathered for each, and Grey's own notes.
 
-Kept on this PC in data/research/notebook.json. Source text is an excerpt kept
+Each topic's notes ARE a note in the Notes tab (one shared set of notes for
+Notes, the Research notebook and Workbench): the topic keeps the note's id,
+and reading or writing the topic's notes reads or writes that note. Older
+topics get their note made the first time they're opened. Deleting a topic
+keeps its note. Topics and sources are kept on this PC in
+data/research/notebook.json. Source text is an excerpt kept
 for ZAE's analysis (summary, comparison, claims vs evidence, timeline,
 patterns, next steps); it's untrusted data, never instructions.
 """
@@ -27,8 +32,36 @@ def _now() -> str:
 
 
 class Notebook:
-    def __init__(self, path: Path = NOTEBOOK_FILE):
+    def __init__(self, path: Path = NOTEBOOK_FILE, store: Any = None):
         self.path = Path(path)
+        self._store = store
+
+    @property
+    def notes(self):
+        from core.assistant_platform.notes import Notes
+        if self._store is None:
+            from core.assistant_platform.service import platform
+            self._store = platform().store
+        return Notes(self._store)
+
+    def _note_id(self, data: dict[str, Any], topic: dict[str, Any]) -> str:
+        """The topic's shared note, made from its old notes text the first time (caller holds the lock and saves)."""
+        note_id = topic.get("noteId")
+        if note_id:
+            try:
+                self.notes.get(note_id)
+                return note_id
+            except ValueError:
+                pass
+        note = self.notes.create(f"Research: {topic['name']}"[:160], topic.get("notes", ""))
+        topic["noteId"] = note["id"]
+        return note["id"]
+
+    def _notes_text(self, topic: dict[str, Any]) -> str:
+        try:
+            return self.notes.get(topic["noteId"])["body"] if topic.get("noteId") else topic.get("notes", "")
+        except ValueError:
+            return topic.get("notes", "")
 
     def _load(self) -> dict[str, Any]:
         try:
@@ -49,11 +82,18 @@ class Notebook:
 
     def topics(self) -> list[dict[str, Any]]:
         data = self._load()
-        return [{"id": t["id"], "name": t["name"], "sources": len(t.get("sources", [])), "updatedAt": t.get("updatedAt")}
+        return [{"id": t["id"], "name": t["name"], "sources": len(t.get("sources", [])), "updatedAt": t.get("updatedAt"), "noteId": t.get("noteId")}
                 for t in sorted(data["topics"], key=lambda t: t.get("updatedAt", ""), reverse=True)]
 
     def get(self, topic_id: str) -> dict[str, Any]:
-        topic = dict(self._topic(self._load(), topic_id))
+        with _LOCK:
+            data = self._load()
+            raw = self._topic(data, topic_id)
+            if not raw.get("noteId"):
+                self._note_id(data, raw)
+                self._save(data)
+        topic = dict(raw)
+        topic["notes"] = self._notes_text(topic)
         topic["sources"] = [{k: v for k, v in source.items() if k != "text"} | {"chars": len(source.get("text", ""))}
                             for source in topic.get("sources", [])]
         return topic
@@ -67,6 +107,7 @@ class Notebook:
             if len(data["topics"]) >= MAX_TOPICS:
                 raise ValueError("The notebook is full; delete an old topic first.")
             topic = {"id": uuid.uuid4().hex, "name": name, "notes": "", "sources": [], "createdAt": _now(), "updatedAt": _now()}
+            self._note_id(data, topic)
             data["topics"].append(topic)
             self._save(data)
         return self.get(topic["id"])
@@ -81,9 +122,26 @@ class Notebook:
         with _LOCK:
             data = self._load()
             topic = self._topic(data, topic_id)
-            topic["notes"], topic["updatedAt"] = str(notes)[:50_000], _now()
+            note_id = self._note_id(data, topic)
+            topic["notes"], topic["updatedAt"] = "", _now()
             self._save(data)
-        return {"ok": True, "updatedAt": topic["updatedAt"]}
+        self.notes.set_body(note_id, str(notes)[:30_000])
+        return {"ok": True, "updatedAt": topic["updatedAt"], "noteId": note_id}
+
+    def link_note(self, note_id: str) -> dict[str, Any]:
+        """Make an existing note (from Notes or Workbench) a research topic, sharing the same text."""
+        note = self.notes.get(note_id)
+        with _LOCK:
+            data = self._load()
+            existing = next((t for t in data["topics"] if t.get("noteId") == note_id), None)
+            if existing is None:
+                if len(data["topics"]) >= MAX_TOPICS:
+                    raise ValueError("The notebook is full; delete an old topic first.")
+                existing = {"id": uuid.uuid4().hex, "name": note["title"].removeprefix("Research: ")[:120], "notes": "", "sources": [],
+                            "noteId": note_id, "createdAt": _now(), "updatedAt": _now()}
+                data["topics"].append(existing)
+                self._save(data)
+        return self.get(existing["id"])
 
     def add_source(self, topic_id: str, *, title: str, kind: str = "web", url: str = "", text: str = "", meta: str = "") -> dict[str, Any]:
         title = " ".join(str(title).split())[:300]
@@ -112,4 +170,6 @@ class Notebook:
 
     def material(self, topic_id: str) -> dict[str, Any]:
         """Everything ZAE analyses for a topic (full source excerpts and the notes)."""
-        return dict(self._topic(self._load(), topic_id))
+        topic = dict(self._topic(self._load(), topic_id))
+        topic["notes"] = self._notes_text(topic)
+        return topic

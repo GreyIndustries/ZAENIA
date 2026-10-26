@@ -1,1 +1,27 @@
 .notes-panel{min-width:0}.notes-controls{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:12px 0}.notes-controls>label:first-child{flex:1 1 180px}.notes-workspace{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr));gap:16px;align-items:start}.notes-list{min-width:0;max-height:280px;overflow:auto}.notes-panel .notes-list__item{display:grid;width:100%;gap:5px;text-align:left;white-space:normal;margin:8px 0;padding:12px;overflow-wrap:anywhere}.notes-list__item>span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap}.notes-editor{min-width:0}.notes-editor form{margin-top:0}.notes-editor textarea{min-height:220px;line-height:1.7;white-space:pre-wrap}.notes-panel .platform-inline{margin-bottom:0}@media(max-width:600px){.notes-list{max-height:220px}}.zaenia-app--phone .sidebar__nav{overflow-x:auto;scrollbar-width:thin}.zaenia-app--phone .nav-item{flex:1 0 44px}
+
+/* Notes as a pinboard: cards of different sizes and tints, slightly tilted (Grey, 2026-10-26). */
+.notes-workspace--wall{display:flex!important;flex-direction:column;gap:16px}
+.notes-wall{columns:4 210px;column-gap:14px}
+.notes-wall__count,.notes-wall__pages{display:block;column-span:all;margin-bottom:10px}
+.notes-panel .note-card{--tint:#f2b95f;display:flex;flex-direction:column;gap:6px;width:100%;margin:0 0 14px;padding:14px 14px 12px;break-inside:avoid;text-align:left;white-space:normal;
+  border-radius:14px 18px 12px 16px;border:1px solid color-mix(in srgb,var(--tint) 45%,transparent);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--tint) 16%,#0d1a2b),#0b1524);color:#eef3fa;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.notes-panel .note-card:hover{transform:rotate(0) translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.35)}
+.notes-panel .note-card[aria-pressed=true]{outline:2px solid var(--tint);outline-offset:2px}
+.note-card strong{font-size:14px;line-height:1.3}
+.note-card span{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;font-size:12.5px;line-height:1.5;color:#c9d8ea}
+.note-card em{font-style:normal;font-size:10.5px;color:var(--tint)}
+.note-card small{font-size:10px;color:#8ea4c0}
+.note-card--s{min-height:90px}.note-card--s span{-webkit-line-clamp:3}
+.note-card--m{min-height:150px}.note-card--m span{-webkit-line-clamp:7}.note-card--m strong{font-size:15px}
+.note-card--l{min-height:230px}.note-card--l span{-webkit-line-clamp:13}.note-card--l strong{font-size:17px}
+.note-card--tilt-l{transform:rotate(-.6deg)}.note-card--tilt-r{transform:rotate(.5deg)}
+.note-card--amber{--tint:#f2b95f}.note-card--blue{--tint:#75cfff}.note-card--green{--tint:#7fe3a8}.note-card--rose{--tint:#f49cb8}.note-card--violet{--tint:#b9a2ff}
+/* Live transcript button */
+.live-transcript{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 0}
+.live-transcript__btn{padding:6px 12px;border-radius:999px;border:1px solid rgba(255,120,120,.45);background:rgba(60,14,20,.45);color:#ffd2d2;font:inherit;font-size:12px;cursor:pointer}
+.live-transcript__btn--on{background:#b3262e;color:#fff;border-color:#ff6b6b;animation:live-pulse 1.4s ease-in-out infinite}
+.live-transcript__level{height:6px;border-radius:3px;background:#ff6b6b;transition:width .12s linear}
+.live-transcript small{font-size:11px;color:#9fb6cf}.live-transcript__error{color:#ffcfae!important}
+@keyframes live-pulse{50%{box-shadow:0 0 0 6px rgba(255,80,80,.18)}}

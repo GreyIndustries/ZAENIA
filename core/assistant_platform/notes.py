@@ -43,9 +43,36 @@ class Notes:
                 where+=" AND instr(note_fold(json_extract(payload,'$.title') || char(10) || json_extract(payload,'$.body')),?)>0"
                 params.append(needle)
             total=db.execute('SELECT COUNT(*) FROM records WHERE '+where,params).fetchone()[0]
-            rows=db.execute("SELECT id,revision,updated,json_extract(payload,'$.title') AS title,substr(json_extract(payload,'$.body'),1,220) AS excerpt,json_extract(payload,'$.pinned') AS pinned,json_extract(payload,'$.reference') AS reference FROM records WHERE "+where+" ORDER BY json_extract(payload,'$.pinned') DESC,updated DESC,id LIMIT ? OFFSET ?",(*params,limit,offset))
-            items=[{'id':r['id'],'revision':r['revision'],'updatedAt':r['updated'],'title':r['title'],'excerpt':r['excerpt'],'pinned':bool(r['pinned']),'reference':bool(r['reference']),'archived':archived} for r in rows]
+            rows=db.execute("SELECT id,revision,updated,json_extract(payload,'$.title') AS title,substr(json_extract(payload,'$.body'),1,420) AS excerpt,length(json_extract(payload,'$.body')) AS chars,json_extract(payload,'$.pinned') AS pinned,json_extract(payload,'$.reference') AS reference FROM records WHERE "+where+" ORDER BY json_extract(payload,'$.pinned') DESC,updated DESC,id LIMIT ? OFFSET ?",(*params,limit,offset))
+            items=[{'id':r['id'],'revision':r['revision'],'updatedAt':r['updated'],'title':r['title'],'excerpt':r['excerpt'],'chars':r['chars'] or 0,'pinned':bool(r['pinned']),'reference':bool(r['reference']),'archived':archived} for r in rows]
         return {'notes':items,'total':total,'offset':offset,'nextOffset':offset+limit if offset+limit<total else None}
+
+    # ---- Shared notes: the same notes back the Notes tab, Research notebook topics and Workbench projects.
+    def create(self,title,body=''):
+        return self.save({'title':str(title)[:160] or 'Note','body':str(body)[:MAX_BODY]})
+
+    def set_body(self,identifier,body):
+        row=self.get(identifier)
+        keep={k:row.get(k,False if k!='title' else 'Note') for k in ('title','pinned','archived','reference')}
+        return self.save({**keep,'body':str(body)[-MAX_BODY:]},identifier,row['revision'])
+
+    def append(self,identifier,addition,stamp=True):
+        """Add text to the end of a note (oldest text is dropped first if it would pass the size limit)."""
+        from datetime import datetime
+        row=self.get(identifier)
+        header=f"— {datetime.now().strftime('%b %d, %I:%M %p').replace(' 0',' ')}\n" if stamp else ''
+        body=(row['body'].rstrip()+'\n\n'+header+str(addition).strip()).strip()
+        return self.set_body(identifier,body)
+
+    def find(self,name):
+        """The note he means by name: exact title, then a title containing it, then the best text match."""
+        wanted=unicodedata.normalize('NFKC',str(name)).strip().casefold()
+        if not wanted:return None
+        rows=self.list(wanted,limit=50)['notes']
+        for test in (lambda t:t==wanted,lambda t:t.startswith(wanted),lambda t:wanted in t):
+            for row in rows:
+                if test(unicodedata.normalize('NFKC',row['title']).casefold()):return row
+        return rows[0] if rows else None
 
     def get(self,identifier):
         row=self.store.get('note',identifier)

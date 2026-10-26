@@ -50,6 +50,26 @@ class TabActionsTest(unittest.TestCase):
 
 
 
+class NoteCommandTest(unittest.TestCase):
+    def test_parse_and_save_notes_from_chat(self):
+        from core.assistant_platform.notes import Notes
+        self.assertEqual(tab_actions.parse_note("add this to my notes: buy creatine"), {"action": "new", "name": "", "text": "buy creatine"})
+        self.assertEqual(tab_actions.parse_note("update my workout log note with this"), {"action": "update", "name": "workout log", "text": ""})
+        self.assertEqual(tab_actions.parse_note("add this to my Arc Reactor note")["name"], "Arc Reactor")
+        self.assertIsNone(tab_actions.parse_note("add milk to my shopping list"))
+        with tempfile.TemporaryDirectory() as folder:
+            store = PlatformStore(Path(folder) / "p.sqlite3")
+            messages = [{"role": "user", "content": "plan?"}, {"role": "assistant", "content": PLAN}]
+            made = tab_actions.save_note({"action": "new", "name": "", "text": ""}, messages, store=store, ask=lambda p: "Spider Plan")
+            self.assertEqual(Notes(store).get(made["id"])["body"], PLAN.strip())
+            gym = Notes(store).create("Gym log", "Mon: bench")
+            done = tab_actions.save_note({"action": "update", "name": "gym", "text": "Tue: squat 225"}, messages, store=store)
+            self.assertEqual(done["id"], gym["id"])
+            self.assertTrue(Notes(store).get(gym["id"])["body"].endswith("Tue: squat 225"))
+            fresh = tab_actions.save_note({"action": "update", "name": "reading list", "text": "Dune"}, messages, store=store)
+            self.assertIn("started one", fresh["reply"])
+
+
 class LastReplyTest(unittest.TestCase):
     def test_skips_short_claims_after_the_plan(self):
         messages = [{"role": "user", "content": "plan from https://x.com/a"}, {"role": "assistant", "content": PLAN},

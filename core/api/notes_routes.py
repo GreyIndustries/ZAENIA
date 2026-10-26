@@ -17,9 +17,32 @@ def create_notes_router(get,call):
     router=APIRouter(prefix='/api/platform/notes',tags=['notes'])
     def notes():return Notes(get().store)
 
+    def links():
+        """Which notes belong to a research topic or a workbench project (shown as tags in Notes)."""
+        tags={}
+        try:
+            from core.research.notebook import Notebook
+            for topic in Notebook(store=get().store).topics():
+                if topic.get('noteId'):tags.setdefault(topic['noteId'],[]).append('Research')
+        except Exception:
+            pass
+        for project in get().store.list('workbench'):
+            for note_id in project.get('noteIds') or []:
+                tags.setdefault(note_id,[]).append('Workbench: '+project.get('title','')[:40])
+        return tags
+
     @router.get('')
     def listing(q:str=Query(default='',max_length=300),archived:bool=False,offset:int=Query(default=0,ge=0)):
-        return call(lambda:notes().list(q,archived=archived,offset=offset))
+        def run():
+            result=notes().list(q,archived=archived,offset=offset)
+            tags=links()
+            for item in result['notes']:item['tags']=tags.get(item['id'],[])
+            return result
+        return call(run)
+
+    @router.post('/{identifier}/append')
+    def append(identifier:str,body:dict):
+        return call(lambda:notes().append(identifier,str(body.get('text',''))[:30000],stamp=bool(body.get('stamp',True))))
 
     @router.get('/{identifier}')
     def read(identifier:str):

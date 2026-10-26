@@ -39,6 +39,50 @@ def parse(message: str) -> str | None:
     return None
 
 
+_NOTE_NEW = re.compile(r"^\s*(?:zae[,\s]+)?(?:please\s+)?(?:add|save|put|write|jot)\s+(?:this|that|it)(?:\s+down)?\s+(?:to|in|into)\s+(?:my\s+|the\s+)?notes?"
+                       r"(?:\s+tab)?\s*(?:[:,\-–]\s*(?P<text>.+))?\s*$", re.I | re.S)
+_NOTE_UPDATE = re.compile(
+    r"^\s*(?:zae[,\s]+)?(?:please\s+)?(?:update|add\s+to|append\s+to)\s+(?:my\s+|the\s+)?(?P<name>.+?)\s+note\s+with\s+(?:this|that|it)\s*(?:[:,\-–]\s*(?P<text>.+))?\s*$"
+    r"|^\s*(?:zae[,\s]+)?(?:please\s+)?(?:add|put|append|write)\s+(?:this|that|it)\s+(?:to|in|into)\s+(?:my\s+|the\s+)?(?P<name2>.+?)\s+note\s*(?:[:,\-–]\s*(?P<text2>.+))?\s*$",
+    re.I | re.S)
+
+
+def parse_note(message: str) -> dict[str, str] | None:
+    """'add this to notes[: text]' → a new note; 'update <name> note with this[: text]' → add to that note."""
+    text = str(message).strip()
+    found = _NOTE_UPDATE.match(text)
+    if found:
+        name = (found.group("name") or found.group("name2") or "").strip(" \"'")
+        if name and name.lower() not in ("my", "the", "a"):
+            return {"action": "update", "name": name, "text": (found.group("text") or found.group("text2") or "").strip()}
+    found = _NOTE_NEW.match(text)
+    if found:
+        return {"action": "new", "name": "", "text": (found.group("text") or "").strip()}
+    return None
+
+
+def save_note(request: dict[str, str], messages: list[dict[str, str]], *, store: Any = None, ask: Callable[[str], str] | None = None) -> dict[str, Any]:
+    """Do a note request from chat: the text he gave, or her last answer when he says 'this'."""
+    from core.assistant_platform.notes import Notes
+    if store is None:
+        from core.assistant_platform.service import platform
+        store = platform().store
+    content = request.get("text") or last_reply(messages)[0]
+    if not content:
+        raise ValueError("There's nothing to add yet. Say \"add this to notes: …\" with the text, or ask me something first.")
+    notes = Notes(store)
+    if request["action"] == "update":
+        found = notes.find(request["name"])
+        if found is None:
+            note = notes.create(request["name"][:160].strip().title(), content)
+            return {"reply": f"There was no \"{request['name']}\" note, so I started one with that in it.", "tab": "notes", "id": note["id"]}
+        notes.append(found["id"], content)
+        return {"reply": f"Added to your \"{found['title']}\" note.", "tab": "notes", "id": found["id"]}
+    title = _title(content, "", ask, "Note from chat")
+    note = notes.create(title, content)
+    return {"reply": f"Saved to Notes as \"{title}\".", "tab": "notes", "id": note["id"]}
+
+
 def last_reply(messages: list[dict[str, str]]) -> tuple[str, str]:
     """Her last real answer and the user message before it (where a shared link would be)."""
     # The thing worth saving is her last substantial answer (a plan, a list), not a short "Done" or "I added it"

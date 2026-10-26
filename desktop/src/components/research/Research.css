@@ -98,3 +98,7 @@
 .research .wa-topic{padding:10px;gap:6px}
 .wa-topic .research__result{max-height:220px}
 .pc-spec{display:flex;justify-content:space-between;gap:12px;padding:5px 0;border-top:1px solid rgba(143,202,255,.08);font-size:12.5px}.pc-spec span{color:#9fb6cf}.pc-spec strong{text-align:right;font-weight:600;color:#e8f1fb}
+.research .live-transcript{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.research .live-transcript__btn{border-color:rgba(255,120,120,.45);background:rgba(60,14,20,.45);color:#ffd2d2;border-radius:999px}
+.research .live-transcript__btn--on{background:#b3262e;color:#fff;border-color:#ff6b6b}
+.research .live-transcript__level{height:6px;border-radius:3px;background:#ff6b6b}.research .live-transcript small{font-size:11px;color:#9fb6cf}

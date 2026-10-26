@@ -2,9 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { api, errorText, LIVE_API } from '../../core/bridge';
 import '../assistant/PlatformPanel.css';
 import './NotesPanel.css';
+import { LiveTranscript } from './LiveTranscript';
+
+// Each note card gets its own size and tint (from its length and id) so the wall feels like a pinboard, not a form.
+const TINTS = ['amber', 'blue', 'green', 'rose', 'violet'];
+function look(item: { id: string; chars?: number }) {
+  let hash = 0; for (const char of item.id) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  const chars = item.chars ?? 0;
+  const size = chars > 900 ? 'l' : chars > 250 ? (hash % 3 === 0 ? 'l' : 'm') : (hash % 4 === 0 ? 'm' : 's');
+  return `note-card note-card--${size} note-card--${TINTS[hash % TINTS.length]}${hash % 2 ? ' note-card--tilt-l' : ' note-card--tilt-r'}`;
+}
 
 type Note = { id?: string; revision?: number; title: string; body: string; pinned: boolean; archived: boolean; reference: boolean; updatedAt?: string };
-type Summary = { id: string; revision: number; title: string; excerpt: string; pinned: boolean; archived: boolean; reference: boolean; updatedAt: string };
+type Summary = { id: string; revision: number; title: string; excerpt: string; chars?: number; tags?: string[]; pinned: boolean; archived: boolean; reference: boolean; updatedAt: string };
 type Listing = { notes: Summary[]; total: number; offset: number; nextOffset: number | null };
 export type NotesDraft = { note: Note | null; dirty: boolean };
 export const EMPTY_NOTES_DRAFT: NotesDraft = { note: null, dirty: false };
@@ -19,6 +29,12 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
   const locked = useRef(false); const ticket = useRef(0);
   const note = draft.note; const disabled = !LIVE_API || busy;
+  const noteRef = useRef(note); noteRef.current = note;
+  // Live transcript: each recognised piece goes on the end of the note being edited.
+  function addTranscript(text: string) {
+    const current = noteRef.current ?? blank();
+    onDraft({ note: { ...current, title: current.title || `Transcript ${new Date().toLocaleString()}`, body: (current.body ? current.body.replace(/\s*$/, '') + '\n' : '') + text }, dirty: true });
+  }
 
   async function load() {
     if (!LIVE_API) return;
@@ -66,23 +82,13 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
       <label className="platform-check"><input type="checkbox" checked={archived} onChange={e => { setArchived(e.target.checked); setOffset(0); }}/>Show archived notes</label>
       <button type="button" disabled={disabled} onClick={() => void perform(async () => {})}>Refresh notes</button>
     </div>
-    <div className="notes-workspace">
-      <aside className="notes-list" aria-label="Note list">
-        <small>{listing ? `${listing.total} ${archived ? 'archived' : 'saved'} ${listing.total === 1 ? 'note' : 'notes'}` : 'Loading notes…'}</small>
-        {listing?.notes.length === 0 && <p>{query ? 'No notes match this search.' : archived ? 'No archived notes.' : 'Save ideas, details and things you want to come back to.'}</p>}
-        {listing?.notes.map(item => <button type="button" key={item.id} className="notes-list__item" aria-pressed={note?.id === item.id} disabled={disabled || draft.dirty} onClick={() => open(item.id)}>
-          <strong>{item.pinned ? '★ ' : ''}{item.title}</strong><span>{item.excerpt || 'Empty note'}</span><small>{new Date(item.updatedAt).toLocaleString()}{item.reference ? ' · Conversation reference' : ''}</small>
-        </button>)}
-        <div className="platform-inline">
-          {offset > 0 && <button type="button" disabled={disabled} onClick={() => setOffset(Math.max(0, offset - 100))}>Previous notes</button>}
-          {listing?.nextOffset != null && <button type="button" disabled={disabled} onClick={() => setOffset(listing.nextOffset!)}>More notes</button>}
-        </div>
-      </aside>
+    <div className="notes-workspace notes-workspace--wall">
       <div className="notes-editor">
         {note ? <form onSubmit={e => { e.preventDefault(); void perform(() => save()); }}>
           <div className="platform-card__head"><strong>{note.id ? 'Edit note' : 'New note'}</strong><span>{draft.dirty ? 'Unsaved changes' : note.id ? 'Saved' : 'Not saved yet'}</span></div>
           <label>Note title<input value={note.title} maxLength={160} required disabled={disabled} onChange={e => edit({ title: e.target.value })}/></label>
           <label>Note text<textarea value={note.body} maxLength={30000} disabled={disabled} placeholder="Write anything you want to refer to later…" onChange={e => edit({ body: e.target.value })}/></label>
+          <LiveTranscript disabled={disabled} onText={addTranscript}/>
           <small>{note.body.length.toLocaleString()} / 30,000 characters</small>
           <label className="platform-check"><input type="checkbox" checked={note.pinned} disabled={disabled} onChange={e => edit({ pinned: e.target.checked })}/>Pin this note</label>
           <label className="platform-check"><input type="checkbox" checked={note.reference} disabled={disabled} onChange={e => edit({ reference: e.target.checked })}/>Let ZAE reference this note in relevant conversations</label>
@@ -95,7 +101,20 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
           {draft.dirty && <small>Save or discard edits before opening another note. Your draft stays here while you move between tabs.</small>}
           {note.updatedAt && <small>Last saved {new Date(note.updatedAt).toLocaleString()}</small>}
           {note.archived && <p className="platform-note">Archived. ZAE leaves this note out of conversation references until you restore it.</p>}
-        </form> : <p className="platform-note">Choose a note or select New note.</p>}
+        </form> : <p className="platform-note">Pick a note below or select New note. Notes are shared with Research › Notebook and Workbench projects; in chat, say “add this to notes” or “update my ___ note with this”.</p>}
+      </div>
+      <div className="notes-wall" aria-label="Your notes">
+        <small className="notes-wall__count">{listing ? `${listing.total} ${archived ? 'archived' : 'saved'} ${listing.total === 1 ? 'note' : 'notes'}` : 'Loading notes…'}</small>
+        {listing?.notes.length === 0 && <p>{query ? 'No notes match this search.' : archived ? 'No archived notes.' : 'Save ideas, details and things you want to come back to.'}</p>}
+        {listing?.notes.map(item => <button type="button" key={item.id} className={look(item)} aria-pressed={note?.id === item.id} disabled={disabled || draft.dirty} onClick={() => open(item.id)}>
+          <strong>{item.pinned ? '★ ' : ''}{item.title}</strong><span>{item.excerpt || 'Empty note'}</span>
+          {item.tags?.length ? <em>{item.tags.join(' · ')}</em> : null}
+          <small>{new Date(item.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{item.reference ? ' · ZAE can reference' : ''}</small>
+        </button>)}
+        <div className="platform-inline notes-wall__pages">
+          {offset > 0 && <button type="button" disabled={disabled} onClick={() => setOffset(Math.max(0, offset - 100))}>Previous notes</button>}
+          {listing?.nextOffset != null && <button type="button" disabled={disabled} onClick={() => setOffset(listing.nextOffset!)}>More notes</button>}
+        </div>
       </div>
     </div>
   </section>;

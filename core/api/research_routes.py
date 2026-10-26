@@ -295,6 +295,13 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
         except Exception as error:
             raise _fail(error) from error
 
+    @router.post("/notebook/link/{note_id}")
+    def link_note(note_id: str) -> dict[str, Any]:
+        try:
+            return notebook().link_note(note_id)
+        except Exception as error:
+            raise _fail(error) from error
+
     @router.delete("/notebook/{topic_id}")
     def delete_topic(topic_id: str) -> dict[str, Any]:
         notebook().delete(topic_id)

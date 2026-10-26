@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.1  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.2  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -665,3 +665,19 @@ USER REQUIREMENT: send actual phone notifications through the browser for remind
 - **Rollout status:** committed as `3032cd8`, fast-forwarded into local `main`, and installed to the Windows desktop app on 2026-10-25. During rollout, the API was healthy in full mode; `/api/push/status` and `/api/push/device` were registered, and `/app/` returned HTTP 200 over the existing private Tailscale HTTPS route. An authenticated test was accepted by the browser push service; actual phone display is not confirmed. No remote Git push or authentication-policy change was made.
 
 Implementation, setup, exact limits, primary browser references and rollback: `docs/BROWSER_NOTIFICATIONS.md`.
+
+### 28.1 Connected notes and live transcripts — Claude, 2026-10-26 (v3.2)
+
+- **Shared notes:** one set of notes is used by Notes, the Research notebook and Workbench.
+  - **Research notebook:** each topic's notes are a note (`topic.noteId`). Old topics get their note the first time they're opened. Deleting a topic keeps its note. "Use one of my notes" makes an existing note a topic, and "Add analysis & sources to the note" appends to it.
+  - **Workbench:** projects link notes (`Project.noteIds`). Project notes can be edited in place, created ("New note for this project") or linked from existing notes.
+  - **Notes tab:** each card is tagged "Research" or "Workbench: <project>".
+- **Live transcripts:** `LiveTranscript` records in Notes, the Notebook and Workbench project notes.
+  - The microphone is turned into text on the PC every 6 s via `POST /api/voice/dictation` (memory.write) and appended to the note.
+  - Any speaker works, for lectures and meetings. It returns words only, never a command or a chat turn, and has no speaker gate.
+- **Chat commands:**
+  - "add this to notes[: text]" makes a new note from the text, or from ZAE's last answer.
+  - "update my <name> note with this[: text]" or "add this to my <name> note" appends with a timestamp. The note is found by title; if there's none, it's created.
+- **Notes tab look:** a pinboard. Cards come in three sizes (from length and id) and five tints, slightly tilted.
+- **Notes API:** `Notes.create`, `set_body`, `append` and `find`; `POST /api/platform/notes/{id}/append`. Listing items carry `chars` and `tags`.
+- **Tests:** research_test (shared notebook notes), tab_actions_test (note commands), personal_tools_test.
