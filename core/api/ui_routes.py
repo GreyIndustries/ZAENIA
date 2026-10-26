@@ -47,6 +47,8 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/files/proposals/[0-9a-f]{32}/reject", "files.propose"),
         ("GET", r"/api/desktop/check", "files.read"),
         ("POST", r"/api/voice/transcribe", "voice.transcribe"),
+        ("POST", r"/api/voice/dictation", "memory.write"),
+        ("POST", r"/api/research/notebook/link/[0-9a-f]{32}", "memory.write"),
         ("GET", r"/api/voice/status", "status.read"),
         ("GET", r"/api/weather/now", "status.read"),
         ("GET", r"/api/screen/watch", "status.read"),
@@ -423,6 +425,18 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
             raise HTTPException(422, str(error)) from error
         except ui_voice.VoiceUnavailable as error:
             raise HTTPException(503, str(error)) from error
+
+    @router.post("/api/voice/dictation")
+    def voice_dictation(body: VoiceClip) -> dict[str, Any]:
+        """Live transcripts for notes: words only (any speaker, e.g. a lecture), never a command or a chat turn."""
+        try:
+            return {"text": ui_voice.recognize(ui_voice._decode(body.audio))}
+        except ui_voice.VoiceError as error:
+            raise HTTPException(422, str(error)) from error
+        except ui_voice.VoiceUnavailable as error:
+            raise HTTPException(503, str(error)) from error
+        except Exception as error:
+            raise HTTPException(503, f"Speech recognition failed ({type(error).__name__}).") from error
 
     @router.get("/api/voice/status")
     def voice_status() -> dict[str, Any]:

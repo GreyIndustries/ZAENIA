@@ -23,6 +23,7 @@ PATTERNS = [
     ('DELETE',rf'knowledge/{ID}', 'memory.write'),
     ('GET',rf'notes(?:/{ID})?', 'memory.read'),
     ('POST',r'notes', 'memory.write'),
+    ('POST',rf'notes/{ID}/append', 'memory.write'),
     ('PUT',rf'notes/{ID}', 'memory.write'),
     ('GET',rf'operator/(?:summary|missions/{ID}|handoff)', 'assistant.platform.read'),
     ('POST',rf'operator/(?:missions|draft|missions/{ID}/cancel|continuity|suggestions/dismiss)', 'assistant.platform.write'),

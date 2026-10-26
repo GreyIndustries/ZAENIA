@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { TrainingProgram } from "./TrainingProgram";
+import { ProjectNotes } from "./ProjectNotes";
 import type { PointerEvent, ReactNode } from 'react';
 import { api, errorText, LIVE_API } from '../../core/bridge';
 import '../assistant/PlatformPanel.css';
@@ -55,11 +56,11 @@ function useRecords<T extends Base>(collection: string, drafts: PersonalDraftCac
   const notice = <>{!LIVE_API && <p>Connect to ZAE to load and save your records.</p>}{error && <p role="alert" className="platform-error">{error}</p>}{message && <p role="status">{message}</p>}</>;
   const controls = <div className="platform-inline personal-controls"><label className="platform-check"><input type="checkbox" checked={archived} disabled={disabled} onChange={e => { setArchived(e.target.checked); setOffset(0); }}/>Archived</label><button disabled={disabled} onClick={() => void perform(async () => {})}>Refresh</button><small>{listing.total} records</small>{offset > 0 && <button disabled={disabled} onClick={() => setOffset(Math.max(0, offset - 100))}>Previous</button>}{listing.nextOffset != null && <button disabled={disabled} onClick={() => setOffset(listing.nextOffset!)}>More</button>}</div>;
   const actions = <div className="platform-inline personal-actions"><button disabled={disabled || !value?.title.trim() || !dirty} onClick={() => void perform(() => save())}>Save</button><button disabled={disabled || !value} onClick={() => { remember(null, false); setMessage('Editor closed. Unsaved changes discarded.'); }}>Close / discard</button>{value?.id && <button disabled={disabled || dirty} onClick={() => void perform(() => save({ archived: !value.archived } as Partial<T>))}>{value.archived ? 'Restore' : 'Archive'}</button>}<small>{dirty ? 'Unsaved · draft stays while switching tabs' : 'Saved'}</small></div>;
-  return { value, dirty, listing, disabled, busy, notice, controls, actions, create, edit, open, perform, setMessage };
+  return { value, dirty, listing, disabled, busy, notice, controls, actions, create, edit, open, perform, setMessage, save };
 }
 
 type Stroke = { color: '#f2b95f' | '#75cfff' | '#a5eeaa' | '#f49cb8' | '#eeeeee'; width: number; points: number[][] };
-type Project = Base & { category: string; tags?: string[]; color: string; size: string; status: string; body: string; blueprint: string; scenarios: string; unit: string; boardWidth: number; strokes: Stroke[]; referenceImage: string };
+type Project = Base & { category: string; tags?: string[]; noteIds?: string[]; color: string; size: string; status: string; body: string; blueprint: string; scenarios: string; unit: string; boardWidth: number; strokes: Stroke[]; referenceImage: string };
 const emptyProject = (): Project => ({ title: '', archived: false, category: 'Tech', tags: [], color: 'amber', size: 'medium', status: 'Idea', body: '', blueprint: '', scenarios: '', unit: 'mm', boardWidth: 100, strokes: [], referenceImage: '' });
 
 function Sketch({ value, onChange, disabled }: { value: Project; onChange: (strokes: Stroke[]) => void; disabled: boolean }) {
@@ -113,7 +114,8 @@ export function WorkbenchPanel({ drafts }: Props) {
             onClick={() => r.edit({ tags: on ? (p.tags ?? []).filter(tag => tag !== name) : [...(p.tags ?? []), name] })}>{on ? '✓ ' : '+ '}{name}</button>; })}
         <small>The project shows under every subject it's tagged with.</small>
       </fieldset>
-      <label>Project notes<textarea rows={7} maxLength={30000} value={p.body} onChange={e => r.edit({ body: e.target.value })}/></label>
+      <label>Project description<textarea rows={5} maxLength={30000} value={p.body} onChange={e => r.edit({ body: e.target.value })}/></label>
+      <ProjectNotes projectTitle={p.title} noteIds={p.noteIds ?? []} onLink={ids => p.id && !r.dirty ? r.perform(() => r.save({ noteIds: ids })) : r.edit({ noteIds: ids })}/>
       <label>Blueprint file or link<input maxLength={2000} value={p.blueprint} onChange={e => r.edit({ blueprint: e.target.value })} placeholder="Reference to your CAD file, drawing or shared export"/></label>
       <label>Import sketch / blueprint image<input type="file" accept="image/png,image/jpeg" onChange={event => { const file=event.target.files?.[0]; event.target.value=''; if (!file) return; void r.perform(async () => { if(file.size>600000) throw new Error('Export a PNG or JPEG reference under 600 KB.'); const image=await new Promise<string>((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result)); reader.onerror=()=>reject(new Error('Image could not be read.')); reader.readAsDataURL(file); }); r.edit({ referenceImage:image }); }); }}/></label>
       {p.referenceImage && <figure className="personal-reference"><img src={p.referenceImage} alt={`Sketch or blueprint reference for ${p.title}`}/><figcaption>Imported reference · kept on your PC</figcaption><button type="button" onClick={() => r.edit({ referenceImage:'' })}>Remove image from draft</button></figure>}

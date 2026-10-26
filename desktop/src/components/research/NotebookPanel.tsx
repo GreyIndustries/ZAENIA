@@ -4,10 +4,12 @@ import { openLink } from "../../core/openLink";
 import type { AnalysisTask, Topic } from "./researchShared";
 import { AnalysisResult, NeedsServer, UNTRUSTED_NOTE, useAnalysis } from "./researchShared";
 import { securitySession } from "../security/SecurityPanel";
+import { LiveTranscript } from "../notes/LiveTranscript";
 import "./Research.css";
 
 type Source = { id: string; title: string; kind: string; url: string; meta: string; chars: number; addedAt: string };
-type TopicDetail = { id: string; name: string; notes: string; sources: Source[] };
+type TopicDetail = { id: string; name: string; notes: string; noteId?: string; sources: Source[] };
+type NoteSummary = { id: string; title: string };
 
 const ACTIONS: { task: AnalysisTask; label: string }[] = [
   { task: "nb_summary", label: "Summary" }, { task: "nb_compare", label: "Compare sources" }, { task: "nb_claims", label: "Claims vs evidence" },
@@ -27,6 +29,8 @@ export function NotebookPanel() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const analysis = useAnalysis();
   const timer = useRef<number | null>(null);
+  const notesRef = useRef(""); notesRef.current = notes;
+  const [linkable, setLinkable] = useState<NoteSummary[] | null>(null);
 
   const loadTopics = useCallback(async () => {
     try { setTopics((await api<{ topics: Topic[] }>("GET", "/api/research/notebook")).topics); }
@@ -69,12 +73,20 @@ export function NotebookPanel() {
     try { setCurrent(await api<TopicDetail>("DELETE", `/api/research/notebook/${current.id}/sources/${selectedSource}`)); setSelectedSource(null); }
     catch (failure) { setError(errorText(failure)); }
   };
-  // "Save to Vault" keeps the topic as a ZAE note (Notes tab), with the sources listed.
+  // The topic's notes are a note in the Notes tab already; this adds ZAE's analysis and the source list to it.
   const saveToNotes = async () => {
-    if (!current) return;
-    const body = [notes, analysis.result ? `\n\nZAE's analysis:\n${analysis.result}` : "",
-      current.sources.length ? `\n\nSources:\n${current.sources.map(source => `- ${source.title}${source.url ? ` (${source.url})` : ""}`).join("\n")}` : ""].join("").slice(0, 30_000);
-    try { await api("POST", "/api/platform/notes", { title: `Research: ${current.name}`.slice(0, 160), body, pinned: false, archived: false, reference: false }); setSaved("Saved to Notes"); }
+    if (!current?.noteId) return;
+    const text = [analysis.result ? `ZAE's analysis:\n${analysis.result}` : "",
+      current.sources.length ? `Sources:\n${current.sources.map(source => `- ${source.title}${source.url ? ` (${source.url})` : ""}`).join("\n")}` : ""].filter(Boolean).join("\n\n");
+    if (!text) { setSaved("Nothing new to add"); return; }
+    try { await api("POST", `/api/platform/notes/${current.noteId}/append`, { text }); await open(current.id); setSaved("Added to the note"); }
+    catch (failure) { setError(errorText(failure)); }
+  };
+  const showLinkable = async () => {
+    try { setLinkable((await api<{ notes: NoteSummary[] }>("GET", "/api/platform/notes")).notes); } catch (failure) { setError(errorText(failure)); }
+  };
+  const linkNote = async (noteId: string) => {
+    try { const topic = await api<TopicDetail>("POST", `/api/research/notebook/link/${noteId}`); setLinkable(null); await loadTopics(); await open(topic.id); }
     catch (failure) { setError(errorText(failure)); }
   };
   const saveToVault = async () => {
@@ -101,7 +113,9 @@ export function NotebookPanel() {
           <input value={newName} maxLength={120} placeholder="New topic…" aria-label="New topic name" onChange={event => setNewName(event.target.value)}/>
           <button type="submit" disabled={!newName.trim()}>New</button>
         </form>
-        {current && <button type="button" className="research__danger" onClick={() => void remove()}>{confirmDelete ? "Tap again to delete" : "Delete topic"}</button>}
+        <button type="button" onClick={() => linkable ? setLinkable(null) : void showLinkable()}>{linkable ? "Cancel" : "Use one of my notes"}</button>
+        {linkable && <ul className="research__list">{linkable.map(note => <li key={note.id}><button type="button" onClick={() => void linkNote(note.id)}>{note.title}</button></li>)}</ul>}
+        {current && <button type="button" className="research__danger" onClick={() => void remove()}>{confirmDelete ? "Tap again to delete (the note stays)" : "Delete topic"}</button>}
       </section>
 
       <section className="research__side" aria-label="Sources">
@@ -124,8 +138,9 @@ export function NotebookPanel() {
       </section>
 
       <section className="research__side research__notes" aria-label="My notes">
-        <h3>My notes <small>{current ? saved || "saved as you type" : ""}</small></h3>
-        <textarea value={notes} disabled={!current} maxLength={50000} aria-label="My notes" placeholder={current ? "Write as you research…" : "Pick a topic first."} onChange={event => typeNotes(event.target.value)}/>
+        <h3>My notes <small>{current ? (saved || "saved as you type") + " · shared with the Notes tab" : ""}</small></h3>
+        <textarea value={notes} disabled={!current} maxLength={30000} aria-label="My notes" placeholder={current ? "Write as you research…" : "Pick a topic first."} onChange={event => typeNotes(event.target.value)}/>
+        <LiveTranscript disabled={!current} onText={text => typeNotes((notesRef.current ? notesRef.current.replace(/\s*$/, "") + "\n" : "") + text)}/>
         <div className="research__grid-actions">
           {ACTIONS.map(action => <button type="button" key={action.task} disabled={!current || !current.sources.length || !!analysis.busy}
             onClick={() => current && void analysis.run(action.label.toLowerCase(), action.task, { topicId: current.id })}>{action.label}</button>)}
@@ -133,7 +148,7 @@ export function NotebookPanel() {
         <AnalysisResult {...analysis}/>
         <div className="research__actions">
           <button type="button" className="research__primary" disabled={!current} onClick={() => void saveToVault()}>Save to Vault</button>
-          <button type="button" disabled={!current} onClick={() => void saveToNotes()}>Save to Notes</button>
+          <button type="button" disabled={!current || (!analysis.result && !current.sources.length)} onClick={() => void saveToNotes()}>Add analysis & sources to the note</button>
           <button type="button" disabled={!notes && !analysis.result} onClick={() => void navigator.clipboard?.writeText([notes, analysis.result].filter(Boolean).join("\n\n"))}>Copy</button>
         </div>
       </section>

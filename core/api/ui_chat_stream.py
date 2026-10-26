@@ -122,6 +122,18 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
             return "Here are my questions. Fill them in and I'll set your calories, calendar and reminders.", "training_setup", ["fitness"]
         return ("You're already set up, so no questions needed. Change anything under Your stats & goal in the Training program."), "tab_action", ["fitness"]
     from core.assistant_platform import tab_actions
+    note_request = tab_actions.parse_note(message)
+    if note_request is not None:
+        # "Add this to notes" / "update my gym note with this": the shared notes (Notes, Notebook, Workbench).
+        try:
+            authorize("memory.write")
+            from core.research.analyze import run_local
+            result = tab_actions.save_note(note_request, _brain(authorize).load_recent_messages(), ask=run_local)
+            return result["reply"], "tab_action", [result["tab"]]
+        except PermissionError:
+            return "Saving notes isn't available with the current permissions.", "tab_action", []
+        except ValueError as error:
+            return str(error), "tab_action", []
     target = tab_actions.parse(message)
     if target is not None:
         # "Add it to my fitness tab": her last answer becomes a real record in that tab.

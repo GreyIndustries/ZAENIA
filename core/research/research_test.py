@@ -96,13 +96,22 @@ class HistoryTest(unittest.TestCase):
 class NotebookTest(unittest.TestCase):
     def test_topics_sources_and_notes(self):
         with tempfile.TemporaryDirectory() as folder:
-            book = Notebook(Path(folder) / "notebook.json")
+            from core.assistant_platform.store import PlatformStore
+            from core.assistant_platform.notes import Notes
+            store = PlatformStore(Path(folder) / "p.sqlite3")
+            book = Notebook(Path(folder) / "notebook.json", store=store)
             topic = book.create("Roman decline")
             book.add_source(topic["id"], title="Gibbon", kind="book", text="x" * 30_000)
             book.set_notes(topic["id"], "Why did it fall?")
             shown = book.get(topic["id"])
             self.assertEqual((shown["sources"][0]["chars"], "text" in shown["sources"][0]), (20_000, False))
             self.assertEqual(book.material(topic["id"])["notes"], "Why did it fall?")
+            self.assertEqual(Notes(store).get(topic["noteId"])["body"], "Why did it fall?")  # the same note as the Notes tab
+            Notes(store).append(topic["noteId"], "Lead poisoning?", stamp=False)
+            self.assertEqual(book.get(topic["id"])["notes"], "Why did it fall?\n\nLead poisoning?")
+            linked = book.link_note(Notes(store).create("Aqueducts", "water")["id"])
+            self.assertEqual((linked["name"], linked["notes"]), ("Aqueducts", "water"))
+            book.delete(linked["id"])
             self.assertIn("Gibbon", analyze.notebook_material(book.material(topic["id"])))
             book.remove_source(topic["id"], shown["sources"][0]["id"])
             book.delete(topic["id"])

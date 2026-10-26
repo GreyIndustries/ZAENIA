@@ -61,6 +61,15 @@ class Project(Record):
     category: Subject = "Tech"
     # Cross-tags: other subjects the project also belongs to (it shows under each of them).
     tags: list[Subject] = Field(default_factory=list, max_length=8)
+    # Notes for this project: ids of notes in the shared Notes store.
+    noteIds: list[str] = Field(default_factory=list, max_length=30)
+
+    @field_validator("noteIds")
+    @classmethod
+    def note_ids(cls, value):
+        if any(not re.fullmatch(r"[a-f0-9]{32}", item) for item in value):
+            raise ValueError("Linked notes must be note ids.")
+        return list(dict.fromkeys(value))
     color: Literal["amber", "blue", "green", "rose", "violet"] = "amber"
     size: Literal["small", "medium", "large"] = "medium"
     status: Literal["Idea", "Research", "Prototype", "Testing", "Complete"] = "Idea"
