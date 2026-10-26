@@ -70,7 +70,7 @@ class OwnerProfileTest(unittest.TestCase):
         self.assertGreaterEqual(self.profile.forget(gpu[0]["id"]), 1)
         self.assertFalse(any(r["key"] == gpu[0]["key"] for r in self.profile.records(query="gpu")))
         relearn = self.profile.store_proposals("my gpu is an RTX 5090", [
-            {"key": gpu[0]["key"], "value": "RTX 5090", "quote": "my gpu is an RTX 5090", "scope": "global", "suggested_kind": "fact"}],
+            {"key": gpu[0]["key"], "value": "RTX 5090", "quote": "my gpu is an RTX 5090", "scope": why["scope"], "suggested_kind": "fact"}],
             message_id="t-forget")
         self.assertEqual(relearn[0]["status"], "blocked_by_forget")
 

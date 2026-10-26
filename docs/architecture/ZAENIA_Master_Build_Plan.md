@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.0  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.1  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -651,3 +651,17 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - **When it opens:** by itself while the calorie math is missing inputs, from a button, when he says "set up my training" (stream event `form`), and after "add it to my fitness tab" saves a plan while setup is incomplete.
   - **What her brain gets:** `training_context()` gives it his stats, targets, weekly schedule, today's workout and what's done, today's calories eaten and burned, recent weigh-ins and weekly muscle sets. This only happens when the conversation is about fitness, and needs memory.read.
   - **Body map:** a front and back figure lights each muscle by its weekly sets.
+
+## 28. Browser phone notifications — Codex, 2026-10-25 (v3.1)
+
+USER REQUIREMENT: send actual phone notifications through the browser for reminders and other assistant updates. Baseline inspected: main `855db5a`; Claude's existing Web Push, reminders, training, phone hosting, follow-through and permission routes were reviewed and extended on `codex/browser-phone-notifications`.
+
+- **Decision:** retain the existing opt-in VAPID/DPAPI browser integration. A separate delivery worker reads the canonical follow-through inbox, so calendar/task notices and posted reminder/email/research/training notices share quiet hours, pause, snooze, read state and expiry. It checks existing notification capabilities; learning grants no authority. Core remains usable offline, while remote Web Push requires internet and the PC/API running.
+- **Delivery:** durable per-device claims, bounded retry/backoff and provider-result metadata in private ignored SQLite; expired subscriptions removed, permanent failures reported; stable notification tags and TTL bound to notice validity. Provider acceptance is distinguished from actual phone display. No raw notice contents or endpoints in the delivery ledger or status response. No claim of guaranteed or exactly-once display.
+- **Security:** validate browser-provider HTTPS endpoints and real encryption keys; refuse redirects and bound request timeouts. Retain sealed VAPID key, private subscription storage and existing API/startup authentication. Use the app's HTTPS origin as VAPID contact rather than localhost. Owner must grant the browser notification permission directly on the phone.
+- **Clients:** shared **Phone notifications** panel in Settings → Notifications, Tasks & Calendar → Reminders and Training program. Per-device category choices and opt-in message previews, reconnect/disable, targeted test and truthful delivery status. The service worker displays visible notifications and opens only this app when tapped; it caches no private API data.
+- **Regression support:** isolate push storage/sender in the API lifecycle test. Correct an existing profile test to attempt relearning in the same scope it forgot, rather than assuming the current private fixture record is global; production memory logic is unchanged.
+- **Verification:** full Python discovery passed (758 tests, 1 skipped); security self-test/closure/integration checks passed (124); browser-side test scripts passed; `npm run build:web` and `npm.cmd run tauri build -- --no-bundle` passed. `git diff --check` passed.
+- **Rollout status:** implemented on `codex/browser-phone-notifications`; not merged or installed. The local API was unavailable at `127.0.0.1:8766` during the final check, so live API delivery could not be verified. No API/listener restart or authentication change was made. Owner still needs to install/open ZAE on the phone, grant browser/OS permission, and send a test notification; physical receipt remains a LIVE DEVICE TEST.
+
+Implementation, setup, exact limits, primary browser references and rollback: `docs/BROWSER_NOTIFICATIONS.md`.

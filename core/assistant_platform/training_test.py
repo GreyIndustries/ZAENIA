@@ -113,8 +113,11 @@ class PushTest(unittest.TestCase):
         self.assertEqual(len(web_push.public_key(pem)), 87)
         with tempfile.TemporaryDirectory() as folder:
             subs = Path(folder) / "s.json"
-            web_push.subscribe({"endpoint": "https://push.example/a", "keys": {"p256dh": "k", "auth": "a"}}, path=subs)
-            web_push.subscribe({"endpoint": "https://push.example/b", "keys": {"p256dh": "k", "auth": "a"}}, path=subs)
+            import base64
+            public = ec.generate_private_key(ec.SECP256R1()).public_key().public_bytes(serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint)
+            keys = {"p256dh": base64.urlsafe_b64encode(public).rstrip(b"=").decode(), "auth": base64.urlsafe_b64encode(b"a" * 16).rstrip(b"=").decode()}
+            web_push.subscribe({"endpoint": "https://web.push.apple.com/a", "keys": keys}, path=subs, origin="https://zae.example.test")
+            web_push.subscribe({"endpoint": "https://web.push.apple.com/b", "keys": keys}, path=subs, origin="https://zae.example.test")
             with self.assertRaises(ValueError):
                 web_push.subscribe({"endpoint": "http://x"}, path=subs)
             sent = []
@@ -128,7 +131,7 @@ class PushTest(unittest.TestCase):
                 sent.append(json.loads(data))
             self.assertEqual(web_push.send("Reminder", "Stretch", push=push, path=subs, pem=pem), 1)
             self.assertEqual(sent[0]["body"], "Stretch")
-            self.assertEqual([s["endpoint"] for s in web_push.subscriptions(subs)], ["https://push.example/a"])
+            self.assertEqual([s["endpoint"] for s in web_push.subscriptions(subs)], ["https://web.push.apple.com/a"])
 
     def test_training_reminders_fire_once_in_their_window(self):
         from datetime import datetime

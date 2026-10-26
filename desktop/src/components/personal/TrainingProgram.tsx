@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
-import { disablePush, enablePush, pushHint, pushState } from "../../core/phonePush";
+import { PhoneNotifications } from "../phone/PhoneNotifications";
 import { BodyMap, TrainingSetup } from "./TrainingSetup";
 import "./TrainingProgram.css";
 
@@ -53,7 +53,6 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
   const [link, setLink] = useState("");
   const [cardio, setCardio] = useState<Cardio>({ type: "run", miles: 0, minutes: 0 });
   const [setDraft, setSetDraft] = useState<Record<string, { reps: string; weight: string }>>({});
-  const [push, setPush] = useState<string>("unsupported");
   // ZAE's setup questions: open by themselves while she's missing what the calorie math needs, from the button,
   // or when she asks in chat ("set up my training").
   const [setup, setSetup] = useState(false);
@@ -74,7 +73,6 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
   }, [day]);
   useEffect(() => { if (LIVE_API) void load(); }, [load]);
   useEffect(() => { if (LIVE_API) void loadDay(); }, [loadDay]);
-  useEffect(() => { void pushState().then(setPush, () => setPush("unsupported")); }, []);
   useEffect(() => {
     const changed = () => { void load(); void loadDay(); };
     window.addEventListener("zae:records-changed", changed);
@@ -226,12 +224,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
           {([["workout", "Workout"], ["weighIn", "Weigh-in"], ["food", "Log food"]] as const).map(([key, label]) => <label key={key}>{label}<input type="time" value={p.reminders[key]} onChange={event => setProfile({ ...p, reminders: { ...p.reminders, [key]: event.target.value } })}/></label>)}
         </div>
         <button type="button" disabled={busy === "profile"} onClick={() => void saveProfile({ reminders: p.reminders })}>Save times</button>
-        <p className="tp-muted">{push === "on" ? "Notifications are on for this device." : push === "blocked" ? "Notifications are blocked for ZAE in this browser's settings." : pushHint() || "Turn on notifications on this device to get reminders."}</p>
-        <div className="tp-row">
-          {push === "off" && <button type="button" className="tp-primary" onClick={() => void run("push", async () => { await enablePush(); setPush("on"); }, "Notifications are on.")}>Turn on notifications here</button>}
-          {push === "on" && <><button type="button" onClick={() => void run("push", () => api("POST", "/api/push/test", {}), "Sent a test notification.")}>Send a test</button>
-            <button type="button" onClick={() => void run("push", async () => { await disablePush(); setPush("off"); }, "Notifications are off.")}>Turn off</button></>}
-        </div>
+        <PhoneNotifications/>
       </section>
     </div>
   </div>;

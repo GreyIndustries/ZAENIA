@@ -49,6 +49,7 @@ const ProtocolsPanel = lazy(() => import("./components/status/StatusExtras").the
 const PcSpecsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.PcSpecsPanel })));
 const SelfSustainPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.SelfSustainPanel })));
 const VaultPanel = lazy(() => import("./components/settings/VaultPanel").then(module => ({ default: module.VaultPanel })));
+const PhoneNotifications = lazy(() => import("./components/phone/PhoneNotifications").then(module => ({ default: module.PhoneNotifications })));
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
 const LabsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.LabsPanel })));
 const CodeDoctorPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.CodeDoctorPanel })));
@@ -1148,6 +1149,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "system": return <PageTabs id="settings" tabs={[
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },
+        { id: "notifications", label: "Notifications", render: () => <PhoneNotifications/> },
       ]}/>;
       default: return null;
     }

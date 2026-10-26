@@ -1,0 +1,14 @@
+.phone-notifications { padding: 18px; border: 1px solid var(--glass-border, #ffffff20); border-radius: 18px; background: #ffffff04; color: inherit; min-width: 0; }
+.phone-notifications h3 { margin: 0 0 10px; font-size: 1rem; }
+.phone-notifications p { font-size: .83rem; line-height: 1.6; opacity: .8; overflow-wrap: anywhere; }
+.phone-notifications__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.phone-notifications button { padding: 9px 12px; border: 1px solid #ffffff26; border-radius: 10px; background: #ffffff0a; color: inherit; cursor: pointer; font: inherit; font-size: .82rem; }
+.phone-notifications button:disabled { opacity: .5; cursor: wait; }
+.phone-notifications button:focus-visible, .phone-notifications input:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.phone-notifications fieldset { min-width: 0; margin-top: 16px; padding: 14px; border: 1px solid #ffffff20; border-radius: 12px; }
+.phone-notifications legend { padding: 0 6px; font-size: .88rem; }
+.phone-notifications__choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.phone-notifications label { display: flex; align-items: flex-start; gap: 8px; font-size: .82rem; line-height: 1.5; }
+.phone-notifications input { flex-shrink: 0; margin-top: 4px; }
+.phone-notifications__preview { margin-top: 14px; }
+.phone-notifications .phone-notifications__error { color: #ffa3a3; opacity: 1; }

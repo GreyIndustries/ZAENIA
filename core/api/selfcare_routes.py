@@ -34,6 +34,30 @@ class WatchdogBody(BaseModel):
     on: bool
 
 
+class PushSubscriptionBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    subscription: dict[str, Any]
+    label: str = Field(default="phone", max_length=40)
+    appOrigin: str = Field(default="", max_length=300)
+    preferences: dict[str, Any] | None = None
+
+
+class PushEndpointBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    endpoint: str = Field(min_length=1, max_length=4096)
+
+
+class PushDeviceBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    deviceId: str = Field(pattern=r"^[0-9a-f]{32}$")
+    preferences: dict[str, Any]
+
+
+class PushTestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    deviceId: str | None = Field(default=None, pattern=r"^[0-9a-f]{32}$")
+
+
 def _bad(error: Exception) -> HTTPException:
     return HTTPException(422, str(error).strip("'\""))
 
@@ -102,6 +126,11 @@ def create_selfcare_router(require_api_authentication: Callable[..., None]) -> A
         return health()
 
     # ---- Phone notifications (web_push.py)
+    @router.get("/api/push/status")
+    def push_status() -> dict[str, Any]:
+        from core.assistant_followthrough.push_delivery import push_delivery
+        return push_delivery().status()
+
     @router.get("/api/push/key")
     def push_key() -> dict[str, Any]:
         from core.api import web_push
@@ -111,24 +140,38 @@ def create_selfcare_router(require_api_authentication: Callable[..., None]) -> A
             raise HTTPException(502, f"Push keys unavailable ({type(error).__name__}).") from error
 
     @router.post("/api/push/subscribe")
-    def push_subscribe(body: dict[str, Any]) -> dict[str, Any]:
+    def push_subscribe(body: PushSubscriptionBody) -> dict[str, Any]:
         from core.api import web_push
         try:
-            return {"phones": web_push.subscribe(body.get("subscription") or {}, str(body.get("label") or "phone"))}
+            return {"phones": web_push.subscribe(body.subscription, body.label, options=body.preferences, origin=body.appOrigin)}
         except ValueError as error:
             raise HTTPException(422, str(error)) from error
 
     @router.post("/api/push/unsubscribe")
-    def push_unsubscribe(body: dict[str, Any]) -> dict[str, Any]:
+    def push_unsubscribe(body: PushEndpointBody) -> dict[str, Any]:
         from core.api import web_push
-        web_push.unsubscribe(str(body.get("endpoint") or ""))
+        web_push.unsubscribe(body.endpoint)
+        return {"ok": True}
+
+    @router.post("/api/push/device")
+    def push_device(body: PushDeviceBody) -> dict[str, Any]:
+        from core.api import web_push
+        item = next((s for s in web_push.subscriptions() if web_push.device_id(s["endpoint"]) == body.deviceId), None)
+        if item is None:
+            raise HTTPException(404, "This browser is no longer connected. Turn on notifications here again.")
+        try:
+            web_push.subscribe(item, item.get("label", "phone"), options=body.preferences, origin=item.get("appOrigin", ""))
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
         return {"ok": True}
 
     @router.post("/api/push/test")
-    def push_test() -> dict[str, Any]:
-        from core.api import web_push
+    def push_test(body: PushTestBody) -> dict[str, Any]:
+        from core.assistant_followthrough.push_delivery import push_delivery
         try:
-            return {"sent": web_push.send("ZAE", "Notifications are working. I'll remind you here.")}
+            return push_delivery().test(body.deviceId)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
         except Exception as error:
             raise HTTPException(502, f"Couldn't send ({type(error).__name__}).") from error
 

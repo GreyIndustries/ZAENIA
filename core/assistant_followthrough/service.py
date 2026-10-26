@@ -315,18 +315,14 @@ class FollowThroughService:
             settings = {**DEFAULT_SETTINGS, **json.loads(db.execute("SELECT body FROM settings WHERE id=1").fetchone()[0])}
             if not settings["enabled"]:
                 return None
-            added = db.execute("""INSERT OR IGNORE INTO notifications
+            db.execute("""INSERT OR IGNORE INTO notifications
                 (id,source,source_id,revision,kind,title,message,occurrence,lead_minutes,due,valid_until,created,state)
                 VALUES(?,?,?,?,?,?,?,?,?,?,?,?,'ready')""",
                 (notice_id, source, str(source_id)[:200], "posted", f"{source}.important", str(title)[:500], str(message)[:2000],
                  _iso(now), 0, stamp, stamp + hours * 3600, stamp)).rowcount
-        if added:
-            try:
-                # The same notice on his phone, when it's subscribed (web_push.py); never blocks or fails the post.
-                from core.api.web_push import notify
-                notify(str(title)[:80], str(message)[:240])
-            except Exception:
-                pass
+        # Browser delivery reads this canonical inbox in its own worker. This
+        # keeps posting offline-safe and applies the same quiet/snooze rules to
+        # posted notices and scheduled calendar/task notices.
         return notice_id
 
     def list_notifications(self, include_read: bool = False, limit: int = 100, now: datetime | None = None) -> dict[str, Any]:
@@ -349,6 +345,7 @@ class FollowThroughService:
                 "kind": row["kind"], "title": row["title"], "message": row["message"],
                 "occurrence": row["occurrence"], "leadMinutes": row["lead_minutes"],
                 "dueAt": _iso(datetime.fromtimestamp(row["due"], UTC)),
+                "expiresAt": _iso(datetime.fromtimestamp(max(row["valid_until"], row["snoozed_until"] + CATCH_UP.total_seconds() if row["snoozed_until"] else row["valid_until"]), UTC)),
                 "createdAt": _iso(datetime.fromtimestamp(row["created"], UTC)) if row["created"] is not None else None,
                 "readAt": row["read_at"],
                 "snoozedUntil": _iso(datetime.fromtimestamp(row["snoozed_until"], UTC)) if row["snoozed_until"] is not None else None,

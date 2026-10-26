@@ -81,6 +81,9 @@ class AssistantUpgradeTests(unittest.TestCase):
         self.stack.enter_context(patch.object(BrainService, "_read_json_file", return_value={}))
         self.audit = self.stack.enter_context(patch.object(assistant_routes, "audit"))
         self.followthrough_factory = self.stack.enter_context(patch("core.assistant_followthrough.service.FollowThroughService", return_value=self.followthrough))
+        from core.assistant_followthrough.push_delivery import PushDelivery
+        push = PushDelivery(path=self.root / "push.sqlite3", subs_path=self.root / "push-subscriptions.json", sender=lambda *args, **kwargs: "accepted")
+        self.stack.enter_context(patch("core.assistant_followthrough.push_delivery.push_delivery", return_value=push))
 
     def client(self, gate):
         application = create_app(

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { PhoneNotifications } from "../phone/PhoneNotifications";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "../research/Research.css";
 
@@ -172,6 +173,7 @@ export function RemindersPanel() {
   if (!LIVE_API) return <p className="research__note">Reminders need the ZÆNIA server.</p>;
   return <div className="research">
     <p className="research__note">Or just say “remind me in 20 minutes to check the oven” or “remind me at 5pm tomorrow to call mum”.</p>
+    <PhoneNotifications/>
     {error && <p className="research__error" role="alert">{error}</p>}
     <form className="research__bar" onSubmit={event => { event.preventDefault(); if (text.trim() && when) void add(); }}>
       <input value={text} maxLength={300} placeholder="Remind me to…" aria-label="Reminder" onChange={event => setText(event.target.value)}/>

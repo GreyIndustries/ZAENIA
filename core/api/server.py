@@ -148,11 +148,28 @@ def create_app(
 
     if start_followthrough:
         from core.assistant_platform.game_mode import GameModeMonitor
+        from core.assistant_followthrough.push_delivery import push_delivery
+        from core.api.web_push import TrainingReminders
         game_mode = GameModeMonitor()
+        browser_push = push_delivery()
+
+        def phone_inbox():
+            authorize_operation("notifications.read")
+            authorize_operation("notifications.write")
+            return followthrough().list_notifications(limit=500)
+
+        browser_push.inbox = phone_inbox
+
+        def training_notice(title: str, message: str) -> None:
+            from datetime import datetime
+            followthrough().post("training", f"{datetime.now().date()}:{title}", title, message, hours=0.5)
+
+        training_reminders = TrainingReminders(sender=training_notice)
 
         @application.on_event("startup")
         def start_assistant_worker():
             followthrough().start()
+            browser_push.start()
             game_mode.start()  # frees the brain while a full-screen game is in front
             from core.assistant_platform.reminders import reminders
             reminders().start(reminder_due)  # time-based nudges: on screen, spoken, and texted if asked
@@ -164,8 +181,7 @@ def create_app(
             tech_news().start()  # tech headlines every 30 minutes (optional, online)
             from core.email_watch.service import email_watch
             email_watch().start()  # important-email summaries every 5 minutes, once Gmail is connected
-            from core.api.web_push import TrainingReminders
-            TrainingReminders().start()  # workout / weigh-in / food reminders on his phone at the times he set
+            training_reminders.start()  # uses the shared inbox, quiet hours, and opt-in browser delivery
             from core.assistant_platform.pc_specs import warm
             warm()  # reads the PC's parts once so she can answer about them
             from core.research.agent import watch
@@ -175,6 +191,8 @@ def create_app(
 
         @application.on_event("shutdown")
         def stop_assistant_worker():
+            browser_push.stop()
+            training_reminders.stop()
             game_mode.stop()
             from core.assistant_platform.game_coach import game_coach
             game_coach().stop()  # reviews a game still in progress
