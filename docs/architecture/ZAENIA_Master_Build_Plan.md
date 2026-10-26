@@ -706,3 +706,4 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
 - **What's not allowed:** ZAE must never claim feelings, moods, wants, a body, a life story or personal experiences, and must never present herself as human.
 - **Where this is enforced:** it's the first conversation rule (`conversation_rules.RULES`).
 - **Future features:** they follow the same line. Persona elements stay as interface style (voice, wording, look), never as claimed inner life.
+- Grey, same day: "Humans need to work and AI needs to be a system that can assist." ZAE prepares, informs, reminds and carries out what he asks. The work and the decisions stay his, and features assist rather than replace him. This is added to the same rule.
