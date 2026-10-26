@@ -14,7 +14,10 @@ _DEEP = re.compile(
     r"\b(?:explain|elaborate|in (?:depth|detail)|more detail|deeper|go deeper|dig (?:in|deeper)|"
     r"break (?:it|that|this) down|walk me through|step by step|full (?:explanation|answer|rundown|picture)|"
     r"the long version|teach me|help me understand|how does (?:it|that|this) work|why (?:is|does|did|would|do)|"
-    r"pros and cons|write (?:a|me)|draft|plan (?:for|out)|list (?:all|every))\b")
+    r"pros and cons|write (?:a|me)|draft|plan (?:for|out)|list (?:all|every)|my answers to your questions|"
+    # Making something for him (a program, plan, routine...) needs the full thing, not a two-line outline.
+    r"(?:make|create|build|design|put together|come up with|give me)\b.{0,80}?\b(?:program|programme|plan|routine|"
+    r"schedule|workout|diet|meal plan|budget|itinerary|guide|strategy|split))\b")
 _MORE = re.compile(
     r"^(?:(?:ok(?:ay)?|and|so|alright|right|sure|yeah|yes)[, ]+)?(?:why\??|how so\??|how\??|go on|keep going|continue|"
     r"(?:tell|show) me more|more|say more|expand(?: on (?:that|it|this))?|elaborate|explain(?: (?:that|it|this|more|further))?|"

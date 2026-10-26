@@ -1,0 +1,18 @@
+/* ZAE's clarifying questions: a pop-up above the chat bar. */
+.clarify{position:absolute;z-index:80;right:16px;bottom:96px;width:min(520px,calc(100% - 32px));max-height:min(70vh,640px);overflow:auto;
+  display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:16px;color:#e4eef9;
+  background:rgba(6,14,28,.94);border:1px solid color-mix(in srgb,var(--accent,#e0a353) 55%,transparent);
+  box-shadow:0 18px 50px rgba(0,0,0,.55),0 0 24px color-mix(in srgb,var(--accent,#e0a353) 18%,transparent);backdrop-filter:blur(14px)}
+.clarify header{display:flex;align-items:center;justify-content:space-between}
+.clarify header strong{font-size:14px;color:var(--accent-2,#ffd9a6)}
+.clarify fieldset{margin:0;padding:10px 12px;border:1px solid rgba(143,202,255,.16);border-radius:12px}
+.clarify legend{padding:0 4px;font-size:13px;color:#dbe8f6}
+.clarify__options{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}
+.clarify button{font:inherit;font-size:12px;cursor:pointer;border-radius:9px;padding:6px 11px;border:1px solid rgba(143,202,255,.25);background:rgba(16,32,52,.85);color:#dbe8f6}
+.clarify .clarify__option--on{border-color:var(--accent,#e0a353);background:color-mix(in srgb,var(--accent,#e0a353) 28%,transparent);color:#fff}
+.clarify__row{display:flex;gap:6px}
+.clarify__row input{flex:1;min-width:0;padding:7px 10px;border-radius:8px;border:1px solid rgba(143,202,255,.25);background:rgba(8,20,36,.8);color:#e8f1fb;font:inherit;font-size:12.5px}
+.clarify .clarify__gpt{white-space:nowrap;color:#bfe9d6;border-color:rgba(120,220,170,.35)}
+.clarify footer{display:flex;justify-content:flex-end;gap:8px}
+.clarify .clarify__send{background:color-mix(in srgb,var(--accent,#e0a353) 35%,transparent);border-color:var(--accent,#e0a353);color:#fff;font-weight:600}
+.clarify .clarify__close{padding:2px 8px;background:none}

@@ -244,6 +244,31 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return
+        if not images and not files and authorize is not None:
+            from core.research import links as link_reader
+            if link_reader.find_links(message):
+                # Links he sends are read (page text, TikTok captions and spoken words, YouTube details)
+                # and answered from like shared files: data only, never instructions.
+                authorize("chat.reply")
+                files = link_reader.links_as_files(message)
+                route = "link"
+                yield _line({"type": "route", "route": route})
+            if link_reader.wants_clarify(message):
+                material = "\n\n".join(raw.decode("utf-8", "replace") for _, raw in (files or []))
+                try:
+                    from core.research.analyze import run_local
+                    questions = link_reader.clarify_questions(message, material, run_local)
+                except Exception:
+                    questions = []
+                if questions:
+                    # A few quick questions first, shown as a pop-up; his answers come back with the request.
+                    answer = "A few quick questions so I get this right."
+                    route = "clarify"
+                    yield _line({"type": "route", "route": route})
+                    yield _line({"type": "clarify", "questions": questions, "original": message})
+                    yield _line({"type": "delta", "text": answer})
+                    yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
+                    return
         if not images and SCREEN_QUESTION.search(message) and watcher().latest_frame_b64():
             # A question about the watched monitor: show her the latest capture.
             images = [watcher().latest_frame_b64()]

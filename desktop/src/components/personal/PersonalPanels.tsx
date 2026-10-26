@@ -5,7 +5,7 @@ import '../assistant/PlatformPanel.css';
 import './PersonalPanels.css';
 
 type Base = { title: string; archived: boolean; id?: string; revision?: number; updatedAt?: string; createdAt?: string };
-type Summary = Base & { category?: string; color?: string; size?: string; status?: string; stage?: string; date?: string; calories?: number; protein?: number; fiber?: number; minutes?: number; proteinTarget?: number | null; fiberTarget?: number | null; baselineCalories?: number | null };
+type Summary = Base & { category?: string; tags?: string[]; color?: string; size?: string; status?: string; stage?: string; date?: string; calories?: number; protein?: number; fiber?: number; minutes?: number; proteinTarget?: number | null; fiberTarget?: number | null; baselineCalories?: number | null };
 type Listing = { items: Summary[]; total: number; nextOffset: number | null };
 export type PersonalDraftCache = Record<string, { value: unknown; dirty: boolean }>;
 type Props = { drafts: PersonalDraftCache };
@@ -52,8 +52,8 @@ function useRecords<T extends Base>(collection: string, drafts: PersonalDraftCac
 }
 
 type Stroke = { color: '#f2b95f' | '#75cfff' | '#a5eeaa' | '#f49cb8' | '#eeeeee'; width: number; points: number[][] };
-type Project = Base & { category: string; color: string; size: string; status: string; body: string; blueprint: string; scenarios: string; unit: string; boardWidth: number; strokes: Stroke[]; referenceImage: string };
-const emptyProject = (): Project => ({ title: '', archived: false, category: 'Tech', color: 'amber', size: 'medium', status: 'Idea', body: '', blueprint: '', scenarios: '', unit: 'mm', boardWidth: 100, strokes: [], referenceImage: '' });
+type Project = Base & { category: string; tags?: string[]; color: string; size: string; status: string; body: string; blueprint: string; scenarios: string; unit: string; boardWidth: number; strokes: Stroke[]; referenceImage: string };
+const emptyProject = (): Project => ({ title: '', archived: false, category: 'Tech', tags: [], color: 'amber', size: 'medium', status: 'Idea', body: '', blueprint: '', scenarios: '', unit: 'mm', boardWidth: 100, strokes: [], referenceImage: '' });
 
 function Sketch({ value, onChange, disabled }: { value: Project; onChange: (strokes: Stroke[]) => void; disabled: boolean }) {
   const svg = useRef<SVGSVGElement>(null); const active = useRef<Stroke | null>(null); const pointer = useRef<number | null>(null);
@@ -95,11 +95,17 @@ export function WorkbenchPanel({ drafts }: Props) {
     <div className="platform-panel__heading"><div><span className="subheading">IDEAS INTO PROJECTS</span><h2>Workbench</h2></div><button disabled={r.disabled || r.dirty} onClick={() => r.create(emptyProject())}>New project</button></div>{r.notice}
     <div className="personal-tabs" aria-label="Project subjects">{['All', ...categories].map(name => <button key={name} aria-pressed={category === name} onClick={() => setCategory(name)}>{name}</button>)}</div>
     <label>Find project<input type="search" value={query} onChange={e => setQuery(e.target.value)} placeholder="Project title…"/></label>{r.controls}
-    <div className="personal-forum">{r.listing.items.filter(item => (category === 'All' || item.category === category) && item.title.toLowerCase().includes(query.toLowerCase())).map(item => <button key={item.id} disabled={r.disabled || r.dirty} className={`personal-project personal-project--${item.size} personal-project--${item.color}`} aria-pressed={item.id === p?.id} onClick={() => r.open(item.id!)}><small>{item.category} · {item.status}</small><strong>{item.title}</strong><span>Updated {new Date(item.updatedAt!).toLocaleDateString()}</span></button>)}</div>
+    <div className="personal-forum">{r.listing.items.filter(item => (category === 'All' || item.category === category || (item.tags ?? []).includes(category)) && item.title.toLowerCase().includes(query.toLowerCase())).map(item => <button key={item.id} disabled={r.disabled || r.dirty} className={`personal-project personal-project--${item.size} personal-project--${item.color}`} aria-pressed={item.id === p?.id} onClick={() => r.open(item.id!)}><small>{[item.category, ...(item.tags ?? []).filter(tag => tag !== item.category)].join(' · ')} · {item.status}</small><strong>{item.title}</strong><span>Updated {new Date(item.updatedAt!).toLocaleDateString()}</span></button>)}</div>
     {!r.listing.total && <p>Start a project to keep its notes, sketches, blueprint references and experiments together.</p>}
     {p && <div className="personal-editor"><h3>{p.id ? 'Project details' : 'New project'}</h3><fieldset disabled={r.disabled}>
       <label>Project title<input required maxLength={160} value={p.title} onChange={e => r.edit({ title: e.target.value })}/></label>
       <div className="personal-fields"><Select label="Subject" value={p.category} options={categories} change={category => r.edit({ category })}/><Select label="Stage" value={p.status} options={['Idea', 'Research', 'Prototype', 'Testing', 'Complete']} change={status => r.edit({ status })}/><Select label="Card color" value={p.color} options={['amber', 'blue', 'green', 'rose', 'violet']} change={color => r.edit({ color })}/><Select label="Card size" value={p.size} options={['small', 'medium', 'large']} change={size => r.edit({ size })}/></div>
+      <fieldset className="personal-crosstags"><legend>Also tag as</legend>
+        {categories.filter(name => name !== p.category).map(name => { const on = (p.tags ?? []).includes(name);
+          return <button type="button" key={name} aria-pressed={on} className={on ? 'personal-crosstag personal-crosstag--on' : 'personal-crosstag'}
+            onClick={() => r.edit({ tags: on ? (p.tags ?? []).filter(tag => tag !== name) : [...(p.tags ?? []), name] })}>{on ? '✓ ' : '+ '}{name}</button>; })}
+        <small>The project shows under every subject it's tagged with.</small>
+      </fieldset>
       <label>Project notes<textarea rows={7} maxLength={30000} value={p.body} onChange={e => r.edit({ body: e.target.value })}/></label>
       <label>Blueprint file or link<input maxLength={2000} value={p.blueprint} onChange={e => r.edit({ blueprint: e.target.value })} placeholder="Reference to your CAD file, drawing or shared export"/></label>
       <label>Import sketch / blueprint image<input type="file" accept="image/png,image/jpeg" onChange={event => { const file=event.target.files?.[0]; event.target.value=''; if (!file) return; void r.perform(async () => { if(file.size>600000) throw new Error('Export a PNG or JPEG reference under 600 KB.'); const image=await new Promise<string>((resolve,reject) => { const reader=new FileReader(); reader.onload=()=>resolve(String(reader.result)); reader.onerror=()=>reject(new Error('Image could not be read.')); reader.readAsDataURL(file); }); r.edit({ referenceImage:image }); }); }}/></label>

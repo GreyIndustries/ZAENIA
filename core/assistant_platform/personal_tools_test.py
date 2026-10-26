@@ -29,7 +29,7 @@ class PersonalToolsTests(unittest.TestCase):
         return client
 
     def test_sketch_reopens_with_units_and_edits_conflict(self):
-        body = {'title':'Fixture invention','category':'Nano technology','color':'blue','size':'large','boardWidth':25.4,'unit':'mm',
+        body = {'title':'Fixture invention','category':'Nano technology','tags':['AI','Bio chem'],'color':'blue','size':'large','boardWidth':25.4,'unit':'mm',
                 'strokes':[{'color':'#75cfff','width':2.0,'points':[[0.0,0.0],[1000.0,600.0]]}], 'body':'First note\nSecond note'}
         row = self.tools.save('workbench', body)
         reopened = PlatformStore(self.store.path).get('workbench', row['id'])
@@ -39,6 +39,8 @@ class PersonalToolsTests(unittest.TestCase):
         with self.assertRaises(Conflict): self.tools.save('workbench',body,row['id'],row['revision'])
         with self.assertRaises(ValueError): self.tools.save('workbench',body,row['id'])
         self.assertNotIn('strokes',self.tools.listing('workbench')['items'][0])
+        self.assertEqual(self.tools.listing('workbench')['items'][0]['tags'], ['AI','Bio chem'])  # cross-tags show in the list
+        with self.assertRaises(ValueError): self.tools.save('workbench',{'title':'X','tags':['Cooking']})
 
     def test_untrusted_records_cannot_carry_execution_grants_or_invalid_values(self):
         invalid = [({'title':'X','execute':'powershell'},'workbench'),({'title':'X','category':'Other'},'workbench'),

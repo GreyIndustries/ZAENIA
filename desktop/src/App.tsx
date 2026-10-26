@@ -19,6 +19,7 @@ import type { AssistantActionState, AssistantProposal } from "./core/assistantAc
 import { PhoneConnect } from "./components/phone/PhoneConnect";
 import { BrowserBriefing } from "./components/phone/BrowserBriefing";
 import { HomeConversation } from "./components/chat/HomeConversation";
+import { ClarifyCard } from "./components/chat/ClarifyCard";
 import type { ChatPhoto } from "./core/photos";
 import type { ChatFile } from "./core/sharedFiles";
 import type { ChatMessage, HistoryState } from "./components/chat/HomeConversation";
@@ -727,6 +728,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   ];
 
   /** One message to ZÆNIA, typed or spoken. Sending while she's busy interrupts her. */
+  const [clarify, setClarify] = useState<{ original: string; questions: { question: string; options: string[] }[] } | null>(null);
   function submit(message: string) {
     interrupt();
     const sharedPhotos = photosRef.current;
@@ -850,6 +852,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : "tasks");
           if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
         }
+      } else if (event.type === "clarify") {
+        setClarify({ original: event.original, questions: event.questions });
       } else if (event.type === "protocol") {
         // A protocol ("goodnight") can open tabs as one of its steps.
         for (const tab of event.open) if (tab in sections) openSection(tab as Section);
@@ -1213,6 +1217,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           {connectionNotice && <p className="phone-connect__message" role="status">{connectionNotice}</p>}
           {LIVE_API && <BrowserBriefing onAuthLost={onAuthLost} onActive={setBriefingActive} beforePlay={speech.stop}/>}
           {/* Talk to ZÆNIA from every page: input bar plus a floating transcript. */}
+          {clarify && <ClarifyCard original={clarify.original} questions={clarify.questions} onCancel={() => setClarify(null)}
+            onSend={text => { setClarify(null); submit(text); }}/>}
           <HomeConversation
             photos={photos} onPhotos={changePhotos} files={sharedFiles} onFiles={changeFiles}
             messages={chat} sending={sending} busy={busy} onStop={interrupt} streamingId={streamingId} query={query} onQuery={setQuery} onSubmit={sendChat} inputRef={queryRef}

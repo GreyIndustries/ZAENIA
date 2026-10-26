@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 2.6  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 2.7  |  Date: 2026-10-25 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -560,3 +560,20 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
 - **Route:** `GET /api/pc/specs[?refresh=true]` (status.read).
 - **UI:** Status > This PC shows the parts, with a "Read again" button.
 - **Tests:** pc_specs_test 2.
+
+### 27.6 Cross-tagged projects, reading links, clarifying questions — Claude, 2026-10-25 (v2.7)
+
+- **Cross-tags (Workbench):**
+  - A project keeps its main subject and can also be tagged with any of the other subjects (`Project.tags`, at most 8).
+  - It shows under each tagged subject's filter, and its card lists every subject.
+- **Reading links:** `core/research/links.py`. A chat message with up to 3 links has each link read and answered through the shared-files path. The content is data only, never instructions.
+  - **TikTok:** caption, author, length and sound, plus the spoken words from TikTok's own auto-captions (the public WebVTT track the page lists). No video is downloaded.
+  - **YouTube:** title, channel, length and description. YouTube doesn't hand its captions to plain readers, and ZAE says so.
+  - **Other pages:** readable text, or og:title and og:description when the page is mostly script.
+  - **Unreadable links:** she says she couldn't read it and doesn't guess.
+- **Clarifying questions:** a request to make something personal (a program, plan, routine, schedule, diet, budget…) first gets 2–4 multiple-choice questions from her brain.
+  - **Pop-up:** they appear in the `ClarifyCard` pop-up. Each question has its choices plus a free-text box and an "Ask ChatGPT" button, which opens chatgpt.com in his browser with the question and context filled in.
+  - **Sending:** "Send answers" re-sends the request with "My answers to your questions:"; "Skip, just do it" says to use her judgement.
+  - **Prompt note:** the questions prompt is framed as "write clarifying questions". Asked to "make a fitness program", llama3.1:8b sometimes refused outright.
+- **reply_shape:** requests to make a program, plan and the like, and answered questions, get the full answer, not the two-line brief.
+- **Tests:** links_test 5; personal_tools_test adds cross-tags.

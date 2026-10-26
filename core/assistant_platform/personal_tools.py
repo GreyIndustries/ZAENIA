@@ -54,8 +54,13 @@ class Stroke(BaseModel):
         return points
 
 
+Subject = Literal["Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI"]
+
+
 class Project(Record):
-    category: Literal["Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI"] = "Tech"
+    category: Subject = "Tech"
+    # Cross-tags: other subjects the project also belongs to (it shows under each of them).
+    tags: list[Subject] = Field(default_factory=list, max_length=8)
     color: Literal["amber", "blue", "green", "rose", "violet"] = "amber"
     size: Literal["small", "medium", "large"] = "medium"
     status: Literal["Idea", "Research", "Prototype", "Testing", "Complete"] = "Idea"
@@ -225,7 +230,7 @@ class PersonalTools:
             date.fromisoformat(day)
         rows = [row for row in self.store.list(COLLECTIONS[collection]) if row.get("archived", False) == archived and (not day or row.get("date") == day)]
         # Lists don't download every drawing, source document and history.
-        fields = {"id", "revision", "updatedAt", "title", "archived", "category", "color", "size", "status", "stage", "date", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories"}
+        fields = {"id", "revision", "updatedAt", "title", "archived", "category", "tags", "color", "size", "status", "stage", "date", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories"}
         items = [{key: value for key, value in row.items() if key in fields} for row in rows[offset:offset+100]]
         return {"items": items, "total": len(rows), "nextOffset": offset+100 if offset+100 < len(rows) else None}
 

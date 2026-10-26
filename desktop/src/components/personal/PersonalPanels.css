@@ -41,3 +41,9 @@
 .personal-step { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #314050; }
 .personal-step > label:not(.platform-check) { flex:1 1 180px; }
 @media(max-width:700px) { .personal-two { grid-template-columns:1fr; }.personal-forum .personal-project--large { grid-column:auto; }.personal-editor,.personal-source { padding:12px; }.personal-panel .platform-panel__heading { flex-wrap:wrap; } }
+
+.personal-crosstags { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin:4px 0 12px; padding:10px 12px; border:1px solid rgba(143,202,255,.18); border-radius:10px; }
+.personal-crosstags legend { padding:0 6px; font-size:.82rem; color:#c9d8ea; }
+.personal-crosstags small { flex-basis:100%; color:#8ea4c0; font-size:.75rem; }
+.personal-crosstag { padding:5px 10px; border-radius:999px; border:1px solid rgba(143,202,255,.25); background:rgba(16,32,52,.6); color:#cfe0f2; font:inherit; font-size:.8rem; cursor:pointer; }
+.personal-crosstag--on { border-color:var(--accent,#e0a353); background:color-mix(in srgb,var(--accent,#e0a353) 22%,transparent); color:#fff; }
