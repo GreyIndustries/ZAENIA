@@ -160,6 +160,8 @@ type TrainingSource = { sourceUrl: string; sourceText: string; sourceName: strin
 
 export function FitnessPanel({ drafts }: Props) {
   const [day, setDay] = useState(today()); const [page, setPage] = useState('Training program');
+  const [askSetup, setAskSetup] = useState(0);
+  useEffect(() => { const open = () => { setPage('Training program'); setAskSetup(n => n + 1); }; window.addEventListener('zae:training-setup', open); return () => window.removeEventListener('zae:training-setup', open); }, []);
   const food = useRecords<Food>('food', drafts, day); const exercise = useRecords<Exercise>('exercise', drafts, day); const plans = useRecords<Plan>('plans', drafts); const settings = useRecords<Settings>('fitness-settings', drafts);
   const [totals, setTotals] = useState<{ calories: number; protein: number; fiber: number; burned: number; baseline: number | null; proteinTarget: number | null; fiberTarget: number | null } | null>(null);
   const [sourceText, setSourceText] = useState(''); const [sourceUrl, setSourceUrl] = useState('');
@@ -172,7 +174,7 @@ export function FitnessPanel({ drafts }: Props) {
   return <section className="platform-panel personal-panel" aria-label="Fitness and health">
     <div className="platform-panel__heading"><div><span className="subheading">NUTRITION · MOVEMENT · TRAINING</span><h2>Fitness &amp; Health</h2></div><label>Log date<input type="date" disabled={dirty} value={day} onChange={event => setDay(event.target.value)}/></label></div>
     <div className="personal-tabs">{['Training program', 'Log', 'Edit plans', 'Targets'].map(name => <button key={name} aria-pressed={page === name} onClick={() => setPage(name)}>{name}</button>)}</div>
-    {page === 'Training program' && <TrainingProgram/>}
+    {page === 'Training program' && <TrainingProgram askSetup={askSetup}/>}
     {page !== 'Training program' && (totals ? <><div className="personal-metrics"><Metric title="Food energy" value={`${totals.calories.toFixed(0)} kcal`}/><Metric title="Protein" value={`${totals.protein.toFixed(1)} g${totals.proteinTarget != null ? ` / ${totals.proteinTarget} g` : ''}`}/><Metric title="Fiber" value={`${totals.fiber.toFixed(1)} g${totals.fiberTarget != null ? ` / ${totals.fiberTarget} g` : ''}`}/><Metric title="Logged exercise burn" value={`${totals.burned.toFixed(0)} kcal`}/><Metric title="Intake minus exercise" value={`${(totals.calories - totals.burned).toFixed(0)} kcal`}/>{totals.baseline != null && <Metric title="Estimated energy balance" value={`${(totals.calories - totals.burned - totals.baseline).toFixed(0)} kcal`}/>}</div><small>Intake minus exercise excludes resting energy and other activity. Estimated energy balance uses your optional non-exercise baseline plus logged exercise. All burn figures are estimates.</small></> : <p>Daily totals unavailable. Connect or refresh the logs to retry.</p>)}
     {page === 'Log' && <>
       <div className="personal-two"><div><h3>Food intake</h3>{food.notice}<button disabled={food.disabled || food.dirty} onClick={() => food.create({ title: '', archived: false, date: day, calories: 0, protein: 0, fiber: 0, source: 'Food label / manual entry' })}>Log food</button>{food.controls}<EntryList records={food.listing.items} disabled={food.disabled || food.dirty} open={food.open}/>

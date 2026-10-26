@@ -105,7 +105,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   workbench: { title: 'Workbench', label: 'PROJECTS · TOOLS · LABS', description: 'Projects and inventions, science and tech tools, and chemistry and physics labs, with ZAE to explain.' },
   music: { title: 'Music', label: 'CREATE & RELEASE', description: 'GarageBand projects, production progress, release links and dated song statistics.' },
-  fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Food intake, exercise, energy estimates and training plans from your sources.' },
+  fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Your training program: calendar, daily tracker, calorie targets, body log and phone reminders, plus food and exercise logs.' },
   news: { title: 'News', label: 'TECH & WORLD', description: 'Tech and world headlines from sixteen credible newsrooms, checked every 30 minutes, plus a keyword search of news sites worldwide. Open a story to read it without ads and have ZAE summarise it.' },
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
   history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
@@ -872,6 +872,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           if (windowed) shell.open(proposal.kind.startsWith("memory.") ? "assistant" : "tasks");
           if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
         }
+      } else if (event.type === "form") {
+        // ZAE's question pop-ups live in their tabs (training setup in Fitness & Health).
+        if (event.form === "training-setup") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:training-setup")), 700); }
       } else if (event.type === "say") {
         // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
         if (speakIt && !voice.said) { voice.filler = true; speech.feed(key, `${event.text} `); }

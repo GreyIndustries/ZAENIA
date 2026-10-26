@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import { disablePush, enablePush, pushHint, pushState } from "../../core/phonePush";
+import { BodyMap, TrainingSetup } from "./TrainingSetup";
 import "./TrainingProgram.css";
 
 const PATH = "/api/platform/personal/training";
@@ -40,7 +41,7 @@ function Spark({ points }: { points: { date: string; weightLb: number }[] }) {
 }
 
 /** Training program: the plan on a calendar, a daily tracker, body log, calorie targets, sources and phone reminders. */
-export function TrainingProgram() {
+export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
   const [info, setInfo] = useState<Overview | null>(null);
   const [month, setMonth] = useState(todayIso().slice(0, 7));
   const [day, setDay] = useState(todayIso());
@@ -53,6 +54,16 @@ export function TrainingProgram() {
   const [cardio, setCardio] = useState<Cardio>({ type: "run", miles: 0, minutes: 0 });
   const [setDraft, setSetDraft] = useState<Record<string, { reps: string; weight: string }>>({});
   const [push, setPush] = useState<string>("unsupported");
+  // ZAE's setup questions: open by themselves while she's missing what the calorie math needs, from the button,
+  // or when she asks in chat ("set up my training").
+  const [setup, setSetup] = useState(false);
+  const [askedOnce, setAskedOnce] = useState(false);
+  useEffect(() => { if (askSetup > 0) setSetup(true); }, [askSetup]);
+  useEffect(() => {
+    const open = () => setSetup(true);
+    window.addEventListener("zae:training-setup", open);
+    return () => window.removeEventListener("zae:training-setup", open);
+  }, []);
 
   const load = useCallback(async () => {
     try { const next = await api<Overview>("GET", `${PATH}?month=${month}`); setInfo(next); setProfile(current => current ?? next.profile); }
@@ -70,6 +81,7 @@ export function TrainingProgram() {
     return () => window.removeEventListener("zae:records-changed", changed);
   }, [load, loadDay]);
 
+  useEffect(() => { if (info && !info.targets.ready && !askedOnce) { setAskedOnce(true); setSetup(true); } }, [info, askedOnce]);
   const run = async (label: string, action: () => Promise<unknown>, done?: string) => {
     setBusy(label); setError(null); setNote(null);
     try { await action(); if (done) setNote(done); await Promise.all([load(), loadDay()]); }
@@ -94,6 +106,9 @@ export function TrainingProgram() {
   return <div className="tp">
     {error && <p className="tp-error" role="alert">{error}</p>}
     {note && <p className="tp-note">✓ {note}</p>}
+    {setup && <TrainingSetup profile={info.profile} videoGoal={info.sources.map(s => s.suggested.weightLb).find(Boolean) ?? null}
+      onClose={() => setSetup(false)} onSave={async changes => { await api("POST", `${PATH}/profile`, { changes }); setProfile(null); setNote("Got it. Your targets and calendar are updated."); await Promise.all([load(), loadDay()]); }}/>}
+    <div className="tp-row"><button type="button" onClick={() => setSetup(true)}>ZAE's setup questions</button></div>
 
     <div className="tp-top">
       <label>Program<select value={info.planId} onChange={event => void run("program", () => api("POST", `${PATH}/program`, { planId: event.target.value, weekdays: {} }))}>
@@ -104,7 +119,7 @@ export function TrainingProgram() {
           <Bar label="Burn (exercise)" value={burnedToday} target={targets.burn} unit="kcal"/>
           <Bar label="Protein" value={view?.eaten?.protein ?? 0} target={targets.protein} unit="g"/>
           <small className="tp-muted">Maintenance ≈ {targets.maintenance} kcal · goal deficit {targets.dailyDeficit} kcal/day{targets.goalDate ? ` · goal around ${targets.goalDate}` : ""}. Estimates.</small>
-        </> : <p className="tp-muted">Add your {targets?.missing?.join(", ")} under “Your stats & goal” to get daily calorie targets.</p>}
+        </> : <p className="tp-muted">ZAE needs your {targets?.missing?.join(", ")} for daily calorie targets. <button type="button" className="tp-primary" onClick={() => setSetup(true)}>Answer ZAE's questions</button></p>}
       </div>
     </div>
 
@@ -168,7 +183,7 @@ export function TrainingProgram() {
       <section className="tp-card"><h3>Habits <small>last 30 days</small></h3>
         <div className="tp-habit"><span>Workouts</span><div>{info.habits.workouts.map((on, i) => <i key={i} className={on ? "on" : ""} title={info.habits.dates[i]}/>)}</div></div>
         <div className="tp-habit"><span>Weigh-ins</span><div>{info.habits.weighIns.map((on, i) => <i key={i} className={on ? "on" : ""} title={info.habits.dates[i]}/>)}</div></div></section>
-      <section className="tp-card"><h3>Muscle groups <small>sets, last 7 days</small></h3>
+      <section className="tp-card"><h3>Muscle groups <small>sets, last 7 days</small></h3><BodyMap sets={info.muscles}/>
         {Object.entries(info.muscles).map(([muscle, sets]) => <div className="tp-muscle" key={muscle}><span>{muscle}</span><div><i style={{ width: `${Math.round(sets / maxSets * 100)}%` }}/></div><b>{sets}</b></div>)}</section>
     </div>
 

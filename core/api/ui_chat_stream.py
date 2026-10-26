@@ -115,6 +115,12 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     """A protocol phrase ("goodnight") or "remind me ..." is handled here, before the brain."""
     if authorize is None:
         return None
+    from core.assistant_platform.training import setup_command, setup_missing
+    if setup_command(message):
+        # "Set up my training": her questions pop up in the Training program tab; the answers go straight in.
+        missing = setup_missing()
+        return ("Here are my questions. Fill them in and I'll set your calories, calendar and reminders."
+                if missing else "Your program's set up. I've opened the questions so you can change anything."), "training_setup", ["fitness"]
     from core.assistant_platform import tab_actions
     target = tab_actions.parse(message)
     if target is not None:
@@ -123,6 +129,10 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
             authorize("memory.write")
             from core.research.analyze import run_local
             result = tab_actions.save(target, _brain(authorize).load_recent_messages(), ask=run_local)
+            if target == "plans":
+                from core.assistant_platform.training import setup_missing
+                if setup_missing():
+                    return result["reply"] + " I've a few quick questions so I can set your calories and calendar.", "training_setup", [result["tab"]]
             return result["reply"], "tab_action", [result["tab"]]
         except PermissionError:
             return "Saving to your tabs isn't available with the current permissions.", "tab_action", []
@@ -238,6 +248,8 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "route", "route": route})
             if tabs:
                 yield _line({"type": "protocol", "open": tabs})
+            if route == "training_setup":
+                yield _line({"type": "form", "form": "training-setup"})
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return

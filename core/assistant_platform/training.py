@@ -417,6 +417,60 @@ def improve_program(store, ask) -> dict[str, Any]:
     return {"planId": record["id"], "text": reply}
 
 
+_SETUP = re.compile(r"\b(?:set ?up|setup|configure|start)\s+(?:my\s+)?(?:training|fitness|workout)(?:\s+(?:program|plan|tracker|profile))?\b"
+                    r"|\b(?:update|change|edit)\s+my\s+(?:fitness|training)\s+(?:stats|profile|details|info)\b", re.I)
+
+
+def setup_command(message: str) -> bool:
+    return bool(_SETUP.search(str(message)))
+
+
+def setup_missing(path: Path = PROGRAM_FILE) -> list[str]:
+    return targets(Training(path).load()["profile"]).get("missing") or []
+
+
+_FITNESS_TOPIC = re.compile(r"\b(train|training|workout|work out|exercise|gym|lift|lifting|cardio|run|ran|steps|calorie|calories|kcal|"
+                            r"protein|diet|eat|ate|meal|weight|weigh|body ?fat|fat loss|cut|bulk|muscle|program|physique|fitness|macro)\w*", re.I)
+
+
+def training_context(question: str, store=None, path: Path = PROGRAM_FILE) -> str | None:
+    """His program, targets and today's progress for her brain, when the question is about fitness."""
+    if not _FITNESS_TOPIC.search(str(question or "")):
+        return None
+    if store is None:
+        from core.assistant_platform.service import platform
+        store = platform().store
+    today = date.today().isoformat()
+    view = day_view(today, store, path)
+    info = overview(store, path)
+    p = info["profile"]
+    t = info["targets"]
+    lines = ["GREY'S TRAINING PROGRAM (his own data from the Training program tab; use it, don't invent):"]
+    stats = [f"{p['age']:g} years" if p.get("age") else "", p.get("sex") or "", f"{int(p['heightIn'] // 12)}'{int(p['heightIn'] % 12)}\"" if p.get("heightIn") else "",
+             f"{p['weightLb']:g} lb" if p.get("weightLb") else "", f"{p['bodyFat']:g}% body fat" if p.get("bodyFat") else "",
+             f"goal {p['goalWeightLb']:g} lb at {p.get('rateLbPerWeek')} lb/week" if p.get("goalWeightLb") else ""]
+    lines.append("Stats: " + (", ".join(s for s in stats if s) or "not set yet"))
+    if t.get("ready"):
+        lines.append(f"Daily targets: eat {t['eat']} kcal, burn {t['burn']} kcal in exercise, protein {t['protein']} g "
+                     f"(maintenance {t['maintenance']}, deficit {t['dailyDeficit']}){'; goal around ' + t['goalDate'] if t.get('goalDate') else ''}.")
+    else:
+        lines.append("Targets: missing " + ", ".join(t.get("missing") or []) + " (he can say 'set up my training').")
+    lines.append(f"Program: {info['planTitle'] or 'none'}; " + "; ".join(f"{k}: {v}" for k, v in info["weekdays"].items()))
+    workout = view["workout"]
+    done = view["entry"].get("done") or {}
+    if workout.get("exercises"):
+        lines.append(f"Today ({today}): {workout['label']}: " + "; ".join(f"{e['exercise']} {e['prescription']}{' (done)' if done.get(e['exercise']) else ''}" for e in workout["exercises"]))
+    else:
+        lines.append(f"Today ({today}): rest day.")
+    eaten = (view.get("eaten") or {}).get("calories")
+    lines.append(f"Logged today: eaten {eaten if eaten is not None else 0:g} kcal, burned about {view['burned']['total']} kcal "
+                 f"(steps {view['entry'].get('steps') or 0}, cardio {view['burned']['cardioMiles']} mi); weight {view['entry'].get('weightLb') or 'not logged'}.")
+    if info["weights"]:
+        lines.append("Recent weigh-ins: " + ", ".join(f"{w['date'][5:]} {w['weightLb']:g}" for w in info["weights"][-7:]))
+    lines.append("Muscle sets this week: " + ", ".join(f"{m} {n}" for m, n in info["muscles"].items() if n) if any(info["muscles"].values()) else "No sets logged this week.")
+    return "\n".join(lines)
+
+
 _TRAINING: Training | None = None
 
 

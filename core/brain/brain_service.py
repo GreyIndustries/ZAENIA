@@ -569,7 +569,16 @@ class BrainService:
             pc = pc_context(question)
         except Exception:
             pc = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security, pc) if part]
+        fitness = None
+        try:
+            # His training program, targets and today's log (personal: memory.read like his profile).
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.read")
+            from core.assistant_platform.training import training_context
+            fitness = training_context(question)
+        except Exception:
+            fitness = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security, pc, fitness) if part]
         return "\n\n".join(parts) or None
 
     def _load_behavior_profile(

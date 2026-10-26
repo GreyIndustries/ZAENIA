@@ -57,3 +57,21 @@
 .tp .tp-link{padding:0;border:0;background:none;color:#8fcaff;text-decoration:underline;text-align:left}
 .tp .tp-x{position:absolute;top:6px;right:6px;padding:2px 8px;font-size:11px}
 @media(max-width:760px){.tp-top{grid-template-columns:1fr}.tp-targets{grid-template-columns:1fr}.tp .tp-day{min-height:52px;padding:4px}.tp-day small{display:none}}
+
+/* ZAE's setup questions (pop-up) */
+.ts-backdrop{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:16px;background:rgba(2,6,14,.6);backdrop-filter:blur(6px)}
+.ts{width:min(620px,100%);max-height:min(88vh,860px);overflow:auto;display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:18px;color:#e4eef9;
+  background:rgba(6,14,28,.97);border:1px solid color-mix(in srgb,var(--accent,#e0a353) 55%,transparent);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.ts header{display:flex;justify-content:space-between;gap:10px}.ts header strong{display:block;font-size:15px;color:var(--accent-2,#ffd9a6)}.ts header small{color:#9fb6cf;font-size:12px}
+.ts fieldset{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0;padding:10px 12px;border:1px solid rgba(143,202,255,.16);border-radius:12px}
+.ts legend{padding:0 4px;font-size:13px;color:#dbe8f6}
+.ts input,.ts button{font:inherit;font-size:12.5px;color:#e6eef8;border-radius:8px;border:1px solid rgba(143,202,255,.25);background:rgba(10,22,38,.85);padding:7px 10px}
+.ts input{width:110px}.ts label{display:flex;flex-direction:column;gap:3px;font-size:11px;color:#9fb6cf}
+.ts button{cursor:pointer}.ts .ts-chip--on{border-color:var(--accent,#e0a353);background:color-mix(in srgb,var(--accent,#e0a353) 28%,transparent);color:#fff}
+.ts footer{display:flex;justify-content:flex-end;gap:8px}.ts .ts-save{background:color-mix(in srgb,var(--accent,#e0a353) 35%,transparent);border-color:var(--accent,#e0a353);color:#fff;font-weight:600}
+.ts .ts-close{padding:2px 9px;background:none}.ts-error{margin:0;color:#ffcfae;font-size:12px}
+/* Body map */
+.tp-bodymap{width:100%;max-height:230px}
+.tp-bodymap__body{fill:rgba(143,202,255,.08);stroke:rgba(143,202,255,.3);stroke-width:.6}
+.tp-bodymap__muscle{fill:#5b8cff;stroke:rgba(5,12,24,.6);stroke-width:.4;transition:opacity .4s}
+.tp-bodymap__label{font-size:5px;letter-spacing:.2em;fill:#7f97b3;text-anchor:middle}

@@ -646,3 +646,8 @@ Grey compared ZAE with his brother's "Quantum" app and answered a question card 
   - Routes: `/api/push/key|subscribe|unsubscribe|test`.
   - Package: pywebpush (installed in the live venv, added to requirements.txt).
 - **Tests:** training_test 7, including push and reminders.
+- **Update (same day):** Grey asked ZAE to ask the setup questions herself as a pop-up, with the answers going to her.
+  - **`TrainingSetup` pop-up:** age, sex, height, weight, body fat, goal (the video's figure is offered), pace, activity, gym and home days, and reminder times. Saving it fills in his stats and goal.
+  - **When it opens:** by itself while the calorie math is missing inputs, from a button, when he says "set up my training" (stream event `form`), and after "add it to my fitness tab" saves a plan while setup is incomplete.
+  - **What her brain gets:** `training_context()` gives it his stats, targets, weekly schedule, today's workout and what's done, today's calories eaten and burned, recent weigh-ins and weekly muscle sets. This only happens when the conversation is about fitness, and needs memory.read.
+  - **Body map:** a front and back figure lights each muscle by its weekly sets.

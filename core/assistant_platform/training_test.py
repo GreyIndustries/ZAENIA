@@ -81,6 +81,29 @@ class TrainingTest(unittest.TestCase):
         self.assertEqual(self.tracker.load()["sources"], [])
 
 
+class SetupAndContextTest(unittest.TestCase):
+    def test_setup_command(self):
+        for text in ("set up my training program", "Setup my fitness", "update my fitness stats", "start my training"):
+            self.assertTrue(training.setup_command(text), text)
+        self.assertFalse(training.setup_command("set up my calendar"))
+
+    def test_context_only_for_fitness_talk(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = PlatformStore(Path(folder) / "p.sqlite3")
+            path = Path(folder) / "program.json"
+            from core.assistant_platform.personal_tools import PersonalTools
+            plan = PersonalTools(store).save("plans", {"title": "Spider plan", "steps": STEPS, "sessions": []})
+            tracker = training.Training(path)
+            tracker.set_program(plan["id"], {})
+            tracker.set_profile({"age": 30, "sex": "male", "heightIn": 70, "weightLb": 195.8, "goalWeightLb": 167})
+            self.assertIsNone(training.training_context("what's the weather", store, path))
+            text = training.training_context("how many calories should I eat today?", store, path)
+            self.assertIn("Daily targets: eat 2300 kcal, burn 250 kcal", text)
+            self.assertIn("Program: Spider plan", text)
+            self.assertIn("5'10\"", text)
+            self.assertEqual(training.setup_missing(path), [])
+
+
 class PushTest(unittest.TestCase):
     def test_subscribe_send_and_drop_gone_phones(self):
         from core.api import web_push
