@@ -49,5 +49,16 @@ class TabActionsTest(unittest.TestCase):
                 tab_actions.save("plans", [{"role": "user", "content": "hi"}], store=store)
 
 
+
+class LastReplyTest(unittest.TestCase):
+    def test_skips_short_claims_after_the_plan(self):
+        messages = [{"role": "user", "content": "plan from https://x.com/a"}, {"role": "assistant", "content": PLAN},
+                    {"role": "user", "content": "add it"}, {"role": "assistant", "content": "Training plan added to your fitness tab: Insomniac."},
+                    {"role": "user", "content": "I dont see it"}, {"role": "assistant", "content": "I added it, but it's not synced yet. Done now."}]
+        answer, asked = tab_actions.last_reply(messages)
+        self.assertEqual(answer, PLAN.strip())
+        self.assertEqual(asked, "plan from https://x.com/a")
+
+
 if __name__ == "__main__":
     unittest.main()

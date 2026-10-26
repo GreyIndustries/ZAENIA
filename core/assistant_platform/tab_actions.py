@@ -41,17 +41,15 @@ def parse(message: str) -> str | None:
 
 def last_reply(messages: list[dict[str, str]]) -> tuple[str, str]:
     """Her last real answer and the user message before it (where a shared link would be)."""
-    answer, asked = "", ""
-    for index in range(len(messages) - 1, -1, -1):
-        item = messages[index]
-        if item.get("role") == "assistant" and len(str(item.get("content", "")).strip()) > 40:
-            answer = str(item["content"]).strip()
-            for earlier in range(index - 1, -1, -1):
-                if messages[earlier].get("role") == "user":
-                    asked = str(messages[earlier].get("content", ""))
-                    break
-            break
-    return answer, asked
+    # The thing worth saving is her last substantial answer (a plan, a list), not a short "Done" or "I added it"
+    # line after it; within her last four replies, the newest long one wins, else the newest at all.
+    replies = [i for i in range(len(messages) - 1, -1, -1)
+               if messages[i].get("role") == "assistant" and len(str(messages[i].get("content", "")).strip()) > 40][:4]
+    if not replies:
+        return "", ""
+    index = next((i for i in replies if len(messages[i]["content"]) > 300 or re.search(r"(?m)^\s*(?:[-*+•]|\d+[.)])\s", messages[i]["content"])), replies[0])
+    asked = next((str(messages[e].get("content", "")) for e in range(index - 1, -1, -1) if messages[e].get("role") == "user"), "")
+    return str(messages[index]["content"]).strip(), asked
 
 
 _DAY = re.compile(r"^(?:\*\*)?(?P<day>(?:mon|tues|wednes|thurs|fri|satur|sun)day|day\s*\d+|week\s*\d+)\b[^:]*:?\s*(?:\*\*)?(?P<rest>.*)$", re.I)
