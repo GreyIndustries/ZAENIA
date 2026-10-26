@@ -519,3 +519,6 @@
 .phone-more__item--on{border-color:var(--accent,#e0a353);background:color-mix(in srgb,var(--accent,#e0a353) 20%,rgba(12,26,44,.85))}
 .zaenia-app--phone .topbar__weather small{display:none}
 @media(max-width:420px){.zaenia-app--phone .topbar__weather{display:none}.zaenia-app--phone .topbar__time{font-size:11px}}
+/* Phone browser: each page scrolls inside the stage (it was clipped); the chat bar and tabs stay put (Grey, 2026-10-26). */
+.zaenia-app--phone .main-stage:not(.main-stage--overview)>.glass-module,
+.zaenia-app--phone .main-stage:not(.main-stage--overview)>.section-content{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-bottom:12px}
