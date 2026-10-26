@@ -299,8 +299,32 @@ def suggest_targets(text: str, ask) -> dict[str, Any]:
             value = None
         if value is not None and low <= value <= high:
             out[key] = value
+    # The small model sometimes misreads numbers (it once turned "weighs 167" into 367): numbers the text actually
+    # states win, and a model number the text never mentions is dropped.
+    stated = _stated_numbers(text)
+    for key, value in stated.items():
+        out[key] = value
+    for key in ("weightLb", "bodyFat"):
+        if key in out and key not in stated and f"{out[key]:g}" not in text:
+            del out[key]
     out["advice"] = [str(a)[:200] for a in (data.get("advice") or [])[:8]]
     return out
+
+
+def _stated_numbers(text: str) -> dict[str, float]:
+    found: dict[str, float] = {}
+    height = re.search(r"\b([4-7])\s*(?:ft|foot|feet|')\s*(\d{1,2})?\s*(?:in|inches|\"|'')?", text, re.I)
+    if height:
+        found["heightIn"] = float(int(height.group(1)) * 12 + int(height.group(2) or 0))
+    weight = re.search(r"\b(?:weighs?|weight(?: of| is)?|at)\s+(\d{2,3}(?:\.\d)?)\b(?!\s*(?:%|years|ft|feet|cm))|\b(\d{2,3}(?:\.\d)?)\s*(?:lb|lbs|pounds)\b", text, re.I)
+    if weight:
+        value = float(weight.group(1) or weight.group(2))
+        if 70 <= value <= 600:
+            found["weightLb"] = value
+    fat = re.search(r"\b(\d{1,2}(?:\.\d)?)\s*%\s*body\s*fat|\bbody\s*fat\D{0,12}(\d{1,2}(?:\.\d)?)\s*%", text, re.I)
+    if fat:
+        found["bodyFat"] = float(fat.group(1) or fat.group(2))
+    return found
 
 
 def overview(store=None, path: Path = PROGRAM_FILE, month: str = "") -> dict[str, Any]:
