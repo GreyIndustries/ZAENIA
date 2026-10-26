@@ -129,7 +129,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
       </div>
     </div>
 
-    <div className="tp-grid">
+    <div className="tp-flow">
       <section className="tp-card tp-calendar">
         <header><button type="button" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Previous month">‹</button>
           <strong>{new Date(`${info.month}-01T12:00:00`).toLocaleDateString([], { month: "long", year: "numeric" })}</strong>
@@ -181,9 +181,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
         </div>
         {view && <p className="tp-muted">Burned today (estimates): steps {view.burned.steps} kcal ({view.burned.stepMiles} mi), cardio {view.burned.cardio} kcal ({view.burned.cardioMiles} mi), lifting {view.burned.lifting} kcal{view.eaten?.burned ? `, logged exercise ${Math.round(view.eaten.burned)} kcal` : ""}. Food comes from the Log page.</p>}
       </section>
-    </div>
 
-    <div className="tp-grid tp-grid--three">
       <section className="tp-card"><h3>Weight trend <small>{info.weights.length ? `${info.weights[info.weights.length - 1].weightLb} lb` : ""}</small></h3><Spark points={info.weights}/>
         {p.goalWeightLb && p.weightLb ? <small className="tp-muted">{Math.abs(p.weightLb - p.goalWeightLb).toFixed(1)} lb to your goal of {p.goalWeightLb} lb.</small> : null}</section>
       <section className="tp-card"><h3>Habits <small>last 30 days</small></h3>
@@ -191,9 +189,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
         <div className="tp-habit"><span>Weigh-ins</span><div>{info.habits.weighIns.map((on, i) => <i key={i} className={on ? "on" : ""} title={info.habits.dates[i]}/>)}</div></div></section>
       <section className="tp-card"><h3>Muscle groups <small>sets, last 7 days</small></h3><BodyMap sets={info.muscles}/>
         {Object.entries(info.muscles).map(([muscle, sets]) => <div className="tp-muscle" key={muscle}><span>{muscle}</span><div><i style={{ width: `${Math.round(sets / maxSets * 100)}%` }}/></div><b>{sets}</b></div>)}</section>
-    </div>
 
-    <div className="tp-grid">
       <section className="tp-card"><h3>Sources <small>links ZAE reads to build and improve your program</small></h3>
         <form className="tp-row" onSubmit={event => { event.preventDefault(); if (link.trim()) void run("source", () => api("POST", `${PATH}/source`, { url: link.trim() }), "Read it.").then(() => setLink("")); }}>
           <input value={link} placeholder="Paste a TikTok, YouTube or article link" onChange={event => setLink(event.target.value)}/><button type="submit" disabled={busy === "source"}>{busy === "source" ? "Reading…" : "Add link"}</button></form>

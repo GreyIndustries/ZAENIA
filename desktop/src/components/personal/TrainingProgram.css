@@ -75,3 +75,9 @@
 .tp-bodymap__body{fill:rgba(143,202,255,.08);stroke:rgba(143,202,255,.3);stroke-width:.6}
 .tp-bodymap__muscle{fill:#5b8cff;stroke:rgba(5,12,24,.6);stroke-width:.4;transition:opacity .4s}
 .tp-bodymap__label{font-size:5px;letter-spacing:.2em;fill:#7f97b3;text-anchor:middle}
+/* One flowing wall of cards (no empty gaps): two columns on wide windows, one on narrow (Grey, 2026-10-26). */
+.tp-flow{columns:2 460px;column-gap:14px}
+.tp-flow>.tp-card{break-inside:avoid;margin:0 0 14px;width:100%;box-sizing:border-box}
+.tp-bodymap{max-height:190px}
+.tp-card .tp-muscle{grid-template-columns:80px 1fr 24px}
+.tp-card .tp-muscle{display:inline-grid;width:calc(50% - 8px);margin:0 8px 6px 0;vertical-align:top}
