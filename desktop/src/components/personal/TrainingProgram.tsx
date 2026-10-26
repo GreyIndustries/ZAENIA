@@ -81,7 +81,13 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
     return () => window.removeEventListener("zae:records-changed", changed);
   }, [load, loadDay]);
 
-  useEffect(() => { if (info && !info.targets.ready && !askedOnce) { setAskedOnce(true); setSetup(true); } }, [info, askedOnce]);
+  useEffect(() => {
+    if (!info || info.targets.ready || askedOnce) return;
+    setAskedOnce(true);
+    let asked = false;
+    try { asked = localStorage.getItem("zaenia.trainingSetupAsked") === "1"; localStorage.setItem("zaenia.trainingSetupAsked", "1"); } catch { /* optional */ }
+    if (!asked) setSetup(true);
+  }, [info, askedOnce]);
   const run = async (label: string, action: () => Promise<unknown>, done?: string) => {
     setBusy(label); setError(null); setNote(null);
     try { await action(); if (done) setNote(done); await Promise.all([load(), loadDay()]); }

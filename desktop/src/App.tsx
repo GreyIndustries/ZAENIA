@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { SystemProgressCore } from "./components/core/SystemProgressCore";
@@ -119,6 +120,8 @@ const sections: Record<Section, { title: string; label: string; description: str
   system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
 };
 // On desktop every workspace page opens as a window over the core.
+// Phone bottom bar: these first, the open tab if it's another one, then "More" for everything.
+const PHONE_TABS: readonly string[] = ["overview", "tasks", "fitness", "research"];
 const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "codedoctor", "arena", "assistant", "files", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research", suggestions: "codedoctor" };
@@ -257,6 +260,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const identityTimerRef = useRef<number | null>(null);
   const messageCounter = useRef(0);
   const queryRef = useRef<HTMLTextAreaElement | null>(null);
+  const [phoneMore, setPhoneMore] = useState(false);
   const [history, setHistory] = useState<HistoryState>(LIVE_API ? "loading" : "preview");
   const [historyError, setHistoryError] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState(0);
@@ -1197,7 +1201,15 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     </header>
     {!sidebarHidden && <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar__group-label">WORKSPACE</div>
-      <nav className="sidebar__nav">{nav.map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "files" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}</nav>
+      {isPhone && phoneMore && createPortal(<div className="phone-more" role="dialog" aria-label="All tabs" onClick={() => setPhoneMore(false)}>
+        <div className="phone-more__sheet" onClick={event => event.stopPropagation()}>
+          <header><strong>All tabs</strong><button type="button" onClick={() => setPhoneMore(false)} aria-label="Close">✕</button></header>
+          <div className="phone-more__grid">{nav.map(item => <button key={item.id} type="button" className={section === item.id ? "phone-more__item phone-more__item--on" : "phone-more__item"}
+            onClick={() => { setPhoneMore(false); openSection(item.id); }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
+        </div>
+      </div>, document.body)}
+      <nav className="sidebar__nav">{(isPhone ? [...nav.filter(item => PHONE_TABS.includes(item.id)), ...(PHONE_TABS.includes(section) ? [] : nav.filter(item => item.id === section))].slice(0, 4) : nav).map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "files" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}
+        {isPhone && <button type="button" className={`nav-item${phoneMore ? " nav-item--active" : ""}`} onClick={() => setPhoneMore(open => !open)} aria-expanded={phoneMore} title="All tabs"><Icon name="panel"/><span>More</span></button>}</nav>
       <div className="sidebar__bottom"><SidebarCheck/><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
     </aside>}
     <main className="workspace">
