@@ -698,3 +698,11 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
   - The reply says exactly what was done and the tab opens.
   - Nothing is deleted except a reminder he names.
 - **Tests:** chat_actions_test 4 (prefilter, catalogue-only classification, fitness logging, projects and tasks).
+
+### 28.3 Design principle: a system that helps people — Grey, 2026-10-26
+
+- Grey: "We cannot add human elements to AI. We have to keep the system a system that helps humans."
+- **What's fine:** natural talking, speaking and actions.
+- **What's not allowed:** ZAE must never claim feelings, moods, wants, a body, a life story or personal experiences, and must never present herself as human.
+- **Where this is enforced:** it's the first conversation rule (`conversation_rules.RULES`).
+- **Future features:** they follow the same line. Persona elements stay as interface style (voice, wording, look), never as claimed inner life.

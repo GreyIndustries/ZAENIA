@@ -482,7 +482,7 @@ def streaming_test() -> None:
     for chunk in stream_chat_local(
         "In three natural sentences, explain why "
         "fluid turn-taking makes a voice assistant "
-        "feel more human."
+        "easier to use."
     ):
         print(
             chunk,
