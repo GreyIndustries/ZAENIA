@@ -190,3 +190,13 @@
 .home-chat--drop .chat-dock{border-color:rgba(143,202,255,.8)}
 .message__files{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .message__file{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#b9d4ee;padding:2px 6px;border:1px solid rgba(143,202,255,.25);border-radius:6px}
+
+/* History view: the whole conversation, scrollable and selectable; every message has Copy (Grey, 2026-10-26). */
+.home-chat--float .message p{user-select:text;-webkit-user-select:text;cursor:text}
+.zaenia-app .main-stage .home-chat--float .home-chat__log.home-chat__log--browse{
+  pointer-events:auto;max-height:min(78vh,900px);width:min(620px,48%);padding:10px;border-radius:14px;
+  background:rgba(4,10,20,.86);border:1px solid rgba(143,202,255,.2);box-shadow:0 18px 50px rgba(0,0,0,.5);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);z-index:30}
+.home-chat__log--browse .message{opacity:1!important}
+.message__copy{margin-right:6px}
+.message__play+.message__play{margin-left:0}

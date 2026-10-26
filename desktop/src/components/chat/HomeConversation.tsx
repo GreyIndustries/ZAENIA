@@ -224,12 +224,25 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
   const label = (role: ChatMessage["role"]) => role === "user" ? "YOU" : role === "assistant" ? "ZÆNIA" : "BRIDGE ERROR";
   const [now, setNow] = useState(() => Date.now());
   const [peek, setPeek] = useState(false);
-  const recent = messages.filter(message => !message.history).slice(-FLOAT_LINES);
+  // History: the whole conversation (earlier sessions too), scrollable, nothing fading, every message copyable.
+  const [browsing, setBrowsing] = useState(false);
+  const [copied, setCopied] = useState<number | null>(null);
+  const copy = (message: ChatMessage) => {
+    void navigator.clipboard?.writeText(message.text).then(() => { setCopied(message.id); window.setTimeout(() => setCopied(current => current === message.id ? null : current), 1500); });
+  };
+  useEffect(() => {
+    if (!browsing) return;
+    const close = (event: globalThis.KeyboardEvent) => { if (event.key === "Escape") setBrowsing(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [browsing]);
+  useEffect(() => { if (browsing && logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [browsing]);
+  const recent = browsing ? messages : messages.filter(message => !message.history).slice(-FLOAT_LINES);
   // A line stays while it streams, is being spoken, or still needs a decision.
   const pinned = (message: ChatMessage) => Boolean(message.streaming) || voice.playing === `m${message.id}` || voice.loading === `m${message.id}`
     || (Boolean(message.proposal) && ["ready", "failed", "pending"].includes(message.action?.status ?? "ready"));
   const opacity = (message: ChatMessage) => {
-    if (peek || pinned(message)) return 1;
+    if (browsing || peek || pinned(message)) return 1;
     const age = ageOf(message, now);
     return age <= FADE_START_MS ? 1 : Math.max(0, 1 - (age - FADE_START_MS) / (FADE_END_MS - FADE_START_MS));
   };
@@ -247,6 +260,10 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
     aria-label="Conversation with ZÆNIA" ref={listen.meterRef as RefObject<HTMLElement>}
     onFocus={() => setPeek(true)} onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPeek(false); }}>
     <header className="home-chat__head">
+      {messages.length > 0 && <button type="button" className={`home-chat__voice${browsing ? " home-chat__voice--on" : ""}`} aria-pressed={browsing}
+        onClick={() => setBrowsing(value => !value)} title={browsing ? "Close the conversation history (Esc)" : "Scroll through the whole conversation and copy any message"}>
+        <span aria-hidden="true">☰</span><span>{browsing ? "Close history" : "History"}</span>
+      </button>}
       {listen.supported && <button type="button" className={`home-chat__voice home-chat__listen${listening ? " home-chat__voice--on" : ""}`}
         aria-pressed={listen.alwaysWanted || listen.pcTakesOver} onClick={listen.toggleAlways} disabled={listen.pcTakesOver}
         aria-label={listen.pcTakesOver ? "PC voice service is listening" : listen.alwaysWanted ? "Stop listening" : listen.openMic ? "Start listening" : "Listen for ZAE"}
@@ -265,7 +282,7 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
       {listen.canStartPc && <button type="button" className="home-chat__pc" onClick={listen.startPc}
         title="Opens the ZÆNIA Voice window on this PC. Enter your passkey there.">Start PC voice</button>}
     </div>}
-    <div className="home-chat__log" ref={logRef} role="log" aria-live="polite" aria-busy={sending || history === "loading"}>
+    <div className={`home-chat__log${browsing ? " home-chat__log--browse" : ""}`} ref={logRef} role="log" aria-live="polite" aria-busy={sending || history === "loading"}>
       {history === "unavailable" && peek && <p className="home-chat__note">Earlier conversation couldn't be loaded{historyError ? `: ${historyError}` : "."}</p>}
       {recent.map(message => {
         const key = `m${message.id}`;
@@ -277,7 +294,9 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
           {message.files && <div className="message__files">{message.files.map((name, index) => <span key={index} className="message__file"><FileIcon/>{name}</span>)}</div>}
           {message.photos && <div className="message__photos">{message.photos.map((photo, index) => <img key={index} src={photo.data} alt={photo.name}/>)}</div>}
           {message.role === "assistant" && <ActionCard message={message} live={live} onApply={onApplyProposal} onDismiss={onDismissProposal}/>}
-          {message.role === "assistant" && voice.available && !message.streaming && peek && <button type="button" className="message__play"
+          {!message.streaming && (peek || browsing) && message.text.trim() && <button type="button" className="message__play message__copy"
+            onClick={() => copy(message)} aria-label="Copy this message">{copied === message.id ? "✓ Copied" : "Copy"}</button>}
+          {message.role === "assistant" && voice.available && !message.streaming && (peek || browsing) && <button type="button" className="message__play"
             onClick={() => voice.playing === key ? voice.stop() : voice.play(key, message.text)}
             aria-label={voice.playing === key ? "Stop speaking" : "Speak this reply"} disabled={voice.loading !== null && voice.loading !== key}>
             {voice.loading === key ? "Preparing voice…" : voice.playing === key ? "■ Stop" : "▶ Play"}
