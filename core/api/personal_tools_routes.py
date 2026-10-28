@@ -45,6 +45,34 @@ class CompletionBody(BaseModel):
     revision: int = Field(ge=1)
 
 
+class MealBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    description: str = Field(min_length=3, max_length=2000)
+    items: list[dict] = Field(default_factory=list, max_length=50)
+    date: str = Field(default_factory=lambda: __import__('datetime').date.today().isoformat(), min_length=10, max_length=10)
+
+
+class BarcodeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    barcode: str = Field(min_length=8, max_length=32)
+
+
+class FoodSearchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    query: str = Field(min_length=1, max_length=120)
+
+
+class LabelBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    data: str = Field(min_length=16, max_length=12000000)
+
+
+class RecipeMathBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    ingredients: list[dict] = Field(max_length=100)
+    servings: float = Field(gt=0, le=100)
+
+
 def create_personal_tools_router(get, call):
     router = APIRouter(prefix="/api/platform/personal", tags=["personal workspaces"])
 
@@ -92,6 +120,60 @@ def create_personal_tools_router(get, call):
             result = draft_training_plan(content)
             return {**result, "sourceText": content, "sourceName": name or "Pasted text", "sourceUrl": url}
         return call(extract)
+
+    @router.post("/nutrition/meal-preview")
+    def nutrition_meal_preview(body: MealBody):
+        from core.assistant_platform.nutrition import preview_meal
+        return call(lambda: preview_meal(body.description))
+
+    @router.post("/nutrition/log")
+    def nutrition_log(body: MealBody):
+        from datetime import date
+        from core.assistant_platform.nutrition import totals
+        def save_meal():
+            if not body.items or any(not isinstance(item.get("nutrients"), dict) or any(item["nutrients"].get(key) is None for key in ("calories", "protein", "fiber")) for item in body.items):
+                raise ValueError("Complete and review every food and serving before logging the meal.")
+            sums = totals(body.items)
+            food = {"title": body.description[:160], "date": body.date, "archived": False,
+                    "calories": sums["calories"], "protein": sums["protein"], "fiber": sums["fiber"], "carbs": sums["carbs"],
+                    "fat": sums["fat"], "saturatedFat": sums["saturatedFat"], "sugars": sums["sugars"],
+                    "sodiumMg": sums["sodiumMg"], "cholesterolMg": sums["cholesterolMg"],
+                    "source": "Reviewed nutrition records", "items": body.items,
+                    "sourceDetails": [{"name": x.get("sourceName", ""), "url": x.get("source", ""), "checkedAt": x.get("checkedAt"),
+                                       "nutrientsNotReported": [key for key, value in (x.get("nutrients") or {}).items() if value is None]}
+                                      for x in body.items if x.get("source")]}
+            return PersonalTools(get().store).save("food", food)
+        return call(save_meal)
+
+    @router.post("/nutrition/barcode")
+    def nutrition_barcode(body: BarcodeBody):
+        from core.assistant_platform.nutrition import barcode_lookup
+        return call(lambda: barcode_lookup(body.barcode))
+
+    @router.post("/nutrition/search")
+    def nutrition_search(body: FoodSearchBody):
+        from core.assistant_platform.nutrition import search_food
+        return call(lambda: search_food(body.query))
+
+    @router.post("/nutrition/label")
+    def nutrition_label(body: LabelBody):
+        import base64, binascii
+        from core.assistant_platform.nutrition import read_label
+        def scan():
+            try:
+                raw = base64.b64decode(body.data, validate=True)
+            except (ValueError, binascii.Error) as error:
+                raise ValueError("The label image could not be read.") from error
+            return read_label(raw)
+        return call(scan)
+
+    @router.post("/nutrition/recipe-math")
+    def nutrition_recipe_math(body: RecipeMathBody):
+        from core.assistant_platform.nutrition import totals
+        def calculate():
+            values = totals(body.ingredients)
+            return {"perRecipe": values, "perServing": {key: round(value / body.servings, 2) if value is not None else None for key, value in values.items()}}
+        return call(calculate)
 
     # ---- Training program: live daily tracker (core/assistant_platform/training.py)
     @router.get("/training")

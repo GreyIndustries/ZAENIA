@@ -45,8 +45,11 @@ class ChatActionsTest(unittest.TestCase):
         self.assertIsNone(chat_actions.classify("x", lambda p: "no json"))
 
     def test_fitness_logging(self):
-        reply = self.run_action("food.log", {"name": "chicken burrito"}, ask=lambda p: '{"calories": 650, "protein": 35, "fiber": 6}')
-        self.assertIn("650 kcal", reply["reply"]); self.assertIn("estimate", reply["reply"])
+        with self.assertRaisesRegex(ValueError, "sourced values"):
+            self.run_action("food.log", {"name": "chicken burrito"}, ask=lambda p: '{"calories": 650, "protein": 35, "fiber": 6}')
+        self.assertEqual(self.store.list("fitness_food"), [])
+        reply = self.run_action("food.log", {"name": "chicken burrito", "calories": 650, "protein": 35, "fiber": 6})
+        self.assertIn("650 kcal", reply["reply"])
         food = PersonalTools(self.store).listing("food", day=date.today().isoformat())["items"][0]
         self.assertEqual((food["title"], food["calories"]), ("chicken burrito", 650))
         self.run_action("body.log", {"weightLb": 194.6, "steps": 8000})

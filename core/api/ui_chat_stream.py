@@ -203,6 +203,9 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
                       "assistant.desktop.manage" if action["action"] == "codedoctor.scan" else "memory.write")
         try:
             authorize(permission)
+            if action["action"] == "food.log":
+                # A model estimate must never silently become a health record.
+                return "I’ll check each food and portion with nutrition sources, then show you the totals to review before logging.", "food_meal", ["fitness"]
             result = chat_actions.run(action, ask=run_local)
             return result["reply"], "tab_action", [result["tab"]] if result["tab"] else []
         except PermissionError:
@@ -283,6 +286,8 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                 yield _line({"type": "protocol", "open": tabs})
             if route == "training_setup":
                 yield _line({"type": "form", "form": "training-setup"})
+            elif route == "food_meal":
+                yield _line({"type": "form", "form": "food-meal", "description": message[:2000]})
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return

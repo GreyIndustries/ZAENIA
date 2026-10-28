@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 from core.assistant_platform.store import Conflict, now_text
 
 CATEGORIES = ("Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI")
-COLLECTIONS = {"workbench": "workbench", "music": "music", "food": "fitness_food", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings"}
+COLLECTIONS = {"workbench": "workbench", "music": "music", "food": "fitness_food", "recipes": "fitness_recipe", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings"}
 
 
 class Record(BaseModel):
@@ -161,6 +161,22 @@ class Food(Dated):
     protein: FiniteFloat = Field(ge=0, le=2000)
     fiber: FiniteFloat = Field(ge=0, le=1000)
     source: str = Field(default="Food label / manual entry", max_length=300)
+    carbs: FiniteFloat | None = Field(default=None, ge=0, le=5000)
+    fat: FiniteFloat | None = Field(default=None, ge=0, le=2000)
+    saturatedFat: FiniteFloat | None = Field(default=None, ge=0, le=1000)
+    sugars: FiniteFloat | None = Field(default=None, ge=0, le=2000)
+    sodiumMg: FiniteFloat | None = Field(default=None, ge=0, le=100000)
+    cholesterolMg: FiniteFloat | None = Field(default=None, ge=0, le=100000)
+    items: list[dict] = Field(default_factory=list, max_length=50)
+    sourceDetails: list[dict] = Field(default_factory=list, max_length=50)
+
+
+class Recipe(Record):
+    category: str = Field(default="Meal", max_length=60)
+    servings: FiniteFloat = Field(default=1, gt=0, le=100)
+    ingredients: list[dict] = Field(default_factory=list, max_length=100)
+    instructions: str = Field(default="", max_length=10000)
+    source: str = Field(default="Owner recipe", max_length=300)
 
 
 class Exercise(Dated):
@@ -175,6 +191,12 @@ class Step(BaseModel):
     exercise: str = Field(min_length=1, max_length=300)
     prescription: str = Field(default="", max_length=500)
     done: bool = False
+    sets: int | None = Field(default=None, ge=1, le=100)
+    reps: str = Field(default="", max_length=80)
+    duration: str = Field(default="", max_length=80)
+    restSeconds: int | None = Field(default=None, ge=0, le=3600)
+    equipment: str = Field(default="", max_length=300)
+    notes: str = Field(default="", max_length=1000)
 
 
 class TrainingSession(BaseModel):
@@ -205,7 +227,7 @@ class FitnessSettings(Record):
     baselineCalories: FiniteFloat | None = Field(default=None, ge=0, le=20000)
 
 
-SCHEMAS = {"workbench": Project, "music": Music, "food": Food, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings}
+SCHEMAS = {"workbench": Project, "music": Music, "food": Food, "recipes": Recipe, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings}
 
 
 def validate_record(collection, body):
@@ -239,7 +261,7 @@ class PersonalTools:
             date.fromisoformat(day)
         rows = [row for row in self.store.list(COLLECTIONS[collection]) if row.get("archived", False) == archived and (not day or row.get("date") == day)]
         # Lists don't download every drawing, source document and history.
-        fields = {"id", "revision", "updatedAt", "title", "archived", "category", "tags", "color", "size", "status", "stage", "date", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories"}
+        fields = {"id", "revision", "updatedAt", "title", "archived", "category", "tags", "color", "size", "status", "stage", "date", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories", "servings", "ingredients", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg", "items", "sourceDetails"}
         items = [{key: value for key, value in row.items() if key in fields} for row in rows[offset:offset+100]]
         return {"items": items, "total": len(rows), "nextOffset": offset+100 if offset+100 < len(rows) else None}
 
@@ -249,7 +271,12 @@ class PersonalTools:
         exercise = [item for item in self.store.list('fitness_exercise') if item.get('date') == day and not item.get('archived')]
         settings = next((item for item in self.store.list('fitness_settings') if not item.get('archived')), {})
         return {'calories':sum(item['calories'] for item in food),'protein':sum(item['protein'] for item in food),
-                'fiber':sum(item['fiber'] for item in food),'burned':sum(item['calories'] for item in exercise),
+                'fiber':sum(item['fiber'] for item in food),'carbs':sum(item['carbs'] for item in food) if all(item.get('carbs') is not None for item in food) else None,
+                'fat':sum(item['fat'] for item in food) if all(item.get('fat') is not None for item in food) else None,
+                'saturatedFat':sum(item['saturatedFat'] for item in food) if all(item.get('saturatedFat') is not None for item in food) else None,
+                'sugars':sum(item['sugars'] for item in food) if all(item.get('sugars') is not None for item in food) else None,
+                'sodiumMg':sum(item['sodiumMg'] for item in food) if all(item.get('sodiumMg') is not None for item in food) else None,
+                'cholesterolMg':sum(item['cholesterolMg'] for item in food) if all(item.get('cholesterolMg') is not None for item in food) else None,'burned':sum(item['calories'] for item in exercise),
                 'baseline':settings.get('baselineCalories'),'proteinTarget':settings.get('proteinTarget'),'fiberTarget':settings.get('fiberTarget')}
 
 

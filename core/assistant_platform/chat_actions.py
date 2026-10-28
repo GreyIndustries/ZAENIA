@@ -2,7 +2,7 @@
 
 Tasks, events, reminders, notes, plans, research and watch topics already have
 their own chat handlers. This module covers the rest:
-- Fitness: log food (her estimate when calories aren't given, labelled as one),
+  - Fitness: open a sourced, review-before-save meal workflow; log food with explicitly supplied nutrition,
   exercise, weight / body fat / steps, cardio, sets, and checking off today's
   workout.
 - Tasks: mark done, change priority or deadline.
@@ -70,8 +70,8 @@ def classify(message: str, ask: Callable[[str], str]) -> dict[str, Any] | None:
     reply = ask(
         "Task: turn Grey's message into ONE app action, as JSON. Pick only from this list; if the message isn't asking for "
         "one of these (for example it's a question, chat, or creating a task/event/reminder/note), reply {\"action\": \"none\"}.\n"
-        f"{catalogue}\n\nToday is {date.today().isoformat()}. For food with no calories given, estimate calories and protein "
-        "for a normal portion and add \"estimated\": true. Reply with JSON only: {\"action\": \"name\", \"args\": {...}}\n\n"
+        f"{catalogue}\n\nToday is {date.today().isoformat()}. Never estimate missing nutrition values. "
+        "Reply with JSON only: {\"action\": \"name\", \"args\": {...}}\n\n"
         f"MESSAGE: {message}")
     match = re.search(r"\{.*\}", reply, re.S)
     try:
@@ -118,18 +118,8 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
         from core.assistant_platform.personal_tools import PersonalTools
         food = str(args.get("name") or "").strip()[:160]
         calories = _num(args.get("calories"))
-        if food and calories is None and ask is not None:
-            # No calories given: her estimate for a normal portion, labelled as an estimate.
-            guess = re.search(r"\{.*\}", ask("Task: estimate nutrition, as JSON. For one normal portion of: " + food +
-                                             "\nReply with JSON only: {\"calories\": number, \"protein\": number, \"fiber\": number}") or "", re.S)
-            try:
-                numbers = json.loads(guess.group(0)) if guess else {}
-            except ValueError:
-                numbers = {}
-            calories = _num(numbers.get("calories"))
-            args = {**args, "protein": args.get("protein") or numbers.get("protein"), "fiber": args.get("fiber") or numbers.get("fiber"), "estimated": True}
         if not food or calories is None:
-            raise ValueError("Tell me what you ate and roughly how much, like \"log chicken and rice, 600 calories\".")
+            raise ValueError("I need sourced values before saving this meal. Use the Fitness & Health meal review and check the food matches and portions first.")
         estimated = bool(args.get("estimated"))
         PersonalTools(store).save("food", {"title": food, "date": today, "calories": calories, "protein": _num(args.get("protein")) or 0,
                                            "fiber": _num(args.get("fiber")) or 0,

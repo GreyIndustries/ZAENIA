@@ -61,12 +61,29 @@ class PersonalToolsTests(unittest.TestCase):
 
     def test_api_auth_permissions_and_unknown_routes_fail_closed(self):
         client=self.client({'memory.read'})
-        for path in ('workbench','music','food','exercise','plans','fitness-settings','fitness-summary?day=2026-10-24'):
+        for path in ('workbench','music','food','recipes','exercise','plans','fitness-settings','fitness-summary?day=2026-10-24'):
             self.assertEqual(client.get('/api/platform/personal/'+path).status_code,200)
-        for path in ('workbench','music','food','exercise','plans','fitness-settings','training-source'):
+        for path in ('workbench','music','food','recipes','exercise','plans','fitness-settings','training-source'):
             self.assertEqual(client.post('/api/platform/personal/'+path,json={'record':{'title':'Denied'}}).status_code,403)
         self.assertEqual(client.get('/api/platform/personal/secret').status_code,403)
         self.assertEqual(client.get('/api/platform/personal/workbench',headers={'X-ZAENIA-API-TOKEN':'bad'}).status_code,401)
+
+    def test_nutrition_preview_requires_read_and_meal_commit_requires_write(self):
+        read_client=self.client({'memory.read'})
+        with patch('core.assistant_platform.nutrition.preview_meal',return_value={'items':[],'complete':False}) as preview:
+            response=read_client.post('/api/platform/personal/nutrition/meal-preview',json={'description':'3 eggs'})
+        self.assertEqual(response.status_code,200,response.text);preview.assert_called_once_with('3 eggs')
+        self.assertEqual(read_client.post('/api/platform/personal/nutrition/log',json={'description':'Meal','items':[]}).status_code,403)
+        write_client=self.client();body={'description':'100 g egg','date':'2026-10-24','items':[{'nutrients':{'calories':143,'protein':12.6,'fiber':0,'carbs':.7,'fat':9.5},'source':'https://fdc.nal.usda.gov/food-details/1/nutrients','sourceName':'USDA FoodData Central','checkedAt':'2026-10-24T12:00:00Z'}]}
+        saved=write_client.post('/api/platform/personal/nutrition/log',json=body)
+        self.assertEqual(saved.status_code,200,saved.text)
+        self.assertEqual((saved.json()['calories'],saved.json()['protein'],saved.json()['fiber'],saved.json()['fat']),(143,12.6,0,9.5))
+        self.assertEqual(self.tools.fitness_summary('2026-10-24')['calories'],143)
+
+    def test_recipes_are_saved_revision_checked_and_in_profile(self):
+        recipe=self.tools.save('recipes',{'title':'Protein pancakes','category':'Breakfast','servings':2.0,'ingredients':[{'name':'eggs','amount':'2','unit':'large','nutrients':{'calories':143.0,'protein':12.6,'fiber':0.0},'source':'USDA'}]})
+        self.assertEqual(self.store.get('fitness_recipe',recipe['id'])['ingredients'][0]['name'],'eggs')
+        self.assertEqual(self.tools.listing('recipes')['items'][0]['servings'],2)
 
     def test_api_updates_are_revision_checked_and_archive_is_reversible(self):
         client=self.client();path='/api/platform/personal/workbench'

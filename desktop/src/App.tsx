@@ -880,6 +880,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       } else if (event.type === "form") {
         // ZAE's question pop-ups live in their tabs (training setup in Fitness & Health).
         if (event.form === "training-setup") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:training-setup")), 700); }
+        if (event.form === "food-meal") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:food-meal", { detail: { description: event.description } })), 700); }
       } else if (event.type === "say") {
         // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
         if (speakIt && !voice.said) { voice.filler = true; speech.feed(key, `${event.text} `); }
