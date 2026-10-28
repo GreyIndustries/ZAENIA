@@ -85,6 +85,11 @@ def create_personal_tools_router(get, call):
     def summary(day: str = Query(min_length=10, max_length=10)):
         return call(lambda: PersonalTools(get().store).fitness_summary(day))
 
+    @router.get("/music/overview")
+    def music_overview_route():
+        from core.assistant_platform.personal_tools import music_overview
+        return call(lambda: music_overview(get().store))
+
     @router.post("/training-source")
     def source(body: SourceBody):
         def extract():

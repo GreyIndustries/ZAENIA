@@ -137,6 +137,21 @@ class Statistics(BaseModel):
         return date.fromisoformat(value).isoformat()
 
 
+MUSIC_CHECKLIST = ("Lyrics final", "Vocals recorded", "Mix approved", "Master exported", "Artwork ready", "Distribution submitted")
+
+
+class StudioSession(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    date: str
+    minutes: int = Field(default=0, ge=0, le=1440)
+    note: str = Field(default="", max_length=300)
+
+    @field_validator("date")
+    @classmethod
+    def valid_date(cls, value):
+        return date.fromisoformat(value).isoformat()
+
+
 class Music(Record):
     stage: Literal["Idea", "Writing", "Recording", "Mixing", "Mastering", "Released"] = "Idea"
     projectFile: str = Field(default="", max_length=2000)
@@ -145,6 +160,45 @@ class Music(Record):
     body: str = Field(default="", max_length=30000)
     releases: list[Release] = Field(default_factory=list, max_length=12)
     stats: list[Statistics] = Field(default_factory=list, max_length=300)
+    # Song workspace (2026-10-28): lyrics, planned release date, release checklist, studio sessions, card colour.
+    lyrics: str = Field(default="", max_length=30000)
+    releaseDate: str = Field(default="", max_length=10)
+    checklist: dict[str, bool] = Field(default_factory=dict, max_length=len(MUSIC_CHECKLIST))
+    sessions: list[StudioSession] = Field(default_factory=list, max_length=300)
+    art: Literal["amber", "blue", "green", "rose", "violet", "teal"] = "amber"
+
+    @field_validator("releaseDate")
+    @classmethod
+    def release_date(cls, value):
+        return date.fromisoformat(value).isoformat() if value else ""
+
+    @field_validator("checklist")
+    @classmethod
+    def checklist_items(cls, value):
+        if any(key not in MUSIC_CHECKLIST for key in value):
+            raise ValueError("Unknown checklist item.")
+        return value
+
+
+# Live analytics: what each platform offers, so the Music tab can show what a connection needs.
+# Nothing here connects; manual statistics stay the source until a connector is built and Grey adds its keys.
+MUSIC_CONNECTIONS = [
+    {"platform": "YouTube", "metric": "Views", "status": "not_connected",
+     "needs": "A YouTube Data API key (Google Cloud, free quota). Gives public view, like and comment counts per video."},
+    {"platform": "Spotify", "metric": "Plays", "status": "not_connected",
+     "needs": "Spotify's public Web API has no stream counts; Spotify for Artists has no public API. Live data would come from its CSV export."},
+    {"platform": "SoundCloud", "metric": "Plays", "status": "not_connected",
+     "needs": "A SoundCloud API app (client id and secret; new apps need SoundCloud's approval). Gives play, like and repost counts."},
+    {"platform": "Apple Music", "metric": "Plays", "status": "not_connected",
+     "needs": "Apple Music for Artists has no public API. Live data would come from its CSV export."},
+]
+
+
+def music_overview(store) -> dict:
+    """Every active song in full, for the Music dashboard, studio board and song workspace."""
+    songs = [row for row in store.list(COLLECTIONS["music"]) if not row.get("archived")]
+    songs.sort(key=lambda row: row.get("updatedAt", ""), reverse=True)
+    return {"songs": songs[:300], "checklist": list(MUSIC_CHECKLIST), "connections": MUSIC_CONNECTIONS}
 
 
 class Dated(Record):

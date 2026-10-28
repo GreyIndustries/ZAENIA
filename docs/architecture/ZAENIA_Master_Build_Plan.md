@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.9  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.10  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -783,3 +783,15 @@ Grey asked to start the phased plan (section 11) at the first step. Status of ea
 | Regression tests | FIXED a flaky test | `assistant_stream_test.test_task_execution_requires_separate_permission` failed in about 2 of 3 full runs: "Add a task to inspect the car" reached the chat-actions classifier, and the live model sometimes picked `task.update`, so no task proposal was shown. `chat_actions.maybe` now leaves creating tasks, events, reminders and notes to their own handlers. 3 of 3 full runs pass: 799 tests OK (14 skipped). |
 
 Phase 0 exit (red-team/regression tests, protected routes, clean-install test, live owner/other-speaker trials) is not met yet: it waits on voice training and the live owner/other-speaker trials, and the index rebuild. Grey declined the clean-install test from PyPI (2026-10-28), so that exit item stays open.
+
+### 28.10 Sidebar icons and the Music studio — Claude, 2026-10-28 (v3.10)
+
+- **Icons:** Code Doctor shows code brackets, Music a music note, Arena a brain and Research a pen.
+- **Tab reworks:** Grey asked for three preview directions per tab before any rework. They're on the "ZAE tab rework previews" design canvas. For Music, Grey chose B (dashboard) as the main view, with A (studio pipeline) and C (song workspace) as sub-tabs, plus room for live analytics connections.
+- **Music studio** (`desktop/src/components/music/MusicStudio.tsx`) replaces the single-form Music panel. It has four sections:
+  - **Dashboard:** in-progress and released counts, studio time this week, and the next release. A card per platform shows the total of its main measure (Spotify, SoundCloud and Apple Music plays; YouTube views), a trend and the change over 7 days, 30 days or all time. Songs are ranked by total (click one to open it). Also a release calendar with checklist items left, and quick number logging.
+  - **Studio:** six stage columns. Drag a card to change its stage. Cards show BPM, key, progress (stage plus checklist) and the next step.
+  - **Song:** a workspace with title, BPM, key, release date, GarageBand reference and card colour; a clickable stage tracker; lyrics and session notes; the release checklist; studio sessions (date, minutes, note); release links; the song's numbers; and archive.
+  - **Connections:** a card per platform showing its status (all not connected) and what live data would need, stated as checked. YouTube Data API key: public view counts. SoundCloud API app: plays, and new apps need approval. Spotify: the Web API has no stream counts and Spotify for Artists has no public API, so it would be a CSV export. Apple Music for Artists: no public API, so a CSV export. Nothing connects yet. Statistics stay `method: "manual"`, and the dashboard marks each platform "Manual" until a connector exists.
+- **Data:** the `Music` record gains `lyrics`, `releaseDate`, `checklist` (fixed items: Lyrics final, Vocals recorded, Mix approved, Master exported, Artwork ready, Distribution submitted), `sessions` and `art`. All are optional, so existing songs load unchanged. `GET /api/platform/personal/music/overview` (memory.read, existing pattern) returns active songs in full plus the checklist and the connection info. Saving uses the existing revision-checked PUT.
+- **Tests:** personal_tools_test adds the workspace fields, validation and overview; full suite 800 OK (14 skipped); UI script tests and `tsc` pass. Not checked visually: the dev browser has no live API without the app's credentials.

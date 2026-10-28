@@ -1,0 +1,80 @@
+/* Music studio: Dashboard (main), Studio board, Song workspace, Connections */
+.ms{display:flex;flex-direction:column;gap:14px;color:#dbe8f6;container-type:inline-size}
+.ms-muted{color:#9fb6cf;font-size:12px}
+.ms-error{color:#ffb4a2;margin:0}.ms-note{color:#7fe3a8;margin:0;font-size:13px}
+.ms-row{display:flex;align-items:center;gap:8px}.ms-row--between{justify-content:space-between;flex-wrap:wrap;gap:12px}.ms-wrap{flex-wrap:wrap}
+.ms-stack{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ms-card{background:#0c1524;border:1px solid #1a2a40;border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ms-card h3{margin:0;font-size:14px;display:flex;justify-content:space-between;gap:8px}
+.ms button,.ms input,.ms select,.ms textarea{font:inherit;font-size:13px;color:#dbe8f6;background:#08111f;border:1px solid #1f3149;border-radius:8px}
+.ms button{padding:7px 12px;cursor:pointer}.ms button:disabled{opacity:.5;cursor:default}
+.ms input,.ms select{padding:7px 10px;min-height:20px}.ms input:focus-visible,.ms select:focus-visible,.ms textarea:focus-visible,.ms button:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:1px}
+.ms .ms-primary{background:var(--accent,#e0a353);color:#1a1206;border-color:transparent;font-weight:700}
+.ms-seg{display:inline-flex;gap:4px;padding:4px;background:#0c1524;border:1px solid #1f3149;border-radius:10px}
+.ms .ms-seg button{border:0;background:transparent;color:#9fb6cf;padding:6px 12px}.ms .ms-seg button[aria-pressed=true]{background:#1a2a40;color:#dbe8f6;font-weight:600}
+.ms-empty{padding:40px 20px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:8px}.ms-empty h3{margin:0}
+
+/* Dashboard */
+.ms-dash{display:flex;flex-direction:column;gap:14px}
+.ms-kpis{display:flex;gap:10px;flex-wrap:wrap}.ms-kpis span{display:flex;flex-direction:column;gap:2px;padding:8px 14px;background:#0c1524;border:1px solid #1a2a40;border-radius:10px;min-width:120px}
+.ms-kpis small{color:#9fb6cf;font-size:11px}.ms-kpis b{font-size:17px}
+.ms-platforms{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ms-platform header,.ms-conn__card header{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ms-big{font-size:26px;font-variant-numeric:tabular-nums;font-family:"Cascadia Mono",Consolas,monospace}
+.ms-bars{display:flex;align-items:flex-end;gap:3px;height:38px}.ms-bars i{flex:1;border-radius:2px;opacity:.85}
+.ms .ms-chip{font-size:11px;padding:2px 9px;border-radius:999px}.ms-chip--manual{color:#e0c08a;border-color:#5a4a2a!important}
+.ms-chip--live{color:#7fe3a8;border:1px solid #2a5a40}.ms-chip--off{color:#9fb6cf;border:1px solid #1f3149;font-size:11px;padding:2px 9px;border-radius:999px}
+.ms-split{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:14px}
+.ms-table{width:100%;border-collapse:collapse;font-size:13px}.ms-table th{text-align:left;font-size:11px;color:#9fb6cf;text-transform:uppercase;letter-spacing:.06em;padding:6px 6px;border-bottom:1px solid #1a2a40;font-weight:600}
+.ms-table td{padding:7px 6px;border-bottom:1px solid #111e30}.ms-num{font-variant-numeric:tabular-nums;font-family:"Cascadia Mono",Consolas,monospace}
+.ms-up{color:#7fe3a8}.ms-down{color:#ffb4a2}
+.ms .ms-song{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;font-weight:600;text-align:left}.ms-song i{width:26px;height:26px;border-radius:6px;flex:none}
+.ms .ms-release{display:flex;gap:12px;align-items:center;text-align:left;padding:8px 10px;background:#0f1c2e;border-color:transparent}
+.ms-release>span:last-child{display:flex;flex-direction:column;gap:2px}.ms-release small{color:#9fb6cf;font-size:12px}
+.ms-date{display:flex;flex-direction:column;align-items:center;width:44px}.ms-date small{color:var(--accent,#e0a353);font-weight:700;font-size:11px}.ms-date b{font-size:20px}
+.ms-log{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:end}.ms-log label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9fb6cf}
+
+/* Studio board */
+.ms-studio{display:flex;flex-direction:column;gap:10px}.ms-search{width:min(320px,100%)}
+.ms-board{display:grid;grid-template-columns:repeat(6,minmax(170px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}
+.ms-col{background:#08111f;border:1px solid #16253a;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-height:320px}
+.ms-col--over{border-color:var(--accent,#e0a353);background:#0d1828}
+.ms-col header{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#c9d8ea;padding:2px 4px 6px}
+.ms-col header small{font-size:11px;color:#9fb6cf;background:#0f1c2e;border-radius:999px;padding:2px 8px;letter-spacing:0}
+.ms .ms-kcard{display:flex;flex-direction:column;gap:7px;text-align:left;background:#0c1524;padding:10px 11px;border-radius:10px;cursor:grab}
+.ms-kcard>small{color:#b7c8dc;font-size:11px}.ms-kcard__t{display:flex;flex-direction:column;min-width:0}.ms-kcard__t strong{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ms-kcard__t small{font-size:11px;color:#9fb6cf;font-family:"Cascadia Mono",Consolas,monospace}
+.ms-art{width:30px;height:30px;border-radius:8px;flex:none;display:inline-block}
+.ms-progress{height:4px;border-radius:4px;background:#16253a;overflow:hidden;display:block}.ms-progress i{display:block;height:4px;background:var(--accent,#e0a353)}
+
+/* Song workspace */
+.ms-song-ws{display:grid;grid-template-columns:230px minmax(0,1fr);gap:14px}
+.ms-list{display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto}
+.ms .ms-list button{display:flex;gap:10px;align-items:center;text-align:left;border-color:transparent;background:transparent;padding:8px}
+.ms .ms-list button[aria-pressed=true]{background:#13233a;border-color:#2b4366}.ms-list span{display:flex;flex-direction:column;min-width:0}.ms-list small{color:#9fb6cf;font-size:11px}
+.ms-ws{display:flex;flex-direction:column;gap:14px;min-width:0}
+.ms-ws__head{align-items:flex-start;flex-wrap:wrap}.ms-ws__title{display:flex;flex-direction:column;gap:8px;flex:1;min-width:240px}
+.ms-art--big{width:72px;height:72px;border-radius:14px;position:relative}.ms .ms-art--big select{position:absolute;inset:auto 4px 4px 4px;font-size:10px;padding:2px;background:rgba(6,13,24,.7)}
+.ms .ms-title{font-size:24px;font-weight:700;background:transparent;border-color:transparent;padding:2px 4px}.ms .ms-title:hover{border-color:#1f3149}
+.ms-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:#9fb6cf;background:#0f1c2e;border:1px solid #1f3149;border-radius:999px;padding:2px 4px 2px 12px}
+.ms .ms-pill input{border:0;background:transparent;width:90px;padding:5px 6px}.ms .ms-pill--wide input{width:170px}
+.ms-stages{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.ms .ms-stage{width:100%;display:flex;flex-direction:column;gap:6px;border:0;background:transparent;padding:0;color:#7f97b3;font-size:12px;font-weight:600;text-align:left}
+.ms-stage i{height:6px;border-radius:6px;background:#16253a;display:block}.ms .ms-stage--on{color:#dbe8f6}.ms-stage--on i{background:var(--accent,#e0a353)}
+.ms-ws__grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:14px}
+.ms-editor textarea{min-height:300px;resize:vertical;padding:12px 14px;line-height:1.7;font-size:14px}
+.ms-check{display:flex;gap:10px;align-items:center;font-size:13px}.ms-check input{width:16px;height:16px;accent-color:var(--accent,#e0a353)}
+.ms-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}.ms-lines li{display:flex;gap:8px;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid #111e30}
+.ms-lines li>span{flex:1}.ms .ms-lines button{border:0;background:none;padding:0 4px}.ms-short{width:70px}
+.ms-scroll{overflow-x:auto;max-height:260px}
+
+/* Connections */
+.ms-conn{display:flex;flex-direction:column;gap:12px}.ms-conn__card p{margin:0;font-size:13px;color:#c9d8ea;line-height:1.5}
+
+@container (max-width:900px){
+  .ms-platforms{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ms-split,.ms-ws__grid,.ms-song-ws{grid-template-columns:minmax(0,1fr)}
+  .ms-list{flex-direction:row;overflow-x:auto;max-height:none}.ms .ms-list button{flex:none}
+  .ms-stages{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@container (max-width:520px){.ms-platforms,.ms-log{grid-template-columns:minmax(0,1fr)}}

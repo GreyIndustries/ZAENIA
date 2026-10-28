@@ -59,7 +59,7 @@ const SourceSearch = lazy(() => import("./components/tools/ToolTabs").then(modul
 const PlaygroundPanel = lazy(() => import("./components/tools/Playground").then(module => ({ default: module.PlaygroundPanel })));
 const ResearchPage = lazy(() => import("./components/research/ResearchPage").then(module => ({ default: module.ResearchPage })));
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
-const MusicPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.MusicPanel })));
+const MusicStudio = lazy(() => import('./components/music/MusicStudio').then(module => ({ default: module.MusicStudio })));
 const FitnessPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.FitnessPanel })));
 import { useCoreStartup } from "./core/startup";
 import { skipWhileAway, useAppInBackground } from "./core/appBackground";
@@ -107,7 +107,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   workbench: { title: 'Workbench', label: 'PROJECTS · TOOLS · LABS', description: 'Projects and inventions, science and tech tools, and chemistry and physics labs, with ZAE to explain.' },
-  music: { title: 'Music', label: 'CREATE & RELEASE', description: 'GarageBand projects, production progress, release links and dated song statistics.' },
+  music: { title: 'Music', label: 'DASHBOARD · STUDIO · SONG · CONNECTIONS', description: 'Plays per platform and your songs ranked; every song by stage; each song’s lyrics, checklist and sessions; and room for live analytics connections.' },
   fitness: { title: 'Fitness & Health', label: 'NUTRITION & TRAINING', description: 'Your training program: calendar, daily tracker, calorie targets, body log and phone reminders, plus food and exercise logs.' },
   news: { title: 'News', label: 'TECH & WORLD', description: 'Tech and world headlines from sixteen credible newsrooms, checked every 30 minutes, plus a keyword search of news sites worldwide. Open a story to read it without ads and have ZAE summarise it.' },
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
@@ -1125,7 +1125,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "tools", label: "Tools", render: () => <ToolsPanel/> },
         { id: "labs", label: "Labs", render: () => <LabsPanel/> },
       ]}/>;
-      case 'music': return <MusicPanel drafts={personalDrafts.current}/>;
+      case 'music': return <MusicStudio/>;
       case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
       case 'library':

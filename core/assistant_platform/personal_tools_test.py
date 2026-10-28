@@ -131,6 +131,21 @@ class PersonalToolsTests(unittest.TestCase):
             fetch.assert_called_once_with('https://example.com/routine')
         self.assertEqual(client.post(url,json={'url':'https://example.com','text':'ambiguous'}).status_code,422)
 
+    def test_music_workspace_fields_and_overview(self):
+        from core.assistant_platform.personal_tools import music_overview
+        row = self.tools.save('music', {'title': 'Slow burn', 'stage': 'Recording', 'lyrics': '[Verse] line', 'releaseDate': '2026-12-05',
+                                        'checklist': {'Lyrics final': True}, 'sessions': [{'date': '2026-10-26', 'minutes': 120, 'note': 'Guitar takes'}], 'art': 'teal'})
+        self.assertEqual((row['releaseDate'], row['sessions'][0]['minutes'], row['art']), ('2026-12-05', 120, 'teal'))
+        with self.assertRaises(Exception):
+            self.tools.save('music', {'title': 'Bad', 'checklist': {'Made up step': True}})
+        with self.assertRaises(Exception):
+            self.tools.save('music', {'title': 'Bad', 'releaseDate': 'soon'})
+        self.tools.save('music', {'title': 'Old one', 'archived': True})
+        overview = music_overview(self.store)
+        self.assertEqual([song['title'] for song in overview['songs']], ['Slow burn'])
+        self.assertEqual({c['platform'] for c in overview['connections']}, {'YouTube', 'Spotify', 'SoundCloud', 'Apple Music'})
+        self.assertTrue(all(c['status'] == 'not_connected' for c in overview['connections']))
+
     def test_encrypted_profile_carries_projects_drawings_music_logs_and_plans(self):
         from core.assistant_platform.profiles import capture_profile,encode_profile,decode_profile,restore_profile
         from core.personal_memory.store import MemoryStore
