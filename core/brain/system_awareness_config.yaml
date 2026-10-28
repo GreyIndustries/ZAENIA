@@ -51,6 +51,17 @@ system_awareness:
     - "data/voices"
     - "data/secure"
     - "data/system_awareness"
+    # Not the live source (Build Plan section 10, P1): backups, snapshots, build output and caches.
+    # They stay on disk; ZAE just doesn't treat them as the current code.
+    - "*backup*"
+    - "restore*"
+    - "target"
+    - "dist"
+    - "dist-*"
+    - "data/assistant_platform/releases"
+    - "data/cleanup_review"
+    - "data/web_cache"
+    - "data/chat_files"
 
   ignore_files:
     - ".env"
@@ -65,6 +76,8 @@ system_awareness:
     - "*credentials*.json"
     - "*token*.json"
     - "data/google_calendar/google_calendar_ics_url.txt"
+    - "*package-lock.json"
+    - "*cargo.lock"
 
   metadata_only_globs:
     - "data/*.jsonl"
