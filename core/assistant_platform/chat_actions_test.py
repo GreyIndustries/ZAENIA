@@ -44,6 +44,18 @@ class ChatActionsTest(unittest.TestCase):
         self.assertIsNone(chat_actions.classify("x", lambda p: '{"action": "none"}'))
         self.assertIsNone(chat_actions.classify("x", lambda p: "no json"))
 
+    def test_stated_nutrition_logs_without_lookup(self):
+        self.assertEqual(chat_actions.stated_nutrition("I ate 2,100 cal, 150g protein, 30g fiber and 220 carbs today"),
+                         {"calories": 2100, "protein": 150, "fiber": 30, "carbs": 220})
+        self.assertEqual(chat_actions.stated_nutrition("12g saturated fat, 20g fat, sodium 300"), {"saturatedFat": 12, "fat": 20, "sodiumMg": 300})
+        self.assertEqual(chat_actions.stated_nutrition("I ate a chicken burrito"), {})
+        reply = self.run_action("food.log", {"name": "protein", "text": "I ate 2,100 cal, 150g protein, 30g fiber and 220 carbs today"})
+        self.assertIn("2100 kcal", reply["reply"])
+        food = PersonalTools(self.store).listing("food", day=date.today().isoformat())["items"][-1]
+        self.assertEqual((food["title"], food["calories"], food["protein"], food["fiber"], food["carbs"]), ("Logged in chat", 2100, 150, 30, 220))
+        reply = self.run_action("food.log", {"name": "shake", "text": "shake with 40g protein, 10g carbs and 5g fat"})
+        self.assertIn("worked out from your macros", reply["reply"])
+
     def test_fitness_logging(self):
         with self.assertRaisesRegex(ValueError, "sourced values"):
             self.run_action("food.log", {"name": "chicken burrito"}, ask=lambda p: '{"calories": 650, "protein": 35, "fiber": 6}')

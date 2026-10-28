@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.7  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.8  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -759,3 +759,12 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
 - **Into the burn:** a stated time sets the minutes. Runs show pace and speed, and their MET follows speed (Compendium, about 1.53 × mph + 0.4), though the burn stays distance-based. Lifts use load relative to bodyweight for effort (MET 3.5 + 2.5 × load/bodyweight, capped).
 - **Shown:** each activity has a stats line (`training.describe`), e.g. "16:30 · 8:15/mi · 7.3 mph" or "240 lb × 3 reps (1.23× bodyweight)", in the Training program and in ZAE's chat reply.
 - **Tests:** training_test adds parsing of times, loads, reps and pace; full suite 787 OK (14 skipped). `assistant_stream_test.test_task_execution_requires_separate_permission` failed in 2 of 3 full runs and passes alone (order or timing dependent, not related to this change).
+
+### 28.8 Food numbers Grey states are logged directly — Claude, 2026-10-28 (v3.8)
+
+- Grey asked that when they say how much protein, fiber, calories or carbs they ate, ZAE logs it without searching.
+- **Rule:** `chat_actions.stated_nutrition` reads only numbers in Grey's own words: calories, protein, fiber, carbs, fat, saturated fat, sugars and sodium (mg), as "150g protein", "2,100 cal" or "carbs: 220". If any are present, `food.log` saves them as said, sourced "Told ZAE in chat", with no lookup and no estimate.
+  - If calories aren't given but protein, carbs and fat are, calories are worked out as 4/4/9 and labelled as such. Otherwise none are counted, and the reply says so.
+  - The food name is the one Grey gives, or "Logged in chat" for plain totals.
+- **Unchanged:** a food named without numbers still opens Codex's sourced meal review (28.4), so a model estimate never silently becomes a health record.
+- **Tests:** chat_actions_test adds stated-nutrition parsing and direct logging (including the macro-derived calories); full suite 788 OK (14 skipped).

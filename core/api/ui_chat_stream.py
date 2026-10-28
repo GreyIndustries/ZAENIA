@@ -203,7 +203,7 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
                       "assistant.desktop.manage" if action["action"] == "codedoctor.scan" else "memory.write")
         try:
             authorize(permission)
-            if action["action"] == "food.log":
+            if action["action"] == "food.log" and not chat_actions.stated_nutrition(message):
                 # A model estimate must never silently become a health record.
                 return "I’ll check each food and portion with nutrition sources, then show you the totals to review before logging.", "food_meal", ["fitness"]
             result = chat_actions.run(action, ask=run_local)

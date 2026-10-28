@@ -59,6 +59,34 @@ _TOPIC = re.compile(r"\b(calorie|kcal|protein|fiber|meal|breakfast|lunch|dinner|
 _QUESTION = re.compile(r"^\s*(what|how|why|when|where|who|which|is|are|do|does|can|could|should|would|will)\b", re.I)
 
 
+_NUTRIENTS = {
+    "calories": r"kcals?|cals?|calories|calorie",
+    "protein": r"protein",
+    "fiber": r"fib(?:er|re)",
+    "carbs": r"carbs?|carbohydrates?",
+    "saturatedFat": r"sat(?:urated)?\.?\s*fats?",
+    "fat": r"fats?",
+    "sugars": r"sugars?",
+    "sodiumMg": r"sodium|salt",
+}
+
+
+def stated_nutrition(text: str) -> dict[str, float]:
+    """Nutrition numbers Grey states ("150g protein", "2,100 cal", "carbs 220", "fiber: 30 grams"). Only what's said, never estimated."""
+    found: dict[str, float] = {}
+    text = str(text or "")
+    number = r"(\d[\d,]*(?:\.\d+)?)\s*(?:g|grams?|mg|k?cals?|kcal|calories)?"
+    for key, words in _NUTRIENTS.items():
+        guard = r"(?<!saturated )(?<!sat )(?<!sat\. )" if key == "fat" else ""
+        for pattern in (number + r"\s*(?:of\s+)?" + guard + r"(?:" + words + r")\b",
+                        r"\b" + guard + r"(?:" + words + r")\s*(?:[:=-]|was|of|is|at)?\s*" + number):
+            match = re.search(pattern, text, re.I)
+            if match:
+                found[key] = float(match.group(1).replace(",", ""))
+                break
+    return found
+
+
 def maybe(message: str) -> bool:
     """Worth asking her brain? An instruction about something a tab does, not a question."""
     text = str(message or "").strip()
@@ -83,7 +111,7 @@ def classify(message: str, ask: Callable[[str], str]) -> dict[str, Any] | None:
     if not isinstance(data, dict) or data.get("action") not in ACTIONS:
         return None
     args = data.get("args") if isinstance(data.get("args"), dict) else {}
-    if data["action"] == "workout.actual":
+    if data["action"] in ("workout.actual", "food.log"):
         args["text"] = message
     if data.get("estimated"):
         args["estimated"] = True
@@ -122,6 +150,24 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
         from core.assistant_platform.personal_tools import PersonalTools
         food = str(args.get("name") or "").strip()[:160]
         calories = _num(args.get("calories"))
+        stated = stated_nutrition(str(args.get("text") or ""))
+        if stated:
+            # Numbers Grey gives are logged as said: no lookup, no estimate.
+            if not food or re.search(r"\b(" + "|".join(_NUTRIENTS.values()) + r")\b", food, re.I) or food.lower() in ("food", "meal", "today", "unknown", "none", "n/a"):
+                food = "Logged in chat"
+            calories = stated.get("calories")
+            from_macros = calories is None and all(k in stated for k in ("protein", "carbs", "fat"))
+            if from_macros:
+                calories = round(4 * stated["protein"] + 4 * stated["carbs"] + 9 * stated["fat"])
+            record = {"title": food, "date": today, "calories": calories or 0, "protein": stated.get("protein", 0), "fiber": stated.get("fiber", 0),
+                      "source": "Told ZAE in chat" + (" (calories from protein, carbs and fat)" if from_macros else "")}
+            record.update({k: v for k, v in stated.items() if k in ("carbs", "fat", "saturatedFat", "sugars", "sodiumMg")})
+            PersonalTools(store).save("food", record)
+            labels = {"protein": "g protein", "fiber": "g fiber", "carbs": "g carbs", "fat": "g fat", "saturatedFat": "g saturated fat", "sugars": "g sugar", "sodiumMg": "mg sodium"}
+            said = [f"{calories:g} kcal" + (" (worked out from your macros)" if from_macros else "")] if calories is not None else []
+            said += [f"{stated[k]:g} {label}" for k, label in labels.items() if k in stated]
+            note = "" if calories is not None else " You didn't give calories, so none are counted for this entry."
+            return {"reply": f"Logged {', '.join(said)}{'' if food == 'Logged in chat' else ' for ' + food}.{note}", "tab": "fitness"}
         if not food or calories is None:
             raise ValueError("I need sourced values before saving this meal. Use the Fitness & Health meal review and check the food matches and portions first.")
         estimated = bool(args.get("estimated"))
