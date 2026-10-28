@@ -13,3 +13,14 @@
 .sg-tag--feature{color:#dcd5ff;background:rgba(157,140,255,.22)}
 .sg-tag--upgrade{color:#ffe0b0;background:rgba(255,170,70,.2)}
 .sg-tag--effort{color:#c5d6e8;background:rgba(143,202,255,.12)}
+/* Playground */
+.pg-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(300px,1fr);gap:12px;align-items:start}
+.pg-editor{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pg-label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:#9fb6cf}.pg-label small{color:#7f97b3}
+.research .pg-code{width:100%;box-sizing:border-box;resize:vertical;font:12.5px/1.5 "Cascadia Code","Cascadia Mono",Consolas,monospace;tab-size:4;white-space:pre;
+  padding:10px 12px;border-radius:10px;border:1px solid rgba(143,202,255,.22);background:#050c16;color:#dbe8f6}
+.pg-code--tests{background:#07111d}
+.pg-side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.pg-out{margin:0;max-height:42vh;overflow:auto;padding:10px;border-radius:10px;background:#050c16;border:1px solid rgba(143,202,255,.18);font:12px/1.45 "Cascadia Mono",Consolas,monospace;white-space:pre-wrap;color:#dbe8f6}
+.pg-err{color:#ffb4a2}.pg-ok{color:#7fe3a8!important}.pg-bad{color:#ffb4a2!important}
+@container (max-width:900px){.pg-grid{grid-template-columns:minmax(0,1fr)}}

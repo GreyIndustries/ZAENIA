@@ -56,6 +56,7 @@ const CodeDoctorPanel = lazy(() => import("./components/tools/ToolTabs").then(mo
 const SuggestionsPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SuggestionsPanel })));
 const ArenaPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.ArenaPanel })));
 const SourceSearch = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SourceSearch })));
+const PlaygroundPanel = lazy(() => import("./components/tools/Playground").then(module => ({ default: module.PlaygroundPanel })));
 const ResearchPage = lazy(() => import("./components/research/ResearchPage").then(module => ({ default: module.ResearchPage })));
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
 const MusicPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.MusicPanel })));
@@ -112,7 +113,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   library: { title: 'Library', label: 'RESEARCH · BOOKS & ARCHIVES', description: 'Find books in Project Gutenberg, Open Library and the Internet Archive. Free books can be read and scanned by ZAE here.' },
   history: { title: 'Historical connections', label: 'RESEARCH · PATTERNS THROUGH TIME', description: 'Track up to three words through old newspapers, books or world news and see when people wrote about them most, and why.' },
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
-  codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
+  codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS · PLAYGROUND', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
   arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
@@ -1131,6 +1132,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'suggestions': return <PageTabs id="codedoctor" tabs={[
         { id: "doctor", label: "Code Doctor", render: () => <CodeDoctorPanel/> },
         { id: "suggestions", label: "Suggestions", render: () => <SuggestionsPanel/> },
+        { id: "playground", label: "Playground", render: () => <PlaygroundPanel/> },
       ]}/>;
       case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;

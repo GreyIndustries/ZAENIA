@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.3  |  Date: 2026-10-26 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.5  |  Date: 2026-10-27 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -721,3 +721,21 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
 - **Verification status:** frontend TypeScript/Vite build, 13 focused nutrition/chat/storage tests, Python compilation, diff check, and the FastAPI read/write authorization integration test pass. Catalog network calls use mocked data in tests; live catalog lookup and camera hardware were not exercised.
 - **Windows desktop rollout (2026-10-26):** built the native Tauri release from `codex/fitness-nutrition-workflow`, installed it with `scripts/update_desktop_app.ps1`, and reopened ZAE. The installed executable SHA-256 matched the release build.
 - **Activation (2026-10-27):** the live local API reports ready on port 8766 in full owner-authenticated mode (version 0.9.1). OpenAPI exposes meal preview/log, barcode, label, search, recipe math, and the generic personal-record routes. The installed desktop process is running and its SHA-256 still matches the release build. Startup authentication remains unchanged.
+
+### 28.5 Code Doctor Playground — Claude, 2026-10-27 (v3.5)
+
+- Grey asked for a Code Doctor sub-tab to write code and test it before implementing it. New tab: Code Doctor > Playground.
+- **Run:** Python, JavaScript (Node) or PowerShell, in a fresh temporary folder that is deleted afterwards (`core/assistant_platform/playground.py`).
+  - Time limit 5 to 60 s; the whole process tree is stopped when it runs out.
+  - Output capped at 100 KB.
+  - Minimal environment: none of ZAE's tokens, keys or settings are passed in.
+  - Desktop app only (`require_desktop`).
+- **Tests:** test code runs after the code in the same file; exit code 0 means they passed.
+- **ZAE assists:** explain an error and fix it, review and improve, write tests, or answer a question. Her code is shown separately; Grey chooses "Use as code" or "Use as tests".
+- **Snippets:** saved in `data/playground/snippets.json` (last 200).
+- **Implement:** writes the code into a project file under the Code Doctor roots.
+  - A new file is created.
+  - An existing file must be loaded first; it is only replaced if it hasn't changed since (SHA-256 check), and the old version goes to `backups/playground/`.
+  - ZAE's security code is refused. Each implement is audited.
+- **Routes:** `POST /api/code/run`, `/api/code/playground/ask`, `GET/POST/DELETE /api/code/snippets`, `POST /api/code/load`, `/api/code/implement`.
+- **Tests:** playground_test 13; full suite 776 OK (14 skipped); UI script tests and `tsc` pass.

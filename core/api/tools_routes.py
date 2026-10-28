@@ -29,6 +29,39 @@ class ThinkBody(BaseModel):
     focus: str = Field(default="all", pattern=r"^(all|day|system)$")
 
 
+class RunBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    language: str = Field(pattern=r"^(python|javascript|powershell)$")
+    code: str = Field(max_length=200_000)
+    tests: str = Field(default="", max_length=50_000)
+    stdin: str = Field(default="", max_length=20_000)
+    timeout: float = Field(default=10, ge=1, le=60)
+
+
+class PlaygroundAskBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    language: str = Field(pattern=r"^(python|javascript|powershell)$")
+    code: str = Field(max_length=200_000)
+    tests: str = Field(default="", max_length=50_000)
+    result: dict | None = None
+    question: str = Field(default="", max_length=1000)
+
+
+class SnippetBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    id: str = Field(default="", max_length=32)
+    title: str = Field(default="", max_length=120)
+    language: str = Field(pattern=r"^(python|javascript|powershell)$")
+    code: str = Field(default="", max_length=200_000)
+    tests: str = Field(default="", max_length=50_000)
+
+
+class ImplementBody(ProjectBody):
+    file: str = Field(min_length=1, max_length=400)
+    code: str = Field(max_length=200_000)
+    oldHash: str = Field(default="", max_length=64)
+
+
 class DecideBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     approve: bool
@@ -114,6 +147,63 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         except Exception as error:
             raise _bad(error) from error
         audit("code_doctor.fix_applied", operation="assistant.desktop.manage", reason_code="backup_kept")
+        return result
+
+    # ---- Playground: write, run and test code before putting it in a project (playground.py)
+    @router.post("/api/code/run", dependencies=[Depends(require_desktop)])
+    def code_run(body: RunBody) -> dict[str, Any]:
+        from core.assistant_platform.playground import run
+        try:
+            return run(body.language, body.code, tests=body.tests, stdin=body.stdin, timeout=body.timeout)
+        except Exception as error:
+            raise _bad(error) from error
+
+    @router.post("/api/code/playground/ask")
+    def code_playground_ask(body: PlaygroundAskBody) -> dict[str, Any]:
+        from core.assistant_platform import code_doctor as doctor
+        from core.assistant_platform.playground import ask_prompt
+        try:
+            answer = _ask_brain(ask_prompt(body.language, body.code, body.tests, body.result, body.question))
+            return {"answer": answer, "code": doctor.extract_code(answer)}
+        except Exception as error:
+            raise _bad(error) from error
+
+    @router.get("/api/code/snippets")
+    def code_snippets() -> dict[str, Any]:
+        from core.assistant_platform.playground import snippets
+        return {"snippets": snippets()[::-1]}
+
+    @router.post("/api/code/snippets")
+    def code_snippet_save(body: SnippetBody) -> dict[str, Any]:
+        from core.assistant_platform.playground import save_snippet
+        try:
+            return save_snippet(body.model_dump())
+        except Exception as error:
+            raise _bad(error) from error
+
+    @router.delete("/api/code/snippets/{snippet_id}")
+    def code_snippet_delete(snippet_id: str) -> dict[str, Any]:
+        from core.assistant_platform.playground import delete_snippet
+        delete_snippet(snippet_id)
+        return {"ok": True}
+
+    @router.post("/api/code/load")
+    def code_load(body: FileBody) -> dict[str, Any]:
+        from core.assistant_platform.playground import load_file
+        try:
+            return load_file(body.project, body.file)
+        except Exception as error:
+            raise _bad(error) from error
+
+    @router.post("/api/code/implement", dependencies=[Depends(require_desktop)])
+    def code_implement(body: ImplementBody) -> dict[str, Any]:
+        from core.assistant_platform.playground import save_to_project
+        from core.foundation.security.audit import audit
+        try:
+            result = save_to_project(body.project, body.file, body.code, body.oldHash)
+        except Exception as error:
+            raise _bad(error) from error
+        audit("code_playground.implemented", operation="assistant.desktop.manage", reason_code="backup_kept" if result["backup"] else "new_file")
         return result
 
     @router.get("/api/code/search")
