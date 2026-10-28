@@ -31,7 +31,9 @@ SKIP_DIRS = {".git", "node_modules", ".venv", ".venv311_backup", "venv", "__pyca
 MAX_FILES = 4000
 MAX_FILE_BYTES = 400_000
 PROTECTED = ("core/foundation", "core/voice_security", "core/telephony", "core/api/vault.py", "core/api/auth.py",
-             "core/api/security_", "core/api/desktop_key", "core/api/mobile_auth", "data/")
+             "core/api/security_", "core/api/desktop_key", "core/api/mobile_auth", "data/",
+             # The code that enforces these rules can't be changed through them either.
+             "core/assistant_platform/code_doctor.py", "core/assistant_platform/playground.py")
 SECRET = re.compile(r"(?i)(?:api[_-]?key|secret|passw(?:or)?d|token)\s*[:=]\s*['\"][A-Za-z0-9/+_\-]{16,}['\"]|AKIA[0-9A-Z]{16}|sk-[A-Za-z0-9]{20,}|ghp_[A-Za-z0-9]{30,}")
 
 
@@ -161,11 +163,17 @@ def read_file(project: str, rel: str) -> tuple[Path, str]:
 
 
 def protected(target: Path) -> bool:
+    """ZAE's security code: this list plus everything the file tools protect (auth, and the modules that map
+    requests to permissions). Compared case-insensitively, since Windows paths ignore case (Build Plan P0)."""
+    from core.api.ui_files import is_protected
     try:
-        rel = target.resolve().relative_to(PROJECT_ROOT).as_posix()
+        rel = target.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
     except ValueError:
         return False
-    return any(rel.startswith(prefix) for prefix in PROTECTED)
+    except OSError:
+        return True
+    lowered = rel.lower()
+    return is_protected(rel) or any(lowered.startswith(prefix) for prefix in PROTECTED)
 
 
 def review_prompt(rel: str, text: str, findings: list[str], fix: bool) -> str:

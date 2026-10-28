@@ -37,6 +37,11 @@ class ChatActionsTest(unittest.TestCase):
         for text in ("what is the weather today", "hello", "how many calories should I eat?"):
             self.assertFalse(chat_actions.maybe(text), text)
 
+    def test_creating_tasks_and_reminders_is_left_to_their_own_handlers(self):
+        for text in ("Add a task to inspect the car", "create an event for Friday", "remind me to stretch", "Please add a reminder at 5"):
+            self.assertFalse(chat_actions.maybe(text), text)
+        self.assertTrue(chat_actions.maybe("mark the inspect the car task done"))
+
     def test_classify_only_picks_known_actions(self):
         self.assertEqual(chat_actions.classify("log 8000 steps", lambda p: '{"action": "body.log", "args": {"steps": 8000}}'),
                          {"action": "body.log", "args": {"steps": 8000}})

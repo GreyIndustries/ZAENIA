@@ -56,6 +56,9 @@ _TOPIC = re.compile(r"\b(calorie|kcal|protein|fiber|meal|breakfast|lunch|dinner|
                     r"bench|squat|deadlift|curl|press|pull-?ups?|push-?ups?|dips|plank|task|todo|to-do|reminder|project|workbench|"
                     r"song|track|beat|music|stage|translate|book|library|program|source|suggestion|idea|code doctor|my code|your code|"
                     r"prototype|testing|mixing|mastering|recording|released|writing|lunge|row|raise|crunch|twist|burpee)(?:e?s)?\b", re.I)
+# Creating tasks, events, reminders and notes has its own handlers (they show a proposal first); never route it here.
+_CREATE_OWN = re.compile(r"^\s*(?:please\s+|can you\s+|could you\s+)?(?:add|create|make|new|set up|schedule|put)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:new\s+)?"
+                         r"(?:task|todo|to-do|event|appointment|meeting|reminder|note)\b|^\s*remind me\b", re.I)
 _QUESTION = re.compile(r"^\s*(what|how|why|when|where|who|which|is|are|do|does|can|could|should|would|will)\b", re.I)
 
 
@@ -91,6 +94,8 @@ def maybe(message: str) -> bool:
     """Worth asking her brain? An instruction about something a tab does, not a question."""
     text = str(message or "").strip()
     if len(text) < 6 or len(text) > 4000 or (_QUESTION.match(text) and not re.match(r"^\s*(can|could|will) you\b", text, re.I)):
+        return False
+    if _CREATE_OWN.search(text):
         return False
     return bool(_VERBS.search(text) and _TOPIC.search(text))
 

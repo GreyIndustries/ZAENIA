@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.8  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.9  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -768,3 +768,18 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
   - The food name is the one Grey gives, or "Logged in chat" for plain totals.
 - **Unchanged:** a food named without numbers still opens Codex's sourced meal review (28.4), so a model estimate never silently becomes a health record.
 - **Tests:** chat_actions_test adds stated-nutrition parsing and direct logging (including the macro-derived calories); full suite 788 OK (14 skipped).
+
+### 28.9 Phase 0 pass: stabilize security and source of truth — Claude, 2026-10-28 (v3.9)
+
+Grey asked to start the phased plan (section 11) at the first step. Status of each Phase 0 part, with evidence:
+
+| Part | Status | Evidence |
+|---|---|---|
+| Path capitalisation bypass (P0) | DONE 2026-10-21 | §17.3, ui_files_test |
+| Protected code and code-edit approval (P0) | FIXED now | Code Doctor fixes and Playground "Implement" used a shorter list than the file tools: they could edit `ui_routes.py`, `platform_routes.py`, `server.py`, `ui_files.py` and `capabilities.py` (the modules that map requests to permissions). `code_doctor.protected` now includes everything `ui_files.is_protected` covers, compares case-insensitively, fails closed on errors, and also protects `code_doctor.py` and `playground.py`. Test: code_doctor_protected_test 4. |
+| Voice speaker verification (P0) | OPEN, Grey's decision | Options (a)/(b)/(c) from §17.3; recalibration (`core.voice_security.calibrate`) still not run. |
+| Retrieval excludes generated/historical content (P1) | CONFIG DONE, REBUILD PENDING | The saved index (2026-10-17) had 8,583 chunks, about 4,300 of them from backups, UI backups, Tauri build output and lock files. `system_awareness_config.yaml` now excludes `*backup*`, `restore*`, `target`, `dist`, `dist-*`, release snapshots, cleanup review, web cache, chat files, and lock files. Test: system_awareness_config_test 3. The rebuild (`python -m core.brain.system_index build`, then `core.brain.semantic_index build`) is owner-gated by the passkey, so Grey runs it. The backups stay on disk; a separately labelled historical lookup is not built. |
+| Dependency manifest and install doc (P1) | DONE except the clean-install test | The typo was already fixed. Ten packages live code imports were missing from requirements.txt: lxml, soundfile, scipy, pygame, kokoro-onnx, silero-vad, torch, torchaudio, speechbrain, huggingface_hub (pinned to the live versions). Added `docs/INSTALL.md` (tools, PyTorch CUDA index, Ollama models, Vosk/Kokoro/Piper/ECAPA model locations, builds, tests) and `scripts/check_install.py` (read-only: packages and pins, tools, Ollama models, local models). The live install passes it. Test: check_install_test 3. A fresh-venv install test downloads several GB and waits for Grey's OK. |
+| Regression tests | FIXED a flaky test | `assistant_stream_test.test_task_execution_requires_separate_permission` failed in about 2 of 3 full runs: "Add a task to inspect the car" reached the chat-actions classifier, and the live model sometimes picked `task.update`, so no task proposal was shown. `chat_actions.maybe` now leaves creating tasks, events, reminders and notes to their own handlers. 3 of 3 full runs pass: 799 tests OK (14 skipped). |
+
+Phase 0 exit (red-team/regression tests, protected routes, clean-install test, live owner/other-speaker trials) is not met yet: it waits on the voice decision and calibration, the index rebuild, and the clean-install test.
