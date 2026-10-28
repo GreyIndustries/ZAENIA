@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.6  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.7  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -748,3 +748,14 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
 - **Burn:** stored as `actual` on the day's log (`training.clean_actual` clamps minutes to 300, MET to 1.5–14, at most 30 items). When present it replaces the lifting estimate: runs and walks by distance (0.63 or 0.3 kcal per lb per mile), everything else by (MET − 1) × kg × hours. Steps and separately logged cardio still count. All labelled as estimates.
 - **Route:** `POST /api/platform/personal/training/actual?day=` (memory.write).
 - **Tests:** training_test ActualWorkoutTest 2; full suite 786 OK (14 skipped); tried on Grey's ACFT text with the local model (classified as workout.actual, five activities, 2.0 mi run).
+
+### 28.7 Training: times, pace and loads — Claude, 2026-10-28 (v3.7)
+
+- Grey asked ZAE to use stated times, pace and weights (ACFT example: 240 lb hex bar × 3, 31 push-ups in 2 min, SDC 1 min 98 sec, plank 1:98, 2-mile run in 16:30).
+- **Read from Grey's own words, not the model's guess** (`training.apply_measured`), per bulleted line (or by name, or the whole message for one activity):
+  - Times: `16:30`, `1:05:00`, "1 min and 58 sec", "two minutes", "45 seconds". Overflowing seconds roll over (1:98 = 2:38).
+  - Loads: a number before lb/pounds or before bar/hex/dumbbell/kettlebell/sled; the heaviest is kept.
+  - Reps: "three clean reps", "31 push-ups".
+- **Into the burn:** a stated time sets the minutes. Runs show pace and speed, and their MET follows speed (Compendium, about 1.53 × mph + 0.4), though the burn stays distance-based. Lifts use load relative to bodyweight for effort (MET 3.5 + 2.5 × load/bodyweight, capped).
+- **Shown:** each activity has a stats line (`training.describe`), e.g. "16:30 · 8:15/mi · 7.3 mph" or "240 lb × 3 reps (1.23× bodyweight)", in the Training program and in ZAE's chat reply.
+- **Tests:** training_test adds parsing of times, loads, reps and pace; full suite 787 OK (14 skipped). `assistant_stream_test.test_task_execution_requires_separate_permission` failed in 2 of 3 full runs and passes alone (order or timing dependent, not related to this change).

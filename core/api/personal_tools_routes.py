@@ -210,7 +210,8 @@ def create_personal_tools_router(get, call):
     def training_actual(body: TrainingActualBody, day: str = Query(min_length=10, max_length=10)):
         from core.assistant_platform.training import parse_actual, training
         from core.research.analyze import run_local
-        return call(lambda: training().log_day(day, {"actual": parse_actual(body.text, run_local) if body.text.strip() else None}))
+        tracker = training()
+        return call(lambda: tracker.log_day(day, {"actual": parse_actual(body.text, run_local, tracker.load()["profile"].get("weightLb")) if body.text.strip() else None}))
 
     @router.post("/training/source")
     def training_source(body: TrainingSourceBody):

@@ -166,6 +166,19 @@ class ActualWorkoutTest(unittest.TestCase):
             self.assertNotEqual(plan_burn["lifting"], burn["lifting"])
             self.assertIsNone(tracker.log_day(today, {"actual": None})["actual"])
 
+    def test_stated_times_loads_and_pace(self):
+        self.assertEqual(training.stated_seconds("run in 16:30"), 990)
+        self.assertEqual(training.stated_seconds("plank 1:98"), 158)
+        self.assertEqual(training.stated_seconds("for a time of 1 min and 58 sec"), 118)
+        self.assertEqual(training.stated_seconds("31 push-ups in two minutes"), 120)
+        run = training.apply_measured({"name": "Run", "type": "run", "miles": 2.0, "minutes": 20, "met": 9}, "2-mile run in 16:30")
+        self.assertEqual(training.describe(run), "16:30 · 8:15/mi · 7.3 mph")
+        lift = training.apply_measured({"name": "Deadlift", "type": "strength", "miles": 0, "minutes": 10, "met": 6},
+                                       "Lifts a 240 hex bar for three clean reps", 200)
+        self.assertEqual((lift["loadLb"], lift["reps"], lift["met"]), (240.0, 3, 6.5))
+        pushups = training.apply_measured({"name": "Push-ups", "type": "bodyweight", "miles": 0, "minutes": 5, "met": 8}, "31 push-ups in two minutes")
+        self.assertEqual((pushups["reps"], pushups["minutes"]), (31, 2.0))
+
     def test_values_are_clamped(self):
         items = training.clean_actual([{"name": "x" * 300, "type": "weird", "minutes": 9999, "met": 50}])
         self.assertEqual((len(items[0]["name"]), items[0]["type"], items[0]["minutes"], items[0]["met"]), (120, "other", 300.0, 14.0))

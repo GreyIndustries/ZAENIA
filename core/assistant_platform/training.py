@@ -272,6 +272,13 @@ def clean_actual(items: Any) -> list[dict[str, Any]]:
                         "minutes": round(min(max(float(item.get("minutes") or 0), 0.0), 300.0), 1),
                         "miles": round(min(max(float(item.get("miles") or 0), 0.0), 100.0), 2),
                         "met": round(min(max(met, 1.5), 14.0), 1)})
+        for key, top in (("seconds", 36000), ("loadLb", 2000), ("reps", 2000)):
+            try:
+                value = float(item.get(key) or 0)
+            except (TypeError, ValueError):
+                value = 0
+            if 0 < value <= top:
+                cleaned[-1][key] = round(value, 1) if key != "reps" else int(value)
     if not cleaned:
         raise ValueError("I couldn't find any activities in that.")
     return cleaned
@@ -284,7 +291,7 @@ def activity_kcal(item: dict[str, Any], weight_lb: float) -> float:
     return max(0.0, item.get("met", 5.0) - 1) * weight_lb * 0.4536 * (item.get("minutes") or 0) / 60
 
 
-def parse_actual(text: str, ask) -> list[dict[str, Any]]:
+def parse_actual(text: str, ask, weight_lb: float | None = None) -> list[dict[str, Any]]:
     """ZAE turns Grey's description of what they did into activities (her estimates for time and effort)."""
     reply = ask(
         "Task: turn this description of a workout into a list of activities as JSON, to estimate calories burned.\n"
@@ -308,7 +315,92 @@ def parse_actual(text: str, ask) -> list[dict[str, Any]]:
     if len(stated) == len(runs):
         for item, miles in zip(runs, stated):
             item["miles"] = miles
+    # Times, loads and reps Grey states win too, read line by line.
+    lines = _activity_lines(text)
+    if len(lines) == len(items):
+        pairs = zip(items, lines)
+    elif len(items) == 1:
+        pairs = [(items[0], str(text))]
+    else:
+        pairs = [(item, line) for item in items for line in lines if _same_activity(item["name"], line)]
+    for item, line in pairs:
+        apply_measured(item, line, weight_lb)
     return items
+
+
+_WORD_NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+                 "fifteen": 15, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60}
+_NUM = r"(\d+(?:\.\d+)?|" + "|".join(_WORD_NUMBERS) + r")"
+
+
+def _number(word: str) -> float:
+    return float(_WORD_NUMBERS.get(word.lower(), word))
+
+
+def _activity_lines(text: str) -> list[str]:
+    """Bulleted or numbered lines, one per activity."""
+    return [line.strip() for line in str(text).splitlines()
+            if re.match(r"^\s*(?:[•\-*–]|\d+[.)])\s+\S", line)]
+
+
+def _same_activity(name: str, line: str) -> bool:
+    words = [w for w in re.findall(r"[a-z]{3,}", name.lower()) if w not in ("the", "and", "with", "max", "maximum")]
+    return bool(words) and sum(w in line.lower() for w in words) >= max(1, len(words) // 2)
+
+
+def stated_seconds(line: str) -> float | None:
+    """A time Grey states: 16:30, 1:05:00, '1 min and 58 sec', '2 minutes', '45 seconds'. Overflowing seconds roll over (1:98 = 2:38)."""
+    clock = re.search(r"(?<![\d:])(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?(?![\d:])", line)
+    if clock:
+        parts = [int(p) for p in clock.groups() if p is not None]
+        return float(parts[0] * 3600 + parts[1] * 60 + parts[2]) if len(parts) == 3 else float(parts[0] * 60 + parts[1])
+    minutes = re.search(_NUM + r"\s*(?:-\s*)?(?:min(?:ute)?s?)\b(?:\s*(?:and\s*)?" + _NUM + r"\s*sec(?:ond)?s?\b)?", line, re.I)
+    if minutes:
+        return _number(minutes.group(1)) * 60 + (_number(minutes.group(2)) if minutes.group(2) else 0)
+    seconds = re.search(_NUM + r"\s*sec(?:ond)?s?\b", line, re.I)
+    return _number(seconds.group(1)) if seconds else None
+
+
+def apply_measured(item: dict[str, Any], line: str, weight_lb: float | None = None) -> dict[str, Any]:
+    """Use the time, load and reps stated on this activity's line; time sets minutes, and for runs the pace."""
+    seconds = stated_seconds(line)
+    if seconds:
+        item["seconds"] = seconds
+        item["minutes"] = round(seconds / 60, 2)
+        if item.get("miles") and item["type"] in ("run", "walk"):
+            mph = item["miles"] / (seconds / 3600)
+            # Running MET by speed (Compendium of Physical Activities, roughly linear 5-10 mph).
+            item["met"] = round(min(max(1.53 * mph + 0.4, 6.0), 14.0), 1) if item["type"] == "run" else item["met"]
+    load = re.findall(r"(\d+(?:\.\d+)?)\s*(?:-\s*)?(?:lb|lbs|pounds?)?\s*(?:hex|trap|barbell|bar|dumbbells?|kettlebells?|sled|db|kb|plate)\b"
+                      r"|(\d+(?:\.\d+)?)\s*(?:-\s*)?(?:lb|lbs|pounds?)\b", line, re.I)
+    loads = [float(a or b) for a, b in load if float(a or b) > 0]
+    if loads:
+        item["loadLb"] = max(loads)
+    reps = re.search(_NUM + r"\s*(?:clean\s+|good\s+|total\s+)?(?:reps?|repetitions?|push-?ups?|pull-?ups?|sit-?ups?|burpees?)\b", line, re.I)
+    if reps:
+        item["reps"] = int(_number(reps.group(1)))
+    if item["type"] == "strength" and item.get("loadLb") and weight_lb:
+        # Heavier relative to bodyweight means harder work per minute.
+        item["met"] = round(min(3.5 + 2.5 * min(item["loadLb"] / weight_lb, 1.6), 8.0), 1)
+    return item
+
+
+def describe(item: dict[str, Any], weight_lb: float | None = None) -> str:
+    """'16:30 · 8:15/mi · 7.3 mph' or '240 lb × 3 reps (1.23× bodyweight)'."""
+    parts = []
+    seconds = item.get("seconds")
+    clock = lambda s: f"{int(s // 3600)}:{int(s % 3600 // 60):02d}:{int(s % 60):02d}" if s >= 3600 else f"{int(s // 60)}:{int(round(s % 60)):02d}"
+    if seconds:
+        parts.append(clock(seconds))
+        if item.get("miles"):
+            parts.append(f"{clock(seconds / item['miles'])}/mi")
+            parts.append(f"{item['miles'] / (seconds / 3600):.1f} mph")
+    if item.get("loadLb"):
+        parts.append(f"{item['loadLb']:g} lb" + (f" × {item['reps']} reps" if item.get("reps") else "")
+                     + (f" ({item['loadLb'] / weight_lb:.2f}× bodyweight)" if weight_lb and item["type"] == "strength" else ""))
+    elif item.get("reps"):
+        parts.append(f"{item['reps']} reps" + (f" ({item['reps'] / (seconds / 60):.1f}/min)" if seconds else ""))
+    return " · ".join(parts)
 
 
 def burned(entry: dict[str, Any], weight_lb: float | None, height_in: float | None) -> dict[str, float]:
@@ -339,7 +431,7 @@ def burned(entry: dict[str, Any], weight_lb: float | None, height_in: float | No
     total = steps_kcal + cardio_kcal + workout_kcal
     return {"steps": round(steps_kcal), "stepMiles": round(step_miles, 2), "cardio": round(cardio_kcal), "cardioMiles": round(cardio_miles, 2),
             "lifting": round(workout_kcal), "total": round(total),
-            "actual": [{"name": item["name"], "kcal": round(activity_kcal(item, weight))} for item in actual]}
+            "actual": [{"name": item["name"], "kcal": round(activity_kcal(item, weight)), "stats": describe(item, weight)} for item in actual]}
 
 
 def muscle_sets(days_log: dict[str, Any], since: str) -> dict[str, int]:

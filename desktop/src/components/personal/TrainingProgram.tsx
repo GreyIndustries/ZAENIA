@@ -11,7 +11,7 @@ type Exercise = { exercise: string; prescription: string };
 type Day = { label: string; exercises: Exercise[] };
 type Cardio = { type: string; miles: number; minutes: number };
 type SetRow = { exercise: string; reps: number; weightLb: number };
-type Activity = { name: string; type: string; detail: string; minutes: number; miles: number; met: number };
+type Activity = { name: string; type: string; detail: string; minutes: number; miles: number; met: number; seconds?: number; loadLb?: number; reps?: number };
 type Entry = { actual?: Activity[] | null; weightLb?: number; bodyFat?: number; steps?: number; workoutMinutes?: number; cardio?: Cardio[]; done?: Record<string, boolean>; sets?: SetRow[]; notes?: string };
 type Profile = { age: number | null; sex: string; heightIn: number | null; weightLb: number | null; bodyFat: number | null; goalWeightLb: number | null;
   rateLbPerWeek: number; activity: string; gymDays: string[]; homeDays: string[]; reminders: { workout: string; weighIn: string; food: string } };
@@ -20,7 +20,7 @@ type Source = { url: string; title: string; kind: string; suggested: { heightIn?
 type Overview = { profile: Profile; targets: Targets; plans: { id: string; title: string }[]; planId: string; planTitle: string; days: Day[]; weekdays: Record<string, string>;
   calendar: { date: string; workout: string; planned: number; done: number; weighed: boolean; steps?: number | null; cardio: boolean }[]; month: string;
   sources: Source[]; weights: { date: string; weightLb: number }[]; habits: { workouts: boolean[]; weighIns: boolean[]; dates: string[] }; muscles: Record<string, number>; cardioTypes: string[] };
-type DayView = { date: string; workout: Day; actual: Activity[]; entry: Entry; burned: { steps: number; stepMiles: number; cardio: number; cardioMiles: number; lifting: number; total: number; actual: { name: string; kcal: number }[] };
+type DayView = { date: string; workout: Day; actual: Activity[]; entry: Entry; burned: { steps: number; stepMiles: number; cardio: number; cardioMiles: number; lifting: number; total: number; actual: { name: string; kcal: number; stats: string }[] };
   eaten: { calories: number; protein: number; burned: number } | null; targets: Targets };
 
 const todayIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
@@ -154,12 +154,12 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
       <section className="tp-card tp-today">
         <h3>{new Date(`${day}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} <small>{view?.workout.label || `${weekday}: rest day`}</small></h3>
         {view && view.actual.length > 0 && <div className="tp-actual">
-          <p className="tp-muted">What you did instead of the plan{view.workout.label ? ` (${shortLabel(view.workout.label)})` : ""}. Calories are ZAE's estimate from time and effort; fix a time if it's off.</p>
+          <p className="tp-muted">What you did instead of the plan{view.workout.label ? ` (${shortLabel(view.workout.label)})` : ""}. Calories are estimates from your times, loads and bodyweight; fix anything that's off.</p>
           <ul className="tp-exercises">{view.actual.map((item, i) => <li key={i} className="tp-ex tp-ex--done">
-            <div className="tp-actual__row"><span><strong>{item.name}</strong><small>{item.detail}</small></span>
+            <div className="tp-actual__row"><span><strong>{item.name}</strong>{view.burned.actual[i]?.stats && <em className="tp-actual__stats">{view.burned.actual[i].stats}</em>}<small>{item.detail}</small></span>
               {item.miles > 0 ? <label>mi<input type="number" step="0.1" min="0" defaultValue={item.miles} key={`am${day}${i}${item.miles}`}
                 onBlur={event => Number(event.target.value) !== item.miles && void log({ actual: view.actual.map((a, j) => j === i ? { ...a, miles: Number(event.target.value) } : a) })}/></label>
-              : <label>min<input type="number" step="1" min="0" defaultValue={item.minutes} key={`at${day}${i}${item.minutes}`}
+              : !item.seconds && <label>min<input type="number" step="1" min="0" defaultValue={item.minutes} key={`at${day}${i}${item.minutes}`}
                 onBlur={event => Number(event.target.value) !== item.minutes && void log({ actual: view.actual.map((a, j) => j === i ? { ...a, minutes: Number(event.target.value) } : a) })}/></label>}
               <b>{view.burned.actual[i]?.kcal ?? 0} kcal</b>
               <button type="button" aria-label={`Remove ${item.name}`} onClick={() => void log({ actual: view.actual.length > 1 ? view.actual.filter((_, j) => j !== i) : null })}>✕</button></div>

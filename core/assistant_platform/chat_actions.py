@@ -155,12 +155,13 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
             return {"reply": f"Back to today's plan{': ' + planned['label'] if planned.get('label') else ''}.", "tab": "fitness"}
         if ask is None:
             from core.research.analyze import run_local as ask
-        items = parse_actual(str(args.get("text") or ""), ask)
+        items = parse_actual(str(args.get("text") or ""), ask, tracker.load()["profile"].get("weightLb"))
         tracker.log_day(today, {"actual": items})
         burn = day_view(today, store)["burned"]
-        lines = "; ".join(f"{item['name']} ({item['miles']:g} mi)" if item["miles"] else f"{item['name']} (~{item['minutes']:g} min)" for item in items)
+        lines = "; ".join(f"{item['name']} ({stat['stats'] or ('~' + format(item['minutes'], 'g') + ' min')}, {stat['kcal']} kcal)"
+                          for item, stat in zip(items, burn["actual"]))
         return {"reply": f"Updated today to what you did: {lines}. That's about {sum(a['kcal'] for a in burn['actual'])} kcal burned "
-                         f"(my estimate from time and effort), {burn['total']} kcal for the day with steps and cardio. "
+                         f"(estimates from your times, loads and bodyweight), {burn['total']} kcal for the day with steps and cardio. "
                          "Fix any time in the Training program, or say \"back to the plan\" to undo.", "tab": "fitness"}
 
     if name in ("body.log", "cardio.log", "workout.done", "set.log"):
