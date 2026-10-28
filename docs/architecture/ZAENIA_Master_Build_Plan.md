@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.5  |  Date: 2026-10-27 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.6  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -739,3 +739,12 @@ Implementation, setup, exact limits, primary browser references and rollback: `d
   - ZAE's security code is refused. Each implement is audited.
 - **Routes:** `POST /api/code/run`, `/api/code/playground/ask`, `GET/POST/DELETE /api/code/snippets`, `POST /api/code/load`, `/api/code/implement`.
 - **Tests:** playground_test 13; full suite 776 OK (14 skipped); UI script tests and `tsc` pass.
+
+### 28.6 Training: what was actually done — Claude, 2026-10-28 (v3.6)
+
+- Grey asked that ZAE change the day's training from context when Grey does something other than the plan (example: an ACFT in the morning), and use it for burned calories.
+- **From chat:** describing what was done (any length, up to 4,000 characters) picks the new `workout.actual` action. ZAE turns the description into activities: name, type, detail, minutes, miles and effort (MET). Distances Grey states win over her guess. "Back to the plan" (`workout.plan`) undoes it.
+- **In the Training program:** a "Did something different? Tell ZAE" box does the same for any date. The day then shows the activities in place of the plan, each with editable minutes or miles, its kcal, a remove button and "Back to the plan". The plan itself is never changed.
+- **Burn:** stored as `actual` on the day's log (`training.clean_actual` clamps minutes to 300, MET to 1.5–14, at most 30 items). When present it replaces the lifting estimate: runs and walks by distance (0.63 or 0.3 kcal per lb per mile), everything else by (MET − 1) × kg × hours. Steps and separately logged cardio still count. All labelled as estimates.
+- **Route:** `POST /api/platform/personal/training/actual?day=` (memory.write).
+- **Tests:** training_test ActualWorkoutTest 2; full suite 786 OK (14 skipped); tried on Grey's ACFT text with the local model (classified as workout.actual, five activities, 2.0 mi run).

@@ -30,6 +30,8 @@ ACTIONS = {
     "body.log": "log body numbers for today: {\"weightLb\": number or null, \"bodyFat\": number or null, \"steps\": number or null}",
     "cardio.log": "log cardio: {\"type\": run|walk|hike|cycle|swim|row|elliptical|stairs|hiit|jump rope|sport|other, \"miles\": number or null, \"minutes\": number or null}",
     "workout.done": "check off exercises from today's workout: {\"exercises\": [str] or [\"all\"]}",
+    "workout.actual": "Grey did a different workout than planned today, or describes everything done today (several exercises, a test, a class, a circuit): {}",
+    "workout.plan": "go back to today's planned workout (undo the different workout logged instead): {}",
     "set.log": "log lifting sets: {\"exercise\": str, \"sets\": number, \"reps\": number, \"weightLb\": number or null}",
     "task.complete": "mark a task done: {\"task\": str}",
     "task.update": "change a task: {\"task\": str, \"priority\": Critical|High|Normal|Low or null, \"deadline\": \"YYYY-MM-DD\" or null}",
@@ -60,7 +62,7 @@ _QUESTION = re.compile(r"^\s*(what|how|why|when|where|who|which|is|are|do|does|c
 def maybe(message: str) -> bool:
     """Worth asking her brain? An instruction about something a tab does, not a question."""
     text = str(message or "").strip()
-    if len(text) < 6 or len(text) > 600 or (_QUESTION.match(text) and not re.match(r"^\s*(can|could|will) you\b", text, re.I)):
+    if len(text) < 6 or len(text) > 4000 or (_QUESTION.match(text) and not re.match(r"^\s*(can|could|will) you\b", text, re.I)):
         return False
     return bool(_VERBS.search(text) and _TOPIC.search(text))
 
@@ -81,6 +83,8 @@ def classify(message: str, ask: Callable[[str], str]) -> dict[str, Any] | None:
     if not isinstance(data, dict) or data.get("action") not in ACTIONS:
         return None
     args = data.get("args") if isinstance(data.get("args"), dict) else {}
+    if data["action"] == "workout.actual":
+        args["text"] = message
     if data.get("estimated"):
         args["estimated"] = True
     return {"action": data["action"], "args": args}
@@ -141,6 +145,23 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
         PersonalTools(store).save("exercise", {"title": title, "date": today, "minutes": minutes, "calories": calories,
                                                "source": "Manual estimate", "notes": "Logged from chat"})
         return {"reply": f"Logged {title}, {minutes:g} min, about {calories:g} kcal.", "tab": "fitness"}
+
+    if name in ("workout.actual", "workout.plan"):
+        from core.assistant_platform.training import day_view, parse_actual, training
+        tracker = training()
+        if name == "workout.plan":
+            tracker.log_day(today, {"actual": None})
+            planned = day_view(today, store)["workout"]
+            return {"reply": f"Back to today's plan{': ' + planned['label'] if planned.get('label') else ''}.", "tab": "fitness"}
+        if ask is None:
+            from core.research.analyze import run_local as ask
+        items = parse_actual(str(args.get("text") or ""), ask)
+        tracker.log_day(today, {"actual": items})
+        burn = day_view(today, store)["burned"]
+        lines = "; ".join(f"{item['name']} ({item['miles']:g} mi)" if item["miles"] else f"{item['name']} (~{item['minutes']:g} min)" for item in items)
+        return {"reply": f"Updated today to what you did: {lines}. That's about {sum(a['kcal'] for a in burn['actual'])} kcal burned "
+                         f"(my estimate from time and effort), {burn['total']} kcal for the day with steps and cardio. "
+                         "Fix any time in the Training program, or say \"back to the plan\" to undo.", "tab": "fitness"}
 
     if name in ("body.log", "cardio.log", "workout.done", "set.log"):
         from core.assistant_platform.training import day_view, training

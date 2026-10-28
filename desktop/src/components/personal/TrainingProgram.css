@@ -81,3 +81,11 @@
 .tp-bodymap{max-height:190px}
 .tp-card .tp-muscle{grid-template-columns:80px 1fr 24px}
 .tp-card .tp-muscle{display:inline-grid;width:calc(50% - 8px);margin:0 8px 6px 0;vertical-align:top}
+/* What was actually done (replaces the plan for the day) */
+.tp-actual{display:flex;flex-direction:column;gap:6px}
+.tp-actual__row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tp-actual__row>span{display:flex;flex-direction:column;flex:1 1 180px;min-width:0}
+.tp-actual__row small{color:#9fb6cf;font-size:11.5px}.tp-actual__row label{display:flex;align-items:center;gap:4px;font-size:11px;color:#9fb6cf}
+.tp-actual__row input{width:64px}.tp-actual__row b{font-size:12px;min-width:62px;text-align:right}
+.tp-actual__row button{padding:0 6px;border:0;background:none}
+.tp-different{margin-top:8px}.tp-different summary{cursor:pointer;font-size:12px;color:#9fb6cf}
+.tp-different textarea{width:100%;box-sizing:border-box;margin:6px 0;resize:vertical}

@@ -11,7 +11,8 @@ type Exercise = { exercise: string; prescription: string };
 type Day = { label: string; exercises: Exercise[] };
 type Cardio = { type: string; miles: number; minutes: number };
 type SetRow = { exercise: string; reps: number; weightLb: number };
-type Entry = { weightLb?: number; bodyFat?: number; steps?: number; workoutMinutes?: number; cardio?: Cardio[]; done?: Record<string, boolean>; sets?: SetRow[]; notes?: string };
+type Activity = { name: string; type: string; detail: string; minutes: number; miles: number; met: number };
+type Entry = { actual?: Activity[] | null; weightLb?: number; bodyFat?: number; steps?: number; workoutMinutes?: number; cardio?: Cardio[]; done?: Record<string, boolean>; sets?: SetRow[]; notes?: string };
 type Profile = { age: number | null; sex: string; heightIn: number | null; weightLb: number | null; bodyFat: number | null; goalWeightLb: number | null;
   rateLbPerWeek: number; activity: string; gymDays: string[]; homeDays: string[]; reminders: { workout: string; weighIn: string; food: string } };
 type Targets = { ready: boolean; assumedAge?: boolean; missing?: string[]; bmr?: number; maintenance?: number; dailyDeficit?: number; eat?: number; burn?: number; protein?: number; weeksToGoal?: number | null; goalDate?: string | null; note?: string };
@@ -19,7 +20,7 @@ type Source = { url: string; title: string; kind: string; suggested: { heightIn?
 type Overview = { profile: Profile; targets: Targets; plans: { id: string; title: string }[]; planId: string; planTitle: string; days: Day[]; weekdays: Record<string, string>;
   calendar: { date: string; workout: string; planned: number; done: number; weighed: boolean; steps?: number | null; cardio: boolean }[]; month: string;
   sources: Source[]; weights: { date: string; weightLb: number }[]; habits: { workouts: boolean[]; weighIns: boolean[]; dates: string[] }; muscles: Record<string, number>; cardioTypes: string[] };
-type DayView = { date: string; workout: Day; entry: Entry; burned: { steps: number; stepMiles: number; cardio: number; cardioMiles: number; lifting: number; total: number };
+type DayView = { date: string; workout: Day; actual: Activity[]; entry: Entry; burned: { steps: number; stepMiles: number; cardio: number; cardioMiles: number; lifting: number; total: number; actual: { name: string; kcal: number }[] };
   eaten: { calories: number; protein: number; burned: number } | null; targets: Targets };
 
 const todayIso = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
@@ -53,6 +54,7 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
   const [link, setLink] = useState("");
   const [cardio, setCardio] = useState<Cardio>({ type: "run", miles: 0, minutes: 0 });
   const [setDraft, setSetDraft] = useState<Record<string, { reps: string; weight: string }>>({});
+  const [different, setDifferent] = useState("");
   // ZAE's setup questions: open by themselves while she's missing what the calorie math needs, from the button,
   // or when she asks in chat ("set up my training").
   const [setup, setSetup] = useState(false);
@@ -151,7 +153,20 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
 
       <section className="tp-card tp-today">
         <h3>{new Date(`${day}T12:00:00`).toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} <small>{view?.workout.label || `${weekday}: rest day`}</small></h3>
-        {view?.workout.exercises.length ? <ul className="tp-exercises">{view.workout.exercises.map(item => { const draft = setDraft[item.exercise] ?? { reps: "", weight: "" };
+        {view && view.actual.length > 0 && <div className="tp-actual">
+          <p className="tp-muted">What you did instead of the plan{view.workout.label ? ` (${shortLabel(view.workout.label)})` : ""}. Calories are ZAE's estimate from time and effort; fix a time if it's off.</p>
+          <ul className="tp-exercises">{view.actual.map((item, i) => <li key={i} className="tp-ex tp-ex--done">
+            <div className="tp-actual__row"><span><strong>{item.name}</strong><small>{item.detail}</small></span>
+              {item.miles > 0 ? <label>mi<input type="number" step="0.1" min="0" defaultValue={item.miles} key={`am${day}${i}${item.miles}`}
+                onBlur={event => Number(event.target.value) !== item.miles && void log({ actual: view.actual.map((a, j) => j === i ? { ...a, miles: Number(event.target.value) } : a) })}/></label>
+              : <label>min<input type="number" step="1" min="0" defaultValue={item.minutes} key={`at${day}${i}${item.minutes}`}
+                onBlur={event => Number(event.target.value) !== item.minutes && void log({ actual: view.actual.map((a, j) => j === i ? { ...a, minutes: Number(event.target.value) } : a) })}/></label>}
+              <b>{view.burned.actual[i]?.kcal ?? 0} kcal</b>
+              <button type="button" aria-label={`Remove ${item.name}`} onClick={() => void log({ actual: view.actual.length > 1 ? view.actual.filter((_, j) => j !== i) : null })}>✕</button></div>
+          </li>)}</ul>
+          <div className="tp-row"><button type="button" onClick={() => void run("plan", () => api("POST", `${PATH}/day?day=${day}`, { changes: { actual: null } }), "Back to the planned workout.")}>Back to the plan</button></div>
+        </div>}
+        {!view?.actual.length && (view?.workout.exercises.length ? <ul className="tp-exercises">{view.workout.exercises.map(item => { const draft = setDraft[item.exercise] ?? { reps: "", weight: "" };
           const logged = (entry.sets ?? []).filter(s => s.exercise === item.exercise);
           return <li key={item.exercise} className={done[item.exercise] ? "tp-ex tp-ex--done" : "tp-ex"}>
             <label><input type="checkbox" checked={Boolean(done[item.exercise])} onChange={event => void log({ done: { ...done, [item.exercise]: event.target.checked } })}/>
@@ -160,7 +175,11 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
               <input inputMode="decimal" placeholder="lb" value={draft.weight} onChange={event => setSetDraft({ ...setDraft, [item.exercise]: { ...draft, weight: event.target.value } })}/>
               <button type="button" disabled={!draft.reps} onClick={() => { void log({ sets: [...(entry.sets ?? []), { exercise: item.exercise, reps: Number(draft.reps), weightLb: Number(draft.weight || 0) }], done: { ...done, [item.exercise]: true } }); setSetDraft({ ...setDraft, [item.exercise]: { reps: "", weight: draft.weight } }); }}>+ set</button>
               {logged.length > 0 && <small>{logged.map(s => `${s.reps}${s.weightLb ? `×${s.weightLb}` : ""}`).join(", ")}</small>}</div>
-          </li>; })}</ul> : <p className="tp-muted">Nothing planned. Recovery, steps or light cardio.</p>}
+          </li>; })}</ul> : <p className="tp-muted">Nothing planned. Recovery, steps or light cardio.</p>)}
+        <details className="tp-different"><summary>{view?.actual.length ? "Change what you did" : "Did something different? Tell ZAE"}</summary>
+          <textarea rows={4} value={different} maxLength={4000} placeholder="e.g. ACFT this morning: 3-rep max deadlift, hand-release push-ups for 2 min, sprint-drag-carry, plank, 2-mile run" onChange={event => setDifferent(event.target.value)}/>
+          <button type="button" className="tp-primary" disabled={!different.trim() || busy === "actual"} onClick={() => void run("actual", async () => { await api("POST", `${PATH}/actual?day=${day}`, { text: different }, { timeoutMs: 180_000 }); setDifferent(""); }, "Updated with what you did, and the burn is recalculated.")}>{busy === "actual" ? "ZAE is working it out…" : "Use this for the day"}</button>
+        </details>
 
         <div className="tp-body">
           <label>Weight (lb)<input type="number" step="0.1" defaultValue={entry.weightLb ?? ""} key={`w${day}${entry.weightLb}`} onBlur={event => event.target.value && Number(event.target.value) !== entry.weightLb && void log({ weightLb: Number(event.target.value) })}/></label>

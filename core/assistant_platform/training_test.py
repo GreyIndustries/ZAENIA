@@ -145,5 +145,33 @@ class PushTest(unittest.TestCase):
         self.assertEqual(sent, ["Weigh-in"])
 
 
+class ActualWorkoutTest(unittest.TestCase):
+    def test_parse_uses_stated_miles_and_replaces_plan_burn(self):
+        reply = json.dumps({"activities": [
+            {"name": "Deadlift", "type": "strength", "detail": "3 reps", "minutes": 10, "met": 6},
+            {"name": "Two-mile run", "type": "run", "detail": "2 miles", "minutes": 18, "miles": 3, "met": 9},
+            {"name": "", "type": "core"}]})
+        items = training.parse_actual("deadlift, then a 2-mile run", lambda prompt: reply)
+        self.assertEqual([i["name"] for i in items], ["Deadlift", "Two-mile run"])
+        self.assertEqual(items[1]["miles"], 2.0)
+        with tempfile.TemporaryDirectory() as folder:
+            tracker = training.Training(Path(folder) / "program.json")
+            today = date.today().isoformat()
+            tracker.log_day(today, {"done": {"Bench": True, "Rows": True}})
+            plan_burn = training.burned(tracker.load()["days"][today], 200, 66)
+            entry = tracker.log_day(today, {"actual": items})
+            burn = training.burned(entry, 200, 66)
+            self.assertEqual(burn["actual"][1]["kcal"], round(0.63 * 200 * 2))
+            self.assertEqual(burn["lifting"], sum(a["kcal"] for a in burn["actual"]))
+            self.assertNotEqual(plan_burn["lifting"], burn["lifting"])
+            self.assertIsNone(tracker.log_day(today, {"actual": None})["actual"])
+
+    def test_values_are_clamped(self):
+        items = training.clean_actual([{"name": "x" * 300, "type": "weird", "minutes": 9999, "met": 50}])
+        self.assertEqual((len(items[0]["name"]), items[0]["type"], items[0]["minutes"], items[0]["met"]), (120, "other", 300.0, 14.0))
+        with self.assertRaises(ValueError):
+            training.clean_actual([])
+
+
 if __name__ == "__main__":
     unittest.main()

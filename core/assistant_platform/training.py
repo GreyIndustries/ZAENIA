@@ -8,6 +8,10 @@
   actually done.
 - Daily log: weight, body fat, steps, cardio (type, miles, minutes), which
   exercises were done with sets/reps/weight, and notes.
+- What was actually done: when Grey does something other than the plan, Grey
+  describes it and ZAE turns it into activities (minutes, miles, effort as MET)
+  that replace the planned workout for that day; burn is worked out from them
+  (the plan stays as it was, and "back to the plan" clears it).
 - Targets: BMR (Mifflin-St Jeor), maintenance, the daily deficit for the goal
   rate, split into calories to eat and calories to burn in exercise; protein.
   Burn estimates: steps and runs by distance, other cardio and lifting by MET.
@@ -124,7 +128,7 @@ class Training:
     # ---- daily log
     def log_day(self, day: str, changes: dict[str, Any]) -> dict[str, Any]:
         date.fromisoformat(day)
-        allowed = {"weightLb", "bodyFat", "steps", "cardio", "done", "sets", "notes", "workoutMinutes"}
+        allowed = {"weightLb", "bodyFat", "steps", "cardio", "done", "sets", "notes", "workoutMinutes", "actual"}
         with _LOCK:
             data = self.load()
             entry = data["days"].get(day) or {}
@@ -147,6 +151,8 @@ class Training:
                               "weightLb": max(0.0, float(s.get("weightLb") or 0))} for s in value]
                 elif key == "notes":
                     value = str(value)[:2000]
+                elif key == "actual":
+                    value = clean_actual(value) if value else None
                 elif value is not None:
                     value = float(value)
                     if value < 0 or (key == "steps" and value > 200000) or (key == "bodyFat" and value > 70) or (key == "weightLb" and value > 600):
@@ -245,8 +251,68 @@ def targets(profile: dict[str, Any]) -> dict[str, Any]:
                      + (" Age not given, so 30 is assumed." if assumed_age else ""))}
 
 
+ACTIVITY_MET = {"strength": 6.0, "bodyweight": 8.0, "circuit": 10.0, "core": 4.0, "run": 9.8, "walk": 3.5, "cardio": 7.0, "mobility": 2.5, "sport": 7.0, "other": 5.0}
+
+
+def clean_actual(items: Any) -> list[dict[str, Any]]:
+    """Validate a day's actual activities: name, type, minutes, miles, MET, detail."""
+    if not isinstance(items, list) or not items or len(items) > 30:
+        raise ValueError("What you did is a list of 1 to 30 activities.")
+    cleaned = []
+    for item in items:
+        if not isinstance(item, dict) or not str(item.get("name") or "").strip():
+            continue
+        kind = str(item.get("type") or "other").lower()
+        kind = kind if kind in ACTIVITY_MET else "other"
+        try:
+            met = float(item.get("met") or ACTIVITY_MET[kind])
+        except (TypeError, ValueError):
+            met = ACTIVITY_MET[kind]
+        cleaned.append({"name": str(item["name"]).strip()[:120], "type": kind, "detail": str(item.get("detail") or "")[:300],
+                        "minutes": round(min(max(float(item.get("minutes") or 0), 0.0), 300.0), 1),
+                        "miles": round(min(max(float(item.get("miles") or 0), 0.0), 100.0), 2),
+                        "met": round(min(max(met, 1.5), 14.0), 1)})
+    if not cleaned:
+        raise ValueError("I couldn't find any activities in that.")
+    return cleaned
+
+
+def activity_kcal(item: dict[str, Any], weight_lb: float) -> float:
+    """Active calories for one activity: runs and walks by distance, everything else by MET x minutes."""
+    if item.get("miles") and item.get("type") in ("run", "walk"):
+        return (0.63 if item["type"] == "run" else 0.3) * weight_lb * item["miles"]
+    return max(0.0, item.get("met", 5.0) - 1) * weight_lb * 0.4536 * (item.get("minutes") or 0) / 60
+
+
+def parse_actual(text: str, ask) -> list[dict[str, Any]]:
+    """ZAE turns Grey's description of what they did into activities (her estimates for time and effort)."""
+    reply = ask(
+        "Task: turn this description of a workout into a list of activities as JSON, to estimate calories burned.\n"
+        "For each activity give: name (its full name, not an abbreviation), type (one of " + ", ".join(ACTIVITY_MET) + "), detail (sets, reps, loads or distance "
+        "as described, short), minutes (realistic time the activity itself took, including the rest between its sets; "
+        "estimate it if not stated), miles (only for runs or walks, else 0), met (effort: about 3-4 light, 6 heavy lifting, "
+        "8 hard bodyweight work, 10-12 sprints, sled drags and loaded carries).\n"
+        "Use the numbers the description states. Reply with JSON only: {\"activities\": [...]}\n\n"
+        f"DESCRIPTION:\n{str(text)[:4000]}")
+    import re as _re
+    match = _re.search(r"\{.*\}|\[.*\]", reply, _re.S)
+    try:
+        data = json.loads(match.group(0) if match else reply)
+    except (ValueError, AttributeError):
+        raise ValueError("I couldn't work out the activities from that. Try listing them one per line.") from None
+    items = data.get("activities") if isinstance(data, dict) else data
+    items = clean_actual(items)
+    # Distances Grey states win over the model's guess ("2-mile run").
+    stated = [float(m) for m in _re.findall(r"(\d+(?:\.\d+)?)[ -]?mi(?:le)?s?\b", str(text), _re.I)]
+    runs = [item for item in items if item["type"] in ("run", "walk")]
+    if len(stated) == len(runs):
+        for item, miles in zip(runs, stated):
+            item["miles"] = miles
+    return items
+
+
 def burned(entry: dict[str, Any], weight_lb: float | None, height_in: float | None) -> dict[str, float]:
-    """Estimated active calories for a day: steps, cardio and lifting."""
+    """Estimated active calories for a day: steps, cardio and lifting (or what was actually done instead)."""
     weight = weight_lb or 180.0
     kg = weight * 0.4536
     stride_miles = ((height_in or 69) * 0.414) / 63360
@@ -263,11 +329,17 @@ def burned(entry: dict[str, Any], weight_lb: float | None, height_in: float | No
             cardio_kcal += 0.3 * weight * miles
         else:
             cardio_kcal += max(0.0, CARDIO_MET.get(kind, 5.0) - 1) * kg * minutes / 60
-    lifting_minutes = entry.get("workoutMinutes") or (3 * len(entry.get("sets") or []) or 2.5 * 3 * sum(1 for v in (entry.get("done") or {}).values() if v))
-    lifting_kcal = (5.0 - 1) * kg * lifting_minutes / 60
-    total = steps_kcal + cardio_kcal + lifting_kcal
+    actual = entry.get("actual") or []
+    if actual:
+        workout_kcal = sum(activity_kcal(item, weight) for item in actual)
+        cardio_miles += sum(item.get("miles") or 0 for item in actual)
+    else:
+        lifting_minutes = entry.get("workoutMinutes") or (3 * len(entry.get("sets") or []) or 2.5 * 3 * sum(1 for v in (entry.get("done") or {}).values() if v))
+        workout_kcal = (5.0 - 1) * kg * lifting_minutes / 60
+    total = steps_kcal + cardio_kcal + workout_kcal
     return {"steps": round(steps_kcal), "stepMiles": round(step_miles, 2), "cardio": round(cardio_kcal), "cardioMiles": round(cardio_miles, 2),
-            "lifting": round(lifting_kcal), "total": round(total)}
+            "lifting": round(workout_kcal), "total": round(total),
+            "actual": [{"name": item["name"], "kcal": round(activity_kcal(item, weight))} for item in actual]}
 
 
 def muscle_sets(days_log: dict[str, Any], since: str) -> dict[str, int]:
@@ -387,7 +459,7 @@ def day_view(day: str, store=None, path: Path = PROGRAM_FILE) -> dict[str, Any]:
             eaten = PersonalTools(store).fitness_summary(day)
         except Exception:
             eaten = None
-    return {"date": day, "workout": planned, "entry": entry, "burned": burn, "eaten": eaten, "targets": info["targets"]}
+    return {"date": day, "workout": planned, "actual": entry.get("actual") or [], "entry": entry, "burned": burn, "eaten": eaten, "targets": info["targets"]}
 
 
 def improve_program(store, ask) -> dict[str, Any]:

@@ -14,7 +14,7 @@ PATTERNS = [
     ('PUT',r'calendar-completions/[a-f0-9]{64}', 'ui.calendar.write'),
     ('GET',r'personal/fitness-summary', 'memory.read'),
     ('GET',r'personal/training(?:/day)?', 'memory.read'),
-    ('POST',r'personal/training/(?:profile|program|day|source|improve)', 'memory.write'),
+    ('POST',r'personal/training/(?:profile|program|day|actual|source|improve)', 'memory.write'),
     ('GET',rf'personal/(?:workbench|music|food|recipes|exercise|plans|fitness-settings)(?:/{ID})?', 'memory.read'),
     ('POST',r'personal/nutrition/(?:meal-preview|barcode|search|label|recipe-math)', 'memory.read'),
     ('POST',r'personal/nutrition/log', 'memory.write'),
