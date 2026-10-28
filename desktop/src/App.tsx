@@ -77,7 +77,7 @@ import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
 type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
-type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield";
+type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
 type VisualMode = "blend" | "progress";
 
 // Conversations live in the chat box under the core: its thread opens above the
@@ -89,12 +89,12 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "tasks", label: "Tasks & Calendar", short: "Plan", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
   { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
-  { id: 'music', label: 'Music', short: 'Music', icon: 'pulse' },
+  { id: 'music', label: 'Music', short: 'Music', icon: 'music' },
   { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
   { id: "news", label: "News", short: "News", icon: "news" },
-  { id: "research", label: "Research", short: "Research", icon: "clock" },
-  { id: "codedoctor", label: "Code Doctor", short: "Code", icon: "files" },
-  { id: "arena", label: "Arena", short: "Arena", icon: "pulse" },
+  { id: "research", label: "Research", short: "Research", icon: "pen" },
+  { id: "codedoctor", label: "Code Doctor", short: "Code", icon: "code" },
+  { id: "arena", label: "Arena", short: "Arena", icon: "brain" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "Settings", short: "Settings", icon: "system" },
@@ -162,6 +162,10 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     shield: <><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6Z"/><path d="m9 12 2 2 4-4"/></>,
     chevron: <path d="m6 9 6 6 6-6"/>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 13h18M10 16.5h4"/></>,
+    code: <><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/><path d="m14 4-4 16"/></>,
+    music: <><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></>,
+    brain: <><path d="M9.5 3A3 3 0 0 0 6.6 5.3 3 3 0 0 0 4 8.3a3 3 0 0 0 .6 1.8A3.5 3.5 0 0 0 4 15a3.2 3.2 0 0 0 3 3.2A3 3 0 0 0 12 19.5V4.6A2.8 2.8 0 0 0 9.5 3Z"/><path d="M14.5 3a3 3 0 0 1 2.9 2.3A3 3 0 0 1 20 8.3a3 3 0 0 1-.6 1.8A3.5 3.5 0 0 1 20 15a3.2 3.2 0 0 1-3 3.2 3 3 0 0 1-5 1.3"/><path d="M12 8.5c-1.2 0-2.2-.6-2.7-1.6M12 13c1.4 0 2.6-.8 3-2M8 12.5c.6.6 1.4 1 2.3 1"/></>,
+    pen: <><path d="M17 3a2.8 2.8 0 0 1 4 4L8 20l-5 1 1-5Z"/><path d="m15 5 4 4"/></>,
   };
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
