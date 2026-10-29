@@ -63,7 +63,7 @@
 
 /* Center: tags above the core, the context line and suggestion chips below it (the reference's hero) */
 .ov-center__tags{display:flex;gap:6px;justify-content:space-between;width:100%;max-width:720px}
-.ov-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,6px);color:var(--zx-muted,#9fb6cf);background:var(--zx-inset,transparent)}
+.ov .ov-tag,.ov-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,6px);color:var(--zx-muted,#9fb6cf);background:var(--zx-inset,transparent)}
 .ov-tag i{width:6px;height:6px;border-radius:50%;background:var(--accent,#e0a353);box-shadow:0 0 8px var(--accent,#e0a353)}
 .ov .ov-tag--btn:hover{color:var(--zx-text,#dbe8f6);border-color:var(--zx-line-strong,#2b4366)}
 .ov-hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;max-width:640px;padding:0 8px 6px}
