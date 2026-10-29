@@ -35,7 +35,7 @@ import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
 import './styles/module-looks.css';
-import './styles/look-tokens.css';
+import './styles/look-styles.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";

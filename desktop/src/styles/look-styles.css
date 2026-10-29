@@ -1,0 +1,60 @@
+/* Shared design tokens for the reworked tabs (Music onward).
+   Every window style (Aurora glass, Holo HUD, Midnight editorial, Neon bento) sets these, and the
+   extra Appearance options (density, corners, panel opacity, motion) adjust them, so a new tab
+   follows every customisation just by using the tokens:
+     --zx-panel, --zx-panel-2, --zx-inset   card, raised and inset backgrounds
+     --zx-line, --zx-line-strong            borders
+     --zx-radius, --zx-radius-sm            corners
+     --zx-shadow                            card glow / shadow
+     --zx-title-font, --zx-btn-case, --zx-btn-spacing   headings and buttons
+     --zx-gap, --zx-pad                     spacing (density)
+     --zx-text, --zx-muted                  text colours                                      */
+
+[data-look]{
+  --zx-opacity:var(--app-panel-opacity,1);
+  --zx-text:#dbe8f6;--zx-muted:#9fb6cf;
+  --zx-line:color-mix(in srgb,var(--accent) 14%,#1a2a40);--zx-line-strong:color-mix(in srgb,var(--accent) 35%,#1f3149);
+  --zx-panel:rgba(12,21,36,calc(.86 * var(--zx-opacity)));--zx-panel-2:rgba(19,35,58,calc(.9 * var(--zx-opacity)));
+  --zx-inset:rgba(8,17,31,calc(.9 * var(--zx-opacity)));
+  --zx-radius:calc(12px * var(--app-corners,1));--zx-radius-sm:calc(8px * var(--app-corners,1));
+  --zx-shadow:0 0 0 1px transparent;
+  --zx-title-font:inherit;--zx-btn-case:none;--zx-btn-spacing:0;
+  --zx-gap:calc(12px * var(--app-density,1));--zx-pad:calc(14px * var(--app-density,1));
+}
+[data-look="aurora"]{
+  --zx-panel:linear-gradient(160deg,rgba(18,32,54,calc(.78 * var(--zx-opacity))),rgba(10,20,36,calc(.7 * var(--zx-opacity))));
+  --zx-shadow:0 10px 30px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.04);
+}
+[data-look="hud"]{
+  --zx-panel:linear-gradient(180deg,color-mix(in srgb,var(--accent) 6%,rgba(4,12,22,calc(.85 * var(--zx-opacity)))),rgba(4,12,22,calc(.8 * var(--zx-opacity))));
+  --zx-inset:rgba(2,8,16,calc(.85 * var(--zx-opacity)));
+  --zx-line:color-mix(in srgb,var(--accent) 30%,transparent);--zx-line-strong:color-mix(in srgb,var(--accent) 60%,transparent);
+  --zx-radius:calc(3px * var(--app-corners,1));--zx-radius-sm:calc(2px * var(--app-corners,1));
+  --zx-title-font:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace;--zx-btn-case:uppercase;--zx-btn-spacing:.1em;
+  --zx-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 12%,transparent),0 0 18px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+[data-look="editorial"]{
+  --zx-panel:rgba(11,18,32,calc(.97 * var(--zx-opacity)));--zx-panel-2:rgba(16,26,44,var(--zx-opacity));--zx-inset:rgba(7,12,22,var(--zx-opacity));
+  --zx-line:#1c2a40;--zx-radius:calc(2px * var(--app-corners,1));--zx-radius-sm:calc(2px * var(--app-corners,1));
+  --zx-title-font:Georgia,Cambria,"Times New Roman",serif;--zx-shadow:none;
+}
+[data-look="neon"]{
+  --zx-panel:linear-gradient(140deg,color-mix(in srgb,var(--accent) 16%,rgba(10,14,30,calc(.9 * var(--zx-opacity)))),color-mix(in srgb,var(--accent-2) 8%,rgba(10,14,30,calc(.9 * var(--zx-opacity)))));
+  --zx-line:color-mix(in srgb,var(--accent) 45%,transparent);--zx-line-strong:var(--accent);
+  --zx-radius:calc(18px * var(--app-corners,1));--zx-radius-sm:calc(12px * var(--app-corners,1));
+  --zx-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 30%,transparent),0 0 24px color-mix(in srgb,var(--accent) 22%,transparent);
+}
+
+/* Corners override (Appearance → Corners): "style" keeps each style's own; the others force one. */
+.zaenia-app[data-corners="sharp"] [data-look]{--zx-radius:2px;--zx-radius-sm:2px}
+.zaenia-app[data-corners="soft"] [data-look]{--zx-radius:10px;--zx-radius-sm:7px}
+.zaenia-app[data-corners="round"] [data-look]{--zx-radius:20px;--zx-radius-sm:14px}
+
+/* Motion (Appearance → Motion): reduced turns off transitions and animations everywhere. */
+.zaenia-app[data-motion="reduced"] *,.zaenia-app[data-motion="reduced"] *::before,.zaenia-app[data-motion="reduced"] *::after{
+  animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+
+/* Shared building blocks for reworked tabs */
+.zx-card{background:var(--zx-panel);border:1px solid var(--zx-line);border-radius:var(--zx-radius);box-shadow:var(--zx-shadow);padding:var(--zx-pad)}
+.zx-inset{background:var(--zx-inset);border:1px solid var(--zx-line);border-radius:var(--zx-radius-sm)}
+.zx-title{font-family:var(--zx-title-font)}
