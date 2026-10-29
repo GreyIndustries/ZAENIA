@@ -9,7 +9,7 @@ from __future__ import annotations
 
 _ROWS = [
     # name, aliases, values
-    ("Egg, whole, raw", "egg eggs whole egg", (143, 12.6, 0.7, 9.5, 3.1, 0, 0.4, 142, 372)),
+    ("Egg, whole", "egg eggs whole egg raw", (143, 12.6, 0.7, 9.5, 3.1, 0, 0.4, 142, 372)),
     ("Egg white, raw", "egg white whites", (52, 10.9, 0.7, 0.2, 0, 0, 0.7, 166, 0)),
     ("Chicken breast, skinless, raw", "chicken breast chicken", (120, 22.5, 0, 2.6, 0.6, 0, 0, 45, 73)),
     ("Chicken breast, skinless, roasted", "chicken breast cooked grilled chicken", (165, 31.0, 0, 3.6, 1.0, 0, 0, 74, 85)),
@@ -48,10 +48,23 @@ _ROWS = [
     ("Cheddar cheese", "cheddar cheese", (403, 24.9, 1.3, 33.1, 21.1, 0, 0.5, 621, 105)),
     ("Peanut butter, smooth", "peanut butter pb", (588, 25.1, 19.6, 50.4, 10.1, 6.0, 9.2, 459, 0)),
     ("Almonds", "almonds almond nuts", (579, 21.2, 21.6, 49.9, 3.8, 12.5, 4.4, 1, 0)),
+    ("Potatoes, boiled, diced", "potato potatoes boiled cooked diced home fries hash browns", (87, 1.9, 20.1, 0.1, 0, 1.8, 0.9, 4, 0)),
+    ("Bacon, pork, cooked", "bacon strips", (541, 37.0, 1.4, 41.8, 13.7, 0, 0, 1717, 110)),
+    ("Bagel, plain", "bagel bagels", (257, 10.0, 50.5, 1.6, 0.2, 2.2, 5.5, 450, 0)),
+    ("Jelly or jam", "jelly jam preserves grape strawberry", (266, 0.2, 70.0, 0, 0, 1.0, 51.0, 30, 0)),
+    ("Mushrooms, white, raw", "mushroom mushrooms", (22, 3.1, 3.3, 0.3, 0, 1.0, 2.0, 5, 0)),
+    ("Granola", "granola", (471, 10.0, 64.0, 20.0, 3.0, 5.5, 24.0, 30, 0)),
+    ("Applesauce, unsweetened", "apple sauce applesauce", (42, 0.2, 11.3, 0.1, 0, 1.1, 9.4, 2, 0)),
+    ("Apple juice", "apple juice", (46, 0.1, 11.3, 0.1, 0, 0.2, 9.6, 4, 0)),
+    ("Orange juice", "orange juice oj", (45, 0.7, 10.4, 0.2, 0, 0.2, 8.4, 1, 0)),
+    ("Bread, white", "bread white toast", (266, 8.9, 49.2, 3.3, 0.7, 2.7, 5.7, 491, 0)),
+    ("Bread, whole wheat", "bread whole wheat wheat toast", (252, 12.4, 42.7, 3.5, 0.7, 6.0, 4.4, 455, 0)),
+    # A typical ready-to-drink shake (about 160 kcal and 25 g protein per 11 oz bottle); brands differ a lot, so check yours.
+    ("Protein shake, ready-to-drink", "protein shake shakes drink", (48.5, 7.6, 1.8, 0.9, 0.5, 0.3, 0.6, 61, 9)),
 ]
 # Typical serving for each food (label, grams), so the recipe editor can work by serving instead of per 100 g.
 SERVINGS = {
-    "Egg, whole, raw": ("1 large egg", 50), "Egg white, raw": ("1 large egg white", 33),
+    "Egg, whole": ("1 large egg", 50), "Egg white, raw": ("1 large egg white", 33),
     "Chicken breast, skinless, raw": ("4 oz", 113), "Chicken breast, skinless, roasted": ("3 oz", 85),
     "Ground beef, 85% lean, raw": ("4 oz", 113), "Salmon, Atlantic, farmed, raw": ("4 oz", 113),
     "Oats, rolled, dry": ("1/2 cup dry", 40), "Rice, white, long-grain, raw": ("1/4 cup dry", 46),
@@ -66,6 +79,10 @@ SERVINGS = {
     "Lentils, cooked": ("1/2 cup", 99), "Olive oil": ("1 tbsp", 13.5), "Butter, salted": ("1 tbsp", 14),
     "Milk, whole (3.25%)": ("1 cup", 244), "Milk, skim": ("1 cup", 245), "Greek yogurt, plain, nonfat": ("1 container", 170),
     "Cheddar cheese": ("1 oz", 28), "Peanut butter, smooth": ("2 tbsp", 32), "Almonds": ("1 oz (about 23)", 28),
+    "Potatoes, boiled, diced": ("1 cup", 156), "Bacon, pork, cooked": ("1 strip", 8), "Bagel, plain": ("1 medium bagel", 105),
+    "Jelly or jam": ("1 tbsp", 20), "Mushrooms, white, raw": ("1/2 cup sliced", 35), "Granola": ("1/4 cup", 30),
+    "Applesauce, unsweetened": ("1/2 cup", 122), "Apple juice": ("1 cup", 248), "Orange juice": ("1 cup", 248),
+    "Bread, white": ("1 slice", 28), "Bread, whole wheat": ("1 slice", 32), "Protein shake, ready-to-drink": ("1 bottle (11 fl oz)", 330),
 }
 _KEYS = ("calories", "protein", "carbs", "fat", "saturatedFat", "fiber", "sugars", "sodiumMg", "cholesterolMg")
 SOURCE = "https://fdc.nal.usda.gov/"

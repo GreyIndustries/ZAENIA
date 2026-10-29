@@ -16,13 +16,14 @@ class NutritionTest(unittest.TestCase):
         self.assertIn("Confirm its brand", items[5]["question"])
 
     def test_meal_uses_catalog_values_and_keeps_unknown_nutrients_unknown(self):
-        record = {"fdcId": 123, "description": "Egg, whole, raw, fresh", "dataType": "Foundation", "foodNutrients": [
+        record = {"fdcId": 123, "description": "Kale, raw", "dataType": "Foundation", "foodNutrients": [
             {"nutrientName": "Energy", "unitName": "kcal", "value": 143},
             {"nutrientName": "Protein", "unitName": "g", "value": 12.6},
             {"nutrientName": "Fiber, total dietary", "unitName": "g", "value": 0},
             {"nutrientName": "Carbohydrate, by difference", "unitName": "g", "value": 0.72}]}
+        nutrition._SUGGEST_CACHE.clear()
         with patch.object(nutrition, "_request", return_value={"foods": [record]}):
-            result = nutrition.preview_meal("I ate 100g eggs")
+            result = nutrition.preview_meal("I ate 100g kale")
         item = result["items"][0]
         self.assertEqual(item["nutrients"]["calories"], 143)
         self.assertEqual(item["nutrients"]["protein"], 12.6)
@@ -30,11 +31,31 @@ class NutritionTest(unittest.TestCase):
         self.assertTrue(result["complete"])
 
     def test_lookup_failure_becomes_question_without_estimation(self):
-        with patch.object(nutrition, "_request", side_effect=OSError("offline")):
-            result = nutrition.preview_meal("I ate 100g eggs")
+        nutrition._SUGGEST_CACHE.clear()
+        with patch.object(nutrition, "_request", side_effect=OSError("offline")),              patch("core.assistant_platform.nutrition_web.web_lookup", side_effect=OSError("offline")):
+            result = nutrition.preview_meal("I ate 100g kale")
         self.assertFalse(result["complete"])
-        self.assertIn("couldn't reach USDA", result["items"][0]["question"])
+        self.assertIn("couldn't find kale", result["items"][0]["question"])
         self.assertIsNone(result["items"][0]["nutrients"])
+
+    def test_one_sentence_breakfast_is_split_and_portioned(self):
+        nutrition._SUGGEST_CACHE.clear()
+        text = ("I ate 1 cup of potatoes, 3 eggs with tomatoes, onion, mushrooms, and cheese, 4 strips of bacon, bagel with jelly, "
+                "10 oz of apple juice, Chobani yogurt with granola, apple sauce, and a 25 G protein shake.")
+        plan = nutrition.plan_meal(text)
+        self.assertEqual([i["name"] for i in plan], ["potatoes", "eggs", "tomatoes", "onion", "mushrooms", "cheese", "bacon", "bagel", "jelly",
+                                                     "apple juice", "Chobani yogurt", "granola", "apple sauce", "protein shake"])
+        self.assertEqual([i["name"] for i in plan if i["addIn"]], ["tomatoes", "onion", "mushrooms", "cheese", "jelly", "granola"])
+        self.assertEqual(plan[-1]["statedProteinG"], 25)
+        with patch.object(nutrition, "_request", side_effect=OSError("offline")),              patch("core.assistant_platform.nutrition_web.web_lookup", side_effect=OSError("offline")):
+            result = nutrition.preview_meal(text)
+        rows = {i["name"]: i for i in result["items"]}
+        self.assertEqual(rows["eggs"]["grams"], 150)            # 3 × 1 large egg
+        self.assertEqual(rows["bacon"]["grams"], 32)            # 4 × 1 strip
+        self.assertAlmostEqual(rows["apple juice"]["grams"], 283.5, places=1)
+        self.assertEqual(rows["cheese"]["grams"], 28)           # add-in estimate
+        self.assertEqual(rows["protein shake"]["nutrients"]["protein"], 25)
+        self.assertIn("estimate", rows["onion"]["note"])
 
     def test_barcode_requires_digits(self):
         with self.assertRaises(ValueError):

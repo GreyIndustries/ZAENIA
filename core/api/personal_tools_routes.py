@@ -134,7 +134,7 @@ def create_personal_tools_router(get, call):
     @router.post("/nutrition/meal-preview")
     def nutrition_meal_preview(body: MealBody):
         from core.assistant_platform.nutrition import preview_meal
-        return call(lambda: preview_meal(body.description))
+        return call(lambda: preview_meal(body.description, store=get().store))
 
     @router.post("/nutrition/log")
     def nutrition_log(body: MealBody):

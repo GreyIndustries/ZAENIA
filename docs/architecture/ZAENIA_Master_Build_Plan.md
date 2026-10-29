@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.13  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.14  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -860,3 +860,19 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
   - Pages or search engines that block automated readers are skipped; the reader is never disguised. DuckDuckGo was showing a bot check while this was tested, so FatSecret is the dependable source and brand pages appear when the search lets the reader through.
   - Each result names the website it came from, and every value stays editable.
 - **Tests:** nutrition_web_test 5 (label panel, serving grams, JSON-LD, FatSecret parsing, page reader).
+
+### 28.14 Meals from one sentence — Claude, 2026-10-29 (v3.14)
+
+- Grey's breakfast sentence in Log › "Describe a meal" didn't log. "3 eggs with tomatoes, onion, mushrooms, and cheese" was read as one food, every item without an amount stopped for a question, and household units (cup, strips) had no weight.
+- **`nutrition.plan_meal` (rule-based):**
+  - Splits "with" add-ins. Following short items join the add-in list only when the list closes with "and …".
+  - Keeps the amounts and units Grey said, and reads "25 g protein shake" as a stated 25 g of protein.
+  - The local model was tried for this but dropped amounts, so it isn't used.
+- **`preview_meal`:**
+  - Looks up every item in parallel with `search_products` (his recipes, common foods, Open Food Facts, USDA), plus the website lookup when the top matches lack fiber.
+  - Prefers a match with a serving size when no amount was said, and one that reports calories, protein and fiber.
+  - Portions come, in order, from the weight said; household units (cup ≈ 240 g, or the label's 1-cup serving); count × label serving (3 × 1 large egg); a typical add-in amount (cheese 28 g, jelly 20 g, others 30 g); or one serving.
+  - Each item carries a note saying how its portion was worked out ("added in: about 30 g (estimate)"). The review shows it, and every match and weight stays editable.
+- **Common foods:** added cooked potatoes, cooked bacon, bagel, jelly or jam, mushrooms, granola, applesauce, apple and orange juice, white and whole-wheat bread, and a typical ready-to-drink protein shake, all with typical servings.
+- **Result:** Grey's sentence gives 14 foods, about 1,590 kcal and 94 g protein, complete and ready to log after review. The review's "Search nutrition sources" now uses the multi-source search.
+- **Tests:** nutrition_test updated (offline questions, catalog values) plus the one-sentence breakfast.

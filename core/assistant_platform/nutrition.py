@@ -333,31 +333,140 @@ def parse_meal(text: str) -> list[dict]:
     return items
 
 
-def preview_meal(text: str) -> dict:
-    items = parse_meal(text)
+# Weights for household units, so "1 cup of potatoes" or "4 strips of bacon" can be scaled (grams per unit).
+_UNIT_GRAMS = {"oz": 28.3495, "ounce": 28.3495, "ounces": 28.3495, "lb": 453.592, "pound": 453.592, "pounds": 453.592,
+               "g": 1, "gram": 1, "grams": 1, "kg": 1000, "ml": 1, "l": 1000, "liter": 1000, "liters": 1000,
+               "cup": 240, "cups": 240, "tbsp": 15, "tablespoon": 15, "tablespoons": 15, "tsp": 5, "teaspoon": 5, "teaspoons": 5}
+# Typical amount for an add-in ("eggs with tomatoes, onion, mushrooms and cheese") when no amount is given.
+_ADD_IN_GRAMS = {"cheese": 28, "jelly": 20, "jam": 20, "granola": 30, "butter": 10, "syrup": 20, "honey": 14, "peanut butter": 16,
+                 "cream cheese": 28, "sour cream": 30, "salsa": 30, "ketchup": 17, "mayo": 14, "dressing": 30}
+
+
+def _serving_grams_of(match: dict) -> float | None:
+    text = str(match.get("servingSize") or "")
+    found = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:g|grams?|ml)\b", text, re.I)
+    if found:
+        return float(found.group(1).replace(",", "."))
+    try:
+        value = float(text)
+    except ValueError:
+        return None
+    return value if value > 0 and str(match.get("servingSizeUnit") or "").lower() in ("g", "grm", "ml", "mlt") else None
+
+
+def plan_meal(text: str) -> list[dict]:
+    """Every food in a meal description: add-ins split out ("3 eggs with tomatoes, onion, mushrooms, and cheese" is five
+    foods), the amount and unit Grey said, nutrients he stated ("a 25 g protein shake" = 25 g protein), and which items
+    are add-ins (a smaller typical amount when none is said). Rule-based on purpose: the local model dropped amounts."""
+    items = []
+    for piece in parse_meal(text):
+        # "3 eggs with tomatoes" -> eggs + tomatoes (an add-in).
+        parts = re.split(r"\s+with\s+", piece["text"], maxsplit=1)
+        first = parse_meal(parts[0])[0] if parts[0].strip() else piece
+        protein = re.search(r"(\d+(?:\.\d+)?)\s*g\s+(?:of\s+)?protein", piece["text"], re.I)
+        name = re.sub(r"^\d+(?:\.\d+)?\s*g\s+(?=protein)", "", first["name"], flags=re.I)
+        said_amount = first["amount"] if not (protein and first["unit"] in ("g", "gram", "grams", "serving")) else None
+        items.append({"text": parts[0].strip(), "name": name, "amount": said_amount,
+                      "unit": None if first["unit"] in ("", "serving") or said_amount is None else first["unit"], "addIn": False,
+                      "statedProteinG": float(protein.group(1)) if protein else None})
+        if len(parts) > 1:
+            items.append({"text": parts[1].strip(), "name": parts[1].strip(), "amount": None, "unit": None, "addIn": True, "statedProteinG": None,
+                          "chainStart": True})
+    # Short, amount-less pieces right after an add-in belong to the same food only when that list closes with
+    # "and …" ("tomatoes, onion, mushrooms, and cheese"); otherwise they are foods of their own ("granola, apple sauce").
+    i = 0
+    while i < len(items):
+        if items[i].pop("chainStart", False):
+            j = i + 1
+            while j < len(items) and items[j]["amount"] is None and items[j]["statedProteinG"] is None and len(items[j]["name"].split()) <= 2:
+                j += 1
+            closing = items[j - 1]["name"] if j - 1 > i else ""
+            if closing and re.search(r"\band\s+(?:a\s+|an\s+|some\s+)?" + re.escape(closing) + r"\b", text, re.I):
+                for k in range(i + 1, j):
+                    items[k]["addIn"] = True
+            i = j
+        else:
+            i += 1
+    return items
+
+
+def _portion(item: dict, match: dict) -> tuple[float | None, str]:
+    """Grams for an item and how they were worked out (said by Grey, a household unit, the label serving, or a typical add-in)."""
+    amount, unit, name = item.get("amount"), (item.get("unit") or "").rstrip("s") if item.get("unit") not in ("g", "ml") else item.get("unit"), item["name"].lower()
+    serving = _serving_grams_of(match)
+    if amount and unit in ("g", "ml", "kg", "oz", "ounce", "lb", "pound", "l", "liter"):
+        return amount * _UNIT_GRAMS.get(unit, _UNIT_GRAMS.get(unit + "s", 1)), f"{amount:g} {item.get('unit')} as you said"
+    if amount and unit in ("cup", "tbsp", "tablespoon", "tsp", "teaspoon"):
+        label = str(match.get("servingLabel") or "").lower()
+        if serving and label.startswith("1 cup") and unit == "cup":
+            return amount * serving, f"{amount:g} cup ≈ {amount * serving:.0f} g (label serving)"
+        grams = amount * _UNIT_GRAMS[unit if unit in _UNIT_GRAMS else unit + "s"]
+        return grams, f"{amount:g} {item.get('unit')} ≈ {grams:.0f} g (estimate)"
+    if amount and serving:
+        return amount * serving, f"{amount:g} × {match.get('servingLabel') or 'serving'} ≈ {amount * serving:.0f} g"
+    if amount:
+        return None, ""
+    if item.get("addIn"):
+        grams = next((g for key, g in _ADD_IN_GRAMS.items() if key in name), 30)
+        return grams, f"added in: about {grams} g (estimate)"
+    if serving:
+        return serving, f"1 serving: {match.get('servingLabel') or f'{serving:g} g'} (no amount said)"
+    return None, ""
+
+
+def preview_meal(text: str, store=None) -> dict:
+    """A reviewable meal from one sentence: each food matched (your recipes, common foods, food labels, websites),
+    scaled to the portion said or estimated, with every estimate marked so it can be checked and changed."""
+    from concurrent.futures import ThreadPoolExecutor
+    items = plan_meal(text)
     if not items:
         raise ValueError("Describe the food and how much you ate.")
-    result = []
-    for item in items:
-        row = {**item, "matches": [], "nutrients": None, "source": "", "sourceName": ""}
-        if not item["question"]:
+
+    def look(item):
+        try:
+            matches = search_products(item["name"], store)["matches"]
+        except Exception:
+            matches = []
+        if not any(m["nutrients"].get("fiber") is not None for m in matches[:3]):
             try:
-                row["matches"] = search_food(item["name"])["matches"]
-                if not row["matches"]:
-                    row["question"] = f"I couldn't find a nutrition record for {item['name']}. Enter a brand, choose a similar food, or read its label."
-                elif item["grams"] is not None:
-                    row["nutrients"] = {key: round(float(value or 0) * item["grams"] / 100, 3) if value is not None else None
-                                        for key, value in row["matches"][0]["nutrients"].items()}
-                    row["source"], row["sourceName"] = row["matches"][0]["source"], row["matches"][0]["sourceName"]
-                    if any(row["nutrients"].get(key) is None for key in ("calories", "protein", "fiber")):
-                        row["question"] = "This record does not report calories, protein, and fiber. Scan or enter the package label before logging."
-                else:
-                    row["question"] = f"Pick the closest food record and enter the portion weight in grams for {item['text']}."
+                from core.assistant_platform.nutrition_web import web_lookup
+                matches = matches + web_lookup(item["name"])["matches"]
             except Exception:
-                row["question"] = f"I couldn't reach USDA FoodData Central for {item['name']}. Check the brand/label or retry when online."
+                pass
+        return matches
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        found = list(pool.map(look, items))
+    result = []
+    for item, matches in zip(items, found):
+        # Prefer a match that reports calories, protein and fiber, so the meal can be logged.
+        # When no amount (or only a count) was said, a match with a serving size is needed to know how much it was.
+        needs_serving = not item.get("addIn") and (item.get("amount") is None or not item.get("unit"))
+        ordered = sorted(matches, key=lambda m: (needs_serving and _serving_grams_of(m) is None,
+                                                 not all(m["nutrients"].get(k) is not None for k in ("calories", "protein", "fiber"))))
+        row = {"text": item["text"], "name": item["name"], "amount": item.get("amount"), "unit": item.get("unit") or "",
+               "matches": ordered[:8], "nutrients": None, "grams": None, "source": "", "sourceName": "", "question": "", "note": ""}
+        if not ordered:
+            row["question"] = f"I couldn't find {item['name']}. Add a brand, try a simpler name, or enter its label."
+            result.append(row)
+            continue
+        best = ordered[0]
+        grams, how = _portion(item, best)
+        row.update(selected=best, source=best["source"], sourceName=best["sourceName"], checkedAt=best.get("checkedAt"))
+        if grams is None:
+            row["question"] = f"How many grams of {item['name']} was it? (no serving size listed)"
+        else:
+            row["grams"] = round(grams, 1)
+            row["nutrients"] = {k: (round(float(v) * grams / 100, 2) if v is not None else None) for k, v in best["nutrients"].items()}
+            if item.get("statedProteinG") is not None:
+                row["nutrients"]["protein"] = item["statedProteinG"]
+                how += f" · protein {item['statedProteinG']:g} g as you said"
+            row["note"] = how
+            if any(row["nutrients"].get(k) is None for k in ("calories", "protein", "fiber")):
+                row["question"] = "This record is missing calories, protein or fiber. Pick another match or enter the label value."
         result.append(row)
-    return {"description": text[:2000], "items": result, "complete": all(i["nutrients"] is not None and all(i["nutrients"].get(key) is not None for key in ("calories", "protein", "fiber")) for i in result),
-            "message": "Check every match and serving weight before logging. Values are scaled from the cited catalog record per 100 g."}
+    complete = all(i["nutrients"] is not None and all(i["nutrients"].get(k) is not None for k in ("calories", "protein", "fiber")) for i in result)
+    return {"description": text[:2000], "items": result, "complete": complete,
+            "message": "Each food is matched and scaled to the portion you said; amounts you didn't give are estimated and marked. Change any match or weight, then log."}
 
 
 def totals(items: list[dict]) -> dict:
