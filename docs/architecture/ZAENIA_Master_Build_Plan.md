@@ -847,3 +847,10 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
   - Picking a food sets the unit to "serving" with 1 to start, and the source line says what one serving is.
   - Serving weights come from the label (Open Food Facts `serving_size`; USDA `servingSize` and `householdServingFullText`), or from a typical serving for each of the 39 common foods (`nutrition_common.SERVINGS`).
   - Values are still stored per 100 g underneath, so g, oz and lb keep working. UI checks: recipe-ingredient 14.
+- **Real products with label servings (Grey: fairlife whole milk had no serving, and too many near-identical results):**
+  - The Open Food Facts search index leaves out serving sizes and full names. The top 8 products are now read from their full label record (`/api/v2/product/{code}`, in parallel, 6 s each), which gives the real name ("fairlife Whole ultra-filtered milk"), package size (52 fl oz) and printed serving ("1 portion (240 ml)").
+  - When a label lists no serving, a typical one by food category is used and marked "(typical serving)": milk 1 cup, yogurt 1 container, cheese 1 oz, nut butter 2 tbsp, and so on.
+  - Near-duplicates (same name and calories) merge, keeping the most complete record. A repeated brand ("Chobani Chobani") is tidied.
+  - Ranking prefers names with the most typed words, then US products and ones with a serving. The list shows at most 10, each with its package size.
+- **Store data:** store sites (Walmart, Target) have no open nutrition data. Kroger has a free developer API (needs a key) if Grey wants store listings later.
+- **Tests:** nutrition_test ProductLabelTest 2.

@@ -116,3 +116,37 @@ class SearchProductsTest(__import__("unittest").TestCase):
     def test_needs_two_letters(self):
         with self.assertRaises(ValueError):
             self.nutrition.search_products("a")
+
+
+class ProductLabelTest(__import__("unittest").TestCase):
+    def test_full_label_gives_real_name_and_serving_and_duplicates_merge(self):
+        from unittest import mock
+        from core.assistant_platform import nutrition
+        nutrition._SUGGEST_CACHE.clear()
+        hits = {"hits": [
+            {"code": "1", "product_name": "Fairlife Whole", "brands": ["Fairlife"], "quantity": "52 fl oz", "countries_tags": ["en:united-states"],
+             "completeness": .7, "nutriments": {"energy-kcal_100g": 62.5, "proteins_100g": 5.4}},
+            {"code": "2", "product_name": "Fairlife Whole", "brands": ["Fairlife"], "countries_tags": ["en:united-states"],
+             "completeness": .3, "nutriments": {"energy-kcal_100g": 62.5, "proteins_100g": 5.4}},
+            {"code": "3", "product_name": "Greek Yogurt", "brands": ["Chobani"], "categories_tags": ["en:yogurts"],
+             "nutriments": {"energy-kcal_100g": 74, "proteins_100g": 10}}]}
+        labels = {"1": {"product": {"product_name": "Whole ultra-filtered milk", "brands": "fairlife", "quantity": "52 fl oz", "serving_size": "1 portion (240 ml)", "serving_quantity": 240}}}
+
+        def fake(url, timeout=9):
+            if "nal.usda.gov" in url:
+                raise OSError("busy")
+            if "/api/v2/product/" in url:
+                return labels.get(url.split("/api/v2/product/")[1].split("?")[0], {"product": {}})
+            return hits if "search.openfoodfacts.org" in url else {"products": []}
+        with mock.patch.object(nutrition, "_request", side_effect=fake):
+            result = nutrition.search_products("fairlife whole milk")
+        products = [m for m in result["matches"] if m["dataType"] == "Product"]
+        self.assertEqual(products[0]["title"], "fairlife Whole ultra-filtered milk")
+        self.assertEqual(products[0]["servingSize"], "1 portion (240 ml)")
+        self.assertEqual(sum(1 for m in products if "fairlife" in m["title"].lower()), 1)  # the duplicate merged
+        yogurt = next(m for m in products if "Yogurt" in m["title"])
+        self.assertEqual((yogurt["servingSize"], yogurt["servingLabel"]), ("170 g", "1 container (typical serving)"))
+
+    def test_tidy_title(self):
+        from core.assistant_platform.nutrition import _tidy_title
+        self.assertEqual(_tidy_title("Chobani Chobani Greek Yogurt"), "Chobani Greek Yogurt")

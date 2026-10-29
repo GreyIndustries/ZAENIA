@@ -12,7 +12,7 @@ export type NutrientKey = typeof NUTRIENT_KEYS[number];
 export type Nutrients = Record<NutrientKey, number | null>;
 export type Ingredient = { name: string; amount: string | number; unit: string; nutrients: Nutrients; source: string; sourceName?: string;
   per100?: Nutrients | null; grams?: number | null; servingGrams?: number | null; servingLabel?: string; edited?: NutrientKey[] };
-type Match = { title: string; dataType: string; servingSize?: string | number | null; servingSizeUnit?: string; servingLabel?: string; nutrients: Nutrients; source: string; sourceName: string };
+type Match = { title: string; dataType: string; servingSize?: string | number | null; servingSizeUnit?: string; servingLabel?: string; quantity?: string; nutrients: Nutrients; source: string; sourceName: string };
 
 export const LABELS: Record<NutrientKey, string> = { calories: "kcal", protein: "Protein g", carbs: "Carbs g", fat: "Fat g", saturatedFat: "Sat. fat g",
   fiber: "Fiber g", sugars: "Sugars g", sodiumMg: "Sodium mg", cholesterolMg: "Cholest. mg" };
@@ -112,7 +112,7 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
         {open && matches.length > 0 && <ul className="ri__list" role="listbox">
           {matches.map((m, i) => <li key={`${m.source}${i}`} role="option" aria-selected={i === active}>
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => pick(m)} className={i === active ? "ri__opt ri__opt--on" : "ri__opt"}>
-              <span><b>{m.title}</b><small>{m.dataType === "Product" ? "Product · Open Food Facts" : m.dataType === "Yours" ? m.sourceName : m.dataType === "Common food" ? "Common food · typical values" : `USDA · ${m.dataType}`}</small></span>
+              <span><b>{m.title}</b><small>{m.dataType === "Product" ? `${m.quantity ? `${m.quantity} · ` : ""}Open Food Facts label` : m.dataType === "Yours" ? m.sourceName : m.dataType === "Common food" ? "Common food · typical values" : `USDA · ${m.dataType}`}</small></span>
               <small>{(() => { const g = servingGramsOf(m); const per = (v: number | null) => v == null ? "?" : Math.round(v * (g ?? 100) / 10) / 10;
                 return g ? `${servingText(m.servingLabel, g, m.servingSize)}: ${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein`
                   : `${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein per 100 g (no serving size listed)`; })()}</small>

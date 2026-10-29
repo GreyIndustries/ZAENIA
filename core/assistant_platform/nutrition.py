@@ -88,7 +88,16 @@ def search_food(query: str) -> dict:
 _SUGGEST_CACHE: dict[str, tuple[float, dict]] = {}
 
 
-def _off_matches(products: list, limit: int = 8) -> list[dict]:
+def _tidy_title(title: str) -> str:
+    """"Chobani Chobani Greek Yogurt" -> "Chobani Greek Yogurt" (the brand is often repeated in the product name)."""
+    words = str(title or "").split()
+    for size in (3, 2, 1):
+        if len(words) >= 2 * size and [w.lower() for w in words[:size]] == [w.lower() for w in words[size:2 * size]]:
+            return " ".join(words[size:])
+    return " ".join(words)
+
+
+def _off_matches(products: list, limit: int = 10) -> list[dict]:
     out = []
     for product in products[:limit]:
         if isinstance(product.get("brands"), list):
@@ -98,13 +107,94 @@ def _off_matches(products: list, limit: int = 8) -> list[dict]:
         item = _off_product(product, f"https://world.openfoodfacts.org/product/{product['code']}")
         if item["nutrients"].get("calories") is None:
             continue
-        out.append({"fdcId": None, "code": str(product["code"]), "title": item["title"] or product["product_name"], "dataType": "Product",
-                    "servingSize": item["servingSize"], "servingSizeUnit": "", "basis": "per 100 g", "nutrients": item["nutrients"],
-                    "source": item["source"], "sourceName": item["sourceName"], "checkedAt": item["checkedAt"]})
+        out.append({"fdcId": None, "code": str(product["code"]), "title": _tidy_title(item["title"] or product["product_name"]), "dataType": "Product",
+                    "servingSize": item["servingSize"] or "", "servingSizeUnit": "", "quantity": str(product.get("quantity") or ""),
+                    "basis": "per 100 g", "nutrients": item["nutrients"], "source": item["source"], "sourceName": item["sourceName"],
+                    "checkedAt": item["checkedAt"], "us": "en:united-states" in (product.get("countries_tags") or []),
+                    "categories": [c for c in (product.get("categories_tags") or []) if isinstance(c, str)][:20],
+                    "completeness": float(product.get("completeness") or 0)})
     return out
 
 
-_OFF_FIELDS = "code,product_name,brands,quantity,nutriments,serving_size"
+_OFF_FIELDS = "code,product_name,brands,quantity,nutriments,serving_size,serving_quantity,countries_tags,categories_tags,completeness"
+
+# A typical serving by food category, used only when the label lists none (shown as "typical serving").
+_CATEGORY_SERVINGS = (
+    ("milks", "1 cup", 240), ("plant-based-milk", "1 cup", 240), ("juices", "1 cup", 240), ("dairy-drinks", "1 cup", 240),
+    ("yogurts", "1 container", 170), ("cheeses", "1 oz", 28), ("breakfast-cereals", "1 cup", 40), ("breads", "1 slice", 40),
+    ("peanut-butters", "2 tbsp", 32), ("nut-butters", "2 tbsp", 32), ("olive-oils", "1 tbsp", 14), ("vegetable-oils", "1 tbsp", 14),
+    ("butters", "1 tbsp", 14), ("eggs", "1 large egg", 50), ("protein-powders", "1 scoop", 30), ("ice-creams", "2/3 cup", 95),
+    ("sodas", "1 can", 355), ("carbonated-drinks", "1 can", 355), ("chips", "1 oz", 28), ("crisps", "1 oz", 28),
+)
+
+
+def _typical_serving(categories: list[str]) -> tuple[str, float] | None:
+    tags = " ".join(categories)
+    for key, label, grams in _CATEGORY_SERVINGS:
+        if f":{key}" in tags:
+            return label, grams
+    return None
+
+
+def _product_label(code: str) -> dict:
+    """The full Open Food Facts record for one product: its real name and the serving size printed on the label
+    (the search index leaves these out)."""
+    data = _request(f"https://world.openfoodfacts.org/api/v2/product/{code}?fields=product_name,brands,quantity,serving_size,serving_quantity,categories_tags", timeout=6)
+    return data.get("product") or {}
+
+
+def _enrich_products(matches: list[dict], limit: int = 8) -> None:
+    """Fill in name, size and serving for the top products from their full labels, at the same time."""
+    from concurrent.futures import ThreadPoolExecutor
+    todo = [m for m in matches if m.get("dataType") == "Product" and m.get("code")][:limit]
+    if not todo:
+        return
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        labels = list(pool.map(lambda m: _safe(_product_label, m["code"]), todo))
+    for match, label in zip(todo, labels):
+        if not label:
+            continue
+        brand = ", ".join(label["brands"]) if isinstance(label.get("brands"), list) else str(label.get("brands") or "")
+        name = str(label.get("product_name") or "").strip()
+        if name:
+            match["title"] = _tidy_title(f"{brand} {name}".strip() if brand and brand.lower() not in name.lower() else name)
+        if label.get("quantity"):
+            match["quantity"] = str(label["quantity"])
+        if label.get("categories_tags"):
+            match["categories"] = [c for c in label["categories_tags"] if isinstance(c, str)][:20]
+        grams = label.get("serving_quantity")
+        if label.get("serving_size"):
+            match["servingSize"] = str(label["serving_size"])
+            if isinstance(grams, (int, float)) and grams > 0 and not re.search(r"\d\s*(?:g|ml)\b", match["servingSize"], re.I):
+                match["servingSize"] += f" ({grams:g} g)"
+    for match in matches:
+        if match.get("dataType") == "Product" and not match.get("servingSize"):
+            typical = _typical_serving(match.get("categories") or [])
+            if typical:
+                match["servingSize"] = f"{typical[1]:g} g"
+                match["servingLabel"] = f"{typical[0]} (typical serving)"
+
+
+def _safe(fn, *args):
+    try:
+        return fn(*args)
+    except Exception:
+        return None
+
+
+def _dedupe(matches: list[dict]) -> list[dict]:
+    """The same product listed several times (other sizes, community copies): keep the most complete one."""
+    best: dict[tuple, dict] = {}
+    order = []
+    for m in matches:
+        cal = m["nutrients"].get("calories")
+        key = (re.sub(r"[^a-z0-9]+", " ", str(m.get("title", "")).lower()).strip(), round(float(cal)) if cal is not None else None)
+        if key not in best:
+            order.append(key)
+            best[key] = m
+        elif (bool(m.get("servingSize")), m.get("completeness", 0)) > (bool(best[key].get("servingSize")), best[key].get("completeness", 0)):
+            best[key] = m
+    return [best[k] for k in order]
 
 
 def _source_usda(query: str) -> list[dict]:
@@ -151,15 +241,16 @@ def saved_ingredients(store, query: str) -> list[dict]:
 
 
 def _rank(query: str, match: dict) -> tuple:
-    """Your own ingredients first, then names containing every typed word, names starting with it, generic foods before brands."""
+    """Your own ingredients first, then names with the most typed words (plurals folded), names starting with them,
+    US products and ones with a serving size, generic foods before brands, shorter names first."""
     title = str(match.get("title") or "").lower()
-    q = query.lower()
-    words = [w[:-1] if len(w) > 3 and w.endswith("s") else w for w in q.split()]
+    words = [w[:-1] if len(w) > 3 and w.endswith("s") else w for w in query.lower().split()]
     q = " ".join(words)
     kind = {"Yours": 0, "Common food": 1, "Foundation": 1, "SR Legacy": 1, "Survey (FNDDS)": 2}.get(match.get("dataType"), 3)
+    missing = sum(1 for w in words if w not in title)
     starts = 0 if title.startswith(q) else 1 if any(w and title.startswith(w) for w in words) else 2
-    has_all = 0 if all(w in title for w in words) else 1
-    return (0 if kind == 0 else 1, has_all, starts, kind, len(title))
+    product_bonus = (0 if match.get("us", True) else 1) + (0 if match.get("servingSize") else 1)
+    return (0 if kind == 0 else 1, missing, starts, product_bonus, kind, len(title))
 
 
 _SOURCES = (("USDA FoodData Central", "_source_usda"), ("Open Food Facts", "_source_off_search"), ("Open Food Facts (classic)", "_source_off_classic"))
@@ -198,6 +289,10 @@ def search_products(query: str, store=None) -> dict:
                     continue
                 seen.add(ident)
                 merged.append(match)
+        merged = _dedupe(merged)
+        merged.sort(key=lambda m: _rank(query, m))
+        _enrich_products(merged)
+        merged = _dedupe(merged)
         online = {"matches": merged, "offline": offline}
         if merged:
             if len(_SUGGEST_CACHE) > 200:
@@ -205,7 +300,7 @@ def search_products(query: str, store=None) -> dict:
             _SUGGEST_CACHE[key] = (time.time(), online)
     from core.assistant_platform.nutrition_common import common_foods
     mine = saved_ingredients(store, query)
-    matches = sorted(mine + common_foods(query) + online["matches"], key=lambda m: _rank(query, m))[:15]
+    matches = sorted(mine + common_foods(query) + online["matches"], key=lambda m: _rank(query, m))[:10]
     used = sorted({"Your recipes" if m["dataType"] == "Yours" else "Common foods" if m["dataType"] == "Common food" else "Open Food Facts" if m["dataType"] == "Product" else "USDA" for m in matches})
     return {"query": query, "matches": matches, "offline": online["offline"], "sources": used}
 
