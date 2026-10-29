@@ -78,6 +78,24 @@ class SourceBody(BaseModel):
     fetch: bool = False
 
 
+class QuestionBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    question: str = Field(default="", max_length=300)
+
+
+class ClaimBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str = Field(min_length=1, max_length=500)
+    column: str = Field(default="open", pattern=r"^(supports|contradicts|open)$")
+    source: str = Field(default="", max_length=200)
+
+
+class ClaimPatch(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    text: str | None = Field(default=None, max_length=500)
+    column: str | None = Field(default=None, pattern=r"^(supports|contradicts|open)$")
+
+
 def _fail(error: Exception) -> HTTPException:
     if isinstance(error, (ValueError, KeyError)):
         return HTTPException(422, str(error).strip("'\""))
@@ -94,6 +112,14 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
     def article(url: str) -> dict[str, str]:
         from core.research import web
         return web.readable(web.get_text(url))
+
+    @router.get("/desk")
+    def desk(q: str = Query(min_length=1, max_length=200), sources: str = Query(default="library,news,scripture,notebook", max_length=60)) -> dict[str, Any]:
+        from core.research import desk as finder
+        try:
+            return finder.search(q, tuple(sources.split(",")))
+        except Exception as error:
+            raise _fail(error) from error
 
     @router.get("/library")
     def library(q: str = Query(min_length=1, max_length=200)) -> dict[str, Any]:
@@ -328,6 +354,50 @@ def create_research_router(require_api_authentication: Callable[..., None]) -> A
             text = ""  # keep the source by title and link if its text can't be fetched
         try:
             return notebook().add_source(topic_id, title=body.title, kind=body.kind, url=body.url, text=text, meta=body.meta)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.get("/notebook/{topic_id}/sources/{source_id}")
+    def read_source(topic_id: str = Path(pattern=HEX), source_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        try:
+            return notebook().source(topic_id, source_id)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.put("/notebook/{topic_id}/question")
+    def set_question(body: QuestionBody, topic_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        try:
+            return notebook().set_question(topic_id, body.question)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.post("/notebook/{topic_id}/claims/suggest")
+    def suggest_claims(topic_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        from core.research import analyze as brain
+        try:
+            topic = notebook().material(topic_id)
+            return {"suggestions": brain.suggest_claims(brain.notebook_material(topic) if topic.get("sources") else "", topic.get("question", ""))}
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.post("/notebook/{topic_id}/claims")
+    def add_claim(body: ClaimBody, topic_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        try:
+            return notebook().add_claim(topic_id, body.text, body.column, body.source)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.put("/notebook/{topic_id}/claims/{claim_id}")
+    def update_claim(body: ClaimPatch, topic_id: str = Path(pattern=HEX), claim_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        try:
+            return notebook().update_claim(topic_id, claim_id, column=body.column, text=body.text)
+        except Exception as error:
+            raise _fail(error) from error
+
+    @router.delete("/notebook/{topic_id}/claims/{claim_id}")
+    def remove_claim(topic_id: str = Path(pattern=HEX), claim_id: str = Path(pattern=HEX)) -> dict[str, Any]:
+        try:
+            return notebook().remove_claim(topic_id, claim_id)
         except Exception as error:
             raise _fail(error) from error
 

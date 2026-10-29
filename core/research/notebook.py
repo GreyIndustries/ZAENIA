@@ -24,6 +24,8 @@ MAX_TOPICS = 200
 MAX_SOURCES = 60
 MAX_SOURCE_TEXT = 20_000
 KINDS = ("book", "news", "history", "web", "pasted")
+COLUMNS = ("supports", "contradicts", "open")
+MAX_CLAIMS = 80
 _LOCK = threading.Lock()
 
 
@@ -164,6 +166,70 @@ class Notebook:
             data = self._load()
             topic = self._topic(data, topic_id)
             topic["sources"] = [s for s in topic["sources"] if s["id"] != source_id]
+            topic["updatedAt"] = _now()
+            self._save(data)
+        return self.get(topic_id)
+
+    def raw_topics(self) -> list[dict[str, Any]]:
+        """Topics with their sources' titles (no text), for searching the notebook."""
+        return [{"id": t["id"], "name": t["name"], "sources": [{k: v for k, v in s.items() if k != "text"} for s in t.get("sources", [])]}
+                for t in self._load()["topics"]]
+
+    def source(self, topic_id: str, source_id: str) -> dict[str, Any]:
+        """One saved source with its kept text, for the Reader."""
+        topic = self._topic(self._load(), topic_id)
+        for source in topic.get("sources", []):
+            if source["id"] == source_id:
+                return dict(source) | {"topicId": topic_id, "topicName": topic["name"]}
+        raise KeyError("That source no longer exists.")
+
+    # Evidence board: the question a topic is trying to answer, and claims Grey sorts into columns.
+    def set_question(self, topic_id: str, question: str) -> dict[str, Any]:
+        with _LOCK:
+            data = self._load()
+            topic = self._topic(data, topic_id)
+            topic["question"], topic["updatedAt"] = " ".join(str(question).split())[:300], _now()
+            self._save(data)
+        return self.get(topic_id)
+
+    def add_claim(self, topic_id: str, text: str, column: str = "open", source: str = "") -> dict[str, Any]:
+        text = " ".join(str(text).split())[:500]
+        if not text:
+            raise ValueError("Write the claim first.")
+        with _LOCK:
+            data = self._load()
+            topic = self._topic(data, topic_id)
+            claims = topic.setdefault("claims", [])
+            if len(claims) >= MAX_CLAIMS:
+                raise ValueError("This board has the most claims it can hold.")
+            claims.append({"id": uuid.uuid4().hex, "text": text, "column": column if column in COLUMNS else "open",
+                           "source": " ".join(str(source).split())[:200], "addedAt": _now()})
+            topic["updatedAt"] = _now()
+            self._save(data)
+        return self.get(topic_id)
+
+    def update_claim(self, topic_id: str, claim_id: str, *, column: str | None = None, text: str | None = None) -> dict[str, Any]:
+        with _LOCK:
+            data = self._load()
+            topic = self._topic(data, topic_id)
+            claim = next((c for c in topic.get("claims", []) if c["id"] == claim_id), None)
+            if claim is None:
+                raise KeyError("That claim no longer exists.")
+            if column is not None:
+                if column not in COLUMNS:
+                    raise ValueError("Unknown column.")
+                claim["column"] = column
+            if text is not None and " ".join(text.split()):
+                claim["text"] = " ".join(text.split())[:500]
+            topic["updatedAt"] = _now()
+            self._save(data)
+        return self.get(topic_id)
+
+    def remove_claim(self, topic_id: str, claim_id: str) -> dict[str, Any]:
+        with _LOCK:
+            data = self._load()
+            topic = self._topic(data, topic_id)
+            topic["claims"] = [c for c in topic.get("claims", []) if c["id"] != claim_id]
             topic["updatedAt"] = _now()
             self._save(data)
         return self.get(topic_id)

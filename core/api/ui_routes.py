@@ -112,6 +112,13 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/selfcare/backup", "assistant.desktop.manage"),
         ("POST", r"/api/selfcare/watchdog", "assistant.desktop.manage"),
         # Research (research_routes.py): public sources are reads; the notebook is memory; her analysis is a chat reply.
+        ("GET", r"/api/research/desk", "memory.read"),
+        ("GET", r"/api/research/notebook/[0-9a-f]{32}/sources/[0-9a-f]{32}", "memory.read"),
+        ("PUT", r"/api/research/notebook/[0-9a-f]{32}/question", "memory.write"),
+        ("POST", r"/api/research/notebook/[0-9a-f]{32}/claims/suggest", "chat.reply"),
+        ("POST", r"/api/research/notebook/[0-9a-f]{32}/claims", "memory.write"),
+        ("PUT", r"/api/research/notebook/[0-9a-f]{32}/claims/[0-9a-f]{32}", "memory.write"),
+        ("DELETE", r"/api/research/notebook/[0-9a-f]{32}/claims/[0-9a-f]{32}", "memory.write"),
         ("GET", r"/api/research/library", "status.read"),
         ("POST", r"/api/research/library/read", "status.read"),
         ("GET", r"/api/research/article", "status.read"),

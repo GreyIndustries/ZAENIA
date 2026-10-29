@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 
-export type Topic = { id: string; name: string; sources: number; updatedAt?: string };
+export type Topic = { id: string; name: string; sources: number; updatedAt?: string; noteId?: string };
 export type AnalysisTask = "summary" | "facts_opinion" | "book" | "ask" | "what_happened" | "suggest" | "translate"
   | "sc_explain" | "sc_traditions" | "sc_compare" | "sc_crossrefs" | "sc_wordstudy" | "sc_translate"
   | "nb_summary" | "nb_compare" | "nb_claims" | "nb_timeline" | "nb_patterns" | "nb_next";

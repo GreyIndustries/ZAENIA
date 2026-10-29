@@ -49,6 +49,9 @@ TASKS = {
     "nb_timeline": "Build a dated timeline of events from these sources, oldest first. Mark dates that are uncertain.",
     "nb_patterns": "What patterns, causes and effects show up across these sources? Separate well-supported links from guesses.",
     "nb_next": "Based on these sources and notes, what are the 3-5 most useful questions to research next, and where to look?",
+    "nb_board": ("The question is: {term}\nList up to 8 short claims from the sources that bear on it. Reply with one per line, "
+                 "exactly as COLUMN | claim | source title, where COLUMN is SUPPORTS (backs a yes), CONTRADICTS (backs a no) "
+                 "or OPEN (a gap the sources don't settle). No other text."),
 }
 
 
@@ -90,6 +93,24 @@ def analyze(task: str, material: str, *, run: Callable[[str], str] = run_local, 
     if not str(material).strip():
         raise ValueError("There's nothing to read yet.")
     return {"task": task, "result": run(build_prompt(task, material, **details))}
+
+
+
+CLAIM_COLUMNS = {"SUPPORTS": "supports", "CONTRADICTS": "contradicts", "OPEN": "open"}
+
+
+def suggest_claims(material: str, question: str, *, run: Callable[[str], str] = run_local) -> list[dict[str, str]]:
+    """Claims from a topic's sources sorted against its question, for Grey to keep or drop on the Evidence board.
+    Lines that aren't COLUMN | claim | source are skipped."""
+    if not str(material).strip():
+        raise ValueError("Add sources to this topic first.")
+    term = " ".join(str(question).split())[:300] or "What do these sources establish?"
+    found = []
+    for line in run(build_prompt("nb_board", material, term=term)).splitlines():
+        parts = [part.strip(" -*\t") for part in line.split("|")]
+        if len(parts) >= 2 and parts[0].upper() in CLAIM_COLUMNS and parts[1]:
+            found.append({"column": CLAIM_COLUMNS[parts[0].upper()], "text": parts[1][:500], "source": (parts[2] if len(parts) > 2 else "")[:200]})
+    return found[:8]
 
 
 LANGUAGES = ("English", "Spanish", "French", "German", "Italian", "Portuguese", "Dutch", "Russian", "Ukrainian", "Polish",

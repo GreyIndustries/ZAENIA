@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.14  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.15  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -876,3 +876,17 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
 - **Common foods:** added cooked potatoes, cooked bacon, bagel, jelly or jam, mushrooms, granola, applesauce, apple and orange juice, white and whole-wheat bread, and a typical ready-to-drink protein shake, all with typical servings.
 - **Result:** Grey's sentence gives 14 foods, about 1,590 kcal and 94 g protein, complete and ready to log after review. The review's "Search nutrition sources" now uses the multi-source search.
 - **Tests:** nutrition_test updated (offline questions, catalog values) plus the one-sentence breakfast.
+
+### 28.15 Research rework: Desk, Reader, Evidence board — Claude, 2026-10-29 (v3.15)
+
+Grey's picks from the preview canvas, in his order: A (Desk) first, then C (Reader), then B (Evidence board). Every existing Research tool stays as a later sub-tab (Web agent, Historical Connections, Notebook, News, The Library, Scripture & ancient, Translate). All three new views use the look-styles tokens, so window style, per-tab colour, density, corners, panel solidity and motion apply.
+
+- **Desk** (`ResearchStudio.tsx`, opens by default):
+  - One search box runs the Library, world news, scripture and the notebook side by side (`core/research/desk.py`, `GET /api/research/desk`). Each source answers on its own; one that fails or is slow is named and the rest still show. Source chips choose which run; recent searches are kept on this PC.
+  - "Sum up with ZAE" writes a short summary from the encyclopedia overview and the results, naming which source each point comes from, and can be saved to the notebook.
+  - Each result can be read in the Reader, opened on its site, or added to a notebook topic. Notebook hits open that topic's Evidence board.
+  - "Show mentions over time" draws the old-newspaper mentions chart for the search (Historical Connections data), only when asked, because it is slow.
+- **Reader:** one calm reading view for news articles, free library books, scripture hits and saved notebook sources (`GET /api/research/notebook/{topic}/sources/{source}` returns a source's kept text). A shelf keeps the last 12 things read, the reading position is remembered per item, and a progress bar shows time left. Selecting text offers Save highlight (kept per item, and appended to the chosen topic's note), Explain and Translate. The side panel has ZAE (summarise, explain the highlight, facts vs opinion, compare with my notebook, ask about this page), Highlights and Translate.
+- **Evidence board:** each notebook topic is an investigation with a question (`PUT …/question`) and claims sorted into Supports, Contradicts and Open questions (`POST/PUT/DELETE …/claims`). Grey adds, moves and deletes claims. "Ask ZAE to suggest claims" (`POST …/claims/suggest`, `analyze.suggest_claims`) proposes up to 8 from the topic's sources; nothing is added until Grey presses Keep. "Weigh the cards" gives a one-or-two-sentence answer and how sure she is, built only from the cards. Source text stays untrusted data.
+- **Capabilities:** desk and reading a source are memory.read; question and claims are memory.write; suggesting claims is chat.reply.
+- **Tests:** `core/research/desk_test.py` (6): sources answer independently with timeouts, chosen sources only, notebook word matching, question/claims/source reading, suggested-claim parsing, route capabilities.
