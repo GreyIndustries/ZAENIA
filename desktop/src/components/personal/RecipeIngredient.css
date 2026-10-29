@@ -1,0 +1,24 @@
+/* Recipe ingredient search-as-you-type and live totals (Fitness › Logs & plans › Recipes). */
+.ri{display:flex;flex-direction:column;gap:8px}
+.ri__top{display:grid;grid-template-columns:minmax(0,2.4fr) minmax(70px,.6fr) minmax(90px,.7fr) auto;gap:8px;align-items:end}
+.ri__name{position:relative}
+.ri__list{position:absolute;z-index:30;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;max-height:320px;overflow-y:auto;
+  background:var(--zx-panel-2,#13233a);border:1px solid var(--zx-line-strong,#2b4366);border-radius:var(--zx-radius-sm,10px);box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.ri__opt{width:100%;display:flex;justify-content:space-between;gap:12px;align-items:center;text-align:left;padding:8px 10px!important;border:0!important;background:transparent!important;border-radius:8px}
+.ri__opt span{display:flex;flex-direction:column;min-width:0}.ri__opt b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ri__opt small{color:#9fb6cf;font-size:11px;white-space:nowrap}
+.ri__opt:hover,.ri__opt--on{background:color-mix(in srgb,var(--accent,#e0a353) 18%,transparent)!important}
+.ri__hint{color:#9fb6cf;font-size:11px}
+.ri__src{color:#9fb6cf;font-size:11.5px}.ri__src a{color:var(--accent-2,#f0b866)}
+.ri__link{border:0!important;background:none!important;padding:0 4px!important;color:var(--accent-2,#f0b866)!important;text-decoration:underline;font-size:11.5px}
+.ri__remove{align-self:end;padding:8px 10px!important}
+.ri__grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.ri__grid label{font-size:11px}.ri__grid input{width:100%;box-sizing:border-box}
+.ri__edited input{border-color:var(--accent,#e0a353)!important;box-shadow:0 0 0 1px color-mix(in srgb,var(--accent,#e0a353) 40%,transparent)}
+.ri__edited::after{content:"edited";font-size:9.5px;color:var(--accent-2,#f0b866);letter-spacing:.06em}
+.ri__totals{display:grid;grid-template-columns:minmax(0,1fr) repeat(2,minmax(80px,auto));gap:4px 16px;align-items:center;padding:12px 14px;margin:6px 0;
+  border-radius:var(--zx-radius,12px);background:color-mix(in srgb,var(--accent,#e0a353) 7%,var(--zx-panel,rgba(12,21,36,.86)));border:1px solid var(--zx-line,#1f3149)}
+.ri__totals>strong{font-size:12px;color:#9fb6cf;text-align:right}.ri__totals>strong:first-child{grid-column:2}
+.ri__total{display:contents}.ri__total span{font-size:12px;color:#c9d8ea}.ri__total b{text-align:right;font-variant-numeric:tabular-nums}
+.ri__totals small{grid-column:1/-1;color:#9fb6cf;font-size:11px}
+@media (max-width:640px){.ri__top{grid-template-columns:1fr 1fr}.ri__name{grid-column:1/-1}}

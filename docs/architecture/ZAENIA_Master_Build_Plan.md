@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.12  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.13  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -826,3 +826,14 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
 - **Log anything:** `POST /api/platform/personal/training/quick-log` (memory.write) uses `chat_actions.fitness_quick_log`. It only runs fitness actions. Food is logged only with numbers Grey states; otherwise it points to the Log review.
 - **Food listing** now includes `createdAt`, so meals show their time.
 - **Tests:** chat_actions_test quick-log; full suite and UI checks pass; `tsc` clean.
+
+### 28.13 Recipes: ingredient search as you type — Claude, 2026-10-29 (v3.13)
+
+- Fitness › Logs & plans › Recipes. Each ingredient (`components/personal/RecipeIngredient.tsx`) searches as Grey types (3+ letters, 0.5 s pause) through `POST /api/platform/personal/nutrition/suggest` (memory.read, `nutrition.search_products`). Results are cached for an hour.
+  - Sources: Open Food Facts packaged products (search.openfoodfacts.org, falling back to the classic search) and USDA FoodData Central. If one source is offline, the other's results still show, with a note saying which didn't answer.
+- **Picking a match** fills nutrients per 100 g, scaled to the amount: g, kg, oz or lb, ml counted as grams, or "serving" when the product states its serving weight. The source link and name are kept.
+- **Editing:** every value stays editable. An edited value is marked "edited" and kept when the amount changes, and "Reset to source" restores the source values.
+- **Running totals** for the recipe and per serving update live ("—" until every ingredient has that value). "Log one serving" sits next to the totals.
+- **Fix:** `search_food` sent `dataType` as repeated parameters, which FoodData Central rejects with 400. It now sends one comma-separated value; this also affects the meal review.
+- **Note:** the shared `DEMO_KEY` is rate-limited (429 seen while testing). A free personal FoodData Central key in the `FDC_API_KEY` environment variable makes USDA reliable.
+- **Tests:** nutrition_test SearchProductsTest 2; `scripts/recipe-ingredient.test.cjs` 7.

@@ -56,3 +56,43 @@ class NutritionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SearchProductsTest(__import__("unittest").TestCase):
+    def setUp(self):
+        from core.assistant_platform import nutrition
+        nutrition._SUGGEST_CACHE.clear()
+        self.nutrition = nutrition
+
+    def test_combines_sources_and_survives_one_offline(self):
+        from unittest import mock
+        usda = {"foods": [{"fdcId": 1, "description": "Yogurt, Greek, plain", "dataType": "Foundation", "foodNutrients": [
+            {"nutrientName": "Energy", "value": 59, "unitName": "KCAL"}, {"nutrientName": "Protein", "value": 10.3}]}]}
+        off = {"hits": [{"code": "123", "product_name": "Greek Yogurt", "brands": ["Chobani"], "serving_size": "170 g",
+                         "nutriments": {"energy-kcal_100g": 53, "proteins_100g": 9.4}}]}
+
+        def fake(url, timeout=9):
+            if "nal.usda.gov" in url:
+                self.assertIn("dataType=Foundation%2CSR+Legacy", url)
+                return usda
+            return off
+        with mock.patch.object(self.nutrition, "_request", side_effect=fake):
+            result = self.nutrition.search_products("greek yogurt")
+        self.assertEqual(result["offline"], [])
+        self.assertEqual([m["title"] for m in result["matches"]], ["Yogurt, Greek, plain", "Chobani Greek Yogurt"])
+        self.assertEqual(result["matches"][1]["nutrients"]["calories"], 53)
+
+        self.nutrition._SUGGEST_CACHE.clear()
+
+        def usda_down(url, timeout=9):
+            if "nal.usda.gov" in url:
+                raise OSError("429")
+            return off
+        with mock.patch.object(self.nutrition, "_request", side_effect=usda_down):
+            result = self.nutrition.search_products("greek yogurt")
+        self.assertEqual(result["offline"], ["USDA FoodData Central"])
+        self.assertEqual(len(result["matches"]), 1)
+
+    def test_needs_two_letters(self):
+        with self.assertRaises(ValueError):
+            self.nutrition.search_products("a")

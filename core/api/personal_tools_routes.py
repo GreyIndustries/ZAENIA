@@ -165,6 +165,11 @@ def create_personal_tools_router(get, call):
         from core.assistant_platform.nutrition import search_food
         return call(lambda: search_food(body.query))
 
+    @router.post("/nutrition/suggest")
+    def nutrition_suggest(body: FoodSearchBody):
+        from core.assistant_platform.nutrition import search_products
+        return call(lambda: search_products(body.query))
+
     @router.post("/nutrition/label")
     def nutrition_label(body: LabelBody):
         import base64, binascii
