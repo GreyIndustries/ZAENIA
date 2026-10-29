@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.15  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.16  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -890,3 +890,16 @@ Grey's picks from the preview canvas, in his order: A (Desk) first, then C (Read
 - **Evidence board:** each notebook topic is an investigation with a question (`PUT …/question`) and claims sorted into Supports, Contradicts and Open questions (`POST/PUT/DELETE …/claims`). Grey adds, moves and deletes claims. "Ask ZAE to suggest claims" (`POST …/claims/suggest`, `analyze.suggest_claims`) proposes up to 8 from the topic's sources; nothing is added until Grey presses Keep. "Weigh the cards" gives a one-or-two-sentence answer and how sure she is, built only from the cards. Source text stays untrusted data.
 - **Capabilities:** desk and reading a source are memory.read; question and claims are memory.write; suggesting claims is chat.reply.
 - **Tests:** `core/research/desk_test.py` (6): sources answer independently with timeouts, chosen sources only, notebook word matching, question/claims/source reading, suggested-claim parsing, route capabilities.
+
+### 28.16 Overview blended with Grey's reference dashboard — Claude, 2026-10-29 (v3.16)
+
+Grey asked to keep the existing Overview (the Neural Core) and blend it with a reference dashboard: a glowing sphere as the hero, cards on both sides, a context line and actions under the sphere, a status bar along the bottom. This replaces the earlier plan (C first, A's cards behind its buttons, B last) with one page that holds all three: the calm core (C) as the centre, A's context cards around it, B's mission-control numbers inside those cards.
+
+- **`components/overview/OverviewFrame.tsx`** wraps the Neural Core on the Overview:
+  - Left: **Today** (open, due-today and overdue tasks, the next event and reminder), **Fitness & health** (kcal left of target, eaten and protein meters, today's workout), **System health** (security score ring, CPU, memory and GPU meters).
+  - Right: **ZAE's systems** (the core modules with ready/working/waiting states, like the reference's agents), **Ask ZAE** (suggested actions built from the calendar, overdue tasks and food left today, each sends a chat request), **Music & news** (songs in progress, next release, top stories).
+  - Under the core: a greeting with the weather, one line on what's next and what's due, and the four quick asks (Brief me, Plan tomorrow, Log food, Start workout).
+  - The existing status bar stays at the bottom. Every card's ↗ opens its tab.
+- **Calm view** hides the cards and leaves the core alone (remembered on this device). Phones and narrow windows always show the core alone. While windows are open and the core docks in a corner, the cards step aside.
+- **Data:** read from ZAE's own routes (calendar, tasks, reminders, training day, status bar, security summary, music overview, tech news, weather), refreshed every minute and when records change. A missing value shows "—", never a made-up number.
+- **Look:** built on the look-styles tokens with the Overview's own tab colour, so window style, density, corners, panel solidity and motion apply.
