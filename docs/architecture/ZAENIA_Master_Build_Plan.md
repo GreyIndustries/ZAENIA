@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.10  |  Date: 2026-10-28 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.11  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -795,3 +795,23 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
   - **Connections:** a card per platform showing its status (all not connected) and what live data would need, stated as checked. YouTube Data API key: public view counts. SoundCloud API app: plays, and new apps need approval. Spotify: the Web API has no stream counts and Spotify for Artists has no public API, so it would be a CSV export. Apple Music for Artists: no public API, so a CSV export. Nothing connects yet. Statistics stay `method: "manual"`, and the dashboard marks each platform "Manual" until a connector exists.
 - **Data:** the `Music` record gains `lyrics`, `releaseDate`, `checklist` (fixed items: Lyrics final, Vocals recorded, Mix approved, Master exported, Artwork ready, Distribution submitted), `sessions` and `art`. All are optional, so existing songs load unchanged. `GET /api/platform/personal/music/overview` (memory.read, existing pattern) returns active songs in full plus the checklist and the connection info. Saving uses the existing revision-checked PUT.
 - **Tests:** personal_tools_test adds the workspace fields, validation and overview; full suite 800 OK (14 skipped); UI script tests and `tsc` pass. Not checked visually: the dev browser has no live API without the app's credentials.
+
+### 28.11 Appearance for reworked tabs, and Tasks & Calendar — Claude, 2026-10-29 (v3.11)
+
+- **Grey's picks** (preview canvas, boards renamed with numbers): every tab keeps all three previews as sub-tabs in the numbered order. The full list is in project memory (`tab-rework-picks`).
+- **Customisations carry over:**
+  - `desktop/src/styles/look-styles.css` defines shared tokens (`--zx-panel`, `--zx-inset`, `--zx-line`, `--zx-radius`, `--zx-shadow`, `--zx-title-font`, `--zx-btn-case`, `--zx-gap`, `--zx-pad`) for each window style (Aurora, HUD, Editorial, Neon). They're built from the window's `--accent`, so a tab's own colour applies too.
+  - The Music studio and new tabs use these tokens.
+- **New Appearance options** (saved per device, voice commands included):
+  - Spacing: compact, comfortable or spacious.
+  - Corners: the style's own, sharp, soft or round.
+  - Panel solidity: 50–100%.
+  - Motion: full or reduced. Reduced turns off transitions and animations app-wide.
+- **Tasks & Calendar** (`components/plan/PlanStudio.tsx`) has four sub-tabs, all on the existing tasks, calendar, reminders and training data:
+  1. **Week** (main): seven day columns with events, tasks due, the training day and reminders; a bar showing how booked each day is; open a day; tick off tasks.
+  2. **Priorities**: four boxes (Do now = Critical, Schedule = High, Quick wins = Normal, Later = Low). Drag a task to change its priority; done, open and overdue counts for the week.
+  3. **Day**: a mini month, list counts, an hour timeline (drag a task onto an hour to set its time) and the day's tasks.
+  4. **Month & reminders**: the previous panel (month grid, duty status, completions, reminders), so nothing is lost.
+- **Quick add** (`core/quickTask.ts`): "call bank fri 3pm !high" understands today, tomorrow, tonight, weekdays, dates, 3pm or 18:30, and !critical, !high or !low.
+- **Tests:** `scripts/plan-quick.test.cjs` 6 and appearance 31 checks; `tsc`; full Python suite unchanged.
+- **Gotcha:** `.gitignore` ignores `*token*`, so a file named look-tokens.css was silently untracked. It was renamed look-styles.css.

@@ -40,7 +40,7 @@ import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
 // Module windows load when first opened, so the core appears sooner.
-const PlanPanel = lazy(() => import("./components/plan/PlanPanel").then(module => ({ default: module.PlanPanel })));
+const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
 const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(module => ({ default: module.StatusPanel })));
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
@@ -1148,7 +1148,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "pc", label: "This PC", render: () => <PcSpecsPanel/> },
       ]}/>;
       case "tasks":
-      case "calendar": return <PlanPanel remote={LIVE_API} tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
+      case "calendar": return <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
       case "files": return <PageTabs id="files" tabs={[
         { id: "files", label: "Files", render: () => <FilesPanel onPendingChange={setPendingFiles}/> },
