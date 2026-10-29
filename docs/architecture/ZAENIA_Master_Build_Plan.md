@@ -837,3 +837,8 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
 - **Fix:** `search_food` sent `dataType` as repeated parameters, which FoodData Central rejects with 400. It now sends one comma-separated value; this also affects the meal review.
 - **Note:** the shared `DEMO_KEY` is rate-limited (429 seen while testing). A free personal FoodData Central key in the `FDC_API_KEY` environment variable makes USDA reliable.
 - **Tests:** nutrition_test SearchProductsTest 2; `scripts/recipe-ingredient.test.cjs` 7.
+- **More sources (same day, after Grey said the search didn't know his ingredients):**
+  - `search_products` asks four sources at once (threads, 15 s each): Grey's saved recipe ingredients (per 100 g; worked out from his own amounts when no source was picked); a built-in list of 39 common whole foods with typical USDA reference values (`nutrition_common.py`, works offline, labelled "typical values · check your package"); Open Food Facts' new search service and its classic search (merged without duplicates); and USDA FoodData Central.
+  - Ranking: his own ingredients first, then names containing every typed word (plurals folded), then names starting with it, generic foods before brands.
+  - Search starts at 2 letters. Results show inline under the field, not as a pop-up that could be clipped, with a status line naming the sources and any that are busy. "Search again" re-runs it.
+- **Tests:** nutrition_test 3 (merge and ranking, one source offline, offline with saved and common foods).

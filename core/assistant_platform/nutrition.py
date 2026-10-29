@@ -87,51 +87,126 @@ def search_food(query: str) -> dict:
 _SUGGEST_CACHE: dict[str, tuple[float, dict]] = {}
 
 
-def search_products(query: str) -> dict:
-    """Recipe ingredient search as you type: USDA FoodData Central (generic and branded foods) plus
-    Open Food Facts (packaged products by name). Either source may be offline; whatever answered is
-    returned. Values are per 100 g from the cited record, and Grey can edit any of them."""
+def _off_matches(products: list, limit: int = 8) -> list[dict]:
+    out = []
+    for product in products[:limit]:
+        if isinstance(product.get("brands"), list):
+            product = {**product, "brands": ", ".join(str(b) for b in product["brands"])}
+        if not product.get("product_name") or not product.get("code"):
+            continue
+        item = _off_product(product, f"https://world.openfoodfacts.org/product/{product['code']}")
+        if item["nutrients"].get("calories") is None:
+            continue
+        out.append({"fdcId": None, "code": str(product["code"]), "title": item["title"] or product["product_name"], "dataType": "Product",
+                    "servingSize": item["servingSize"], "servingSizeUnit": "", "basis": "per 100 g", "nutrients": item["nutrients"],
+                    "source": item["source"], "sourceName": item["sourceName"], "checkedAt": item["checkedAt"]})
+    return out
+
+
+_OFF_FIELDS = "code,product_name,brands,quantity,nutriments,serving_size"
+
+
+def _source_usda(query: str) -> list[dict]:
+    return search_food(query)["matches"]
+
+
+def _source_off_search(query: str) -> list[dict]:
+    data = _request("https://search.openfoodfacts.org/search?" + urllib.parse.urlencode({"q": query, "page_size": 8, "fields": _OFF_FIELDS}))
+    return _off_matches(data.get("hits") or [])
+
+
+def _source_off_classic(query: str) -> list[dict]:
+    data = _request("https://world.openfoodfacts.org/cgi/search.pl?" + urllib.parse.urlencode(
+        {"search_terms": query, "search_simple": 1, "action": "process", "json": 1, "page_size": 8, "sort_by": "unique_scans_n", "fields": _OFF_FIELDS}))
+    return _off_matches(data.get("products") or [])
+
+
+def saved_ingredients(store, query: str) -> list[dict]:
+    """Ingredients already used in saved recipes, with values per 100 g (picked from a source, or worked out from
+    Grey's own amounts), so the usual foods come up first, even offline."""
+    words = [w for w in re.findall(r"[a-z0-9]+", query.lower()) if len(w) > 1]
+    if store is None or not words:
+        return []
+    seen, out = set(), []
+    for recipe in store.list("fitness_recipe"):
+        if recipe.get("archived"):
+            continue
+        for item in recipe.get("ingredients") or []:
+            name = str(item.get("name") or "").strip()
+            if not name or name.lower() in seen or not all(w in name.lower() for w in words):
+                continue
+            per100 = item.get("per100")
+            if not per100 and item.get("grams") and isinstance(item.get("nutrients"), dict):
+                grams = float(item["grams"])
+                per100 = {k: (round(float(v) * 100 / grams, 2) if v is not None else None) for k, v in item["nutrients"].items()}
+            if not per100 or per100.get("calories") is None:
+                continue
+            seen.add(name.lower())
+            label = "Your recipe " + str(recipe.get("title", ""))
+            out.append({"fdcId": None, "title": name, "dataType": "Yours", "servingSize": item.get("servingGrams"),
+                        "servingSizeUnit": "g" if item.get("servingGrams") else "", "basis": "per 100 g", "nutrients": per100,
+                        "source": str(item.get("source") or ""), "sourceName": label + (" · " + item["sourceName"] if item.get("sourceName") else "")})
+    return out[:4]
+
+
+def _rank(query: str, match: dict) -> tuple:
+    """Your own ingredients first, then names containing every typed word, names starting with it, generic foods before brands."""
+    title = str(match.get("title") or "").lower()
+    q = query.lower()
+    words = [w[:-1] if len(w) > 3 and w.endswith("s") else w for w in q.split()]
+    q = " ".join(words)
+    kind = {"Yours": 0, "Common food": 1, "Foundation": 1, "SR Legacy": 1, "Survey (FNDDS)": 2}.get(match.get("dataType"), 3)
+    starts = 0 if title.startswith(q) else 1 if any(w and title.startswith(w) for w in words) else 2
+    has_all = 0 if all(w in title for w in words) else 1
+    return (0 if kind == 0 else 1, has_all, starts, kind, len(title))
+
+
+_SOURCES = (("USDA FoodData Central", "_source_usda"), ("Open Food Facts", "_source_off_search"), ("Open Food Facts (classic)", "_source_off_classic"))
+
+
+def search_products(query: str, store=None) -> dict:
+    """Recipe ingredient search as you type. Asked at the same time: Grey's saved recipe ingredients, Open Food Facts
+    (the new search service and the classic one, which find different products) and USDA FoodData Central (generic and
+    branded foods). Any source may be offline or rate-limited; whatever answered is returned. Values are per 100 g
+    from the cited record, and every one stays editable."""
     import time
+    from concurrent.futures import ThreadPoolExecutor
     query = " ".join(str(query or "").split())[:120]
     if len(query) < 2:
         raise ValueError("Type at least two letters of the ingredient.")
     key = query.lower()
     cached = _SUGGEST_CACHE.get(key)
-    if cached and time.time() - cached[0] < 3600:
-        return cached[1]
-    matches, offline = [], []
-    try:
-        matches.extend(search_food(query)["matches"])
-    except Exception:
-        offline.append("USDA FoodData Central")
-    try:
-        fields = "code,product_name,brands,quantity,nutriments,serving_size"
-        try:
-            data = _request("https://search.openfoodfacts.org/search?" + urllib.parse.urlencode({"q": query, "page_size": 6, "fields": fields}))
-            products = data.get("hits") or []
-        except Exception:
-            data = _request("https://world.openfoodfacts.org/cgi/search.pl?" + urllib.parse.urlencode(
-                {"search_terms": query, "search_simple": 1, "action": "process", "json": 1, "page_size": 6, "fields": fields}))
-            products = data.get("products") or []
-        for product in products[:6]:
-            if isinstance(product.get("brands"), list):
-                product = {**product, "brands": ", ".join(str(b) for b in product["brands"])}
-            if not product.get("product_name") or not product.get("code"):
-                continue
-            item = _off_product(product, f"https://world.openfoodfacts.org/product/{product['code']}")
-            if item["nutrients"].get("calories") is None:
-                continue
-            matches.append({"fdcId": None, "code": product["code"], "title": item["title"], "dataType": "Product",
-                            "servingSize": item["servingSize"], "servingSizeUnit": "", "basis": "per 100 g", "nutrients": item["nutrients"],
-                            "source": item["source"], "sourceName": item["sourceName"], "checkedAt": item["checkedAt"]})
-    except Exception:
-        offline.append("Open Food Facts")
-    result = {"query": query, "matches": matches[:12], "offline": offline}
-    if matches:
-        if len(_SUGGEST_CACHE) > 200:
-            _SUGGEST_CACHE.clear()
-        _SUGGEST_CACHE[key] = (time.time(), result)
-    return result
+    online = cached[1] if cached and time.time() - cached[0] < 3600 else None
+    if online is None:
+        found, failed = {}, []
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            futures = {name: pool.submit(globals()[fn], query) for name, fn in _SOURCES}
+            for name, future in futures.items():
+                try:
+                    found[name] = future.result(timeout=15)
+                except Exception:
+                    failed.append(name)
+        offline = ["USDA FoodData Central"] if "USDA FoodData Central" in failed else []
+        if "Open Food Facts" in failed and "Open Food Facts (classic)" in failed:
+            offline.append("Open Food Facts")
+        merged, seen = [], set()
+        for name, _ in _SOURCES:
+            for match in found.get(name, []):
+                ident = match.get("code") or match.get("fdcId") or str(match.get("title", "")).lower()
+                if ident in seen:
+                    continue
+                seen.add(ident)
+                merged.append(match)
+        online = {"matches": merged, "offline": offline}
+        if merged:
+            if len(_SUGGEST_CACHE) > 200:
+                _SUGGEST_CACHE.clear()
+            _SUGGEST_CACHE[key] = (time.time(), online)
+    from core.assistant_platform.nutrition_common import common_foods
+    mine = saved_ingredients(store, query)
+    matches = sorted(mine + common_foods(query) + online["matches"], key=lambda m: _rank(query, m))[:15]
+    used = sorted({"Your recipes" if m["dataType"] == "Yours" else "Common foods" if m["dataType"] == "Common food" else "Open Food Facts" if m["dataType"] == "Product" else "USDA" for m in matches})
+    return {"query": query, "matches": matches, "offline": online["offline"], "sources": used}
 
 
 _NUMBER = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9", "ten": "10", "a": "1", "an": "1"}

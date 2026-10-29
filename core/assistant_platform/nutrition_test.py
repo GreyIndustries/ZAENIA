@@ -79,8 +79,12 @@ class SearchProductsTest(__import__("unittest").TestCase):
         with mock.patch.object(self.nutrition, "_request", side_effect=fake):
             result = self.nutrition.search_products("greek yogurt")
         self.assertEqual(result["offline"], [])
-        self.assertEqual([m["title"] for m in result["matches"]], ["Yogurt, Greek, plain", "Chobani Greek Yogurt"])
-        self.assertEqual(result["matches"][1]["nutrients"]["calories"], 53)
+        titles = [m["title"] for m in result["matches"]]
+        self.assertEqual(titles[0], "Greek yogurt, plain, nonfat")  # built-in common food ranks first among generic foods
+        self.assertIn("Yogurt, Greek, plain", titles)
+        self.assertEqual(titles.count("Chobani Greek Yogurt"), 1)  # the two Open Food Facts searches are merged
+        self.assertEqual(next(m for m in result["matches"] if m["title"] == "Chobani Greek Yogurt")["nutrients"]["calories"], 53)
+        self.assertEqual(result["sources"], ["Common foods", "Open Food Facts", "USDA"])
 
         self.nutrition._SUGGEST_CACHE.clear()
 
@@ -91,7 +95,23 @@ class SearchProductsTest(__import__("unittest").TestCase):
         with mock.patch.object(self.nutrition, "_request", side_effect=usda_down):
             result = self.nutrition.search_products("greek yogurt")
         self.assertEqual(result["offline"], ["USDA FoodData Central"])
-        self.assertEqual(len(result["matches"]), 1)
+        self.assertEqual([m["dataType"] for m in result["matches"]], ["Common food", "Product"])
+
+    def test_common_foods_work_offline_and_saved_ingredients_come_first(self):
+        from unittest import mock
+        from core.assistant_platform.store import PlatformStore
+        import tempfile, pathlib
+        with tempfile.TemporaryDirectory() as folder:
+            store = PlatformStore(pathlib.Path(folder) / "state.sqlite3")
+            store.put("fitness_recipe", {"title": "Overnight oats", "archived": False, "category": "Meal", "servings": 1, "instructions": "", "source": "Owner",
+                                         "createdAt": "2026-10-29T00:00:00+00:00",
+                                         "ingredients": [{"name": "Oats, my brand", "amount": "50", "unit": "g", "grams": 50, "source": "label",
+                                                          "nutrients": {"calories": 190, "protein": 6.5, "fiber": 5}}]}, None, revision=0)
+            with mock.patch.object(self.nutrition, "_request", side_effect=OSError("offline")):
+                result = self.nutrition.search_products("oats", store)
+        self.assertEqual(result["offline"], ["USDA FoodData Central", "Open Food Facts"])
+        self.assertEqual([m["dataType"] for m in result["matches"]], ["Yours", "Common food"])
+        self.assertEqual(result["matches"][0]["nutrients"]["calories"], 380.0)
 
     def test_needs_two_letters(self):
         with self.assertRaises(ValueError):

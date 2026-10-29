@@ -48,22 +48,23 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
   const [note, setNote] = useState("");
   const [active, setActive] = useState(-1);
   const typed = useRef(false);
+  const [retry, setRetry] = useState(0);
   const edited = item.edited ?? [];
 
   useEffect(() => {
     const query = String(item.name || "").trim();
-    if (!typed.current || query.length < 3) { setMatches([]); return; }
+    if (!typed.current || query.length < 2) { setMatches([]); return; }
     const timer = window.setTimeout(async () => {
       setSearching(true); setNote("");
       try {
-        const reply = await api<{ matches: Match[]; offline: string[] }>("POST", `${PATH}/nutrition/suggest`, { query }, { timeoutMs: 30_000 });
+        const reply = await api<{ matches: Match[]; offline: string[]; sources: string[] }>("POST", `${PATH}/nutrition/suggest`, { query }, { timeoutMs: 30_000 });
         setMatches(reply.matches); setOpen(true); setActive(-1);
-        if (reply.offline.length) setNote(`${reply.offline.join(" and ")} didn't answer; showing what did.`);
-        if (!reply.matches.length) setNote("No matches. Type a brand or a simpler name, or enter the label values yourself.");
+        setNote(reply.matches.length ? `${reply.matches.length} matches from ${reply.sources.join(", ")}${reply.offline.length ? ` (${reply.offline.join(" and ")} busy right now)` : ""}. Pick one, then check the numbers.`
+          : "No matches. Try a simpler name (\"oats\", \"chicken breast\") or a brand, or enter the label values yourself.");
       } catch (failure) { setNote(errorText(failure)); } finally { setSearching(false); }
-    }, 500);
+    }, 450);
     return () => window.clearTimeout(timer);
-  }, [item.name]);
+  }, [item.name, retry]);
 
   const pick = (m: Match) => {
     typed.current = false;
@@ -89,7 +90,7 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
       <label className="ri__name">Ingredient
         <input value={item.name} maxLength={200} role="combobox" aria-expanded={open && matches.length > 0} aria-autocomplete="list" placeholder="Start typing: greek yogurt, oats, Chobani…"
           onChange={e => { typed.current = true; onChange({ ...item, name: e.target.value }); }}
-          onFocus={() => matches.length && setOpen(true)} onBlur={() => window.setTimeout(() => setOpen(false), 150)}
+          onFocus={() => matches.length && setOpen(true)}
           onKeyDown={e => {
             if (!open || !matches.length) return;
             if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => Math.min(matches.length - 1, i + 1)); }
@@ -97,11 +98,12 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
             else if (e.key === "Enter" && active >= 0) { e.preventDefault(); pick(matches[active]); }
             else if (e.key === "Escape") setOpen(false);
           }}/>
-        {searching && <small className="ri__hint">Searching…</small>}
+        <span className="ri__searchrow">{searching ? <small className="ri__hint">Searching your recipes, common foods, Open Food Facts and USDA…</small> : null}
+          <button type="button" className="ri__link" disabled={String(item.name || "").trim().length < 2} onMouseDown={e => e.preventDefault()} onClick={() => { typed.current = true; setRetry(n => n + 1); }}>Search again</button></span>
         {open && matches.length > 0 && <ul className="ri__list" role="listbox">
           {matches.map((m, i) => <li key={`${m.source}${i}`} role="option" aria-selected={i === active}>
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => pick(m)} className={i === active ? "ri__opt ri__opt--on" : "ri__opt"}>
-              <span><b>{m.title}</b><small>{m.dataType === "Product" ? "Product · Open Food Facts" : `USDA · ${m.dataType}`}</small></span>
+              <span><b>{m.title}</b><small>{m.dataType === "Product" ? "Product · Open Food Facts" : m.dataType === "Yours" ? m.sourceName : m.dataType === "Common food" ? "Common food · typical values" : `USDA · ${m.dataType}`}</small></span>
               <small>{m.nutrients.calories ?? "?"} kcal · {m.nutrients.protein ?? "?"} g protein /100 g</small>
             </button></li>)}
         </ul>}
