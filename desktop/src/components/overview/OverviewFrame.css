@@ -79,7 +79,7 @@
 /* Narrow windows: not enough room beside the core, so it stands alone (as in Calm view) */
 @container (max-width:980px){
   .ov{grid-template-columns:minmax(0,1fr)}
-  .ov-rail,.ov .ov-tag--btn{display:none}
+  .ov-rail,.ov:not(.ov-phone) .ov-tag--btn{display:none}
 }
 
 /* Phone (iPhone 16 Pro, 402 × 874): one scrolling app screen between the header and the chat bar */
