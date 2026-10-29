@@ -72,6 +72,7 @@ import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
+import { OverviewFrame } from "./components/overview/OverviewFrame";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -242,6 +243,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     return () => window.removeEventListener('beforeunload', warn);
   }, []);
   const [mode, setMode] = useState<VisualMode>("blend");
+  // Overview dashboard cards around the core, or the core alone ("Calm view"); remembered on this device.
+  const [overviewCalm, setOverviewCalm] = useState(() => { try { return localStorage.getItem("zaenia.overview.calm") === "1"; } catch { return false; } });
+  const chooseCalm = (calm: boolean) => { setOverviewCalm(calm); try { localStorage.setItem("zaenia.overview.calm", calm ? "1" : "0"); } catch { /* optional */ } };
   const [motion, setMotion] = useState(true);
   // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
@@ -1232,7 +1236,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           {stageSection === "overview"
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
-          {stageSection === "overview" && <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>}
+          {stageSection === "overview" && <OverviewFrame telemetry={telemetry} look={tabAppearance(appearance, "overview").look} style={tabAppearance(appearance, "overview").style as CSSProperties}
+            calm={isPhone || overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
+            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
+          </OverviewFrame>}
           {!windowed && section !== "overview" && glassBody(section, false)}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
             {shell.windows.filter(win => !win.minimized).map(win => <AppWindow key={win.id} win={win} title={sections[win.id as Section].title} label={sections[win.id as Section].label}

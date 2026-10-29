@@ -1,0 +1,84 @@
+/* Overview, blended: the Neural Core in the middle, live cards on both sides; shared look tokens (look-styles.css). */
+.ov-wrap{flex:1;min-height:0;width:100%;display:flex;container-type:inline-size}
+.ov{position:relative;flex:1;min-height:0;width:100%;display:grid;grid-template-columns:minmax(230px,280px) minmax(0,1fr) minmax(230px,280px);
+  gap:var(--zx-gap,12px);align-items:stretch;color:var(--zx-text,#dbe8f6)}
+.ov--calm{grid-template-columns:minmax(0,1fr)}
+.ov-rail{display:flex;flex-direction:column;gap:var(--zx-gap,12px);min-height:0;overflow:auto;scrollbar-width:thin;padding:2px}
+.ov-center{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0;min-height:0}
+.ov-center>.progress-stage{width:100%;max-width:720px;margin:0 auto}
+.ov--calm .ov-center>.progress-stage{max-width:790px}
+
+/* Cards: small caps kicker over a title, like the reference */
+.ov-card{display:flex;flex-direction:column;gap:10px;padding:12px 14px!important;--ov-tone:var(--accent,#e0a353)}
+.ov-card header{display:flex;align-items:center;gap:10px}
+.ov-icon{width:26px;height:26px;flex:none;border-radius:var(--zx-radius-sm,8px);border:1px solid var(--zx-line,#1f3149);
+  background:radial-gradient(circle,var(--ov-tone) 0 3px,transparent 4px),var(--zx-inset,#08111f)}
+.ov-head{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
+.ov-head small{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--zx-muted,#9fb6cf)}
+.ov-head b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-pill{font-size:10px;letter-spacing:.14em;text-transform:uppercase;padding:3px 8px;border-radius:var(--zx-radius-sm,6px);border:1px solid var(--zx-line,#1f3149);color:var(--zx-muted,#9fb6cf)}
+.ov button{font:inherit;color:inherit;cursor:pointer}
+.ov button:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:2px}
+.ov .ov-open{border:1px solid var(--zx-line,#1f3149);background:transparent;border-radius:var(--zx-radius-sm,6px);width:26px;height:26px;color:var(--zx-muted,#9fb6cf)}
+.ov .ov-open:hover{color:var(--accent,#e0a353);border-color:var(--zx-line-strong,#2b4366)}
+.ov-muted{color:var(--zx-muted,#9fb6cf);font-size:12px}
+
+.ov-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.ov-stats>span{display:flex;flex-direction:column;gap:2px;padding:7px 8px;border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px);background:var(--zx-inset,#08111f)}
+.ov-stats small{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--zx-muted,#9fb6cf)}
+.ov-stats b{font-size:20px;font-weight:500}
+.ov-stats .ov-warn b{color:#ffb4a2}
+.ov-lines{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ov-lines li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--zx-line,#16253a);font-size:12px}
+.ov-lines li:first-child{border-top:0}
+.ov-lines li>span,.ov-lines .ov-link{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-lines li>b{font-weight:500;color:var(--zx-muted,#9fb6cf);white-space:nowrap}
+.ov .ov-link{border:0;background:none;padding:0;text-align:left;font-size:12px}.ov .ov-link:hover{color:var(--accent,#e0a353)}
+
+.ov-big{display:flex;align-items:baseline;gap:8px}.ov-big b{font-size:34px;font-weight:300;letter-spacing:-.02em}.ov-big small{font-size:12px;color:var(--zx-muted,#9fb6cf)}
+.ov-meter{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:12px}
+.ov-meter span{color:var(--zx-muted,#9fb6cf)}.ov-meter b{font-weight:500}
+.ov-meter i{grid-column:1/-1;height:3px;border-radius:3px;background:var(--zx-line,#16253a);overflow:hidden}
+.ov-meter em{display:block;height:3px;background:var(--ov-tone);border-radius:3px;transition:width .6s ease}
+.ov-health{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:center}
+.ov-health svg{width:96px;height:96px}
+.ov-ring-bg{fill:none;stroke:var(--zx-line,#16253a);stroke-width:8}
+.ov-ring{fill:none;stroke:var(--accent,#e0a353);stroke-width:8;stroke-linecap:round;filter:drop-shadow(0 0 6px color-mix(in srgb,var(--accent,#e0a353) 50%,transparent))}
+.ov-ring-num{fill:var(--zx-text,#dbe8f6);font-size:28px;font-weight:300}.ov-ring-label{fill:var(--zx-muted,#9fb6cf);font-size:8px;letter-spacing:.2em}
+.ov-health__meters{display:flex;flex-direction:column;gap:8px}
+
+.ov-agents{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ov-agent{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:8px 10px;border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px);background:var(--zx-inset,#08111f);font-size:12px}
+.ov-agent span{display:flex;align-items:center;gap:8px;font-weight:600}
+.ov-agent i{width:7px;height:7px;border-radius:50%;background:var(--zx-muted,#9fb6cf)}
+.ov-agent--ready i{background:#7fe3a8}.ov-agent--working i{background:var(--accent,#e0a353);box-shadow:0 0 8px var(--accent,#e0a353)}.ov-agent--error i{background:#ff8a7a}
+.ov-agent small{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--zx-muted,#9fb6cf)}
+.ov-agent em{grid-column:1/-1;font-style:normal;font-size:11px;color:var(--zx-muted,#9fb6cf);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-actions{list-style:none;margin:0;padding:0;counter-reset:ov;display:flex;flex-direction:column}
+.ov-actions li{counter-increment:ov;border-top:1px solid var(--zx-line,#16253a)}.ov-actions li:first-child{border-top:0}
+.ov .ov-actions button{width:100%;display:grid;grid-template-columns:22px 1fr;gap:1px 6px;padding:7px 0;border:0;background:none;text-align:left}
+.ov-actions button::before{content:counter(ov,decimal-leading-zero);grid-row:span 2;font-size:10px;color:var(--zx-muted,#9fb6cf);padding-top:2px}
+.ov-actions b{font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ov-actions small{font-size:10px;color:var(--zx-muted,#9fb6cf)}
+.ov .ov-actions button:hover b{color:var(--accent,#e0a353)}
+
+/* Center: tags above the core, the context line and suggestion chips below it (the reference's hero) */
+.ov-center__tags{display:flex;gap:6px;justify-content:space-between;width:100%;max-width:720px}
+.ov-tag{display:inline-flex;align-items:center;gap:6px;font-size:10px;letter-spacing:.18em;text-transform:uppercase;padding:4px 9px;border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,6px);color:var(--zx-muted,#9fb6cf);background:var(--zx-inset,transparent)}
+.ov-tag i{width:6px;height:6px;border-radius:50%;background:var(--accent,#e0a353);box-shadow:0 0 8px var(--accent,#e0a353)}
+.ov .ov-tag--btn:hover{color:var(--zx-text,#dbe8f6);border-color:var(--zx-line-strong,#2b4366)}
+.ov-hero{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;max-width:640px;padding:0 8px 6px}
+.ov-kicker{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent,#e0a353)}
+.ov-hero p{margin:0;font-family:var(--zx-title-font,inherit);font-size:clamp(16px,2.1cqi,24px);font-weight:300;line-height:1.35}
+.ov-chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.ov .ov-chips button{font-size:12px;padding:7px 14px;border-radius:999px;border:1px solid var(--zx-line,#1f3149);background:var(--zx-inset,transparent);
+  text-transform:var(--zx-btn-case,none);letter-spacing:var(--zx-btn-spacing,0)}
+.ov .ov-chips button:hover{border-color:var(--accent,#e0a353);color:var(--accent,#e0a353)}
+
+@media (prefers-reduced-motion:reduce){.ov-meter em{transition:none}}
+.zaenia-app[data-motion="off"] .ov-meter em{transition:none}
+/* Narrow windows and phones: the core alone, cards stack under it */
+@container (max-width:980px){
+  .ov{grid-template-columns:minmax(0,1fr)}
+  .ov-center{order:-1}
+  .ov-rail{overflow:visible;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+}
