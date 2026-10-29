@@ -43,7 +43,7 @@ export function servingGramsOf(m: { servingSize?: string | number | null; servin
 /** How a serving reads: "1 large egg (50 g)", or the source's own text. */
 export function servingText(label: string | undefined, grams: number | null, raw?: string | number | null): string {
   const g = grams ? `${Math.round(grams * 10) / 10} g` : "";
-  if (label) return g ? `${label} (${g})` : label;
+  if (label) return g && !/\d\s*(?:g|ml|oz)\b/i.test(label) ? `${label} (${g})` : label;
   const text = String(raw ?? "").trim();
   return text && !/^\d+(?:\.\d+)?$/.test(text) ? text : g ? `1 serving (${g})` : "";
 }
@@ -56,11 +56,13 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
   const [active, setActive] = useState(-1);
   const typed = useRef(false);
   const [retry, setRetry] = useState(0);
+  const [web, setWeb] = useState<Match[]>([]);
+  const [webState, setWebState] = useState<"" | "searching" | "done" | "failed">("");
   const edited = item.edited ?? [];
 
   useEffect(() => {
     const query = String(item.name || "").trim();
-    if (!typed.current || query.length < 2) { setMatches([]); return; }
+    if (!typed.current || query.length < 2) { setMatches([]); setWeb([]); setWebState(""); return; }
     const timer = window.setTimeout(async () => {
       setSearching(true); setNote("");
       try {
@@ -69,6 +71,12 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
         setNote(reply.matches.length ? `${reply.matches.length} matches from ${reply.sources.join(", ")}${reply.offline.length ? ` (${reply.offline.join(" and ")} busy right now)` : ""}. Pick one, then check the numbers.`
           : "No matches. Try a simpler name (\"oats\", \"chicken breast\") or a brand, or enter the label values yourself.");
       } catch (failure) { setNote(errorText(failure)); } finally { setSearching(false); }
+      // Then brand, store and nutrition websites (slower), added under the quick results.
+      setWebState("searching"); setWeb([]);
+      try {
+        const found = await api<{ matches: Match[] }>("POST", `${PATH}/nutrition/web`, { query }, { timeoutMs: 60_000 });
+        setWeb(found.matches); setOpen(true); setWebState("done");
+      } catch { setWebState("failed"); }
     }, 450);
     return () => window.clearTimeout(timer);
   }, [item.name, retry]);
@@ -82,7 +90,7 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
     const grams = gramsFor(amount, unit, servingGrams);
     onChange({ ...item, name: m.title, unit, amount, per100: m.nutrients, servingGrams, servingLabel: servingText(m.servingLabel, servingGrams, m.servingSize), grams, edited: [],
       nutrients: scaled(m.nutrients, grams, item.nutrients ?? emptyNutrients()), source: m.source, sourceName: m.sourceName });
-    setOpen(false); setMatches([]);
+    setOpen(false); setMatches([]); setWeb([]); setWebState("");
   };
   const setAmount = (amount: string, unit = item.unit) => {
     const grams = gramsFor(amount, unit, item.servingGrams);
@@ -101,22 +109,26 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
           onChange={e => { typed.current = true; onChange({ ...item, name: e.target.value }); }}
           onFocus={() => matches.length && setOpen(true)}
           onKeyDown={e => {
-            if (!open || !matches.length) return;
-            if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => Math.min(matches.length - 1, i + 1)); }
+            if (!open || !(matches.length + web.length)) return;
+            if (e.key === "ArrowDown") { e.preventDefault(); setActive(i => Math.min(matches.length + web.length - 1, i + 1)); }
             else if (e.key === "ArrowUp") { e.preventDefault(); setActive(i => Math.max(0, i - 1)); }
-            else if (e.key === "Enter" && active >= 0) { e.preventDefault(); pick(matches[active]); }
+            else if (e.key === "Enter" && active >= 0) { e.preventDefault(); pick([...matches, ...web][active]); }
             else if (e.key === "Escape") setOpen(false);
           }}/>
         <span className="ri__searchrow">{searching ? <small className="ri__hint">Searching your recipes, common foods, Open Food Facts and USDA…</small> : null}
           <button type="button" className="ri__link" disabled={String(item.name || "").trim().length < 2} onMouseDown={e => e.preventDefault()} onClick={() => { typed.current = true; setRetry(n => n + 1); }}>Search again</button></span>
-        {open && matches.length > 0 && <ul className="ri__list" role="listbox">
-          {matches.map((m, i) => <li key={`${m.source}${i}`} role="option" aria-selected={i === active}>
+        {open && (matches.length > 0 || web.length > 0 || webState === "searching") && <ul className="ri__list" role="listbox">
+          {[...matches, ...web].map((m, i) => <li key={`${m.source}${i}`} role="option" aria-selected={i === active}>
+            {i === matches.length && <small className="ri__group">From websites</small>}
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => pick(m)} className={i === active ? "ri__opt ri__opt--on" : "ri__opt"}>
-              <span><b>{m.title}</b><small>{m.dataType === "Product" ? `${m.quantity ? `${m.quantity} · ` : ""}Open Food Facts label` : m.dataType === "Yours" ? m.sourceName : m.dataType === "Common food" ? "Common food · typical values" : `USDA · ${m.dataType}`}</small></span>
+              <span><b>{m.title}</b><small>{m.dataType === "Product" ? `${m.quantity ? `${m.quantity} · ` : ""}Open Food Facts label` : m.dataType === "Yours" ? m.sourceName
+                : m.dataType === "Common food" ? "Common food · typical values" : m.dataType === "Web" ? m.sourceName.split(" · ")[0] : `USDA · ${m.dataType}`}</small></span>
               <small>{(() => { const g = servingGramsOf(m); const per = (v: number | null) => v == null ? "?" : Math.round(v * (g ?? 100) / 10) / 10;
-                return g ? `${servingText(m.servingLabel, g, m.servingSize)}: ${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein`
+                return g ? `${servingText(m.servingLabel, m.dataType === "Web" ? null : g, m.servingSize)}: ${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein`
                   : `${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein per 100 g (no serving size listed)`; })()}</small>
             </button></li>)}
+          {webState === "searching" && <li className="ri__group">Checking brand, store and nutrition websites…</li>}
+          {webState === "done" && !web.length && <li className="ri__group">No website labels found for this name.</li>}
         </ul>}
       </label>
       <label>Amount<input inputMode="decimal" value={item.amount} onChange={e => setAmount(e.target.value)}/></label>

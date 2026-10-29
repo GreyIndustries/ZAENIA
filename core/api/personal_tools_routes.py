@@ -170,6 +170,12 @@ def create_personal_tools_router(get, call):
         from core.assistant_platform.nutrition import search_products
         return call(lambda: search_products(body.query, get().store))
 
+    @router.post("/nutrition/web")
+    def nutrition_web(body: FoodSearchBody):
+        from core.assistant_platform.nutrition_web import web_lookup
+        from core.research.analyze import run_local
+        return call(lambda: web_lookup(body.query, ask=run_local))
+
     @router.post("/nutrition/label")
     def nutrition_label(body: LabelBody):
         import base64, binascii

@@ -26,4 +26,5 @@ check(() => assert.equal(servingGramsOf({ servingSize: '2 slices' }), null));
 check(() => assert.equal(servingText('1 large egg', 50), '1 large egg (50 g)'));
 check(() => assert.equal(servingText('', 30, 30), '1 serving (30 g)'));
 check(() => assert.equal(servingText('', 240, '1 cup (240 ml)'), '1 cup (240 ml)'));
+check(() => assert.equal(servingText('1 cup (240 ml)', 240), '1 cup (240 ml)'));
 console.log(`${n} recipe ingredient checks passed.`);

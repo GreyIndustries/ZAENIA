@@ -16,7 +16,7 @@ PATTERNS = [
     ('GET',r'personal/training(?:/day)?', 'memory.read'),
     ('POST',r'personal/training/(?:profile|program|day|actual|quick-log|source|improve)', 'memory.write'),
     ('GET',rf'personal/(?:workbench|music|food|recipes|exercise|plans|fitness-settings)(?:/{ID})?', 'memory.read'),
-    ('POST',r'personal/nutrition/(?:meal-preview|barcode|search|suggest|label|recipe-math)', 'memory.read'),
+    ('POST',r'personal/nutrition/(?:meal-preview|barcode|search|suggest|web|label|recipe-math)', 'memory.read'),
     ('POST',r'personal/nutrition/log', 'memory.write'),
     ('POST',r'personal/(?:workbench|music|food|recipes|exercise|plans|fitness-settings|training-source)', 'memory.write'),
     ('PUT',rf'personal/(?:workbench|music|food|recipes|exercise|plans|fitness-settings)/{ID}', 'memory.write'),

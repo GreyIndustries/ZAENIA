@@ -854,3 +854,9 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
   - Ranking prefers names with the most typed words, then US products and ones with a serving. The list shows at most 10, each with its package size.
 - **Store data:** store sites (Walmart, Target) have no open nutrition data. Kroger has a free developer API (needs a key) if Grey wants store listings later.
 - **Tests:** nutrition_test ProductLabelTest 2.
+- **Websites (Grey: "use website for all foods, products or stores"):** `nutrition_web.py`, `POST /api/platform/personal/nutrition/web` (memory.read). After the quick results, the recipe row asks for website labels and adds them under "From websites".
+  - **FatSecret's public food pages** cover brand and store products. Each gives the label serving (with grams, from the product page) plus calories, fat, carbs and protein. Fiber, sugars and sodium aren't on those pages, so they stay blank to fill in, and the result says so.
+  - **Brand or store pages** found by a web search are read in parallel for a label: schema.org NutritionInformation first, then the Nutrition Facts text, then the local model for that part of the page only.
+  - Pages or search engines that block automated readers are skipped; the reader is never disguised. DuckDuckGo was showing a bot check while this was tested, so FatSecret is the dependable source and brand pages appear when the search lets the reader through.
+  - Each result names the website it came from, and every value stays editable.
+- **Tests:** nutrition_web_test 5 (label panel, serving grams, JSON-LD, FatSecret parsing, page reader).

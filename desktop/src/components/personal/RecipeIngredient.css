@@ -23,3 +23,4 @@
 .ri__totals small{grid-column:1/-1;color:#9fb6cf;font-size:11px}
 @media (max-width:640px){.ri__top{grid-template-columns:1fr 1fr}.ri__name{grid-column:1/-1}}
 .ri__searchrow{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.ri__group{display:block;padding:8px 10px 4px;color:var(--accent-2,#f0b866);font-size:11px;letter-spacing:.08em;text-transform:uppercase;list-style:none}
