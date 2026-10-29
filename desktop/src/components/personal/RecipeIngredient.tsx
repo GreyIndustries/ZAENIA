@@ -11,8 +11,8 @@ export const NUTRIENT_KEYS = ["calories", "protein", "carbs", "fat", "saturatedF
 export type NutrientKey = typeof NUTRIENT_KEYS[number];
 export type Nutrients = Record<NutrientKey, number | null>;
 export type Ingredient = { name: string; amount: string | number; unit: string; nutrients: Nutrients; source: string; sourceName?: string;
-  per100?: Nutrients | null; grams?: number | null; servingGrams?: number | null; edited?: NutrientKey[] };
-type Match = { title: string; dataType: string; servingSize?: string | number | null; servingSizeUnit?: string; nutrients: Nutrients; source: string; sourceName: string };
+  per100?: Nutrients | null; grams?: number | null; servingGrams?: number | null; servingLabel?: string; edited?: NutrientKey[] };
+type Match = { title: string; dataType: string; servingSize?: string | number | null; servingSizeUnit?: string; servingLabel?: string; nutrients: Nutrients; source: string; sourceName: string };
 
 export const LABELS: Record<NutrientKey, string> = { calories: "kcal", protein: "Protein g", carbs: "Carbs g", fat: "Fat g", saturatedFat: "Sat. fat g",
   fiber: "Fiber g", sugars: "Sugars g", sodiumMg: "Sodium mg", cholesterolMg: "Cholest. mg" };
@@ -32,14 +32,21 @@ export function scaled(per100: Nutrients, grams: number | null, current: Nutrien
   return Object.fromEntries(NUTRIENT_KEYS.map(k => [k, edited.includes(k) ? current[k]
     : per100[k] == null || grams == null ? null : Math.round(Number(per100[k]) * grams / 100 * 10) / 10])) as Nutrients;
 }
-const servingGramsOf = (m: Match): number | null => {
+/** The serving weight a source states: 50 with unit "g", "170 g", "1 cup (240 ml)". ml is counted as grams. */
+export function servingGramsOf(m: { servingSize?: string | number | null; servingSizeUnit?: string }): number | null {
   const text = String(m.servingSize ?? ""); const unit = (m.servingSizeUnit ?? "").toLowerCase();
+  const inText = /(\d+(?:[.,]\d+)?)\s*(?:g|grams?|ml)\b/i.exec(text);
+  if (inText) return Number(inText[1].replace(",", "."));
   const n = parseFloat(text);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  if (/\b(?:g|gram)/i.test(text) || unit === "g" || unit === "grm") return n;
-  if (/\bml\b/i.test(text) || unit === "ml" || unit === "mlt") return n;
-  return null;
-};
+  return Number.isFinite(n) && n > 0 && ["g", "grm", "ml", "mlt"].includes(unit) ? n : null;
+}
+/** How a serving reads: "1 large egg (50 g)", or the source's own text. */
+export function servingText(label: string | undefined, grams: number | null, raw?: string | number | null): string {
+  const g = grams ? `${Math.round(grams * 10) / 10} g` : "";
+  if (label) return g ? `${label} (${g})` : label;
+  const text = String(raw ?? "").trim();
+  return text && !/^\d+(?:\.\d+)?$/.test(text) ? text : g ? `1 serving (${g})` : "";
+}
 
 export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; onChange: (next: Ingredient) => void; onRemove: () => void }) {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -69,9 +76,11 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
   const pick = (m: Match) => {
     typed.current = false;
     const servingGrams = servingGramsOf(m);
-    const unit = item.unit && UNITS.includes(item.unit) ? item.unit : "g";
-    const grams = gramsFor(item.amount, unit, servingGrams);
-    onChange({ ...item, name: m.title, unit, per100: m.nutrients, servingGrams, grams, edited: [],
+    // Work by servings whenever the food has one (1 serving to start); otherwise by weight.
+    const unit = servingGrams ? "serving" : item.unit && UNITS.includes(item.unit) && item.unit !== "serving" ? item.unit : "g";
+    const amount = servingGrams ? (item.unit === "serving" && Number(item.amount) > 0 ? item.amount : "1") : item.amount;
+    const grams = gramsFor(amount, unit, servingGrams);
+    onChange({ ...item, name: m.title, unit, amount, per100: m.nutrients, servingGrams, servingLabel: servingText(m.servingLabel, servingGrams, m.servingSize), grams, edited: [],
       nutrients: scaled(m.nutrients, grams, item.nutrients ?? emptyNutrients()), source: m.source, sourceName: m.sourceName });
     setOpen(false); setMatches([]);
   };
@@ -104,18 +113,20 @@ export function IngredientRow({ item, onChange, onRemove }: { item: Ingredient; 
           {matches.map((m, i) => <li key={`${m.source}${i}`} role="option" aria-selected={i === active}>
             <button type="button" onMouseDown={e => e.preventDefault()} onClick={() => pick(m)} className={i === active ? "ri__opt ri__opt--on" : "ri__opt"}>
               <span><b>{m.title}</b><small>{m.dataType === "Product" ? "Product · Open Food Facts" : m.dataType === "Yours" ? m.sourceName : m.dataType === "Common food" ? "Common food · typical values" : `USDA · ${m.dataType}`}</small></span>
-              <small>{m.nutrients.calories ?? "?"} kcal · {m.nutrients.protein ?? "?"} g protein /100 g</small>
+              <small>{(() => { const g = servingGramsOf(m); const per = (v: number | null) => v == null ? "?" : Math.round(v * (g ?? 100) / 10) / 10;
+                return g ? `${servingText(m.servingLabel, g, m.servingSize)}: ${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein`
+                  : `${per(m.nutrients.calories)} kcal · ${per(m.nutrients.protein)} g protein per 100 g (no serving size listed)`; })()}</small>
             </button></li>)}
         </ul>}
       </label>
       <label>Amount<input inputMode="decimal" value={item.amount} onChange={e => setAmount(e.target.value)}/></label>
       <label>Unit<select value={UNITS.includes(item.unit) ? item.unit : "g"} onChange={e => setAmount(String(item.amount), e.target.value)}>
-        {UNITS.map(u => <option key={u} value={u} disabled={u === "serving" && !item.servingGrams}>{u === "serving" && item.servingGrams ? `serving (${item.servingGrams} g)` : u}</option>)}</select></label>
+        {UNITS.map(u => <option key={u} value={u} disabled={u === "serving" && !item.servingGrams}>{u === "serving" && item.servingGrams ? `serving: ${item.servingLabel || `${item.servingGrams} g`}` : u === "serving" ? "serving (pick a food first)" : u}</option>)}</select></label>
       <button type="button" className="ri__remove" aria-label={`Remove ${item.name || "ingredient"}`} onClick={onRemove}>✕</button>
     </div>
     {note && <small className="ri__hint">{note}</small>}
     {item.per100 && <small className="ri__src">From <a href={item.source} target="_blank" rel="noreferrer">{item.sourceName || "source"}</a>
-      {item.grams ? ` · ${Math.round(item.grams)} g` : " · enter the amount in g, oz or lb to scale it"}
+      {item.servingGrams ? ` · 1 serving = ${item.servingLabel || `${item.servingGrams} g`}` : ""}{item.grams ? ` · this amount is ${Math.round(item.grams)} g` : " · enter how much to scale it"}
       {edited.length > 0 && <> · {edited.length} edited by you <button type="button" className="ri__link" onClick={resetToSource}>Reset to source</button></>}</small>}
     <div className="ri__grid">
       {NUTRIENT_KEYS.map(k => <label key={k} className={edited.includes(k) ? "ri__edited" : undefined}>{LABELS[k]}

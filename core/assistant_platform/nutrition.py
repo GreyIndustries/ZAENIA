@@ -78,6 +78,7 @@ def search_food(query: str) -> dict:
                 nutrients[key] = round(float(match["value"]) / 4.184, 2)
         hits.append({"fdcId": food.get("fdcId"), "title": food.get("description", "Food record"), "dataType": food.get("dataType", ""),
                      "servingSize": food.get("servingSize"), "servingSizeUnit": food.get("servingSizeUnit", "g"),
+                     "servingLabel": str(food.get("householdServingFullText") or "")[:60],
                      "basis": "per 100 g", "nutrients": nutrients,
                      "source": f"https://fdc.nal.usda.gov/food-details/{food.get('fdcId')}/nutrients", "sourceName": "USDA FoodData Central",
                      "checkedAt": datetime.now(timezone.utc).isoformat(timespec="seconds")})

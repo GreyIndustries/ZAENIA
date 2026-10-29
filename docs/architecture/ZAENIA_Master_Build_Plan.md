@@ -842,3 +842,8 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
   - Ranking: his own ingredients first, then names containing every typed word (plurals folded), then names starting with it, generic foods before brands.
   - Search starts at 2 letters. Results show inline under the field, not as a pop-up that could be clipped, with a status line naming the sources and any that are busy. "Search again" re-runs it.
 - **Tests:** nutrition_test 3 (merge and ranking, one source offline, offline with saved and common foods).
+- **By serving (Grey: "have it by serving size"):**
+  - The search list shows each food per serving, e.g. "1 large egg (50 g): 72 kcal · 6.3 g protein". It falls back to per 100 g only when the source states no serving.
+  - Picking a food sets the unit to "serving" with 1 to start, and the source line says what one serving is.
+  - Serving weights come from the label (Open Food Facts `serving_size`; USDA `servingSize` and `householdServingFullText`), or from a typical serving for each of the 39 common foods (`nutrition_common.SERVINGS`).
+  - Values are still stored per 100 g underneath, so g, oz and lb keep working. UI checks: recipe-ingredient 14.

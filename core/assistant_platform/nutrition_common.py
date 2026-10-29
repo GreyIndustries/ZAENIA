@@ -49,6 +49,24 @@ _ROWS = [
     ("Peanut butter, smooth", "peanut butter pb", (588, 25.1, 19.6, 50.4, 10.1, 6.0, 9.2, 459, 0)),
     ("Almonds", "almonds almond nuts", (579, 21.2, 21.6, 49.9, 3.8, 12.5, 4.4, 1, 0)),
 ]
+# Typical serving for each food (label, grams), so the recipe editor can work by serving instead of per 100 g.
+SERVINGS = {
+    "Egg, whole, raw": ("1 large egg", 50), "Egg white, raw": ("1 large egg white", 33),
+    "Chicken breast, skinless, raw": ("4 oz", 113), "Chicken breast, skinless, roasted": ("3 oz", 85),
+    "Ground beef, 85% lean, raw": ("4 oz", 113), "Salmon, Atlantic, farmed, raw": ("4 oz", 113),
+    "Oats, rolled, dry": ("1/2 cup dry", 40), "Rice, white, long-grain, raw": ("1/4 cup dry", 46),
+    "Rice, white, long-grain, cooked": ("1 cup", 158), "Pasta, dry": ("2 oz dry", 56),
+    "Flour, wheat, all-purpose": ("1/4 cup", 31), "Flour, whole wheat": ("1/4 cup", 30),
+    "Sugar, granulated": ("1 tsp", 4), "Honey": ("1 tbsp", 21), "Banana, raw": ("1 medium", 118),
+    "Apple, raw, with skin": ("1 medium", 182), "Blueberries, raw": ("1 cup", 148), "Strawberries, raw": ("1 cup", 152),
+    "Avocado, raw": ("1/2 avocado", 100), "Broccoli, raw": ("1 cup chopped", 91), "Spinach, raw": ("1 cup", 30),
+    "Potato, raw, with skin": ("1 medium", 213), "Sweet potato, raw": ("1 medium", 130), "Onion, raw": ("1 medium", 110),
+    "Tomato, raw": ("1 medium", 123), "Carrot, raw": ("1 medium", 61), "Bell pepper, red, raw": ("1 medium", 119),
+    "Garlic, raw": ("1 clove", 3), "Black beans, cooked": ("1/2 cup", 86), "Chickpeas, cooked": ("1/2 cup", 82),
+    "Lentils, cooked": ("1/2 cup", 99), "Olive oil": ("1 tbsp", 13.5), "Butter, salted": ("1 tbsp", 14),
+    "Milk, whole (3.25%)": ("1 cup", 244), "Milk, skim": ("1 cup", 245), "Greek yogurt, plain, nonfat": ("1 container", 170),
+    "Cheddar cheese": ("1 oz", 28), "Peanut butter, smooth": ("2 tbsp", 32), "Almonds": ("1 oz (about 23)", 28),
+}
 _KEYS = ("calories", "protein", "carbs", "fat", "saturatedFat", "fiber", "sugars", "sodiumMg", "cholesterolMg")
 SOURCE = "https://fdc.nal.usda.gov/"
 
@@ -63,7 +81,8 @@ def common_foods(query: str, limit: int = 4) -> list[dict]:
     for name, aliases, values in _ROWS:
         haystack = f"{name} {aliases}".lower()
         if all(w in haystack for w in words):
-            out.append({"fdcId": None, "title": name, "dataType": "Common food", "servingSize": None, "servingSizeUnit": "",
+            label, grams = SERVINGS.get(name, ("", None))
+            out.append({"fdcId": None, "title": name, "dataType": "Common food", "servingSize": grams, "servingSizeUnit": "g" if grams else "", "servingLabel": label,
                         "basis": "per 100 g", "nutrients": dict(zip(_KEYS, values)), "source": SOURCE,
                         "sourceName": "Typical values (USDA reference) · check your package"})
     return out[:limit]
