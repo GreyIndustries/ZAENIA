@@ -72,7 +72,7 @@ class PersonalToolsTests(unittest.TestCase):
         read_client=self.client({'memory.read'})
         with patch('core.assistant_platform.nutrition.preview_meal',return_value={'items':[],'complete':False}) as preview:
             response=read_client.post('/api/platform/personal/nutrition/meal-preview',json={'description':'3 eggs'})
-        self.assertEqual(response.status_code,200,response.text);preview.assert_called_once_with('3 eggs')
+        self.assertEqual(response.status_code,200,response.text);self.assertEqual(preview.call_args.args, ('3 eggs',)); self.assertIn('store', preview.call_args.kwargs)
         self.assertEqual(read_client.post('/api/platform/personal/nutrition/log',json={'description':'Meal','items':[]}).status_code,403)
         write_client=self.client();body={'description':'100 g egg','date':'2026-10-24','items':[{'nutrients':{'calories':143,'protein':12.6,'fiber':0,'carbs':.7,'fat':9.5},'source':'https://fdc.nal.usda.gov/food-details/1/nutrients','sourceName':'USDA FoodData Central','checkedAt':'2026-10-24T12:00:00Z'}]}
         saved=write_client.post('/api/platform/personal/nutrition/log',json=body)
