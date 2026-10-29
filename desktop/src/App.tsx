@@ -1237,7 +1237,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
           {stageSection === "overview" && <OverviewFrame telemetry={telemetry} look={tabAppearance(appearance, "overview").look} style={tabAppearance(appearance, "overview").style as CSSProperties}
-            docked={coreDock !== "center"} calm={isPhone || overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
+            docked={coreDock !== "center"} phone={isPhone} calm={overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
             <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
           </OverviewFrame>}
           {!windowed && section !== "overview" && glassBody(section, false)}

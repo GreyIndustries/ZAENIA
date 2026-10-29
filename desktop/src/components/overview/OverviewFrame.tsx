@@ -67,8 +67,8 @@ function Meter({ label, value, max = 100, tone }: { label: string; value: number
     <i><em style={{ width: `${share * 100}%`, background: tone }}/></i></div>;
 }
 
-export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm, docked }: {
-  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties; docked: boolean;
+export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm, docked, phone }: {
+  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties; docked: boolean; phone: boolean;
   onOpen: (section: string) => void; onAsk: (text: string) => void; calm: boolean; onCalm: (calm: boolean) => void;
 }) {
   const data = useOverviewData();
@@ -98,8 +98,68 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const headline = nextEvent ? `Next: ${nextEvent.title}${nextEvent.allDay ? (nextEvent.date === today ? " today" : " tomorrow") : ` at ${clock(nextEvent.time)}${nextEvent.date === today ? "" : " tomorrow"}`}.` : "Nothing else on the calendar today.";
   const taskLine = open === null ? "" : dueToday.length || overdue.length ? ` ${dueToday.length} task${dueToday.length === 1 ? "" : "s"} due today${overdue.length ? `, ${overdue.length} overdue` : ""}.` : " No tasks due today.";
 
+  const kcalLeft = eat !== null && eaten !== null ? Math.max(0, eat - eaten) : null;
+  const todayLines = <ul className="ov-lines">
+    {nextEvent && <li><span>{nextEvent.title}</span><b>{nextEvent.allDay ? "All day" : clock(nextEvent.time)}</b></li>}
+    {nextReminder && <li><span>{nextReminder.text}</span><b>{new Date(nextReminder.due).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b></li>}
+    {[...overdue, ...dueToday].slice(0, 2).map(t => <li key={t.id}><span>{t.title}</span><b>{t.deadline!.slice(0, 10) < today ? "overdue" : "today"}</b></li>)}
+    {!nextEvent && !nextReminder && dueToday.length + overdue.length === 0 && <li className="ov-muted">Clear for now.</li>}
+  </ul>;
+  const askCard = <Card kicker="Suggested" title="Ask ZAE" tone="#c08cff">
+    <ol className="ov-actions">
+      {nextEvent && <li><button type="button" onClick={() => onAsk(`Help me get ready for ${nextEvent.title}`)}><b>Get ready for {nextEvent.title}</b><small>From your calendar</small></button></li>}
+      {overdue[0] && <li><button type="button" onClick={() => onAsk(`Help me finish "${overdue[0].title}"`)}><b>Finish "{overdue[0].title}"</b><small>Overdue task</small></button></li>}
+      {kcalLeft !== null && kcalLeft > 300 && <li><button type="button" onClick={() => onAsk(`What should I eat to hit about ${fmt(kcalLeft)} more calories${proteinGoal && protein !== null ? ` and ${fmt(proteinGoal - protein)} g protein` : ""}?`)}>
+        <b>Plan the rest of today's food</b><small>{fmt(kcalLeft)} kcal left</small></button></li>}
+      <li><button type="button" onClick={() => onAsk("Plan tomorrow")}><b>Plan tomorrow</b><small>Calendar, tasks and training</small></button></li>
+    </ol>
+  </Card>;
+  const musicCard = <Card kicker="Music & news" title="Following" tone="#e0c08a">
+    <ul className="ov-lines">
+      <li><button type="button" className="ov-link" onClick={() => onOpen("music")}>{songs === null ? "Music" : `${songs.length} song${songs.length === 1 ? "" : "s"} in progress`}</button>
+        <b>{release ? `${release.title} · ${new Date(`${release.releaseDate}T00:00`).toLocaleDateString([], { month: "short", day: "numeric" })}` : "No release date"}</b></li>
+      {(data.news ?? []).slice(0, 2).map((story, index) => <li key={index}><button type="button" className="ov-link" onClick={() => onOpen("news")}>{story.title}</button></li>)}
+      {data.news?.length === 0 && <li className="ov-muted">No new stories.</li>}
+    </ul>
+  </Card>;
+  const tags = <div className="ov-center__tags">
+    <span className="ov-tag"><i/>{telemetry ? `${ready} / ${modules.length} modules ready` : "Core"}</span>
+    <button type="button" className="ov-tag ov-tag--btn" aria-pressed={calm} onClick={() => onCalm(!calm)}>{calm ? "Show dashboard" : "Calm view"}</button>
+  </div>;
+  const hero = <div className="ov-hero">
+    <span className="ov-kicker">{greeting()}, Grey{data.weather?.temperature !== null && data.weather ? ` · ${Math.round(data.weather.temperature!)}° ${data.weather.condition.toLowerCase()}` : ""}</span>
+    <p>{headline}{taskLine}</p>
+    <div className="ov-chips">{SUGGESTIONS.map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}</div>
+  </div>;
+
   // While windows are open the core docks in a corner and the cards step aside.
   if (docked) return <>{children}</>;
+
+  // Phone (sized for an iPhone 16 Pro, 402 × 874): one scrolling app screen. A smaller core, the greeting and quick asks
+  // in a swipeable row, four widget tiles, then Today, Ask ZAE and Music & news as full-width cards.
+  if (phone) return <div className="ov-wrap ov-wrap--phone" data-look={look} style={style}><div className="ov-phone">
+    {tags}
+    <div className="ov-phone__core">{children}</div>
+    {hero}
+    {!calm && <>
+      <div className="ov-tiles">
+        <button type="button" className="ov-tile zx-card" style={{ "--ov-tone": "#8fc8ff" } as CSSProperties} onClick={() => onOpen("tasks")}>
+          <small>Tasks</small><b>{open === null ? "—" : open.length}</b><span>{open === null ? "open" : `${dueToday.length} due · ${overdue.length} overdue`}</span></button>
+        <button type="button" className="ov-tile zx-card" style={{ "--ov-tone": "#7fe3a8" } as CSSProperties} onClick={() => onOpen("fitness")}>
+          <small>Calories left</small><b>{fmt(kcalLeft)}</b><span>{protein === null ? "protein —" : `${fmt(protein)}${proteinGoal ? ` / ${fmt(proteinGoal)}` : ""} g protein`}</span>
+          <i className="ov-tile__bar"><em style={{ width: `${eat && eaten !== null ? Math.min(100, eaten / eat * 100) : 0}%` }}/></i></button>
+        <button type="button" className="ov-tile zx-card" style={{ "--ov-tone": "var(--accent)" } as CSSProperties} onClick={() => onOpen("status")}>
+          <small>Security</small><b>{health ?? "—"}</b><span>{data.security?.level ?? "—"}</span>
+          <i className="ov-tile__bar"><em style={{ width: `${health ?? 0}%` }}/></i></button>
+        <button type="button" className="ov-tile zx-card" style={{ "--ov-tone": "#e0a353" } as CSSProperties} onClick={() => onOpen("status")}>
+          <small>ZAE's systems</small><b>{modules.length ? `${ready}/${modules.length}` : "—"}</b><span>{modules.find(m => m.phase === "working")?.name ? `${modules.find(m => m.phase === "working")!.name} working` : "ready"}</span></button>
+      </div>
+      <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")}>{todayLines}</Card>
+      {askCard}
+      {musicCard}
+    </>}
+  </div></div>;
+
   return <div className="ov-wrap" data-look={look} style={style}><div className={`ov${calm ? " ov--calm" : ""}`}>
     {!calm && <div className="ov-rail ov-rail--left">
       <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")}>
@@ -108,15 +168,10 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
           <span><small>Due today</small><b>{open === null ? "—" : dueToday.length}</b></span>
           <span className={overdue.length ? "ov-warn" : ""}><small>Overdue</small><b>{open === null ? "—" : overdue.length}</b></span>
         </div>
-        <ul className="ov-lines">
-          {nextEvent && <li><span>{nextEvent.title}</span><b>{nextEvent.allDay ? "All day" : clock(nextEvent.time)}</b></li>}
-          {nextReminder && <li><span>{nextReminder.text}</span><b>{new Date(nextReminder.due).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</b></li>}
-          {[...overdue, ...dueToday].slice(0, 2).map(t => <li key={t.id}><span>{t.title}</span><b>{t.deadline!.slice(0, 10) < today ? "overdue" : "today"}</b></li>)}
-          {!nextEvent && !nextReminder && dueToday.length + overdue.length === 0 && <li className="ov-muted">Clear for now.</li>}
-        </ul>
+        {todayLines}
       </Card>
       <Card kicker="Fitness & health" title={data.day?.workout.label || "Today's training"} tone="#7fe3a8" onOpen={() => onOpen("fitness")}>
-        <div className="ov-big"><b>{eat !== null && eaten !== null ? fmt(Math.max(0, eat - eaten)) : "—"}</b><small>kcal left{eat !== null ? ` of ${fmt(eat)}` : ""}</small></div>
+        <div className="ov-big"><b>{fmt(kcalLeft)}</b><small>kcal left{eat !== null ? ` of ${fmt(eat)}` : ""}</small></div>
         <Meter label="Eaten" value={eaten} max={eat ?? 2000} tone="var(--accent)"/>
         <Meter label="Protein (g)" value={protein} max={proteinGoal ?? 150} tone="#5fb4ff"/>
       </Card>
@@ -137,16 +192,9 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     </div>}
 
     <div className="ov-center">
-      <div className="ov-center__tags">
-        <span className="ov-tag"><i/>{telemetry ? `${ready} / ${modules.length} modules ready` : "Core"}</span>
-        <button type="button" className="ov-tag ov-tag--btn" aria-pressed={calm} onClick={() => onCalm(!calm)}>{calm ? "Show dashboard" : "Calm view"}</button>
-      </div>
+      {tags}
       {children}
-      <div className="ov-hero">
-        <span className="ov-kicker">{greeting()}, Grey{data.weather?.temperature !== null && data.weather ? ` · ${Math.round(data.weather.temperature!)}° ${data.weather.condition.toLowerCase()}` : ""}</span>
-        <p>{headline}{taskLine}</p>
-        <div className="ov-chips">{SUGGESTIONS.map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}</div>
-      </div>
+      {hero}
     </div>
 
     {!calm && <div className="ov-rail ov-rail--right">
@@ -156,24 +204,8 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
           {m.detail && <em title={m.detail}>{m.detail}</em>}</li>)}
           {modules.length === 0 && <li className="ov-muted">Status feed unavailable.</li>}</ul>
       </Card>
-      <Card kicker="Suggested" title="Ask ZAE" tone="#c08cff">
-        <ol className="ov-actions">
-          {nextEvent && <li><button type="button" onClick={() => onAsk(`Help me get ready for ${nextEvent.title}`)}><b>Get ready for {nextEvent.title}</b><small>From your calendar</small></button></li>}
-          {overdue[0] && <li><button type="button" onClick={() => onAsk(`Help me finish "${overdue[0].title}"`)}><b>Finish "{overdue[0].title}"</b><small>Overdue task</small></button></li>}
-          {eat !== null && eaten !== null && eat - eaten > 300 && <li><button type="button" onClick={() => onAsk(`What should I eat to hit about ${fmt(eat - eaten)} more calories${proteinGoal && protein !== null ? ` and ${fmt(proteinGoal - protein)} g protein` : ""}?`)}>
-            <b>Plan the rest of today's food</b><small>{fmt(eat - eaten)} kcal left</small></button></li>}
-          <li><button type="button" onClick={() => onAsk("Plan tomorrow")}><b>Plan tomorrow</b><small>Calendar, tasks and training</small></button></li>
-        </ol>
-      </Card>
-      <Card kicker="Music & news" title="Following" tone="#e0c08a">
-        <ul className="ov-lines">
-          <li><button type="button" className="ov-link" onClick={() => onOpen("music")}>{songs === null ? "Music" : `${songs.length} song${songs.length === 1 ? "" : "s"} in progress`}</button>
-            <b>{release ? `${release.title} · ${new Date(`${release.releaseDate}T00:00`).toLocaleDateString([], { month: "short", day: "numeric" })}` : "No release date"}</b></li>
-          {(data.news ?? []).slice(0, 2).map((story, index) => <li key={index}><button type="button" className="ov-link" onClick={() => onOpen("news")}>{story.title}</button></li>)}
-          {data.news?.length === 0 && <li className="ov-muted">No new stories.</li>}
-        </ul>
-      </Card>
+      {askCard}
+      {musicCard}
     </div>}
-
   </div></div>;
 }
