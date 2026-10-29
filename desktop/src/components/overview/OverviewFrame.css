@@ -86,7 +86,7 @@
 .ov-wrap--phone{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;
   mask-image:linear-gradient(180deg,#000 calc(100% - 18px),transparent)}
 .ov-wrap--phone::-webkit-scrollbar{display:none}
-.ov-phone{display:flex;flex-direction:column;gap:12px;width:100%;padding:2px 2px 18px;color:var(--zx-text,#dbe8f6)}
+.ov.ov-phone{display:flex;flex:none;align-self:flex-start;flex-direction:column;gap:12px;width:100%;padding:2px 2px 18px;color:var(--zx-text,#dbe8f6)}
 .ov-phone .ov-center__tags{max-width:none}
 .ov-phone__core{position:relative;flex:none;height:min(64vw,290px);display:flex}
 .zaenia-app--phone .main-stage--overview .ov-wrap--phone .ov-phone__core>.progress-stage{flex:1 1 auto;height:100%;min-height:0;max-height:none;margin:0}

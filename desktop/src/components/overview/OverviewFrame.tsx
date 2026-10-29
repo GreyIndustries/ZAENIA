@@ -137,7 +137,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
 
   // Phone (sized for an iPhone 16 Pro, 402 × 874): one scrolling app screen. A smaller core, the greeting and quick asks
   // in a swipeable row, four widget tiles, then Today, Ask ZAE and Music & news as full-width cards.
-  if (phone) return <div className="ov-wrap ov-wrap--phone" data-look={look} style={style}><div className="ov-phone">
+  if (phone) return <div className="ov-wrap ov-wrap--phone" data-look={look} style={style}><div className="ov ov-phone">
     {tags}
     <div className="ov-phone__core">{children}</div>
     {hero}
