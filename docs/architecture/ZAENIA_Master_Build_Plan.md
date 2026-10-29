@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.16  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.17  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -903,3 +903,12 @@ Grey asked to keep the existing Overview (the Neural Core) and blend it with a r
 - **Calm view** hides the cards and leaves the core alone (remembered on this device). Phones and narrow windows always show the core alone. While windows are open and the core docks in a corner, the cards step aside.
 - **Data:** read from ZAE's own routes (calendar, tasks, reminders, training day, status bar, security summary, music overview, tech news, weather), refreshed every minute and when records change. A missing value shows "—", never a made-up number.
 - **Look:** built on the look-styles tokens with the Overview's own tab colour, so window style, density, corners, panel solidity and motion apply.
+
+### 28.17 Overview as a phone app screen (iPhone 16 Pro) — Claude, 2026-10-29 (v3.17)
+
+Grey asked for the Overview to fit an iPhone 16 Pro like an app. Before, phones showed the core alone.
+
+- On phones the Overview is one scrolling screen between the header and the chat bar, sized for 402 × 874: a smaller core (up to 290 px tall), the greeting and next-up line, the quick asks as one swipeable row, four widget tiles two across (Tasks, Calories left, Security, ZAE's systems; each opens its tab), then Today, Ask ZAE and Music & news as full-width cards.
+- Touch targets are at least 40–48 px, text is larger than on desktop, and the bottom edge fades so the list reads as scrolling under the chat bar. Calm view works on the phone too.
+- The desktop and phone layouts share the same card pieces and data, so both always show the same numbers.
+- Checked in the preview at 402 × 874: no sideways scrolling, top and scrolled views.
