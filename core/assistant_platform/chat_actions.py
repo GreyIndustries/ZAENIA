@@ -90,6 +90,23 @@ def stated_nutrition(text: str) -> dict[str, float]:
     return found
 
 
+FITNESS_ACTIONS = ("food.log", "exercise.log", "body.log", "cardio.log", "workout.done", "set.log", "workout.actual", "workout.plan")
+
+
+def fitness_quick_log(message: str, ask: Callable[[str], str]) -> dict[str, Any]:
+    """The Fitness tab's "log anything" box: only fitness actions, and food only with numbers you state."""
+    text = str(message or "").strip()
+    if not text:
+        raise ValueError("Type what to log, like \"weighed 195.4\" or \"ran 2 miles in 16:30\".")
+    action = classify(text[:4000], ask)
+    if action is None or action["action"] not in FITNESS_ACTIONS:
+        raise ValueError("I couldn't tell what to log. Try \"weighed 195.4\", \"8,000 steps\", \"ran 2 miles in 16:30\" or \"150g protein, 2,100 cal\".")
+    if action["action"] == "food.log" and not stated_nutrition(text):
+        raise ValueError("For food without numbers, use the Log sub-tab so the portions and sources can be checked first.")
+    action["args"]["text"] = text
+    return run(action, ask=ask)
+
+
 def maybe(message: str) -> bool:
     """Worth asking her brain? An instruction about something a tab does, not a question."""
     text = str(message or "").strip()

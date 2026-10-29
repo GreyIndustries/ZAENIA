@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.11  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.12  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -815,3 +815,14 @@ Phase 0 exit (red-team/regression tests, protected routes, clean-install test, l
 - **Quick add** (`core/quickTask.ts`): "call bank fri 3pm !high" understands today, tomorrow, tonight, weekdays, dates, 3pm or 18:30, and !critical, !high or !low.
 - **Tests:** `scripts/plan-quick.test.cjs` 6 and appearance 31 checks; `tsc`; full Python suite unchanged.
 - **Gotcha:** `.gitignore` ignores `*token*`, so a file named look-tokens.css was silently untracked. It was renamed look-styles.css.
+
+### 28.12 Fitness & Health rework — Claude, 2026-10-29 (v3.12)
+
+- `components/personal/FitnessStudio.tsx`, in Grey's order (B, A, C). All three use the look tokens and are labelled as estimates.
+  1. **Progress:** weight since the start of the range, workouts and weigh-ins over 30 days, the 7-day protein average against target, and the 7-day deficit (maintenance + exercise − eaten). A weight chart against the plan line (rate per week), calories eaten vs burned over 7 days, and sets per muscle.
+  2. **Today:** eat, burn and protein rings against targets; weight and steps logged in place; goal date; today's workout with checkboxes, or the activities logged instead; today's food.
+  3. **Day log:** a timeline of weigh-in, food (with times), activities, cardio, the workout and steps; where today stands (kcal and protein left, open exercises, goal date); upcoming fitness reminders; a "log anything" box.
+  4. **Training program** and 5. **Logs & plans** (the existing Log, Recipes, Scan food, Edit plans and Targets) stay, kept mounted so ZAE's setup and meal-review events still reach them. `FitnessPanel` gained `embedded`, which hides its own duplicate Training program page.
+- **Log anything:** `POST /api/platform/personal/training/quick-log` (memory.write) uses `chat_actions.fitness_quick_log`. It only runs fitness actions. Food is logged only with numbers Grey states; otherwise it points to the Log review.
+- **Food listing** now includes `createdAt`, so meals show their time.
+- **Tests:** chat_actions_test quick-log; full suite and UI checks pass; `tsc` clean.

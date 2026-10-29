@@ -61,7 +61,7 @@ const PlaygroundPanel = lazy(() => import("./components/tools/Playground").then(
 const ResearchPage = lazy(() => import("./components/research/ResearchPage").then(module => ({ default: module.ResearchPage })));
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
 const MusicStudio = lazy(() => import('./components/music/MusicStudio').then(module => ({ default: module.MusicStudio })));
-const FitnessPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.FitnessPanel })));
+const FitnessStudio = lazy(() => import('./components/personal/FitnessStudio').then(module => ({ default: module.FitnessStudio })));
 import { useCoreStartup } from "./core/startup";
 import { skipWhileAway, useAppInBackground } from "./core/appBackground";
 import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
@@ -1127,7 +1127,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "labs", label: "Labs", render: () => <LabsPanel/> },
       ]}/>;
       case 'music': return <MusicStudio/>;
-      case 'fitness': return <FitnessPanel drafts={personalDrafts.current}/>;
+      case 'fitness': return <FitnessStudio drafts={personalDrafts.current}/>;
       case 'news': return <NewsPanel/>;
       case 'library':
       case 'history':

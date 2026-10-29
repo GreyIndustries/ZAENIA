@@ -211,6 +211,12 @@ def create_personal_tools_router(get, call):
         from core.assistant_platform.training import training
         return call(lambda: training().log_day(day, body.changes))
 
+    @router.post("/training/quick-log")
+    def training_quick_log(body: TrainingActualBody):
+        from core.assistant_platform.chat_actions import fitness_quick_log
+        from core.research.analyze import run_local
+        return call(lambda: fitness_quick_log(body.text, run_local))
+
     @router.post("/training/actual")
     def training_actual(body: TrainingActualBody, day: str = Query(min_length=10, max_length=10)):
         from core.assistant_platform.training import parse_actual, training

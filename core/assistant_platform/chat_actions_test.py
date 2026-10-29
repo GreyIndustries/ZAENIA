@@ -61,6 +61,17 @@ class ChatActionsTest(unittest.TestCase):
         reply = self.run_action("food.log", {"name": "shake", "text": "shake with 40g protein, 10g carbs and 5g fat"})
         self.assertIn("worked out from your macros", reply["reply"])
 
+    def test_fitness_quick_log_only_runs_fitness_actions(self):
+        from unittest import mock
+        with mock.patch.object(chat_actions, "run", return_value={"reply": "Logged.", "tab": "fitness"}) as ran:
+            self.assertEqual(chat_actions.fitness_quick_log("weighed 195.4", lambda p: '{"action": "body.log", "args": {"weightLb": 195.4}}')["reply"], "Logged.")
+            self.assertEqual(ran.call_args[0][0]["args"]["text"], "weighed 195.4")
+            with self.assertRaisesRegex(ValueError, "couldn't tell"):
+                chat_actions.fitness_quick_log("translate hello", lambda p: '{"action": "translate", "args": {"text": "hello", "to": "French"}}')
+            with self.assertRaisesRegex(ValueError, "Log sub-tab"):
+                chat_actions.fitness_quick_log("ate a burrito", lambda p: '{"action": "food.log", "args": {"name": "burrito"}}')
+            self.assertEqual(ran.call_count, 1)
+
     def test_fitness_logging(self):
         with self.assertRaisesRegex(ValueError, "sourced values"):
             self.run_action("food.log", {"name": "chicken burrito"}, ask=lambda p: '{"calories": 650, "protein": 35, "fiber": 6}')
