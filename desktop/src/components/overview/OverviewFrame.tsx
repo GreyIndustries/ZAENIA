@@ -67,8 +67,8 @@ function Meter({ label, value, max = 100, tone }: { label: string; value: number
     <i><em style={{ width: `${share * 100}%`, background: tone }}/></i></div>;
 }
 
-export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm }: {
-  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties;
+export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm, docked }: {
+  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties; docked: boolean;
   onOpen: (section: string) => void; onAsk: (text: string) => void; calm: boolean; onCalm: (calm: boolean) => void;
 }) {
   const data = useOverviewData();
@@ -98,6 +98,8 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const headline = nextEvent ? `Next: ${nextEvent.title}${nextEvent.allDay ? (nextEvent.date === today ? " today" : " tomorrow") : ` at ${clock(nextEvent.time)}${nextEvent.date === today ? "" : " tomorrow"}`}.` : "Nothing else on the calendar today.";
   const taskLine = open === null ? "" : dueToday.length || overdue.length ? ` ${dueToday.length} task${dueToday.length === 1 ? "" : "s"} due today${overdue.length ? `, ${overdue.length} overdue` : ""}.` : " No tasks due today.";
 
+  // While windows are open the core docks in a corner and the cards step aside.
+  if (docked) return <>{children}</>;
   return <div className="ov-wrap" data-look={look} style={style}><div className={`ov${calm ? " ov--calm" : ""}`}>
     {!calm && <div className="ov-rail ov-rail--left">
       <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")}>
