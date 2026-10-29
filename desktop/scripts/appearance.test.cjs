@@ -15,7 +15,7 @@ let checks = 0;
 const check = run => { run(); checks++; };
 const base = { ...DEFAULT_APPEARANCE };
 
-check(() => assert.deepEqual(plain(parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}')), { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora', tabs: {}, orbs: 'mixed' }));
+check(() => assert.deepEqual(plain(parseAppearance('{"font":"mono","size":500,"accent":"nope","glow":10}')), { font: 'mono', size: 125, accent: 'amber', glow: 40, look: 'aurora', tabs: {}, orbs: 'mixed', density: 'comfortable', corners: 'style', panelOpacity: 100, motion: 'full' }));
 check(() => assert.deepEqual({ ...parseAppearance('not json') }, base));
 check(() => assert.equal(parseAppearanceCommand('make it blue', base).accent, 'blue'));
 check(() => assert.equal(parseAppearanceCommand('change the color to red', base).accent, 'crimson'));
@@ -38,6 +38,11 @@ check(() => { const next = parseAppearanceCommand('make the tasks tab pink', bas
 check(() => assert.equal(parseAppearanceCommand('make it teal', base).accent, 'teal'));
 check(() => assert.equal(parseAppearanceCommand('open the files window', base), null));
 check(() => assert.equal(parseAppearance('{"orbs":"match"}').orbs, 'match'));
+check(() => assert.deepEqual((({ density, corners, panelOpacity, motion }) => ({ density, corners, panelOpacity, motion }))(parseAppearance('{"density":"compact","corners":"round","panelOpacity":10,"motion":"reduced"}')), { density: 'compact', corners: 'round', panelOpacity: 50, motion: 'reduced' }));
+check(() => assert.equal(parseAppearance('{"density":"huge","corners":"wavy"}').density, 'comfortable'));
+check(() => assert.equal(parseAppearanceCommand('use a compact layout', base).density, 'compact'));
+check(() => assert.equal(parseAppearanceCommand('give me round corners', base).corners, 'round'));
+check(() => assert.equal(parseAppearanceCommand('reduce motion please', base).motion, 'reduced'));
 check(() => assert.equal(parseAppearanceCommand('make the core icons the same colour', base).orbs, 'match'));
 check(() => assert.equal(parseAppearanceCommand('make the core icons the same colour', base).accent, 'amber'));
 check(() => assert.equal(parseAppearanceCommand('give the icons two colours again', { ...base, orbs: 'match' }).orbs, 'mixed'));

@@ -14,9 +14,18 @@ export type TabStyle = { look?: LookChoice; color?: AccentChoice };
 export type TabId = "status" | "security" | "tasks" | "calendar" | "notes" | "assistant" | "files" | "system" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
 export type Appearance = { font: FontChoice; size: number; accent: AccentChoice; glow: number; look: LookChoice; tabs: Partial<Record<TabId, TabStyle>>;
   /** The six icons around the core: amber and blue ("mixed"), or all in the accent colour ("match"). */
-  orbs: "mixed" | "match" };
+  orbs: "mixed" | "match";
+  /** Spacing inside the reworked tabs, corner shape (or each style's own), panel see-through, and motion. */
+  density: Density; corners: Corners; panelOpacity: number; motion: "full" | "reduced" };
+export type Density = "compact" | "comfortable" | "spacious";
+export type Corners = "style" | "sharp" | "soft" | "round";
 
-export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora", tabs: {}, orbs: "mixed" };
+export const DEFAULT_APPEARANCE: Appearance = { font: "default", size: 100, accent: "amber", glow: 100, look: "aurora", tabs: {}, orbs: "mixed",
+  density: "comfortable", corners: "style", panelOpacity: 100, motion: "full" };
+export const DENSITIES: { id: Density; label: string; scale: number }[] = [
+  { id: "compact", label: "Compact", scale: 0.75 }, { id: "comfortable", label: "Comfortable", scale: 1 }, { id: "spacious", label: "Spacious", scale: 1.3 }];
+export const CORNERS: { id: Corners; label: string }[] = [
+  { id: "style", label: "Style's own" }, { id: "sharp", label: "Sharp" }, { id: "soft", label: "Soft" }, { id: "round", label: "Round" }];
 
 export const TABS: { id: TabId; label: string }[] = [
   { id: 'workbench', label: 'Workbench' }, { id: 'music', label: 'Music' }, { id: 'fitness', label: 'Fitness & Health' },
@@ -122,6 +131,10 @@ export function parseAppearance(raw: string | null): Appearance {
       look: isLook(saved.look) ? saved.look : "aurora",
       tabs: parseTabs(saved.tabs),
       orbs: saved.orbs === "match" ? "match" : "mixed",
+      density: DENSITIES.some(item => item.id === saved.density) ? saved.density as Density : "comfortable",
+      corners: CORNERS.some(item => item.id === saved.corners) ? saved.corners as Corners : "style",
+      panelOpacity: clampNumber(saved.panelOpacity, 50, 100, 100),
+      motion: saved.motion === "reduced" ? "reduced" : "full",
     };
   } catch { return { ...DEFAULT_APPEARANCE }; }
 }
@@ -135,6 +148,8 @@ export function appearanceStyle(appearance: Appearance): Record<string, string> 
     "--app-zoom": String(appearance.size / 100),
     "--accent-shift": `${accent.shift}deg`,
     "--accent-saturate": String(accent.saturate * appearance.glow / 100),
+    "--app-density": String(DENSITIES.find(item => item.id === appearance.density)?.scale ?? 1),
+    "--app-panel-opacity": String(appearance.panelOpacity / 100),
   };
 }
 
@@ -145,7 +160,7 @@ export function parseAppearanceCommand(input: string, current: Appearance): Appe
   // or are a short "make it blue" style command.
   // "Make the tasks tab blue" changes one window's colour instead of the whole app.
   const tab = TABS.find(item => new RegExp(`\\b${item.label.toLowerCase().split(" ")[0]}\\b (?:tab|window|module|panel)\\b`).test(text));
-  if (!tab && !/\b(?:colou?rs?|theme|accent|font|text|glow)\b/.test(text) && !/^(?:\w+[, ]+)?make (?:it|everything|the ui|the app|zae) \w+(?: please)?[.!]?$/.test(text.trim())) return null;
+  if (!tab && !/\b(?:colou?rs?|theme|accent|font|text|glow|corners?|motion|animations?|spacing|layout)\b/.test(text) && !/^(?:\w+[, ]+)?make (?:it|everything|the ui|the app|zae) \w+(?: please)?[.!]?$/.test(text.trim())) return null;
   const next = { ...current };
   let changed = false;
   for (const accent of ACCENTS) {
@@ -166,6 +181,12 @@ export function parseAppearanceCommand(input: string, current: Appearance): Appe
   if (/\bsmaller text\b|\btext smaller\b/.test(text)) { next.size = Math.max(85, current.size - 10); changed = true; }
   if (/\b(?:more|brighter|stronger) glow\b/.test(text)) { next.glow = Math.min(140, current.glow + 20); changed = true; }
   if (/\b(?:less|dimmer|softer) glow\b/.test(text)) { next.glow = Math.max(40, current.glow - 20); changed = true; }
+  if (/\b(?:compact|tighter|denser)\b/.test(text) && /\b(?:layout|spacing|view|mode|tabs?)\b/.test(text)) { next.density = "compact"; changed = true; }
+  if (/\b(?:spacious|roomier|more space)\b/.test(text)) { next.density = "spacious"; changed = true; }
+  if (/\b(?:sharp|square)\b corners?\b/.test(text)) { next.corners = "sharp"; changed = true; }
+  if (/\b(?:round|rounded)\b corners?\b/.test(text)) { next.corners = "round"; changed = true; }
+  if (/\b(?:reduce|less|stop|no) (?:motion|animations?)\b/.test(text)) { next.motion = "reduced"; changed = true; }
+  if (/\b(?:more|full|turn on) (?:motion|animations?)\b/.test(text)) { next.motion = "full"; changed = true; }
   // "Make the core icons the same colour" / "... two colours again".
   if (/\b(?:core |module )?(?:icons?|orbs?)\b/.test(text)) {
     if (/\b(?:same|one|matching|single) colou?r\b|\bmatch\b/.test(text)) { next.orbs = "match"; changed = true; }

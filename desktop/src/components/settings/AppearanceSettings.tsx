@@ -1,4 +1,4 @@
-import { ACCENTS, DEFAULT_APPEARANCE, FONTS, LOOKS, TABS } from "../../core/appearance";
+import { ACCENTS, CORNERS, DEFAULT_APPEARANCE, DENSITIES, FONTS, LOOKS, TABS } from "../../core/appearance";
 import type { AccentChoice, Appearance, LookChoice, TabId, TabStyle } from "../../core/appearance";
 import "./AppearanceSettings.css";
 
@@ -17,7 +17,7 @@ export function AppearanceSettings({ value, onChange }: { value: Appearance; onC
   return <div className="detail-panel__block appearance-settings" aria-label="Appearance">
     <div className="section-heading"><span className="subheading">APPEARANCE</span><span>THIS DEVICE</span></div>
     <h2>Fonts &amp; colours</h2>
-    <p>Re-tints the whole interface, core included. You can also say “make it blue”, “make the tasks tab pink” or “use the mono font”.</p>
+    <p>Re-tints the whole interface, core included. You can also say “make it blue”, “make the tasks tab pink”, “use the mono font”, “compact layout”, “round corners” or “reduce motion”.</p>
     <div className="appearance-settings__label">WINDOW STYLE · ALL TABS</div>
     <div className="appearance-settings__looks" role="radiogroup" aria-label="Window style">
       {LOOKS.map(look => <button key={look.id} type="button" role="radio" aria-checked={value.look === look.id}
@@ -67,6 +67,24 @@ export function AppearanceSettings({ value, onChange }: { value: Appearance; onC
     <input id="appearance-size" type="range" min={85} max={125} step={5} value={value.size} onChange={event => onChange({ ...value, size: Number(event.target.value) })}/>
     <label className="appearance-settings__label" htmlFor="appearance-glow">COLOUR INTENSITY <strong>{value.glow}%</strong></label>
     <input id="appearance-glow" type="range" min={40} max={140} step={10} value={value.glow} onChange={event => onChange({ ...value, glow: Number(event.target.value) })}/>
+    <div className="appearance-settings__label">SPACING</div>
+    <div className="choice-row" role="radiogroup" aria-label="Spacing">
+      {DENSITIES.map(item => <button key={item.id} type="button" role="radio" aria-checked={value.density === item.id}
+        className={value.density === item.id ? "choice choice--active" : "choice"} onClick={() => onChange({ ...value, density: item.id })}>{item.label}</button>)}
+    </div>
+    <div className="appearance-settings__label">CORNERS</div>
+    <div className="choice-row" role="radiogroup" aria-label="Corners">
+      {CORNERS.map(item => <button key={item.id} type="button" role="radio" aria-checked={value.corners === item.id}
+        className={value.corners === item.id ? "choice choice--active" : "choice"} onClick={() => onChange({ ...value, corners: item.id })}>{item.label}</button>)}
+    </div>
+    <label className="appearance-settings__label" htmlFor="appearance-opacity">PANEL SOLIDITY <strong>{value.panelOpacity}%</strong></label>
+    <input id="appearance-opacity" type="range" min={50} max={100} step={5} value={value.panelOpacity} onChange={event => onChange({ ...value, panelOpacity: Number(event.target.value) })}/>
+    <div className="appearance-settings__label">MOTION</div>
+    <div className="choice-row" role="radiogroup" aria-label="Motion">
+      {([["full", "Full"], ["reduced", "Reduced"]] as const).map(([id, label]) => <button key={id} type="button" role="radio" aria-checked={value.motion === id}
+        className={value.motion === id ? "choice choice--active" : "choice"} onClick={() => onChange({ ...value, motion: id })}>{label}</button>)}
+    </div>
+    <small className="appearance-settings__note">Spacing, corners and panel solidity apply to the reworked tabs (Music first, the others as they're rebuilt). Reduced motion applies everywhere.</small>
     <button type="button" className="choice appearance-settings__reset" onClick={() => onChange({ ...DEFAULT_APPEARANCE })}>Reset to default</button>
   </div>;
 }

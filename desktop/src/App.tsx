@@ -35,6 +35,7 @@ import { NotesPanel, EMPTY_NOTES_DRAFT } from './components/notes/NotesPanel';
 import { ModuleMasthead } from './components/shell/ModuleMasthead';
 import './styles/glass-modules.css';
 import './styles/module-looks.css';
+import './styles/look-tokens.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
@@ -1162,7 +1163,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}>
+  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
+    data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}

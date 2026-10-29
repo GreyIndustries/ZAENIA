@@ -47,3 +47,5 @@
 .zaenia-app--orbs-match .core-orb--blue{--tone:255,166,62;--ink:#ffc768}
 /* Wide windows: the per-tab rows sit side by side instead of one long column. */
 .appearance-settings__tabs{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 12px}
+
+.appearance-settings__note{display:block;color:#8ea4c0;font-size:11px;margin:4px 0 8px}
