@@ -76,9 +76,8 @@
 
 @media (prefers-reduced-motion:reduce){.ov-meter em{transition:none}}
 .zaenia-app[data-motion="off"] .ov-meter em{transition:none}
-/* Narrow windows and phones: the core alone, cards stack under it */
+/* Narrow windows: not enough room beside the core, so it stands alone (as in Calm view) */
 @container (max-width:980px){
   .ov{grid-template-columns:minmax(0,1fr)}
-  .ov-center{order:-1}
-  .ov-rail{overflow:visible;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+  .ov-rail,.ov .ov-tag--btn{display:none}
 }
