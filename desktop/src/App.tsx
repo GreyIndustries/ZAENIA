@@ -79,6 +79,7 @@ import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
+import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -1202,8 +1203,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "files", label: "Files", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><FilesPanel onPendingChange={setPendingFiles}/></Suspense> },
         { id: "source", label: "Source", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SourceSearch/></Suspense> },
       ]}/>;
-      case 'arena': return <ArenaPanel/>;
-      case "security": return <SecurityPanel/>;
+      case 'arena': return <PageTabs id="arena" tabs={[
+        { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
+        { id: "board", label: "Leaderboard & brain", render: () => <ArenaPanel/> },
+      ]}/>;
+      case "security": return <PageTabs id="security" tabs={[
+        { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
+        { id: "details", label: "Details", render: () => <SecurityPanel/> },
+      ]}/>;
       case "status": return <PageTabs id="status" tabs={[
         { id: "live", label: "Live", render: () => <StatusGauges/> },
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
@@ -1219,6 +1226,20 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "tools", label: "Assistant tools", render: () => <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></> },
       ]}/>;
       case "system": return <PageTabs id="settings" tabs={[
+        { id: "center", label: "Control center", render: () => <ControlCenter
+          toggles={[
+            { id: "listen", name: "Listening", detail: listen.mode === "always" ? "App mic on" : "App mic off", on: listen.mode === "always", toggle: toggleListening, disabled: !listen.supported },
+            { id: "speak", name: "Speak replies", detail: speakReplies ? "Out loud" : "Text only", on: speakReplies, toggle: toggleSpeak },
+            { id: "motion", name: "Core motion", detail: motion ? "Signals moving" : "Still", on: motion, toggle: () => setMotion(v => !v) },
+            { id: "hands", name: "Hand controls", detail: handsSupported ? (hands ? "Camera on" : "Camera off") : "Desktop only", on: hands, toggle: () => { setHands(v => !v); setHandNote(null); }, disabled: !handsSupported },
+            { id: "sidebar", name: "Sidebar in tabs", detail: sidebarHidden ? "Hidden" : "Shown", on: !sidebarHidden, toggle: () => setSidebarHidden(v => !v) },
+            { id: "calm", name: "Calm view when idle", detail: idleAfter ? `After ${idleAfter} min` : "Off", on: idleAfter > 0, toggle: () => { const next = idleAfter ? 0 : 5; try { localStorage.setItem("zaenia.overview.idleMinutes", String(next)); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:overview-idle", { detail: next })); } },
+            { id: "calmnow", name: "Calm view now", detail: "Wake with your voice", on: calmOpen, toggle: () => goCalm() },
+            { id: "voicepc", name: "PC voice", detail: pcVoice?.running ? "Listening on this PC" : "Off", on: Boolean(pcVoice?.running), toggle: () => { if (!pcVoice?.running) void startPcVoice(); }, disabled: !IN_TAURI || pcVoice === null || Boolean(pcVoice?.running) },
+          ]}
+          colors={ACCENTS.map(a => ({ id: a.id, label: a.label, swatch: a.swatch }))} color={appearance.accent} onColor={id => setAppearance(current => ({ ...current, accent: id as typeof current.accent }))}
+          size={appearance.size} onSize={size => setAppearance(current => ({ ...current, size }))}
+          onOpen={tab => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "settings", tab } }))}/> },
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },
         { id: "notifications", label: "Notifications", render: () => <PhoneNotifications/> },
