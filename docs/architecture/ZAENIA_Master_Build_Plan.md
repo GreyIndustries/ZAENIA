@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.18  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.19  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -923,3 +923,12 @@ Grey's notes on the blended Overview: add more like the reference's bottom row; 
 - **Spotlight:** cycles every 8 seconds through Next up, Tasks, Fitness & health, the top three news stories, Music and System, with dots to jump and pause-on-hover. Tapping it opens that tab.
 - **Idle Calm view:** Settings (System & appearance) has "Calm view when idle": Off, 1, 2, 5 (default), 10, 15 or 30 minutes. After that long with no key, click, touch, scroll or mouse move, the Overview goes calm; any touch brings the cards back. Saved on each device. Checked in preview with 1 minute.
 - **Phone:** the week row stacks under the other cards, and Calm view shows the spotlight under the quick asks.
+
+### 28.19 Scan food barcodes with the phone camera (Fitness & Health) — Claude, 2026-10-30 (v3.19)
+
+Grey asked to read barcodes with the phone in Fitness & Health. Before, Scan food only took a barcode photo and read it with the browser's BarcodeDetector, which iPhone Safari doesn't have, so it always failed there.
+
+- **`desktop/src/core/barcode.ts`:** ZAE's own reader for EAN-13, UPC-A, EAN-8 and UPC-E (returned as the full 12-digit UPC-A). It samples rows and columns across the middle of the picture, turns each into bar and space widths, matches digit patterns and keeps only codes whose check digit is right. It reads upside-down and sideways codes. BarcodeDetector is still tried first where it exists (Android Chrome). No new dependency.
+- **`BarcodeScanner.tsx`:** full-screen camera with a guide box (back camera, about 8 reads a second, a light button where the phone supports it, Cancel, a short buzz on success). Frames stay on the phone; only the digits go to the existing Open Food Facts lookup. It needs ZAE's secure https address and camera permission, and says so plainly if either is missing.
+- **Where:** "Scan barcode" on Fitness › Today, a "Scan" button in the Day log's quick-log bar, and "Scan barcode with camera" on Logs & plans › Scan food. All open the camera and show the product for logging. Photo upload stays as a fallback and now uses the same reader.
+- **Tests:** `scripts/barcode.test.cjs` (12): check digits, UPC-E expansion, EAN-13/UPC-A/EAN-8/UPC-E lines, reversed and noisy lines, a whole image and a sideways image. In the browser the reader also read a tilted, blurred test barcode from a canvas. The camera itself is blocked in the preview pane, so it still needs a try on the phone.
