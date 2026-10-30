@@ -78,6 +78,7 @@ import { situationNow } from "./core/wakeSituation";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
+import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -1174,8 +1175,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
   function sectionBody(id: Section): ReactNode {
     switch (id) {
-      case 'notes': return <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/>;
+      case 'notes': return <PageTabs id="notes" tabs={[
+        { id: "board", label: "Board", render: () => <NotesBoard onOpenEditor={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "notes", tab: "editor" } }))}/> },
+        { id: "editor", label: "All notes", render: () => <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/> },
+      ]}/>;
       case 'workbench': return <PageTabs id="workbench" tabs={[
+        { id: "lab", label: "Project lab", render: () => <WorkbenchLab onOpenEditor={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "workbench", tab: "projects" } }))}/> },
         { id: "projects", label: "Projects", render: () => <WorkbenchPanel drafts={personalDrafts.current}/> },
         { id: "tools", label: "Tools", render: () => <ToolsPanel/> },
         { id: "labs", label: "Labs", render: () => <LabsPanel/> },
@@ -1200,6 +1205,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;
       case "status": return <PageTabs id="status" tabs={[
+        { id: "live", label: "Live", render: () => <StatusGauges/> },
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
         { id: "protocols", label: "Protocols", render: () => <ProtocolsPanel/> },
         { id: "selfsustain", label: "Self-Sustain", render: () => <SelfSustainPanel/> },

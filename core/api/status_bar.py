@@ -100,3 +100,32 @@ def status_bar(mode: str = "") -> dict[str, Any]:
         "backup": backup.get("at"),
         "time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+
+
+def top_processes(limit: int = 6) -> list[dict[str, Any]]:
+    """What's using this PC: the biggest programs by memory, with a short CPU sample (names only, nothing else)."""
+    import time
+    import psutil
+    procs = []
+    for proc in psutil.process_iter(["name", "memory_info"]):
+        try:
+            proc.cpu_percent(None)
+            procs.append(proc)
+        except (psutil.Error, OSError):
+            continue
+    time.sleep(0.4)
+    grouped: dict[str, dict[str, float]] = {}
+    cores = psutil.cpu_count() or 1
+    for proc in procs:
+        try:
+            name = (proc.info.get("name") or "?").removesuffix(".exe")
+            mem = (proc.info.get("memory_info").rss if proc.info.get("memory_info") else 0) / 1e9
+            cpu = proc.cpu_percent(None) / cores
+        except (psutil.Error, OSError, AttributeError):
+            continue
+        entry = grouped.setdefault(name, {"cpu": 0.0, "memGb": 0.0})
+        entry["cpu"] += cpu
+        entry["memGb"] += mem
+    labels = {"ollama": "Ollama (ZAE's brain)", "python": "Python (ZAENIA server)", "ZAENIA": "ZAENIA app", "msedge": "Edge", "chrome": "Chrome"}
+    rows = sorted(grouped.items(), key=lambda kv: -kv[1]["memGb"])[:limit]
+    return [{"name": labels.get(name, name), "cpu": round(v["cpu"], 1), "memGb": round(v["memGb"], 2)} for name, v in rows]
