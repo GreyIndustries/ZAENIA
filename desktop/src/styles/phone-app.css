@@ -17,3 +17,10 @@
 .zaenia-app--phone .main-stage button:not(.research-page__tab):not(.core-orb):not(.core-tap){min-height:36px}
 .zaenia-app--phone .main-stage input,.zaenia-app--phone .main-stage select{font-size:16px} /* stops iPhone zooming into fields */
 .zaenia-app--phone .main-stage{overscroll-behavior-x:none;touch-action:pan-y pinch-zoom}
+/* Compact page header on phones: a small title, no description (more room for the page itself) */
+.zaenia-app--phone .stage-copy{max-width:none}
+.zaenia-app--phone .stage-copy h1{font-size:24px;margin:2px 0 6px}
+.zaenia-app--phone .stage-copy p{display:none}
+.zaenia-app--phone .stage-copy .eyebrow{font-size:10px}
+/* The tab strip fades at the right edge so it's clear there's more to swipe to */
+.zaenia-app--phone .research-page__tabs{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 28px),transparent)}
