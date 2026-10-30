@@ -42,6 +42,7 @@ export function useCodeScan() {
   return { project, setProject, scan, at, busy, error, run };
 }
 type ScanState = ReturnType<typeof useCodeScan>;
+import { CodeEditorView, CodeSideBySide } from "../studios/ThirdViews";
 
 export function CodeHealth({ code, onReview }: { code: ScanState; onReview: (file: string) => void }) {
   const { scan } = code;
@@ -200,7 +201,7 @@ export function ReviewQueue({ code, focusFile }: { code: ScanState; focusFile: s
 export function CodeDoctorStudio({ extra }: { extra: { id: string; label: string; render: () => React.ReactNode }[] }) {
   const code = useCodeScan();
   const [focusFile, setFocusFile] = useState<string | null>(null);
-  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, ...extra.map(({ id, label }) => ({ id, label }))];
+  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, { id: "side", label: "Side by side" }, { id: "editor", label: "Editor" }, ...extra.map(({ id, label }) => ({ id, label }))];
   const [tab, setTab] = useState(() => { try { const saved = localStorage.getItem("zaenia.pageTab.codedoctor"); return tabs.some(t => t.id === saved) ? saved! : "health"; } catch { return "health"; } });
   const [opened, setOpened] = useState<string[]>([tab]);
   const choose = (next: string) => { setTab(next); setOpened(list => list.includes(next) ? list : [...list, next]); try { localStorage.setItem("zaenia.pageTab.codedoctor", next); } catch { /* optional */ } };
@@ -214,6 +215,8 @@ export function CodeDoctorStudio({ extra }: { extra: { id: string; label: string
     </nav>
     {opened.includes("health") && <div role="tabpanel" hidden={tab !== "health"}><CodeHealth code={code} onReview={file => { setFocusFile(file); choose("queue"); }}/></div>}
     {opened.includes("queue") && <div role="tabpanel" hidden={tab !== "queue"}><ReviewQueue code={code} focusFile={focusFile}/></div>}
+    {opened.includes("side") && <div role="tabpanel" hidden={tab !== "side"}><CodeSideBySide code={code}/></div>}
+    {opened.includes("editor") && <div role="tabpanel" hidden={tab !== "editor"}><CodeEditorView code={code}/></div>}
     {extra.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="tabpanel" hidden={tab !== item.id}>{item.render()}</div>)}
   </div>;
 }
