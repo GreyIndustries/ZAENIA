@@ -77,6 +77,7 @@ import { matchCalmPhrase, type CalmPhrase } from "./core/calmPhrases";
 import { situationNow } from "./core/wakeSituation";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
+import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -1188,12 +1189,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'research': return <ResearchPage/>;
       case 'codedoctor':
       case 'files':
-      case 'suggestions': return <PageTabs id="codedoctor" tabs={[
-        { id: "doctor", label: "Code Doctor", render: () => <CodeDoctorPanel/> },
-        { id: "suggestions", label: "Suggestions", render: () => <SuggestionsPanel/> },
-        { id: "playground", label: "Playground", render: () => <PlaygroundPanel/> },
-        { id: "files", label: "Files", render: () => <FilesPanel onPendingChange={setPendingFiles}/> },
-        { id: "source", label: "Source", render: () => <SourceSearch/> },
+      // Code Doctor (Grey's picks A, C, B): Health, Review queue, then the Playground as the editor and the older tools.
+      case 'suggestions': return <CodeDoctorStudio extra={[
+        { id: "playground", label: "Playground", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><PlaygroundPanel/></Suspense> },
+        { id: "doctor", label: "Scanner", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><CodeDoctorPanel/></Suspense> },
+        { id: "suggestions", label: "Suggestions", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SuggestionsPanel/></Suspense> },
+        { id: "files", label: "Files", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><FilesPanel onPendingChange={setPendingFiles}/></Suspense> },
+        { id: "source", label: "Source", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SourceSearch/></Suspense> },
       ]}/>;
       case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;

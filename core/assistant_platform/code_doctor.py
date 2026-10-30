@@ -107,6 +107,7 @@ def scan(path: str = "") -> dict[str, Any]:
     findings: list[dict[str, Any]] = []
     totals = {"files": 0, "lines": 0}
     languages: dict[str, int] = {}
+    sizes: list[tuple[int, str]] = []
     for file in _files(root):
         rel = file.relative_to(root).as_posix()
         try:
@@ -123,6 +124,7 @@ def scan(path: str = "") -> dict[str, Any]:
         except (UnicodeDecodeError, OSError):
             continue
         totals["lines"] += text.count("\n") + 1
+        sizes.append((text.count("\n") + 1, rel))
         suffix = file.suffix.lower()
         issues: list[tuple[int, str, str]] = []
         if suffix == ".py":
@@ -149,7 +151,9 @@ def scan(path: str = "") -> dict[str, Any]:
     findings.sort(key=lambda item: (order[item["level"]], item["file"], item["line"]))
     counts = {level: sum(1 for item in findings if item["level"] == level) for level in order}
     return {"project": str(root), "isZae": root == PROJECT_ROOT, "totals": totals, "languages": languages,
-            "counts": counts, "findings": findings[:600]}
+            "counts": counts, "findings": findings[:600],
+            "biggest": [{"file": rel, "lines": lines} for lines, rel in sorted(sizes, reverse=True)
+                        if not re.search(r"(?:^|/)(?:wasm|vendor|third_party)/|\.min\.", rel)][:6]}
 
 
 def read_file(project: str, rel: str) -> tuple[Path, str]:
