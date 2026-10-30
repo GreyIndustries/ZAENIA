@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useOverviewData } from "./OverviewFrame";
 import "./CalmView.css";
 
@@ -14,7 +14,7 @@ const clock = (time: string) => { const [h, m] = time.split(":").map(Number); re
 const fmt = (n: number | null | undefined) => n === null || n === undefined ? "—" : Math.round(n).toLocaleString();
 type Slide = { kicker: string; head: string; detail: string; facts: [string, string][]; tone: string };
 
-export function CalmView({ listening, note, onHoldWake }: { listening: boolean; note: string | null; onHoldWake: () => void }) {
+export function CalmView({ listening, note, onHoldWake, core }: { listening: boolean; note: string | null; onHoldWake: () => void; core?: ReactNode }) {
   const data = useOverviewData();
   const [now, setNow] = useState(() => new Date());
   const [spot, setSpot] = useState(0);
@@ -71,15 +71,13 @@ export function CalmView({ listening, note, onHoldWake }: { listening: boolean; 
 
   return <div className="calm" role="dialog" aria-modal="true" aria-label="Calm view">
     <aside className="calm__side">
-      <div className="calm__core">
-        <svg viewBox="0 0 340 340" aria-hidden="true">
-          <circle cx="170" cy="170" r="160" className="calm__track" strokeWidth="10"/><circle cx="170" cy="170" r="160" className="calm__ring calm__ring--day" strokeWidth="10" style={ring(160, dayShare)} transform="rotate(-90 170 170)"/>
-          <circle cx="170" cy="170" r="140" className="calm__track" strokeWidth="6"/><circle cx="170" cy="170" r="140" className="calm__ring calm__ring--kcal" strokeWidth="6" style={ring(140, kcalShare)} transform="rotate(-90 170 170)"/>
-          <circle cx="170" cy="170" r="124" className="calm__track" strokeWidth="3"/><circle cx="170" cy="170" r="124" className="calm__ring calm__ring--tasks" strokeWidth="3" style={ring(124, taskShare)} transform="rotate(-90 170 170)"/>
-        </svg>
-        <span className="calm__sphere" aria-hidden="true"/>
+      {/* The same core as the dashboard (Grey, 2026-10-30), only dimmer; the three rings sit under it. */}
+      <div className="calm__core" aria-hidden="true">{core ?? <span className="calm__sphere"/>}</div>
+      <div className="calm__legend">
+        {([["day", "Day", dayShare, `${Math.round(dayShare * 100)}%`], ["kcal", "Kcal", kcalShare, `${Math.round(kcalShare * 100)}%`], ["tasks", "Tasks", taskShare, `${doneToday}/${doneToday + due.length}`]] as const).map(([id, label, share, text]) =>
+          <span key={id}><svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="14" className="calm__track" strokeWidth="4"/>
+            <circle cx="18" cy="18" r="14" className={`calm__ring calm__ring--${id}`} strokeWidth="4" style={ring(14, share)} transform="rotate(-90 18 18)"/></svg>{label} {text}</span>)}
       </div>
-      <div className="calm__legend"><span><i className="calm__dot--day"/>Day {Math.round(dayShare * 100)}%</span><span><i className="calm__dot--kcal"/>Kcal {Math.round(kcalShare * 100)}%</span><span><i className="calm__dot--tasks"/>Tasks {doneToday}/{doneToday + due.length}</span></div>
       <div className="calm__clock"><b>{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M$/i, "")}</b>
         <span>{now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}{data.weather?.temperature != null ? ` · ${Math.round(data.weather.temperature)}° ${data.weather.condition}` : ""}</span></div>
       <div className="calm__wake">

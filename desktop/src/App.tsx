@@ -1251,7 +1251,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
-    {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}/>}
+    {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
+      core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES}/>}/>}
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">
