@@ -9,8 +9,9 @@ from core.brain import conductor
 
 
 class FakeBrain:
-    def __init__(self, *, slow_talk: bool = False, talk_delay: float = 0) -> None:
+    def __init__(self, *, slow_talk: bool = False, talk_delay: float = 0, failing_talk: bool = False) -> None:
         self.slow_talk = slow_talk
+        self.failing_talk = failing_talk
         self.talk_delay = talk_delay
         self.calls: list[tuple[str | None, str | None, int | None, str | None]] = []
         self.remembered: list[tuple[str, str, str]] = []
@@ -20,6 +21,8 @@ class FakeBrain:
                    stop_event=None, keep_alive: str | None = None):
         self.calls.append((model, conductor_context, timeout, keep_alive))
         yield {"type": "route", "route": "normal"}
+        if model == conductor.TALK_MODEL and self.failing_talk:
+            return
         if model == conductor.TALK_MODEL and self.slow_talk:
             for _ in range(100):
                 if stop_event.is_set():
@@ -53,7 +56,7 @@ class ConductorTests(unittest.TestCase):
         ))
 
         self.assertEqual([call[0] for call in brain.calls], [conductor.TALK_MODEL])
-        self.assertEqual(brain.calls[0][2:], (2, conductor.TALK_KEEP_ALIVE))
+        self.assertEqual(brain.calls[0][2:], (int(conductor.TALK_FIRST_TEXT_BUDGET + conductor.TALK_PATIENCE + 2), conductor.TALK_KEEP_ALIVE))
         self.assertEqual(next(event["text"] for event in events if event["type"] == "text"), "Talk answer.")
         self.assertEqual(events[-1]["brain"], conductor.TALK_MODEL)
         self.assertFalse(events[-1]["execution_authorized"])
@@ -62,17 +65,32 @@ class ConductorTests(unittest.TestCase):
         self.assertIn("ASSISTANT: Talk answer.", context)
         self.assertEqual(brain.remembered, [("What is next?", "Talk answer.", "normal")])
 
-    def test_slow_talk_emits_status_and_retries_with_seek(self) -> None:
+    def test_slow_talk_says_the_filler_and_keeps_going_without_a_second_model(self) -> None:
         brain = FakeBrain(slow_talk=True)
         with patch.object(conductor, "TALK_FIRST_TEXT_BUDGET", 0.02):
             events = list(conductor.stream_turn(
                 brain, "Check this", session_id="session-b", stop=threading.Event(),
             ))
 
+        self.assertEqual([call[0] for call in brain.calls], [conductor.TALK_MODEL])
+        self.assertEqual([event["text"] for event in events if event["type"] == "say"], [conductor.TALK_FILLER])
+        self.assertEqual(events[-1]["brain"], conductor.TALK_MODEL)
+        self.assertIn("Talk answer.", self.memory.context("session-b"))
+
+    def test_talk_that_fails_hands_over_to_seek(self) -> None:
+        brain = FakeBrain(failing_talk=True)
+        events = list(conductor.stream_turn(brain, "Check this", session_id="session-f", stop=threading.Event()))
         self.assertEqual([call[0] for call in brain.calls], [conductor.TALK_MODEL, conductor.SEEK_MODEL])
-        self.assertEqual(next(event["text"] for event in events if event["type"] == "say"), conductor.TALK_FILLER)
+        self.assertEqual([event["text"] for event in events if event["type"] == "say"], [conductor.TALK_FILLER])
         self.assertEqual(events[-1]["brain"], conductor.SEEK_MODEL)
-        self.assertIn("Seek answer.", self.memory.context("session-b"))
+
+    def test_quiet_talk_hands_over_to_seek_after_its_patience(self) -> None:
+        brain = FakeBrain(slow_talk=True)
+        with patch.object(conductor, "TALK_FIRST_TEXT_BUDGET", 0.02), patch.object(conductor, "TALK_PATIENCE", 0.05):
+            events = list(conductor.stream_turn(brain, "Check this", session_id="session-q", stop=threading.Event()))
+        self.assertEqual([call[0] for call in brain.calls], [conductor.TALK_MODEL, conductor.SEEK_MODEL])
+        self.assertEqual(len([event for event in events if event["type"] == "say"]), 1)
+        self.assertEqual(events[-1]["brain"], conductor.SEEK_MODEL)
 
     def test_cold_talk_gets_model_load_window_without_changing_warm_budget(self) -> None:
         from core.brain import local_llm

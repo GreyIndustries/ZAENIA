@@ -21,7 +21,11 @@ TALK_FIRST_TEXT_BUDGET = 2.0
 TALK_COLD_START_BUDGET = 8.0
 TALK_COLD_START_TIMEOUT = 15
 TALK_KEEP_ALIVE = "30m"
-TALK_FILLER = "I'm checking this against a second local brain."
+# Grey's rule: if Talk can't answer within 2 s, say so and keep going. Talk keeps working after the
+# filler (starting a second model at the same time made both fight for the graphics card, about 20 s);
+# Seek only takes over if Talk fails or goes quiet for TALK_PATIENCE seconds.
+TALK_PATIENCE = 25.0
+TALK_FILLER = "I'm looking through our data."
 _SESSION_TTL = 30 * 60
 _MAX_SESSIONS = 128
 _MAX_TURNS = 6
@@ -237,7 +241,7 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
     talk_resident = model_is_loaded(TALK_MODEL)
     cold_start = talk_resident is False
     talk_budget = TALK_COLD_START_BUDGET if cold_start else TALK_FIRST_TEXT_BUDGET
-    talk_timeout = TALK_COLD_START_TIMEOUT if cold_start else 2
+    talk_timeout = TALK_COLD_START_TIMEOUT if cold_start else int(TALK_FIRST_TEXT_BUDGET + TALK_PATIENCE + 2)
     context = _WORKING_MEMORY.context(session_id)
     talk_events, talk_worker, talk_stop = _start_attempt(
         brain, question, model=TALK_MODEL, context=context, timeout=talk_timeout, parent_stop=stop,
@@ -253,6 +257,7 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
     final_event: dict[str, Any] | None = None
     first_text = False
     fallback_started = False
+    filler_said = False
     failure: Exception | None = None
 
     while not stop.is_set():
@@ -260,11 +265,17 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
         try:
             kind, payload = current_events.get(timeout=max(0.01, min(0.25, remaining)) if remaining > 0 else 0.01)
         except Empty:
+            if attempt == "talk" and not first_text and not filler_said and current_worker.is_alive() and time.monotonic() >= deadline:
+                filler_said = True
+                yield {"type": "say", "text": TALK_FILLER}
+                deadline = time.monotonic() + TALK_PATIENCE
+                continue
             if attempt == "talk" and not first_text and (time.monotonic() >= deadline or not current_worker.is_alive()):
                 if fallback_started:
                     break
                 fallback_started = True
-                yield {"type": "say", "text": TALK_FILLER}
+                if not filler_said:
+                    yield {"type": "say", "text": TALK_FILLER}
                 yield {"type": "route", "route": "conductor_seek", "brain": "seek", "level": 2, "model": SEEK_MODEL}
                 current_model = SEEK_MODEL
                 talk_stop.set()
@@ -284,7 +295,8 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
         if kind == "done":
             if attempt == "talk" and not first_text and not fallback_started:
                 fallback_started = True
-                yield {"type": "say", "text": TALK_FILLER}
+                if not filler_said:
+                    yield {"type": "say", "text": TALK_FILLER}
                 yield {"type": "route", "route": "conductor_seek", "brain": "seek", "level": 2, "model": SEEK_MODEL}
                 current_model = SEEK_MODEL
                 talk_stop.set()
@@ -299,7 +311,8 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
             failure = payload if isinstance(payload, Exception) else RuntimeError(str(payload))
             if attempt == "talk" and not first_text and not fallback_started:
                 fallback_started = True
-                yield {"type": "say", "text": TALK_FILLER}
+                if not filler_said:
+                    yield {"type": "say", "text": TALK_FILLER}
                 yield {"type": "route", "route": "conductor_seek", "brain": "seek", "level": 2, "model": SEEK_MODEL}
                 current_model = SEEK_MODEL
                 talk_stop.set()
@@ -318,7 +331,8 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
             if attempt == "talk" and not first_text and time.monotonic() > deadline:
                 if not fallback_started:
                     fallback_started = True
-                    yield {"type": "say", "text": TALK_FILLER}
+                    if not filler_said:
+                        yield {"type": "say", "text": TALK_FILLER}
                     yield {"type": "route", "route": "conductor_seek", "brain": "seek", "level": 2, "model": SEEK_MODEL}
                     current_model = SEEK_MODEL
                     talk_stop.set()

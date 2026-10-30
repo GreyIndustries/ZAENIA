@@ -8,15 +8,23 @@ from __future__ import annotations
 from typing import Any, Callable
 
 _ONLINE_CUES = (
-    "search the web", "search online", "look online", "look up online",
-    "check online", "on the internet", "web search", "research this",
-    "research the", "latest", "current", "right now", "today", "this week",
+    "search the web", "search online", "look online", "look up online", "search for",
+    "check online", "on the internet", "web search", "research this", "online",
+    "research the",
 )
+# Time words alone ("today", "latest") only mean "look it up" when the question is about the world,
+# not about Grey's own day ("what should I focus on first today?" stays with Talk).
+_TIME_CUES = ("latest", "current", "right now", "today", "this week", "news")
+_PERSONAL = ("i ", "i'm", "my ", "me ", "should i", "do i", "remind", "plan ", "focus", "schedule",
+             "workout", "eat", "task", "calendar", "note")
 
 
 def needs_web_evidence(question: str) -> bool:
     text = " ".join(str(question).lower().split())
-    return any(cue in text for cue in _ONLINE_CUES)
+    if any(cue in text for cue in _ONLINE_CUES):
+        return True
+    padded = f" {text} "
+    return any(cue in text for cue in _TIME_CUES) and not any(word in padded for word in _PERSONAL)
 
 
 def gather_web_evidence(
