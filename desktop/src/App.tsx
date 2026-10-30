@@ -71,7 +71,10 @@ import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
-import { OverviewFrame, OverviewIdleSetting } from "./components/overview/OverviewFrame";
+import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./components/overview/OverviewFrame";
+import { CalmView } from "./components/overview/CalmView";
+import { matchCalmPhrase, type CalmPhrase } from "./core/calmPhrases";
+import { situationNow } from "./core/wakeSituation";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
 import { PageTabs } from "./components/shell/PageTabs";
@@ -248,7 +251,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [mode, setMode] = useState<VisualMode>("blend");
   // Overview dashboard cards around the core, or the core alone ("Calm view"); remembered on this device.
   const [overviewCalm, setOverviewCalm] = useState(() => { try { return localStorage.getItem("zaenia.overview.calm") === "1"; } catch { return false; } });
-  const chooseCalm = (calm: boolean) => { setOverviewCalm(calm); try { localStorage.setItem("zaenia.overview.calm", calm ? "1" : "0"); } catch { /* optional */ } };
+  const chooseCalm = (calm: boolean) => { setOverviewCalm(false); try { localStorage.setItem("zaenia.overview.calm", "0"); } catch { /* optional */ } if (calm) goCalm(); };
+  // Calm view (Grey, 2026-10-30): a full-screen layer over any screen, started after the idle time in Settings, by the
+  // Calm view button, or by a sleep phrase. Only Grey's wake-up calls (his voice) end it, and it always ends on the dashboard.
+  const [calmOpen, setCalmOpen] = useState(false);
+  const [calmNote, setCalmNote] = useState<string | null>(null);
+  const calmSince = useRef(0);
+  const [idleAfter, setIdleAfter] = useState(idleMinutes);
+  useEffect(() => { const update = () => setIdleAfter(idleMinutes()); window.addEventListener("zae:overview-idle", update); return () => window.removeEventListener("zae:overview-idle", update); }, []);
+  const idleNow = useIdle(calmOpen ? 0 : idleAfter);
+  useEffect(() => { if (idleNow && !calmOpen) goCalm(); }, [idleNow]); // eslint-disable-line react-hooks/exhaustive-deps
+  function goCalm(note: string | null = null) { calmSince.current = Date.now(); setCalmNote(note); setCalmOpen(true); }
   const [motion, setMotion] = useState(true);
   // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
@@ -754,7 +767,28 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
   /** One message to ZÆNIA, typed or spoken. Sending while she's busy interrupts her. */
   const [clarify, setClarify] = useState<{ original: string; questions: { question: string; options: string[] }[] } | null>(null);
+  // Wake-up calls (voice only) and sleep phrases (voice or typed): ZAE answers from the situation, then the screen follows.
+  async function calmPhrase(match: CalmPhrase, byVoice: boolean) {
+    if (match.kind === "wake" && !byVoice) return false;
+    const jobs = platformRuntime.summary?.jobs ?? [];
+    const running = jobs.filter(job => !/done|complete|fail|cancel/i.test(job.status)).map(job => job.title);
+    const calmMinutes = calmOpen ? Math.round((Date.now() - calmSince.current) / 60000) : 0;
+    const finished = calmOpen ? jobs.filter(job => /done|complete/i.test(job.status)).map(job => job.title).slice(0, 3) : [];
+    if (match.kind === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+    try {
+      const situation = await situationNow({ calmMinutes, running, finished, section: sections[section]?.title ?? section });
+      const reply = await api<{ line: string; focus: string }>("POST", "/api/assistant/wake", { kind: match.kind, phraseId: match.id, situation }, { timeoutMs: 15000 });
+      if (match.kind === "sleep") goCalm(reply.line);
+      else window.dispatchEvent(new CustomEvent("zae:wake-focus", { detail: reply }));
+      speech.prime(); void speech.speak(`calm-${Date.now()}`, reply.line);
+    } catch {
+      if (match.kind === "sleep") goCalm(null);
+    }
+    return true;
+  }
   function submit(message: string) {
+    const phrase = matchCalmPhrase(message);
+    if (phrase?.kind === "sleep") { void calmPhrase(phrase, false); return; }
     interrupt();
     const sharedPhotos = photosRef.current;
     const photoQuestion = sharedPhotos.length > 0;
@@ -945,6 +979,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       return;
     }
     if (typeof result.nameRequired === "boolean") setOpenMic(!result.nameRequired);
+    // Reaching here means the turn was checked as Grey's voice, so wake-up calls are allowed.
+    const phrase = matchCalmPhrase(result.text);
+    if (phrase && (phrase.kind === "wake" ? true : !calmOpen)) { if (barged) speech.duck(false); void calmPhrase(phrase, true); return; }
+    if (calmOpen) return;
     const words = (result.addressed ? result.command : result.text).trim();
     if (barged) {
       // Rule: the moment she hears you she has already stopped talking and
@@ -1184,6 +1222,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
+    {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}/>}
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">

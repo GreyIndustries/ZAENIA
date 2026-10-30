@@ -189,3 +189,9 @@
 .ov-board span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
 .ov-board em{font-style:normal;font-size:9px;letter-spacing:.12em}
 .ov-phone .ov-board li{font-size:13px;padding:8px 0}
+
+/* After a wake-up call: ZAE's line, and the card it's about glows */
+.ov-woke{margin:0;max-width:680px;font-size:16px;line-height:1.45;padding:10px 16px;border-radius:var(--zx-radius,12px);border:1px solid var(--zx-line-strong,#2b4366);
+  background:var(--zx-panel,rgba(12,21,36,.86));text-align:center}
+.ov-woke b{font-size:10px;letter-spacing:.24em;color:var(--accent,#e0a353);margin-right:8px}
+.ov-card--hot{border-color:var(--ov-tone)!important;box-shadow:0 0 0 1px var(--ov-tone),0 0 26px color-mix(in srgb,var(--ov-tone) 35%,transparent)!important}

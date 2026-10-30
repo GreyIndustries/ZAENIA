@@ -1,0 +1,53 @@
+/* Calm view A (Split): dim core and background on the left, one big cycling item on the right. Covers every screen. */
+.calm{position:fixed;inset:0;z-index:900;display:grid;grid-template-columns:minmax(320px,32%) minmax(0,1fr);background:#020304;color:#e7e3dc;
+  font-family:inherit;animation:calm-in .6s ease}
+@keyframes calm-in{from{transform:scale(1.02)}to{transform:none}}
+.calm__side{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;border-right:1px solid #0f1217;padding:24px}
+.calm__core{position:relative;width:min(340px,80%);aspect-ratio:1}
+.calm__core svg{position:absolute;inset:0;width:100%;height:100%}
+.calm__track{fill:none;stroke:#101318}
+.calm__ring{fill:none;stroke-linecap:round;opacity:.75;transition:stroke-dasharray 1s ease}
+.calm__ring--day,.calm__dot--day{stroke:var(--accent,#f08a3c);background:var(--accent,#f08a3c)}
+.calm__ring--kcal,.calm__dot--kcal{stroke:#4fd1c5;background:#4fd1c5}
+.calm__ring--tasks,.calm__dot--tasks{stroke:#8fc8ff;background:#8fc8ff}
+.calm__sphere{position:absolute;left:50%;top:50%;width:58%;height:58%;transform:translate(-50%,-50%);border-radius:50%;
+  background:radial-gradient(circle at 46% 42%,#6e4421 0,#43200a 22%,#1d0c04 48%,transparent 70%);animation:calm-breathe 6s ease-in-out infinite}
+@keyframes calm-breathe{0%,100%{opacity:.75}50%{opacity:1}}
+.calm__legend{display:flex;gap:18px;flex-wrap:wrap;justify-content:center;font-family:"Cascadia Mono","JetBrains Mono",Consolas,monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#57534d}
+.calm__legend i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:1px}
+.calm__clock{text-align:center;display:flex;flex-direction:column;gap:4px}
+.calm__clock b{font-size:clamp(48px,6vw,76px);font-weight:200;letter-spacing:-.02em;line-height:1}
+.calm__clock span{font-family:"Cascadia Mono","JetBrains Mono",Consolas,monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#57534d}
+.calm__wake{position:absolute;bottom:22px;left:16px;right:16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:12px;color:#4a4742}
+.calm__hold{min-height:36px;padding:0 16px;border-radius:999px;border:1px solid #1d2026;background:transparent;color:#6d6962;font:inherit;font-size:12px;cursor:pointer;
+  background-image:linear-gradient(var(--accent,#f08a3c),var(--accent,#f08a3c));background-repeat:no-repeat;background-size:0 100%;transition:background-size 0s}
+.calm__hold--on{background-size:100% 100%;transition:background-size 2s linear;color:#1a0d03}
+.calm__hold:focus-visible{outline:2px solid var(--accent,#f08a3c);outline-offset:2px}
+.calm__main{display:flex;flex-direction:column;gap:26px;padding:clamp(28px,6vh,64px) clamp(28px,5vw,70px) clamp(24px,5vh,44px);min-width:0;--calm-tone:#e0a353}
+.calm__top{display:flex;justify-content:space-between;font-family:"Cascadia Mono","JetBrains Mono",Consolas,monospace;font-size:11px;letter-spacing:.26em;text-transform:uppercase;color:#57534d}
+.calm__top i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--calm-tone);margin-right:10px;vertical-align:0}
+.calm__slide{display:flex;flex-direction:column;gap:20px;animation:calm-slide .8s ease}
+@keyframes calm-slide{from{transform:translateY(10px)}to{transform:none}}
+.calm__slide h1{margin:0;font-size:clamp(44px,6.6vw,104px);font-weight:200;line-height:.98;letter-spacing:-.035em;overflow-wrap:anywhere}
+.calm__slide p{margin:0;font-size:clamp(18px,2vw,30px);font-weight:300;color:#a9a49b}
+.calm__facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:8px}
+.calm__facts div{border-top:1px solid #14171d;padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.calm__facts small{font-family:"Cascadia Mono","JetBrains Mono",Consolas,monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#57534d}
+.calm__facts b{font-size:clamp(20px,2.2vw,30px);font-weight:300}
+.calm__bottom{margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.calm__segments{display:flex;gap:6px}.calm__segments span{flex:1;height:3px;border-radius:3px;background:#1a1d23;transition:background .6s}
+.calm__queue{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.calm__queue div{border:1px solid #101318;border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.calm__queue small{font-family:"Cascadia Mono","JetBrains Mono",Consolas,monospace;font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#57534d}
+.calm__queue span{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.zaenia-app[data-motion="off"] .calm,.zaenia-app[data-motion="off"] .calm__slide,.zaenia-app[data-motion="off"] .calm__sphere{animation:none}
+@media (prefers-reduced-motion:reduce){.calm,.calm__slide,.calm__sphere{animation:none}}
+/* Phone: the core and clock on top, the slide below */
+@media (max-width:760px){
+  .calm{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);overflow:auto}
+  .calm__side{border-right:0;border-bottom:1px solid #0f1217;padding:calc(18px + env(safe-area-inset-top,0px)) 16px 64px;gap:14px}
+  .calm__core{width:180px}
+  .calm__queue{grid-template-columns:1fr 1fr}
+  .calm__facts{gap:12px}
+  .calm__main{padding:22px 16px calc(24px + env(safe-area-inset-bottom,0px))}
+}

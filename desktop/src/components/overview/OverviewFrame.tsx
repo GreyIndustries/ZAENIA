@@ -66,8 +66,8 @@ export function useOverviewData() {
   return data;
 }
 
-function Card({ kicker, title, tone, onOpen, children, side }: { kicker: string; title: string; tone?: string; onOpen?: () => void; children: ReactNode; side?: ReactNode }) {
-  return <section className="ov-card zx-card" style={tone ? { "--ov-tone": tone } as CSSProperties : undefined}>
+function Card({ kicker, title, tone, onOpen, children, side, hot }: { kicker: string; title: string; tone?: string; onOpen?: () => void; children: ReactNode; side?: ReactNode; hot?: boolean }) {
+  return <section className={hot ? "ov-card ov-card--hot zx-card" : "ov-card zx-card"} style={tone ? { "--ov-tone": tone } as CSSProperties : undefined}>
     <header><span className="ov-icon" aria-hidden="true"/><span className="ov-head"><small>{kicker}</small><b className="zx-title">{title}</b></span>
       {side}{onOpen && <button type="button" className="ov-open" onClick={onOpen} aria-label={`Open ${title}`}>↗</button>}</header>
     {children}
@@ -75,7 +75,7 @@ function Card({ kicker, title, tone, onOpen, children, side }: { kicker: string;
 }
 
 /** True after `minutes` without a key, click, touch, scroll or mouse move (0 = never). */
-function useIdle(minutes: number) {
+export function useIdle(minutes: number) {
   const [idle, setIdle] = useState(false);
   useEffect(() => {
     if (!minutes) { setIdle(false); return; }
@@ -122,13 +122,24 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const data = useOverviewData();
   const [idleAfter, setIdleAfter] = useState(idleMinutes);
   useEffect(() => { const update = () => setIdleAfter(idleMinutes()); window.addEventListener("zae:overview-idle", update); return () => window.removeEventListener("zae:overview-idle", update); }, []);
-  const idle = useIdle(docked ? 0 : idleAfter);
+  // Calm view is a full-screen layer now (App: CalmView), started by idle anywhere, the button or a sleep phrase.
+  const idle = false;
+  void idleAfter;
   const quiet = calm || idle;
   const [spot, setSpot] = useState(0);
   const holdUntil = useRef(0);
   const [now, setNow] = useState(() => new Date());
   // Core navigation: a category icon zooms in toward the core, then shows that category's tabs (or opens its only tab);
   // clicking the sphere lists every tab, grouped by category.
+  // After a wake-up call: ZAE's line on the dashboard and the card it's about brought forward (for a minute).
+  const [woke, setWoke] = useState<{ line: string; focus: string } | null>(null);
+  useEffect(() => {
+    let timer = 0;
+    const show = (event: globalThis.Event) => { setWoke((event as CustomEvent<{ line: string; focus: string }>).detail); window.clearTimeout(timer); timer = window.setTimeout(() => setWoke(null), 60_000); };
+    window.addEventListener("zae:wake-focus", show);
+    return () => { window.clearTimeout(timer); window.removeEventListener("zae:wake-focus", show); };
+  }, []);
+  const hot = (focus: string) => woke?.focus === focus;
   const [zoom, setZoom] = useState<number | null>(null);
   const [picked, setPicked] = useState<number | null>(null);
   const [allTabs, setAllTabs] = useState(false);
@@ -216,7 +227,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
       <li><button type="button" onClick={() => onAsk("Plan tomorrow")}><b>Plan tomorrow</b><small>Calendar, tasks and training</small></button></li>
     </ol>
   </Card>;
-  const musicCard = <Card kicker="Music & news" title="Following" tone="#e0c08a">
+  const musicCard = <Card kicker="Music & news" title="Following" tone="#e0c08a" hot={hot("news")}>
     <ul className="ov-lines">
       <li><button type="button" className="ov-link" onClick={() => onOpen("music")}>{songs === null ? "Music" : `${songs.length} song${songs.length === 1 ? "" : "s"} in progress`}</button>
         <b>{release ? `${release.title} · ${new Date(`${release.releaseDate}T00:00`).toLocaleDateString([], { month: "short", day: "numeric" })}` : "No release date"}</b></li>
@@ -227,6 +238,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const calmButton = <button type="button" className="ov-calm-btn" aria-pressed={quiet} onClick={() => onCalm(!quiet)}>
     {quiet ? "Show dashboard" : "Calm view"}</button>;
   const hero = <div className="ov-hero">
+    {woke && <p className="ov-woke" role="status"><b>ZAE</b> {woke.line}</p>}
     <span className="ov-kicker">{greeting()}, Grey{data.weather?.temperature !== null && data.weather ? ` · ${Math.round(data.weather.temperature!)}° ${data.weather.condition.toLowerCase()}` : ""}</span>
     <p>{headline}{taskLine}</p>
     <div className="ov-chips">{SUGGESTIONS.map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}{calmButton}</div>
@@ -254,7 +266,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     ...(data.reminders ?? []).filter(r => !r.done && new Date(r.due) >= now).map(r => { const d = new Date(r.due); return { at: `${iso(d)} ${d.toTimeString().slice(0, 5)}`, time: d.toTimeString().slice(0, 5), what: r.text, status: "REMINDER", tone: "#c08cff" }; }),
   ].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   const bottomRow = <div className="ov-bottom">
-    <Card kicker="Day board" title="Next up" tone="#e0a353" onOpen={() => onOpen("tasks")}>
+    <Card kicker="Day board" title="Next up" tone="#e0a353" onOpen={() => onOpen("tasks")} hot={hot("calendar")}>
       <ul className="ov-board">{boardRows.map((row, i) => <li key={i}><b>{row.time}</b><span>{row.what}</span><em style={{ color: row.tone }}>● {row.status}</em></li>)}
         {boardRows.length === 0 && <li className="ov-muted">Nothing scheduled.</li>}</ul>
     </Card>
@@ -343,7 +355,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
 
   return <div className="ov-wrap" data-look={look} style={style}>{navLayer}<div className={`ov${quiet ? " ov--calm" : ""}${zoom !== null ? " ov--zooming" : ""}`}>
     <div className="ov-rail ov-rail--left" aria-hidden={quiet || undefined} inert={quiet || undefined}>
-      <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")}>
+      <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")} hot={hot("tasks")}>
         <div className="ov-stats">
           <span><small>Open tasks</small><b>{open === null ? "—" : open.length}</b></span>
           <span><small>Due today</small><b>{open === null ? "—" : dueToday.length}</b></span>
@@ -351,12 +363,12 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
         </div>
         {todayLines}
       </Card>
-      <Card kicker="Fitness & health" title={data.day?.workout.label || "Today's training"} tone="#7fe3a8" onOpen={() => onOpen("fitness")}>
+      <Card kicker="Fitness & health" title={data.day?.workout.label || "Today's training"} tone="#7fe3a8" onOpen={() => onOpen("fitness")} hot={hot("fitness")}>
         <div className="ov-big"><b>{fmt(kcalLeft)}</b><small>kcal left{eat !== null ? ` of ${fmt(eat)}` : ""}</small></div>
         <Meter label="Eaten" value={eaten} max={eat ?? 2000} tone="var(--accent)"/>
         <Meter label="Protein (g)" value={protein} max={proteinGoal ?? 150} tone="#5fb4ff"/>
       </Card>
-      <Card kicker="System" title="Health" tone="#9fb6cf" onOpen={() => onOpen("status")} side={<span className="ov-pill">{data.security?.level ?? "—"}</span>}>
+      <Card kicker="System" title="Health" tone="#9fb6cf" onOpen={() => onOpen("status")} hot={hot("system")} side={<span className="ov-pill">{data.security?.level ?? "—"}</span>}>
         <div className="ov-health">
           <svg viewBox="0 0 120 120" role="img" aria-label={`Security score ${health ?? "unknown"}`}>
             <circle cx="60" cy="60" r="52" className="ov-ring-bg"/>

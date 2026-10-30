@@ -75,6 +75,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/news/tech/feedback", "memory.write"),
+        ("POST", r"/api/assistant/wake", "chat.reply"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
         # Code Doctor, Suggestions, Arena, source search (tools_routes.py).
@@ -160,6 +161,12 @@ def operation_for(method: str, path: str) -> str | None:
 
 
 # ------------------------------------------------------------- bodies
+
+class WakeRequest(BaseModel):
+    kind: str = Field(pattern=r"^(wake|sleep)$")
+    phraseId: int = Field(ge=1, le=5)
+    situation: dict[str, Any] = Field(default_factory=dict)
+
 
 class NewsFeedback(BaseModel):
     title: str = Field(min_length=1, max_length=400)
@@ -615,6 +622,15 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         from core.tech_news.service import tech_news
         tech_news().refresh()
         return tech_news().headlines(limit=150)
+
+    @router.post("/api/assistant/wake")
+    def assistant_wake(body: WakeRequest) -> dict[str, Any]:
+        """Grey's wake-up call or sleep phrase: a short reply from the situation, and the dashboard card to bring forward."""
+        from core.assistant_platform.wake import compose
+        from core.research.analyze import run_local
+        if len(str(body.situation)) > 4000:
+            raise HTTPException(422, "Too much context.")
+        return compose(body.kind, body.phraseId, body.situation, run=run_local, timeout=4.0)
 
     @router.post("/api/news/tech/feedback")
     def tech_news_feedback(body: NewsFeedback) -> dict[str, Any]:
