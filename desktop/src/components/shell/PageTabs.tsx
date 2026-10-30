@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import "../research/Research.css";
 
@@ -14,6 +14,11 @@ export function PageTabs({ id, tabs }: { id: string; tabs: { id: string; label: 
     setTab(next); setOpened(current => current.includes(next) ? current : [...current, next]);
     try { localStorage.setItem(key, next); } catch { /* optional */ }
   };
+  // "Open Files" / "open news" jump straight to that sub-tab even when this page is already open.
+  useEffect(() => {
+    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: string }>).detail; if (detail?.page === id && tabs.some(item => item.id === detail.tab)) choose(detail.tab); };
+    window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
+  });
   return <div className="research-page">
     <nav className="research-page__tabs" role="tablist" aria-label={`${id} sections`}>
       {tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id}

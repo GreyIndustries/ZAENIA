@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { ReadItem } from "./ResearchStudio";
 import "./Research.css";
@@ -37,6 +37,10 @@ export function ResearchPage({ initial }: { initial?: ResearchTab }) {
   const choose = (next: ResearchTab) => { setTab(next); try { localStorage.setItem(KEY, next); } catch { /* optional */ } };
   const read = (item: ReadItem) => { setReading(item); choose("reader"); };
   const board = (topicId: string) => { setBoardTopic(topicId); choose("board"); };
+  useEffect(() => {
+    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: ResearchTab }>).detail; if (detail?.page === "research" && TABS.some(item => item.id === detail.tab)) choose(detail.tab); };
+    window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
+  });
   const panel = (id: ResearchTab) => id === "desk" ? <ResearchDesk onRead={read} onBoard={board}/>
     : id === "reader" ? <ResearchReader item={reading} onRead={read}/>
     : id === "board" ? <EvidenceBoard topicId={boardTopic} onTopic={setBoardTopic} onRead={read}/>

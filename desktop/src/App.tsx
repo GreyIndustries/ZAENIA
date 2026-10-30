@@ -45,7 +45,6 @@ const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(modul
 const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(module => ({ default: module.StatusPanel })));
 const SecurityPanel = lazy(() => import("./components/security/SecurityPanel").then(module => ({ default: module.SecurityPanel })));
 const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel").then(module => ({ default: module.AssistantPanel })));
-const NewsPanel = lazy(() => import("./components/news/NewsPanel").then(module => ({ default: module.NewsPanel })));
 const ProtocolsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.ProtocolsPanel })));
 const PcSpecsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.PcSpecsPanel })));
 const SelfSustainPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.SelfSustainPanel })));
@@ -79,7 +78,7 @@ import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 
 type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
-type IconName = "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
+type IconName = "codefile" | "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
 type VisualMode = "blend" | "progress";
 
 // Conversations live in the chat box under the core: its thread opens above the
@@ -93,12 +92,10 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
   { id: 'music', label: 'Music', short: 'Music', icon: 'music' },
   { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
-  { id: "news", label: "News", short: "News", icon: "news" },
   { id: "research", label: "Research", short: "Research", icon: "pen" },
-  { id: "codedoctor", label: "Code Doctor", short: "Code", icon: "code" },
+  { id: "codedoctor", label: "Code Doctor & Files", short: "Code", icon: "codefile" },
   { id: "arena", label: "Arena", short: "Arena", icon: "brain" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
-  { id: "files", label: "Files", short: "Files", icon: "files" },
   { id: "system", label: "Settings", short: "Settings", icon: "system" },
 ];
 const sections: Record<Section, { title: string; label: string; description: string }> = {
@@ -126,9 +123,11 @@ const sections: Record<Section, { title: string; label: string; description: str
 // On desktop every workspace page opens as a window over the core.
 // Phone bottom bar: these first, the open tab if it's another one, then "More" for everything.
 const PHONE_TABS: readonly string[] = ["overview", "tasks", "fitness", "research"];
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "news", "research", "codedoctor", "arena", "assistant", "files", "system"];
+const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "research", "codedoctor", "arena", "assistant", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
-const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research", suggestions: "codedoctor" };
+// News lives in Research and Files in Code Doctor now (Grey, 2026-10-30); the old names open the right sub-tab.
+const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research", suggestions: "codedoctor", news: "research", files: "codedoctor" };
+const ALIAS_SUBTAB: Record<string, { page: string; tab: string }> = { news: { page: "research", tab: "news" }, files: { page: "codedoctor", tab: "files" } };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -165,6 +164,8 @@ function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
     chevron: <path d="m6 9 6 6 6-6"/>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 13h18M10 16.5h4"/></>,
     code: <><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/><path d="m14 4-4 16"/></>,
+    // Code Doctor & Files: the Code Doctor brackets inside a file.
+    codefile: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="m10 12-2 2.5 2 2.5M14 12l2 2.5-2 2.5"/></>,
     music: <><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></>,
     brain: <><path d="M9.5 3A3 3 0 0 0 6.6 5.3 3 3 0 0 0 4 8.3a3 3 0 0 0 .6 1.8A3.5 3.5 0 0 0 4 15a3.2 3.2 0 0 0 3 3.2A3 3 0 0 0 12 19.5V4.6A2.8 2.8 0 0 0 9.5 3Z"/><path d="M14.5 3a3 3 0 0 1 2.9 2.3A3 3 0 0 1 20 8.3a3 3 0 0 1-.6 1.8A3.5 3.5 0 0 1 20 15a3.2 3.2 0 0 1-3 3.2 3 3 0 0 1-5 1.3"/><path d="M12 8.5c-1.2 0-2.2-.6-2.7-1.6M12 13c1.4 0 2.6-.8 3-2M8 12.5c.6.6 1.4 1 2.3 1"/></>,
     pen: <><path d="M17 3a2.8 2.8 0 0 1 4 4L8 20l-5 1 1-5Z"/><path d="m15 5 4 4"/></>,
@@ -375,6 +376,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }
   const stageSection: Section = windowed ? "overview" : section;
   const openSection = (requested: Section) => {
+    const sub = ALIAS_SUBTAB[requested];
+    if (sub) {
+      try { localStorage.setItem(sub.page === "research" ? "zaenia.researchTab" : `zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ }
+      window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub }));
+    }
     const next = (WINDOW_ALIASES[requested] ?? requested) as Section;
     setSection(next);
     if (!windowed) return;
@@ -1133,16 +1139,19 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       ]}/>;
       case 'music': return <MusicStudio/>;
       case 'fitness': return <FitnessStudio drafts={personalDrafts.current}/>;
-      case 'news': return <NewsPanel/>;
+      case 'news': return <ResearchPage initial="news"/>;
       case 'library':
       case 'history':
       case 'notebook':
       case 'research': return <ResearchPage/>;
       case 'codedoctor':
+      case 'files':
       case 'suggestions': return <PageTabs id="codedoctor" tabs={[
         { id: "doctor", label: "Code Doctor", render: () => <CodeDoctorPanel/> },
         { id: "suggestions", label: "Suggestions", render: () => <SuggestionsPanel/> },
         { id: "playground", label: "Playground", render: () => <PlaygroundPanel/> },
+        { id: "files", label: "Files", render: () => <FilesPanel onPendingChange={setPendingFiles}/> },
+        { id: "source", label: "Source", render: () => <SourceSearch/> },
       ]}/>;
       case 'arena': return <ArenaPanel/>;
       case "security": return <SecurityPanel/>;
@@ -1155,10 +1164,6 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "tasks":
       case "calendar": return <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
       case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
-      case "files": return <PageTabs id="files" tabs={[
-        { id: "files", label: "Files", render: () => <FilesPanel onPendingChange={setPendingFiles}/> },
-        { id: "source", label: "Source", render: () => <SourceSearch/> },
-      ]}/>;
       case "system": return <PageTabs id="settings" tabs={[
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },
@@ -1184,7 +1189,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           <div className="brand-menu__group">WORKSPACE</div>
           {nav.map(item => <button key={item.id} type="button" role="menuitem" className="brand-menu__item" onClick={() => { openSection(item.id); setBrandOpen(false); }}>
             <Icon name={item.icon} size={15}/><span>{item.label}</span>
-            {item.id === "files" && pendingFiles > 0 && <em className="brand-menu__pill brand-menu__pill--pending">{pendingFiles} waiting</em>}
+            {item.id === "codedoctor" && pendingFiles > 0 && <em className="brand-menu__pill brand-menu__pill--pending">{pendingFiles} waiting</em>}
           </button>)}
           <div className="brand-menu__group">SYSTEMS</div>
           <div className="brand-menu__item brand-menu__item--static"><span className={`module-item__dot module-item__dot--${live ? "ready" : "error"}`}/><span>Server</span><em className="brand-menu__pill">{live ? "Connected" : "Unavailable"}</em></div>
@@ -1224,7 +1229,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             onClick={() => { setPhoneMore(false); openSection(item.id); }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
         </div>
       </div>, document.body)}
-      <nav className="sidebar__nav">{(isPhone ? [...nav.filter(item => PHONE_TABS.includes(item.id)), ...(PHONE_TABS.includes(section) ? [] : nav.filter(item => item.id === section))].slice(0, 4) : nav).map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "files" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}
+      <nav className="sidebar__nav">{(isPhone ? [...nav.filter(item => PHONE_TABS.includes(item.id)), ...(PHONE_TABS.includes(section) ? [] : nav.filter(item => item.id === section))].slice(0, 4) : nav).map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "codedoctor" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}
         {isPhone && <button type="button" className={`nav-item${phoneMore ? " nav-item--active" : ""}`} onClick={() => setPhoneMore(open => !open)} aria-expanded={phoneMore} title="All tabs"><Icon name="panel"/><span>More</span></button>}</nav>
       <div className="sidebar__bottom"><SidebarCheck/><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
     </aside>}
