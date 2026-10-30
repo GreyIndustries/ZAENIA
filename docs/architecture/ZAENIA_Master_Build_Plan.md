@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.19  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.20  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -936,3 +936,20 @@ Grey asked to read barcodes with the phone in Fitness & Health. Before, Scan foo
 ### 28.20 Calm view cycle fix — Claude, 2026-10-30 (v3.19)
 
 The spotlight paused while the mouse was over it, and when Calm view comes on from idle the mouse is usually resting there, so it stuck on one item. It now always cycles every 8 seconds; picking a dot holds that item for 20 seconds. Five new Overview directions (Command Deck, Orbit, Flight Board, Editorial, Holo HUD; each with a dashboard and a Calm view) are on the preview canvas page "Overview v2 · pick one" for Grey to choose from.
+
+### 28.21 Navigation rework, merges, Assistant front page, multi-brain plan — Claude, 2026-10-30 (v3.20)
+
+Grey's direction after the Overview v2 previews: dashboard of 1 (Command Deck) and 3 (Flight Board), the quick-ask chips kept, the flight board made a small panel; the core's six icons become six categories that every tab fits in; no sidebar on the dashboard (only inside a tab); chat on every screen; clicking the core lists every tab; picking a category zooms in toward the core; Assistant like preview 4 (Editorial); Code Doctor and Files merged; F&H "Logs & plans" sub-tabs and the T&C nested sub-tabs flattened; Overview reached from a Home item in the ZÆNIA menu; News only inside Research with more stories and right-click show more / less; three Calm view previews combining 1 and 2; wake-up and sleep phrases; a multi-brain plan.
+
+- **Six categories** (`desktop/src/core/categories.tsx`, default "by what you're doing" until Grey picks on the card): Plan (Tasks & Calendar, Notes), Health (Fitness & Health), Know (Research, Assistant), Create (Music, Workbench), Build (Code Doctor & Files, Arena), System (Status, Security, Settings). The core shows them on the dashboard; while windows are open the docked core keeps its module icons.
+- **Core navigation** (OverviewFrame): a category zooms the core in (scale and glow, 0.65 s; instant with motion off), then opens its only tab or shows its tabs as large tiles. Clicking the sphere lists every tab grouped by category, with the sidebar's icon size. Escape or a click outside closes.
+- **Sidebar only in a tab**: hidden on the dashboard (desktop); Overview left the sidebar and is "Home" at the top of the ZÆNIA menu. The phone keeps its bottom bar. The chat bar stays on every screen.
+- **Day board**: a small flight-board panel (time, item, status) leads the dashboard's bottom row, from events, overdue and due tasks, and reminders.
+- **Merges**: Code Doctor & Files is one tab (Code Doctor, Suggestions, Playground, Files, Source) with a new icon (the Code Doctor brackets inside a file). News left the sidebar and lives in Research; "open news" / "open files" still work and jump to that sub-tab (`zae:page-tab`).
+- **F&H**: Food & exercise, Recipes, Scan food and Plans & targets are F&H tabs (Edit plans and Targets merged), next to Progress, Today, Day log and Training program.
+- **T&C**: the Both / Calendar / Tasks / Reminders switch became the Month (calendar with tasks) and Reminders tabs.
+- **News**: up to 150 stories at once (route limit 200). Right-click a story: Show more like this / Show less like this / Open story. Feedback weights the story's words and newsroom (`data/news/preferences.json`, on this PC), which reorders headlines and hides strongly disliked ones. Test: show_more_and_less_like_this.
+- **Assistant**: first sub-tab "Today's edition" is The ZAE Daily (lead = next up, columns for fitness, news and the studio, by the numbers, briefs from ZAE's follow-ups, Ask the editor); the existing tools are the second sub-tab.
+- **Calm view previews**: A Split, B Halo, C Horizon on the preview canvas page "Calm view · pick one". Calm view build and the wake-up / sleep phrases wait on Grey's pick.
+- **Multi-brain plan**: `docs/architecture/ZAENIA_Multi_Brain_Plan.md` (Talk, Seek, Keep, Study; the Conductor's levels; shared working memory; wake and sleep phrase handling; phases and Grey's decisions).
+- **Tests**: Python 819 OK (14 skipped); desktop type-check and node tests pass; checked in preview (no sidebar on the dashboard, six categories, zoom then tiles, the full tab list, Code Doctor & Files sub-tabs).
