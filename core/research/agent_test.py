@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.research import agent
 
@@ -21,6 +22,13 @@ FEED = ("<rss><channel><item><title>New chip - Site</title><link>https://news.go
 
 
 class SearchTest(unittest.TestCase):
+    def test_study_and_keep_use_separate_local_model_roles(self):
+        with patch("core.research.analyze.run_local", return_value="ok") as run:
+            self.assertEqual(agent._ask_study("write a sourced report"), "ok")
+            self.assertEqual(run.call_args.kwargs, {"model": "qwen3:14b", "cpu_only": False})
+            self.assertEqual(agent._ask_keep("summarize watch findings"), "ok")
+            self.assertEqual(run.call_args.kwargs, {"model": "qwen3:1.7b", "cpu_only": True})
+
     def test_results_skip_ads_video_and_pdf_and_unwrap_links(self):
         forms = []
         found = agent.search("best gpu", recent=True, post=lambda url, form: forms.append(form) or DDG_PAGE)

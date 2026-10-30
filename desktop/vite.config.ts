@@ -16,7 +16,18 @@ export default defineConfig(() => ({
   server: {
     port: 1420,
     strictPort: true,
-    host: host || false,
+    // The standalone browser dev server is local-only. Tauri may set an
+    // explicit host when remote HMR is needed for its own dev workflow.
+    host: host || "127.0.0.1",
+    // Browser development uses the same authenticated local Core as the
+    // installed app. Keep API credentials in the app; this only forwards the
+    // request to the loopback server.
+    proxy: {
+      "/api": {
+        target: "http://127.0.0.1:8766",
+        changeOrigin: false,
+      },
+    },
     hmr: host
       ? {
           protocol: "ws",

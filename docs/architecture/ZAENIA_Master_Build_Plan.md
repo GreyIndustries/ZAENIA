@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.22  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.24  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -988,3 +988,26 @@ Grey approved downloading the four picked models and asked to finish the new scr
 - **Checks:** the type-check and node tests pass. In preview, each tab opens on its new first view (Settings showed every switch). Views that read records need the server, so they were checked for opening, not for data.
 
 - 2026-10-30: Calm view now shows the dashboard's own core (the same canvas and six category icons), dimmed to about 40% brightness and not clickable; the day, calorie and task rings moved to small gauges under it.
+
+### 28.25 Anatomical heart icon for Health — Codex, 2026-10-30 (v3.23)
+
+- Replaced the generic heart glyph used for the Health category on the Neural Core with a custom anatomical heart line icon, including major vessels and internal contours. It uses the existing SVG stroke and category color so the visual treatment remains consistent with the other core icons.
+
+### 28.26 Conductor Phase 2: Talk routing and shared working memory — Codex, 2026-10-30 (v3.24)
+
+- **Isolated baseline:** left `main` at commit `d84d62b` unchanged and verified the local tag `zaenia-pristine-2026-10-30` points there. Work proceeds on `codex/conductor-weekend-2`, based on that commit. Existing local `core/api/chat_files.py` changes were not copied or edited.
+- **Level 0:** existing deterministic protocol, reminder, screen-watch, photo/file and action-proposal routes stay ahead of model chat. Sensitive changes still use their current permission and approval routes; the Conductor never executes actions.
+- **Talk:** `core/brain/conductor.py` routes ordinary desktop/browser chat and owner-verified PC voice turns to `qwen3.5:4b` with a two-second first-text budget while resident and a cold-load window when it is not. `local_llm.model_is_loaded()` checks Ollama's loopback `/api/ps`; a cold start receives an 8-second first-text window and a 15-second HTTP timeout, while warm turns keep the 2-second budget. The live cold Talk trial took 3.91 seconds to first text; the next warm turn took 0.16 seconds. If Talk times out or fails before speaking, ZAE sends a short spoken status and retries through `qwen3.5:9b`. The real Seek handoff returned the correct answer and `execution_authorized=false`. Both models use local Ollama and the existing `BrainService` grounding/live-data paths. A per-turn timeout and stop event bound each attempt.
+- **Shared working memory:** the Conductor keeps the last three user/assistant exchanges and the last route/evidence references per authenticated conversation in process memory, capped at 128 sessions and a 30-minute idle lifetime. It is temporary, never grants permissions, and is not persisted. The model receives it as context explicitly marked as untrusted conversation context.
+- **Wake and sleep:** the situation-based wake/sleep reply now uses the Talk model. Existing phrase matching and voice checks remain in place.
+- **Scope:** this starts Phase 2. The Seek model handoff is currently a model retry through `BrainService`; the evidence-pack search pipeline remains Phase 3. Keep scheduling/pattern learning and Study jobs are not yet connected to the Conductor.
+- **Dev server:** `desktop/vite.config.ts` binds the standalone browser development UI to `127.0.0.1:1420` and proxies `/api` to the existing token-protected Core on `127.0.0.1:8766`. Tauri can still supply its explicit host for remote HMR.
+- **Verification:** 31 focused Python tests passed (`conductor_test`, `assistant_stream_test`, `assistant_upgrade_test`, `fluid_runtime_test`); all 14 desktop Node test scripts passed (424 counted checks). Local model trials verified Talk cold and warm starts plus a real Seek handoff. The broader core run executed 811 tests, with 4 failures, 7 errors and 13 skips: document-folder fixtures reject this worktree because it is under the protected `.codex` directory. TypeScript, `npm run build`, `npm run build:web` and `npm run tauri build -- --no-bundle` succeeded after the final Conductor change. Live speaker-authentication trial remains pending. No server restart or install replacement has been performed from this feature branch.
+
+### 28.27 Conductor Phase 3: source-backed Seek lookups — Codex, 2026-10-30 (v3.25)
+
+- **Explicit online routing:** `core/brain/seek.py` recognizes direct online, current and research requests. Seek searches only the user's stated query, reads at most four public pages through the existing safe research agent, and does not send private memory or the Conductor blackboard to the web.
+- **Evidence handling:** the local Seek model receives page excerpts as untrusted data with inline citation instructions. Missing evidence is stated plainly in the prompt. Web page text cannot grant permissions or authorize actions; the final event always carries `execution_authorized=false`. Existing grounded local-system answers keep their verifier and now carry their local index paths through the stream.
+- **Sources in chat:** the stream's `done` event includes bounded source references. The desktop and browser chat render external HTTPS sources as links and local evidence as labels.
+- **Keep and Study roles:** Keep's existing evidence-checked insight learner now defaults to `qwen3:1.7b` with Ollama `num_gpu: 0`; configured research watches use that model. Existing scheduled backup, security, news, and topic-watch services remain intact. Research-agent long reports use local `qwen3:14b` through background-priority model calls and preserve their source list. `gpt-oss:20b` overnight scheduling remains future work.
+- **Checks:** 35 focused Seek, Conductor, Keep learning, and research tests pass; all 14 desktop Node test scripts pass. `npm run build`, `npm run build:web` and `npm run tauri build -- --no-bundle` succeed. The browser/native production outputs were generated. The separate `core.api.assistant_stream_test` stalls at its first calendar permission test in this managed checkout; the full core suite also has the path-related fixtures documented in 28.26. Next: verify live voice speaker rejection, live source citations, and Keep preemption while speaking; then tune the multi-brain scorecard. No merge or installation has happened from this feature branch.

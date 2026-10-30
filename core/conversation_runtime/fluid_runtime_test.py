@@ -214,6 +214,7 @@ class StreamingResponse:
             "[dim]"
             f"Brain route: "
             f"{self.route} "
+            f"({event.get('brain', event.get('model', 'local'))}) "
             f"({self.streaming_mode})"
             "[/dim]"
         )
@@ -290,9 +291,14 @@ class StreamingResponse:
         self.speech.start()
 
         try:
-            for event in self.brain.stream_ask(
+            from core.brain.conductor import stream_turn
+            for event in stream_turn(
+                self.brain,
                 self.user_text,
+                session_id="verified-pc-voice",
+                stop=self.cancel_event,
                 remember=False,
+                commit_working_memory=False,
             ):
                 if self.cancel_event.is_set():
                     break
@@ -313,6 +319,11 @@ class StreamingResponse:
                     self._handle_text_event(
                         event
                     )
+
+                elif event_type == "say":
+                    text = str(event.get("text") or "").strip()
+                    if text and not self.cancel_event.is_set():
+                        self.speech.enqueue(text)
 
                 elif event_type == "final":
                     self.final_result = (
@@ -391,6 +402,16 @@ class StreamingResponse:
                     route=(
                         final_route
                     ),
+                )
+                from core.brain.conductor import working_memory
+                working_memory().record_turn(
+                    "verified-pc-voice",
+                    self.user_text,
+                    complete_reply,
+                    route=final_route,
+                    brain=str((self.final_result or {}).get("brain") or "verified voice"),
+                    evidence=(self.final_result or {}).get("evidence")
+                    if isinstance((self.final_result or {}).get("evidence"), list) else None,
                 )
 
         except Exception as error:

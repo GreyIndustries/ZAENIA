@@ -8,7 +8,8 @@ import type { ChatPhoto } from "../../core/photos";
 import { fileSize, MAX_SHARED_FILES, readSharedFile } from "../../core/sharedFiles";
 import type { ChatFile } from "../../core/sharedFiles";
 
-export type ChatMessage = { id: number; role: "user" | "assistant" | "error"; text: string; photos?: ChatPhoto[]; files?: string[]; at?: string; history?: boolean; streaming?: boolean; interrupted?: boolean; proposal?: AssistantProposal; action?: AssistantActionState };
+export type ChatSource = { id?: string; title?: string; url?: string; path?: string; source_type?: string; excerpt?: string };
+export type ChatMessage = { id: number; role: "user" | "assistant" | "error"; text: string; photos?: ChatPhoto[]; files?: string[]; sources?: ChatSource[]; at?: string; history?: boolean; streaming?: boolean; interrupted?: boolean; proposal?: AssistantProposal; action?: AssistantActionState };
 export type HistoryState = "preview" | "loading" | "ready" | "unavailable";
 export type ListenProps = {
   supported: boolean;
@@ -307,6 +308,9 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
         return <div key={message.id} className={`message message--${message.role}${message.streaming ? " message--streaming" : ""}`} style={{ opacity: alpha }}>
           <span>{label(message.role)}{message.at && <time dateTime={message.at}>{clock(message.at)}</time>}{message.interrupted && <em className="message__cut">STOPPED</em>}</span>
           <p>{message.text}{message.streaming && <i className="message__caret" aria-hidden="true"/>}</p>
+          {!!message.sources?.length && <div className="message__sources"><small>Sources</small>{message.sources.map((source, index) => <div key={`${source.id ?? index}-${source.url ?? source.path ?? ""}`}>
+            {source.url?.startsWith("https://") ? <a href={source.url} target="_blank" rel="noreferrer">[{source.id ?? index + 1}] {source.title || source.url}</a> : <span>[{source.id ?? index + 1}] {source.title || source.path || "Local evidence"}</span>}
+          </div>)}</div>}
           {message.files && <div className="message__files">{message.files.map((name, index) => <span key={index} className="message__file"><FileIcon/>{name}</span>)}</div>}
           {message.photos && <div className="message__photos">{message.photos.map((photo, index) => <img key={index} src={photo.data} alt={photo.name}/>)}</div>}
           {message.role === "assistant" && <ActionCard message={message} live={live} onApply={onApplyProposal} onDismiss={onDismissProposal}/>}

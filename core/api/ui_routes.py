@@ -633,10 +633,17 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def assistant_wake(body: WakeRequest) -> dict[str, Any]:
         """Grey's wake-up call or sleep phrase: a short reply from the situation, and the dashboard card to bring forward."""
         from core.assistant_platform.wake import compose
-        from core.research.analyze import run_local
+        from core.brain.conductor import TALK_MODEL
+        from core.brain.local_llm import chat_local
         if len(str(body.situation)) > 4000:
             raise HTTPException(422, "Too much context.")
-        return compose(body.kind, body.phraseId, body.situation, run=run_local, timeout=4.0)
+        return compose(
+            body.kind,
+            body.phraseId,
+            body.situation,
+            run=lambda prompt: chat_local(prompt, model=TALK_MODEL, timeout=4),
+            timeout=4.0,
+        )
 
     @router.post("/api/news/tech/feedback")
     def tech_news_feedback(body: NewsFeedback) -> dict[str, Any]:

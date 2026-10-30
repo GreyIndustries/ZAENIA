@@ -261,14 +261,14 @@ export async function connectGmail(): Promise<void> {
 // ---- Streaming chat ------------------------------------------------------
 export type StreamEvent =
   | { type: "start"; id: string }
-  | { type: "route"; route: string }
+  | { type: "route"; route: string; brain?: string; level?: number; model?: string }
   | { type: "delta"; text: string }
   | { type: "proposal"; proposal: AssistantProposal }
   | { type: "protocol"; open: string[] }
   | { type: "say"; text: string }
   | { type: "form"; form: string; description?: string }
   | { type: "clarify"; questions: { question: string; options: string[] }[]; original: string }
-  | { type: "done"; reply: string; interrupted: boolean; route?: string }
+  | { type: "done"; reply: string; interrupted: boolean; route?: string; sources?: { id?: string; title?: string; url?: string; path?: string; source_type?: string; excerpt?: string }[] }
   | { type: "error"; detail: string };
 export type ChatStream = { done: Promise<void>; cancel: () => void; id: string };
 let conversationSession: string | null = null;
