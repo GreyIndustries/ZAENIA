@@ -120,7 +120,7 @@
 
 /* Bottom row under the core (week trends), and Calm view's spotlight in the same slot so the core keeps its size */
 .ov-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--zx-gap,12px);width:100%;flex:none;margin-top:10px}
-.ov-bottom .ov-card{min-height:150px}
+.ov-bottom .ov-card{height:150px;overflow:hidden}
 .ov-week{display:flex;align-items:flex-end;gap:6px;height:70px}
 .ov-week>span{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
 .ov-week i{width:100%;border-radius:3px 3px 0 0;background:var(--accent,#e0a353);opacity:.85;transition:height .6s ease}
@@ -135,7 +135,7 @@
 .ov-dots i.ov-dot--on{background:var(--ov-tone);border-color:transparent;box-shadow:0 0 6px var(--ov-tone)}
 .ov-dots small{margin-left:6px;font-size:11px;color:var(--zx-muted,#9fb6cf)}
 
-.ov-spotlight{width:100%;max-width:760px;flex:none;margin-top:10px;min-height:150px;justify-content:center;align-items:center;text-align:center;--ov-tone:var(--accent,#e0a353)}
+.ov-spotlight{width:100%;max-width:760px;flex:none;margin-top:10px;height:150px;justify-content:center;align-items:center;text-align:center;--ov-tone:var(--accent,#e0a353)}
 .ov .ov-spotlight__body{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:4px 10px;animation:ov-fade .6s ease}
 .ov-spotlight__body small{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ov-tone)}
 .ov-spotlight__body b{font-family:var(--zx-title-font,inherit);font-size:clamp(18px,2.4cqi,28px);font-weight:300;line-height:1.3;max-width:640px}

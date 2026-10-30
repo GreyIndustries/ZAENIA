@@ -177,7 +177,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     {quiet ? "Show dashboard" : "Calm view"}</button>;
   const hero = <div className="ov-hero">
     <span className="ov-kicker">{greeting()}, Grey{data.weather?.temperature !== null && data.weather ? ` · ${Math.round(data.weather.temperature!)}° ${data.weather.condition.toLowerCase()}` : ""}</span>
-    {!quiet && <p>{headline}{taskLine}</p>}
+    <p>{headline}{taskLine}</p>
     <div className="ov-chips">{SUGGESTIONS.map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}{calmButton}</div>
   </div>;
 
