@@ -68,6 +68,18 @@ class TechNewsTest(unittest.TestCase):
         self.assertEqual([s["title"] for s in self.news.headlines(query="php")["stories"]], ["PHP patches remote code bug"])
         self.assertEqual(len(self.news.headlines(topic="ai")["stories"]), 1)
 
+    def test_show_more_and_less_like_this(self):
+        self.news.refresh()
+        titles = lambda: [s["title"] for s in self.news.headlines()["stories"]]
+        self.assertEqual(titles()[1], "PHP patches remote code bug")
+        for _ in range(2):
+            self.news.feedback("PHP patches remote code bug", ["Alpha"], more=True)
+        self.assertEqual(titles()[0], "PHP patches remote code bug")  # liked it: now ahead of the bigger story
+        for _ in range(6):
+            self.news.feedback("PHP patches remote code bug", ["Alpha"], more=False)
+        self.assertNotIn("PHP patches remote code bug", titles())  # asked for less: it stops showing
+        self.assertTrue((self.dir / "preferences.json").exists())
+
     def test_context_only_for_news_questions_and_labels_text_as_untrusted(self):
         self.news.refresh()
         self.assertIsNone(news_context("what's the weather", self.news))

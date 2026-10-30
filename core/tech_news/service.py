@@ -28,6 +28,9 @@ from xml.etree import ElementTree
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCES_FILE = Path(__file__).with_name("sources.yaml")
 CACHE_FILE = PROJECT_ROOT / "data" / "news" / "tech_news.json"
+# "Show more / less like this" from right-clicking a story: word and newsroom weights, kept on this PC.
+PREFS_FILE = PROJECT_ROOT / "data" / "news" / "preferences.json"
+MAX_HEADLINES = 200
 REFRESH_SECONDS = 30 * 60
 KEEP_DAYS = 4
 MAX_FEED_BYTES = 3_000_000
@@ -176,9 +179,11 @@ def group_stories(stories: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 class TechNews:
     def __init__(self, *, fetch: Callable[[str], bytes] | None = None, sources: Callable[[], list[Source]] = load_sources,
-                 cache_file: Path = CACHE_FILE, clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc)):
+                 cache_file: Path = CACHE_FILE, clock: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
+                 prefs_file: Path | None = None):
         self.fetch = fetch or self._fetch
         self.sources, self.cache_file, self.clock = sources, Path(cache_file), clock
+        self.prefs_file = Path(prefs_file) if prefs_file else (PREFS_FILE if Path(cache_file) == CACHE_FILE else Path(cache_file).with_name("preferences.json"))
         self.lock = threading.Lock()
         self.stop_event = threading.Event()
         self.thread: threading.Thread | None = None
@@ -228,6 +233,34 @@ class TechNews:
                 pass
             return data
 
+    def preferences(self) -> dict[str, dict[str, float]]:
+        try:
+            data = json.loads(self.prefs_file.read_text(encoding="utf-8"))
+            return {"words": dict(data.get("words", {})), "sources": dict(data.get("sources", {}))}
+        except (OSError, ValueError, AttributeError):
+            return {"words": {}, "sources": {}}
+
+    def feedback(self, title: str, sources: list[str], more: bool) -> dict[str, Any]:
+        """Grey right-clicked a story: show more (or less) like it. Its words and newsrooms gain or lose weight."""
+        prefs = self.preferences()
+        step = 1.0 if more else -1.0
+        for word in _words(title):
+            prefs["words"][word] = max(-5.0, min(5.0, prefs["words"].get(word, 0.0) + step))
+        for name in sources[:3]:
+            prefs["sources"][name] = max(-1.5, min(1.5, prefs["sources"].get(name, 0.0) + step / 4))
+        # Keep the strongest 400 words so the file stays small.
+        prefs["words"] = dict(sorted(prefs["words"].items(), key=lambda kv: -abs(kv[1]))[:400])
+        from core.foundation.security.io import atomic_write
+        self.prefs_file.parent.mkdir(parents=True, exist_ok=True)
+        atomic_write(self.prefs_file, json.dumps(prefs, ensure_ascii=False).encode("utf-8"))
+        return {"ok": True, "more": more}
+
+    def _liking(self, story: dict[str, Any], prefs: dict[str, dict[str, float]]) -> float:
+        words = _words(story["title"] + " " + story.get("summary", ""))
+        # Words matter most; a newsroom only nudges (its strongest weight among the story's sources).
+        source = max((prefs["sources"].get(n, 0.0) for n in story["sources"]), key=abs, default=0.0)
+        return sum(prefs["words"].get(w, 0.0) for w in words) / 3 + source
+
     def headlines(self, *, query: str = "", topic: str = "", limit: int = 10, hours: int = 48) -> dict[str, Any]:
         data = self.load()
         sources = {s.name: s for s in self.sources()}
@@ -242,9 +275,12 @@ class TechNews:
             if terms and not terms & _words(story["title"] + " " + story.get("summary", "")):
                 continue
             picked.append(story)
-        # Lead with stories several sources cover, then the newest.
-        picked.sort(key=lambda s: (min(s.get("coverage", 1), 3), s.get("published") or ""), reverse=True)
-        return {"updatedAt": data.get("updatedAt"), "stories": picked[:max(1, min(limit, 50))],
+        # Lead with stories several sources cover and ones like those Grey asked for more of; drop what he asked for less of.
+        prefs = self.preferences()
+        liking = {id(s): self._liking(s, prefs) for s in picked}
+        picked = [s for s in picked if liking[id(s)] > -3]
+        picked.sort(key=lambda s: (min(s.get("coverage", 1), 3) + max(-2.0, min(2.0, liking[id(s)])), s.get("published") or ""), reverse=True)
+        return {"updatedAt": data.get("updatedAt"), "stories": picked[:max(1, min(limit, MAX_HEADLINES))],
                 "sources": [{"name": s.name, "focus": list(s.focus), "why": s.why,
                              **data.get("sources", {}).get(s.name, {})} for s in sources.values()]}
 

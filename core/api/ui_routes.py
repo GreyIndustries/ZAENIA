@@ -74,6 +74,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
+        ("POST", r"/api/news/tech/feedback", "memory.write"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
         # Code Doctor, Suggestions, Arena, source search (tools_routes.py).
@@ -159,6 +160,12 @@ def operation_for(method: str, path: str) -> str | None:
 
 
 # ------------------------------------------------------------- bodies
+
+class NewsFeedback(BaseModel):
+    title: str = Field(min_length=1, max_length=400)
+    sources: list[str] = Field(default_factory=list, max_length=10)
+    more: bool
+
 
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=400)
@@ -599,7 +606,7 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
 
     @router.get("/api/news/tech")
     def tech_news_headlines(q: str = Query(default="", max_length=200), topic: str = Query(default="", max_length=40),
-                            limit: int = Query(default=20, ge=1, le=50)) -> dict[str, Any]:
+                            limit: int = Query(default=20, ge=1, le=200)) -> dict[str, Any]:
         from core.tech_news.service import tech_news
         return tech_news().headlines(query=q, topic=topic, limit=limit)
 
@@ -607,7 +614,12 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def tech_news_refresh() -> dict[str, Any]:
         from core.tech_news.service import tech_news
         tech_news().refresh()
-        return tech_news().headlines(limit=20)
+        return tech_news().headlines(limit=150)
+
+    @router.post("/api/news/tech/feedback")
+    def tech_news_feedback(body: NewsFeedback) -> dict[str, Any]:
+        from core.tech_news.service import tech_news
+        return tech_news().feedback(body.title, body.sources, body.more)
 
     @router.get("/api/screen/watch")
     def screen_watch_status() -> dict[str, Any]:

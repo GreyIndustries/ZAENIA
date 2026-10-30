@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { AddToNotebook, AnalysisResult, useAnalysis } from "../research/researchShared";
 import "../research/Research.css";
@@ -146,12 +146,22 @@ export function NewsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showSources, setShowSources] = useState(false);
+  // Right-click a story: "Show more like this" / "Show less like this" (ZAE weighs its words and newsroom from then on).
+  const [menu, setMenu] = useState<{ x: number; y: number; story: Story } | null>(null);
+  const [said, setSaid] = useState<string | null>(null);
+  const menuFor = (story: Story) => (event: ReactMouseEvent) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY, story }); };
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener("click", close); window.addEventListener("scroll", close, true); window.addEventListener("keydown", close);
+    return () => { window.removeEventListener("click", close); window.removeEventListener("scroll", close, true); window.removeEventListener("keydown", close); };
+  }, [menu]);
 
   const load = useCallback(async (refresh = false) => {
     if (!LIVE_API) return;
     setBusy(true); setError(null);
     try {
-      const params = new URLSearchParams({ limit: "50", topic, q: query.trim() });
+      const params = new URLSearchParams({ limit: "150", topic, q: query.trim() });
       setNews(refresh ? await api<News>("POST", "/api/news/tech/refresh", undefined, { timeoutMs: 60000 })
         : await api<News>("GET", `/api/news/tech?${params}`));
     } catch (failure) { setError(failure instanceof Error ? failure.message : "News couldn't load."); }
@@ -165,6 +175,14 @@ export function NewsPanel() {
     const others = stories.filter(story => story !== lead);
     return [lead, others.slice(0, 21), others.slice(21)];
   }, [news]);
+  const feedback = async (story: Story, more: boolean) => {
+    setMenu(null);
+    try {
+      await api("POST", "/api/news/tech/feedback", { title: story.title, sources: story.sources, more });
+      setSaid(more ? "Got it, more stories like that." : "Got it, fewer stories like that.");
+      void load();
+    } catch (failure) { setError(failure instanceof Error ? failure.message : "That didn't save."); }
+  };
   const reachable = news?.sources.filter(source => source.ok !== false).length ?? 0;
   const today = new Date().toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
 
@@ -195,7 +213,13 @@ export function NewsPanel() {
     {LIVE_API && <WorldSearch onOpen={setReading}/>}
     {reading && <Reader key={reading.link} story={reading} onClose={() => setReading(null)}/>}
 
-    {hero && <article className="news__hero" onClick={() => open(hero)} role="link" tabIndex={0}
+    {said && <p className="news__note" role="status">{said}</p>}
+    {menu && <div className="news__menu" role="menu" style={{ left: Math.min(menu.x, window.innerWidth - 220), top: Math.min(menu.y, window.innerHeight - 110) }} onClick={event => event.stopPropagation()}>
+      <button type="button" role="menuitem" autoFocus onClick={() => void feedback(menu.story, true)}>Show more like this</button>
+      <button type="button" role="menuitem" onClick={() => void feedback(menu.story, false)}>Show less like this</button>
+      <button type="button" role="menuitem" onClick={() => { setMenu(null); open(menu.story); }}>Open story</button>
+    </div>}
+    {hero && <article className="news__hero" onClick={() => open(hero)} onContextMenu={menuFor(hero)} role="link" tabIndex={0}
       onKeyDown={event => { if (event.key === "Enter") open(hero); }}>
       <Picture story={hero}/>
       <div className="news__hero-copy">
@@ -208,7 +232,7 @@ export function NewsPanel() {
 
     <div className="news__grid">
       {rest.map((story, index) => <article key={story.link} className={`news__card news__card--${sizeFor(story, index) || "std"}`}
-        onClick={() => open(story)} role="link" tabIndex={0} onKeyDown={event => { if (event.key === "Enter") open(story); }}>
+        onClick={() => open(story)} onContextMenu={menuFor(story)} role="link" tabIndex={0} onKeyDown={event => { if (event.key === "Enter") open(story); }}>
         <Picture story={story}/>
         <div className="news__card-copy">
           <h4>{story.title}</h4>
@@ -219,8 +243,8 @@ export function NewsPanel() {
     </div>
 
     {quick.length > 0 && <section className="news__quick" aria-label="More headlines">
-      <h3>More headlines</h3>
-      <ol>{quick.map(story => <li key={story.link}><button type="button" onClick={() => open(story)}>{story.title}</button><Sources story={story}/></li>)}</ol>
+      <h3>More headlines <small>{quick.length} more · right-click any story to see more or less like it</small></h3>
+      <ol>{quick.map(story => <li key={story.link} onContextMenu={menuFor(story)}><button type="button" onClick={() => open(story)}>{story.title}</button><Sources story={story}/></li>)}</ol>
     </section>}
   </div>;
 }

@@ -95,3 +95,9 @@
 .news__world-list button{padding:0;border:0;background:none;color:#e8f1fb;text-align:left;font-size:13px;cursor:pointer}
 .news__world-list button:hover{color:var(--accent-2,#ffd9a6)}
 .news__world-list small{display:block;font-size:10px;color:#8ea4c0}
+
+/* Right-click on a story: show more / less like this */
+.news__menu{position:fixed;z-index:1000;min-width:200px;display:flex;flex-direction:column;padding:6px;border-radius:12px;background:#0c1524;border:1px solid rgba(143,202,255,.3);box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.news__menu button{text-align:left;padding:9px 12px;border:0;border-radius:8px;background:transparent;color:#e8f1fb;font:inherit;font-size:13px;cursor:pointer}
+.news__menu button:hover,.news__menu button:focus-visible{background:rgba(143,202,255,.12);outline:none}
+.news__quick h3 small{font-size:11px;font-weight:400;color:#8ea4c0;margin-left:8px}
