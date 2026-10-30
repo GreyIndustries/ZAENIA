@@ -195,3 +195,33 @@
   background:var(--zx-panel,rgba(12,21,36,.86));text-align:center}
 .ov-woke b{font-size:10px;letter-spacing:.24em;color:var(--accent,#e0a353);margin-right:8px}
 .ov-card--hot{border-color:var(--ov-tone)!important;box-shadow:0 0 0 1px var(--ov-tone),0 0 26px color-mix(in srgb,var(--ov-tone) 35%,transparent)!important}
+
+/* Category zoom (2026-10-30): we move in close to the picked part of the core, which stays as a dim background,
+   and panels of recent things appear on that side. Reverses on "← Core" or Escape. */
+.ov-wrap:not(.ov-wrap--phone){overflow:hidden}
+.ov-center>.progress-stage,.ov-phone__core>.progress-stage{transition:transform .9s cubic-bezier(.6,0,.2,1),filter .9s ease}
+.ov--zoomed .ov-center>.progress-stage,.ov--zoomed .ov-phone__core>.progress-stage{transform-origin:var(--zoom-ox,50%) var(--zoom-oy,45%);transform:scale(3.4);filter:brightness(.42) saturate(.85)}
+.ov-rail,.ov-hero,.ov-bottom,.ov-spotlight{transition:opacity .45s ease,visibility .45s}
+.ov--zoomed .ov-rail,.ov--zoomed .ov-hero,.ov--zoomed .ov-bottom,.ov--zoomed .ov-spotlight,.ov--zoomed .ov-tiles,.ov--zoomed .ov-phone>.ov-card{opacity:0;visibility:hidden}
+.ov--zoomed .core-orb,.ov--zoomed .core-state,.ov--zoomed .core-tap,.ov--zoomed .core-hud{opacity:0!important;pointer-events:none}
+.zaenia-app[data-motion="off"] .ov-center>.progress-stage{transition:none}
+@media (prefers-reduced-motion:reduce){.ov-center>.progress-stage,.ov-phone__core>.progress-stage{transition:none}}
+.ov-catwrap{position:absolute;inset:0;z-index:20;display:flex;padding:8px;pointer-events:none}
+.ov-catwrap--left{justify-content:flex-start}.ov-catwrap--right{justify-content:flex-end}
+.ov-cat{pointer-events:auto;width:min(760px,58%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:var(--zx-gap,12px);color:var(--zx-text,#dbe8f6);scrollbar-width:thin}
+.ov-cat__head{display:flex;align-items:center;gap:14px}
+.ov-cat__head h2{margin:2px 0 0;font-size:24px;font-weight:400}
+.ov .ov-cat__back,.ov-cat__back{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--zx-line-strong,#2b4366);background:rgba(4,8,14,.55);color:var(--zx-text,#dbe8f6);font:inherit;font-size:13px;cursor:pointer}
+.ov-cat__back:hover,.ov-cat__back:focus-visible{border-color:var(--accent,#e0a353);outline:none}
+.ov-cat__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--zx-gap,12px)}
+.ov-cat__panel{display:flex;flex-direction:column;gap:8px;backdrop-filter:blur(10px);background:color-mix(in srgb,var(--zx-panel,#0c1524) 82%,transparent)!important}
+.ov-cat__panel header{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ov-cat__panel header b{font-size:14px;font-weight:600}
+.ov-cat__panel header button{border:0;background:none;color:var(--accent,#e0a353);font:inherit;font-size:12px;cursor:pointer;padding:4px 0}
+.ov-cat__panel ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.ov-cat__panel li{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-top:1px solid var(--zx-line,#16253a);font-size:13px}
+.ov-cat__panel li:first-child{border-top:0}
+.ov-cat__panel li span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ov-cat__panel li small{font-size:11px;color:var(--zx-muted,#9fb6cf);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ov-cat__panel li em{font-style:normal;font-size:11px;color:var(--zx-muted,#9fb6cf);white-space:nowrap}
+@container (max-width:980px){.ov-cat{width:100%}.ov-cat__grid{grid-template-columns:minmax(0,1fr)}}
