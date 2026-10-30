@@ -932,3 +932,7 @@ Grey asked to read barcodes with the phone in Fitness & Health. Before, Scan foo
 - **`BarcodeScanner.tsx`:** full-screen camera with a guide box (back camera, about 8 reads a second, a light button where the phone supports it, Cancel, a short buzz on success). Frames stay on the phone; only the digits go to the existing Open Food Facts lookup. It needs ZAE's secure https address and camera permission, and says so plainly if either is missing.
 - **Where:** "Scan barcode" on Fitness › Today, a "Scan" button in the Day log's quick-log bar, and "Scan barcode with camera" on Logs & plans › Scan food. All open the camera and show the product for logging. Photo upload stays as a fallback and now uses the same reader.
 - **Tests:** `scripts/barcode.test.cjs` (12): check digits, UPC-E expansion, EAN-13/UPC-A/EAN-8/UPC-E lines, reversed and noisy lines, a whole image and a sideways image. In the browser the reader also read a tilted, blurred test barcode from a canvas. The camera itself is blocked in the preview pane, so it still needs a try on the phone.
+
+### 28.20 Calm view cycle fix — Claude, 2026-10-30 (v3.19)
+
+The spotlight paused while the mouse was over it, and when Calm view comes on from idle the mouse is usually resting there, so it stuck on one item. It now always cycles every 8 seconds; picking a dot holds that item for 20 seconds. Five new Overview directions (Command Deck, Orbit, Flight Board, Editorial, Holo HUD; each with a dashboard and a Calm view) are on the preview canvas page "Overview v2 · pick one" for Grey to choose from.
