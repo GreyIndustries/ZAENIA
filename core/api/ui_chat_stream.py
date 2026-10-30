@@ -420,25 +420,34 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "done", "reply": answer, "interrupted": stop.is_set(), "route": route})
             return
         brain = _brain(authorize)
-        generator = brain.stream_ask(message, remember=True)
+        from core.brain.conductor import stream_turn
+        generator = stream_turn(
+            brain,
+            message,
+            session_id=conversation_id or f"request:{request_id}",
+            stop=stop,
+        )
         for event in generator:
             if stop.is_set():
                 break
             kind = event.get("type")
             if kind == "route":
                 route = str(event.get("route") or route)
-                yield _line({"type": "route", "route": route})
+                yield _line({key: value for key, value in event.items() if key in {"type", "route", "brain", "level", "model"}})
             elif kind == "text":
                 text = think.feed(str(event.get("text") or ""))
                 if text:
                     parts.append(text)
                     yield _line({"type": "delta", "text": text})
+            elif kind == "say":
+                yield _line({"type": "say", "text": str(event.get("text") or "")})
             elif kind == "final":
                 finished = True
                 final_answer = "".join(parts).strip() or think.feed(str(event.get("answer") or "")).strip()
     except Exception as error:  # Ollama down, model missing, etc.
         failure = str(error).splitlines()[0][:300] if str(error) else type(error).__name__
     finally:
+        stop.set()
         if generator is not None:
             try:
                 generator.close()  # closes the Ollama connection, so it stops generating

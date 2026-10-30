@@ -77,3 +77,7 @@ Do not merge changes without owner approval.
 ## Latest handoff
 
 Read docs/architecture/HANDOFF_2026-10-30.md first: it lists what Claude finished, how to build, test and install, and what is next.
+
+## Release outputs
+
+For every user-requested ZÆNIA application update, build both the native desktop app and the browser website (`desktop/dist-web`). Install the native build and refresh the served website when the user has requested the update be applied. Do not treat a source-only change as a completed app update.

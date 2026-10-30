@@ -940,7 +940,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         if (event.form === "food-meal") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:food-meal", { detail: { description: event.description } })), 700); }
       } else if (event.type === "say") {
         // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
-        if (speakIt && !voice.said) { voice.filler = true; speech.feed(key, `${event.text} `); }
+        if (speakIt && !voice.said && !voice.filler) { voice.filler = true; speech.feed(key, `${event.text} `); }
       } else if (event.type === "clarify") {
         setClarify({ original: event.original, questions: event.questions });
       } else if (event.type === "protocol") {

@@ -261,7 +261,7 @@ export async function connectGmail(): Promise<void> {
 // ---- Streaming chat ------------------------------------------------------
 export type StreamEvent =
   | { type: "start"; id: string }
-  | { type: "route"; route: string }
+  | { type: "route"; route: string; brain?: string; level?: number; model?: string }
   | { type: "delta"; text: string }
   | { type: "proposal"; proposal: AssistantProposal }
   | { type: "protocol"; open: string[] }

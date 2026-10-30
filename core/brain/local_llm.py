@@ -111,6 +111,17 @@ def check_ollama_available() -> bool:
         return False
 
 
+def model_is_loaded(model: str) -> bool | None:
+    """Whether a model is resident in local Ollama; None when its status is unknown."""
+    try:
+        response = requests.get("http://127.0.0.1:11434/api/ps", timeout=0.5)
+        response.raise_for_status()
+        loaded = response.json().get("models") or []
+        return any(str(item.get("name") or "") == model for item in loaded if isinstance(item, dict))
+    except (requests.RequestException, ValueError, AttributeError):
+        return None
+
+
 def build_messages(
     user_text: str,
     *,
@@ -293,8 +304,14 @@ def build_payload(
     behavior_context: str | None = None,
     conversation_context: str | None = None,
     stream: bool = False,
+    model: str | None = None,
+    keep_alive: str | None = None,
 ) -> dict[str, Any]:
     settings = get_brain_settings()
+    if model:
+        settings = {**settings, "model": model}
+    if keep_alive:
+        settings = {**settings, "keep_alive": keep_alive}
 
     return {
         "model": active_model(settings),
@@ -336,6 +353,7 @@ def chat_local(
     behavior_context: str | None = None,
     conversation_context: str | None = None,
     timeout: int = 120,
+    model: str | None = None,
 ) -> str:
     """
     Existing non-streaming conversation path.
@@ -355,6 +373,7 @@ def chat_local(
         behavior_context=behavior_context,
         conversation_context=conversation_context,
         stream=False,
+        model=model,
     )
 
     response = _post_ollama(settings["endpoint"], payload, stream=False, timeout=timeout)
@@ -391,6 +410,9 @@ def stream_chat_local(
     behavior_context: str | None = None,
     conversation_context: str | None = None,
     timeout: int = 120,
+    model: str | None = None,
+    stop_event: threading.Event | None = None,
+    keep_alive: str | None = None,
 ) -> Generator[str, None, None]:
     """
     Stream Qwen output token/chunk by token/chunk.
@@ -411,6 +433,8 @@ def stream_chat_local(
         behavior_context=behavior_context,
         conversation_context=conversation_context,
         stream=True,
+        model=model,
+        keep_alive=keep_alive,
     )
 
     with _post_ollama(settings["endpoint"], payload, stream=True, timeout=timeout) as response:
@@ -427,6 +451,8 @@ def stream_chat_local(
         for raw_line in response.iter_lines(
             decode_unicode=True
         ):
+            if stop_event is not None and stop_event.is_set():
+                break
             if not raw_line:
                 continue
 

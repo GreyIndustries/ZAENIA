@@ -1,6 +1,6 @@
 # ZÆNIA multi-brain plan
 
-Version 1 · 2026-10-30 · Claude, from Grey's request · Status: proposal for Grey's approval
+Version 2 · 2026-10-30 · Grey-approved direction; Phase 2 underway · Status: implementation in progress
 
 ## 1. What Grey asked for
 
@@ -85,7 +85,7 @@ Grey approved the downloads; all four are installed. Each model was loaded alone
 - Talk and Seek together take about 10 GB, and Talk with Study (qwen3:14b) about 12.6 GB, so both pairs fit on the 16 GB card.
 - gpt-oss:20b is fast once it starts, but it reasons before every answer and needs 12.3 GB, so it stays an overnight Study model as planned.
 - The phase 1 exit criterion (Talk's first words in under 2 s) is met.
-- Next is phase 2: the Conductor, which routes each turn to these brains. Until it's built, chat keeps using llama3.1:8b, so nothing changes in how ZAE talks today.
+- Phase 2 is implemented on `codex/conductor-weekend-2`: desktop/browser chat and owner-verified PC voice route through Talk (qwen3.5:4b); warm Talk gets a 2-second first-text budget and a cold Talk load gets up to 8 seconds, based on Ollama's local `/api/ps`. If Talk times out or fails, the Conductor retries through Seek (qwen3.5:9b). Wake/sleep replies also use Talk. Thirty-one focused API, voice and Conductor tests pass. Live local turns measured 3.91 s on the cold Talk load and 0.16 s warm; an actual Seek handoff returned a correct answer with `execution_authorized=false`. Live speaker-authentication trials remain.
 
 ## 4. Multi-level reasoning (the Conductor)
 
@@ -166,7 +166,7 @@ Phrases, the speaker check and the replies all go through Level 0 and Talk. The 
 | Phase | Builds | Done when |
 |---|---|---|
 | 1. Measure | Time each model on this PC: time to first word, tokens per second and VRAM. Pick Talk's model | A table in this doc. Talk's first words land in under 2 s for 9 of 10 test questions |
-| 2. Conductor and Talk | `conductor.py`, Level 0 and 1, filler lines, the shared memory. Wake and sleep phrases with the voice check | Wake and sleep tests pass. Another voice can't wake ZAE. Chat feels faster |
+| 2. Conductor and Talk | `core/brain/conductor.py`, Level 1 Talk and Seek retry, filler, bounded in-memory blackboard; Level 0 remains in deterministic permission-checked routes. Wake/sleep replies use Talk | Implemented on feature branch; 31 focused tests pass. Warm Talk and real Seek handoff verified locally. Verify speaker rejection with a live voice trial |
 | 3. Seek | Evidence packs from the indexes and the web; handoff and replies with sources | Lookup questions cite sources. A thin answer says so |
 | 4. Keep | Scheduler: security checks, backups, news and watch topics, pattern learning to `personal_memory` with evidence, confidence and dates. It pauses while Grey talks | Jobs run on time. No jobs run during speech. Learned patterns can be viewed and deleted in Settings |
 | 5. Study | Long research jobs, using the existing research agent and Desk | Research reports with sources appear in Research |

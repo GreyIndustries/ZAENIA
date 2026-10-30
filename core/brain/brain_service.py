@@ -1013,6 +1013,11 @@ class BrainService:
         question: str,
         *,
         remember: bool = True,
+        model: str | None = None,
+        conductor_context: str | None = None,
+        timeout: int = 120,
+        stop_event: threading.Event | None = None,
+        keep_alive: str | None = None,
     ) -> Iterator[dict[str, Any]]:
         """
         Streaming BrainService interface designed for Voice.
@@ -1162,6 +1167,10 @@ class BrainService:
             conversation_context = (
                 self.model_context(question,turn)
             )
+            if conductor_context:
+                conversation_context = "\n\n".join(
+                    part for part in (conversation_context, conductor_context[:6000]) if part
+                )
 
             result = answer_question(
                 turn.routing_question,
@@ -1248,21 +1257,25 @@ class BrainService:
         conversation_context = (
             self.model_context(question,turn)
         )
+        if conductor_context:
+            conversation_context = "\n\n".join(
+                part for part in (conversation_context, conductor_context[:6000]) if part
+            )
 
         chunks: list[str] = []
 
-        for chunk in user_led_stream(stream_chat_local(
-            question,
-            recent_messages=(
-                recent_messages
-            ),
-            behavior_context=(
-                behavior_context
-            ),
-            conversation_context=(
-                conversation_context
-            ),
-        ), question=question):
+        stream_options: dict[str, Any] = {
+            "recent_messages": recent_messages,
+            "behavior_context": behavior_context,
+            "conversation_context": conversation_context,
+            "timeout": timeout,
+            "stop_event": stop_event,
+        }
+        if model:
+            stream_options["model"] = model
+        if keep_alive:
+            stream_options["keep_alive"] = keep_alive
+        for chunk in user_led_stream(stream_chat_local(question, **stream_options), question=question):
             text = str(
                 chunk
             )
