@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.27  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.28  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1032,3 +1032,17 @@ I followed Codex's handoff (multi-brain plan, section 9), validating on a fresh 
 - **Results:** Talk was 8 of 9 under 2 s (median 0.39 s; before the fix, 0 of 9), with a 3.5 s cold start. Seek's web lookups give cited sources, it says "can't verify" when there are none, and page text that tries to give orders is ignored. The full scorecard and conditions are in multi-brain plan section 8.1.
 - **Tests:** 842 OK, 14 skipped.
 - **Pending:** the live owner/other-speaker voice trial with Grey at 17:00.
+
+### 28.30 Phone version: app-style swiping and sizing — Claude, 2026-10-30 (v3.28)
+
+Grey: the mobile version should differ slightly for size and look, and the web version should swipe like an app.
+
+- **Swiping** (`desktop/src/core/swipe.ts`, phones only): a quick sideways swipe (at least 60 px, mostly horizontal, under 0.7 s) moves to the next or previous sub-tab. Past the first or last sub-tab it moves to the neighbouring tab, in bottom-bar order first (Core, Plan, Fitness, Research), then the rest. Swipes that start in text fields, the chat box, Calm view, the barcode camera, the category panels or anything that already scrolls sideways are ignored. The page slides in from the swipe direction (transform only; off with motion off). 10 checks in `scripts/swipe.test.cjs`.
+- **Phone look** (`desktop/src/styles/phone-app.css`):
+  - Sub-tab rows are one swipeable strip that stays at the top while scrolling, with a fading edge to show there's more.
+  - The active tab scrolls into view.
+  - The page header is compact (small title, no description).
+  - Buttons are at least 36 px tall.
+  - Fields use 16 px text, so iPhone doesn't zoom in.
+  - Sideways overscroll is turned off.
+- **Checked at 402 × 874 in preview:** swiping from the dashboard went to Plan and then Fitness, then through Fitness's sub-tabs and back.
