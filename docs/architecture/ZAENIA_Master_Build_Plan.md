@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.17  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.18  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -912,3 +912,14 @@ Grey asked for the Overview to fit an iPhone 16 Pro like an app. Before, phones 
 - Touch targets are at least 40–48 px, text is larger than on desktop, and the bottom edge fades so the list reads as scrolling under the chat bar. Calm view works on the phone too.
 - The desktop and phone layouts share the same card pieces and data, so both always show the same numbers.
 - Checked in the preview at 402 × 874: no sideways scrolling, top and scrolled views.
+
+### 28.18 Overview: week trends, cycling Calm view, idle setting — Claude, 2026-10-29 (v3.18)
+
+Grey's notes on the blended Overview: add more like the reference's bottom row; the tab strip covered the Calm view switch; Calm view should come on by itself after a set idle time (set in Settings); keep the core the same size in both views, and have Calm view cycle through important info.
+
+- **Bottom row under the core:** Tasks done this week (a bar for each day, from completed tasks), Weight trend (30-day line, latest weight and change, workout dots for the week), and Notes & research (counts of notes, topics and sources, the latest notes). Each opens its tab.
+- **Calm view switch** moved from the top of the core (under the Manage tabs strip) to the end of the quick-ask row. The modules count lives in the ZAE's systems card.
+- **Same core size:** Calm keeps the three columns and fades the side cards out, and its spotlight takes the bottom row's exact slot, so the core doesn't move or resize (checked in preview: 1090 × 612 in both).
+- **Spotlight:** cycles every 8 seconds through Next up, Tasks, Fitness & health, the top three news stories, Music and System, with dots to jump and pause-on-hover. Tapping it opens that tab.
+- **Idle Calm view:** Settings (System & appearance) has "Calm view when idle": Off, 1, 2, 5 (default), 10, 15 or 30 minutes. After that long with no key, click, touch, scroll or mouse move, the Overview goes calm; any touch brings the cards back. Saved on each device. Checked in preview with 1 minute.
+- **Phone:** the week row stacks under the other cards, and Calm view shows the spotlight under the quick asks.
