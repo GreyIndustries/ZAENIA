@@ -1,0 +1,16 @@
+/* Full-screen barcode camera: the picture, a dimmed frame with a clear guide box, Cancel / light at the top. */
+.barcode-scanner{position:fixed;inset:0;z-index:200;background:#000;color:#fff;font:inherit}
+.barcode-scanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.barcode-scanner__shade{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+/* Matches the area the reader looks at: 80% wide, 40% tall of the camera picture */
+.barcode-scanner__box{position:relative;width:80%;height:40%;max-height:46vw;border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55);
+  outline:2px solid var(--accent,#e0a353);outline-offset:0}
+.barcode-scanner__box i{position:absolute;left:6%;right:6%;top:50%;height:2px;background:#ff5a4a;box-shadow:0 0 12px #ff5a4a;animation:barcode-sweep 1.6s ease-in-out infinite alternate}
+@keyframes barcode-sweep{from{transform:translateY(-36px)}to{transform:translateY(36px)}}
+@media (prefers-reduced-motion:reduce){.barcode-scanner__box i{animation:none}}
+.barcode-scanner__top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;gap:10px;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px}
+.barcode-scanner__top button{min-height:44px;padding:0 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(0,0,0,.45);color:#fff;font:inherit;font-size:15px;cursor:pointer}
+.barcode-scanner__top button[aria-pressed=true]{background:var(--accent,#e0a353);color:#1a1206;border-color:transparent}
+.barcode-scanner__status{position:absolute;left:16px;right:16px;bottom:calc(28px + env(safe-area-inset-bottom,0px));margin:0;text-align:center;
+  font-size:15px;line-height:1.45;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.55)}

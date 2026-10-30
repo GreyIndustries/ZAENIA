@@ -64,6 +64,8 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
   const quickLog = (text: string) => act(async () => (await api<{ reply: string }>("POST", `${PATH}/training/quick-log`, { text }, { timeoutMs: 180_000 })).reply);
   const logDay = (changes: Partial<Entry>, done?: string) => act(async () => { await api("POST", `${PATH}/training/day?day=${today}`, { changes }); return done; });
 
+  // "Scan barcode": open Logs & plans › Scan food with the camera already on.
+  const scanFood = () => { choose("logs"); window.dispatchEvent(new Event("zae:food-scan")); };
   const tabs: [Tab, string][] = [["progress", "Progress"], ["today", "Today"], ["log", "Day log"], ["program", "Training program"], ["logs", "Logs & plans"]];
   return <div className="fs">
     <nav className="research-page__tabs" role="tablist" aria-label="Fitness sections">
@@ -75,8 +77,8 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
     {!LIVE_API && (tab === "progress" || tab === "today" || tab === "log") && <p className="fs-muted">These views need the ZÆNIA server: open them in the desktop or phone app.</p>}
     {LIVE_API && !info && (tab === "progress" || tab === "today" || tab === "log") && <p className="fs-muted">{error ? "" : "Loading…"}</p>}
     {info && tab === "progress" && <Progress info={info} week={week}/>}
-    {info && tab === "today" && week.length > 0 && <Today info={info} view={week[6]} food={food} busy={busy} onLog={logDay} onGo={choose}/>}
-    {info && tab === "log" && week.length > 0 && <DayLog info={info} view={week[6]} food={food} busy={busy} onQuick={quickLog}/>}
+    {info && tab === "today" && week.length > 0 && <Today info={info} view={week[6]} food={food} busy={busy} onLog={logDay} onGo={choose} onScan={scanFood}/>}
+    {info && tab === "log" && week.length > 0 && <DayLog info={info} view={week[6]} food={food} busy={busy} onQuick={quickLog} onScan={scanFood}/>}
     {/* Kept mounted so ZAE's "open the setup questions" and "review this meal" still reach them. */}
     <div hidden={tab !== "program"}><TrainingProgram/></div>
     <div hidden={tab !== "logs"}><FitnessPanel drafts={drafts} embedded/></div>
@@ -156,7 +158,7 @@ function Ring({ r, value, target, tone }: { r: number; value: number; target: nu
   return <><circle cx="130" cy="130" r={r} className="fs-ring-bg"/><circle cx="130" cy="130" r={r} fill="none" stroke={tone} strokeWidth="18" strokeLinecap="round"
     strokeDasharray={`${(c * pct).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 130 130)"/></>;
 }
-function Today({ info, view, food, busy, onLog, onGo }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onLog: (c: Partial<Entry>, done?: string) => void; onGo: (t: Tab) => void }) {
+function Today({ info, view, food, busy, onLog, onGo, onScan }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onLog: (c: Partial<Entry>, done?: string) => void; onGo: (t: Tab) => void; onScan: () => void }) {
   const [weight, setWeight] = useState("");
   const [steps, setSteps] = useState("");
   const t = view.targets; const eaten = view.eaten?.calories ?? 0; const burned = view.burned.total + (view.eaten?.burned ?? 0); const protein = view.eaten?.protein ?? 0;
@@ -166,7 +168,8 @@ function Today({ info, view, food, busy, onLog, onGo }: { info: Overview; view: 
     <div className="fs-row fs-row--between">
       <h2 className="zx-title">{view.actual.length ? "What you did today" : view.workout.label || "Rest day"}</h2>
       <div className="fs-row">
-        <button type="button" onClick={() => onGo("logs")}>Scan or log food</button>
+        <button type="button" onClick={onScan}>Scan barcode</button>
+        <button type="button" onClick={() => onGo("logs")}>Log food</button>
         <button type="button" className="fs-primary" onClick={() => onGo("program")}>Open the workout</button>
       </div>
     </div>
@@ -214,7 +217,7 @@ function Today({ info, view, food, busy, onLog, onGo }: { info: Overview; view: 
 }
 
 // ---- C: Day log (third)
-function DayLog({ info, view, food, busy, onQuick }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onQuick: (text: string) => void }) {
+function DayLog({ info, view, food, busy, onQuick, onScan }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onQuick: (text: string) => void; onScan: () => void }) {
   const [text, setText] = useState("");
   const t = view.targets; const eaten = view.eaten?.calories ?? 0; const protein = view.eaten?.protein ?? 0;
   type Row = { at: string; title: string; detail: string; value: string; tone: string };
@@ -240,6 +243,7 @@ function DayLog({ info, view, food, busy, onQuick }: { info: Overview; view: Day
       </ol>
       <form className="fs-quick zx-card" onSubmit={(e: FormEvent) => { e.preventDefault(); if (text.trim()) { onQuick(text.trim()); setText(""); } }}>
         <span className="fs-plus">+</span><input aria-label="Log anything" value={text} maxLength={4000} placeholder='Log anything: "ran 2 miles in 16:30", "150g protein today", "weighed 195.4"' onChange={e => setText(e.target.value)}/>
+        <button type="button" onClick={onScan} aria-label="Scan a food barcode">Scan</button>
         <button type="submit" className="fs-primary" disabled={busy || !text.trim()}>{busy ? "Logging…" : "Log"}</button>
       </form>
     </main>
