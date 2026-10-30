@@ -11,13 +11,36 @@ class Clock:
     def __call__(self): return self.now
 
 
+def first(order):
+    return patch("core.api.near_pc.secrets.choice", return_value=order)
+
+
 class NearPcTest(unittest.TestCase):
     def setUp(self):
         self.clock = Clock()
         self.near = NearPc(clock=self.clock)
 
+    def test_the_first_step_is_picked_at_random(self):
+        seen = {self.near.start()["first"] for _ in range(60)}
+        self.assertEqual(seen, {"code", "voice"})
+
+    def test_the_second_step_waits_for_the_first(self):
+        with first("voice"):
+            secret = self.near.start()["secret"]
+        self.assertIsNone(self.near.code_for_pc())  # no code on the PC yet
+        with self.assertRaises(ValueError):
+            self.near.submit_code(secret, "123456")
+        self.assertTrue(self.near.pending(secret))
+        with first("code"):
+            secret = self.near.start()["secret"]
+        self.assertFalse(self.near.pending(secret))  # voice isn't open until the code is in
+        with self.assertRaises(PermissionError):
+            self.near.voice_passed(secret)
+        self.assertIsNotNone(self.near.code_for_pc())
+
     def test_code_then_voice_turns_the_pass_on(self):
-        secret = self.near.start()["secret"]
+        with first("code"):
+            secret = self.near.start()["secret"]
         self.assertFalse(self.near.allows(secret))
         code = self.near.code_for_pc()["code"]
         self.assertEqual(len(code), 6)
@@ -30,7 +53,8 @@ class NearPcTest(unittest.TestCase):
         self.assertFalse(self.near.allows(secret))
 
     def test_voice_then_code_works_too(self):
-        secret = self.near.start()["secret"]
+        with first("voice"):
+            secret = self.near.start()["secret"]
         self.assertTrue(self.near.pending(secret))
         self.assertFalse(self.near.voice_passed(secret)["active"])
         self.assertFalse(self.near.pending(secret))
@@ -39,7 +63,8 @@ class NearPcTest(unittest.TestCase):
         self.assertTrue(self.near.allows(secret))
 
     def test_wrong_secret_wrong_code_and_old_code_are_refused(self):
-        secret = self.near.start()["secret"]
+        with first("code"):
+            secret = self.near.start()["secret"]
         code = self.near.code_for_pc()["code"]
         self.assertFalse(self.near.allows("someone-else"))
         with self.assertRaises(PermissionError):
@@ -54,7 +79,8 @@ class NearPcTest(unittest.TestCase):
         self.assertTrue(self.near.submit_code(secret, fresh)["code"])
 
     def test_five_wrong_codes_end_the_pass(self):
-        secret = self.near.start()["secret"]
+        with first("code"):
+            secret = self.near.start()["secret"]
         code = self.near.code_for_pc()["code"]
         wrong = "000000" if code != "000000" else "111111"
         for _ in range(4):
@@ -106,7 +132,8 @@ class NearPcApiTest(unittest.TestCase):
         return self.client.post("/api/files/proposals/" + "a" * 32 + "/approve", headers={"X-ZAENIA-NEAR-PASS": secret})
 
     def test_pass_needs_both_steps_then_reaches_the_approval(self):
-        secret = self.client.post("/api/near/start").json()["secret"]
+        with first("code"):
+            secret = self.client.post("/api/near/start").json()["secret"]
         self.assertEqual(self.approve(secret).status_code, 403)
         # PC shows the code (desktop key only).
         self.assertEqual(self.client.get("/api/remote/collect").status_code, 403)

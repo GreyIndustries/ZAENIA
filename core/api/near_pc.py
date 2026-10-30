@@ -1,8 +1,9 @@
-"""Phone confirms when the phone is at the PC (Grey, 2026-10-30: "code plus voice, in either order").
+"""Phone confirms when the phone is at the PC (Grey, 2026-10-30: code plus voice, in a random order).
 
 The phone asks for a pass. The PC app (desktop key) shows a 6-digit code that changes every minute; typing it on the
 phone proves someone at the PC screen. A fresh voice check on the phone (the same local speaker and spoken-words check
-as voice sign-in) proves it's Grey. Both steps, in either order, within 3 minutes turn the pass on for 10 minutes.
+as voice sign-in) proves it's Grey. ZAE picks at random which step comes first each time, and the second step
+opens only after the first. Both within 3 minutes turn the pass on for 10 minutes.
 While it's on, the phone can approve a short list of confirms that otherwise need the desktop app: a waiting file
 change, a Code Doctor fix, opening a registered app, restoring a workspace with its apps. Nothing else: Security,
 the Vault, the passkey, folder grants, approval settings and direct file edits stay at the PC.
@@ -52,7 +53,13 @@ class NearPc:
             return {"pass": False, "code": False, "voice": False, "active": False, "secondsLeft": 0}
         now = self.clock()
         left = p["active_until"] - now if p["active_until"] else p["started"] + SETUP_SECONDS - now
-        return {"pass": True, "code": p["code_ok"], "voice": p["voice_ok"], "active": bool(p["active_until"]), "secondsLeft": max(0, round(left))}
+        return {"pass": True, "first": p["first"], "code": p["code_ok"], "voice": p["voice_ok"], "active": bool(p["active_until"]),
+                "secondsLeft": max(0, round(left))}
+
+    @staticmethod
+    def _turn(p: dict[str, Any], step: str) -> bool:
+        """Is it this step's turn? The first step any time; the second only once the first is done."""
+        return p["first"] == step or p["code_ok" if step == "voice" else "voice_ok"]
 
     def _maybe_activate(self, p: dict[str, Any]) -> None:
         if p["code_ok"] and p["voice_ok"] and not p["active_until"]:
@@ -61,7 +68,8 @@ class NearPc:
     def start(self) -> dict[str, Any]:
         secret = secrets.token_urlsafe(32)
         with self.lock:
-            self.current = {"key": _key(secret), "started": self.clock(), "code": "", "code_at": 0.0, "tries": 0,
+            self.current = {"key": _key(secret), "started": self.clock(), "first": secrets.choice(("code", "voice")),
+                            "code": "", "code_at": 0.0, "tries": 0,
                             "code_ok": False, "voice_ok": False, "active_until": 0.0}
             return {"secret": secret, **self._view(self.current)}
 
@@ -69,7 +77,7 @@ class NearPc:
         """For the desktop app: the code to show while a pass still needs it."""
         with self.lock:
             p = self._live()
-            if not p or p["code_ok"]:
+            if not p or p["code_ok"] or not self._turn(p, "code"):
                 return None
             now = self.clock()
             if not p["code"] or now - p["code_at"] >= CODE_SECONDS:
@@ -81,6 +89,8 @@ class NearPc:
             p = self._match(secret)
             if not p:
                 raise PermissionError("That phone pass ended. Start again.")
+            if not self._turn(p, "code"):
+                raise ValueError("Do the voice check first this time.")
             fresh = p["code"] and self.clock() - p["code_at"] < CODE_SECONDS + 10
             if not fresh or not secrets.compare_digest(p["code"], "".join(ch for ch in str(code) if ch.isdigit())[:6]):
                 p["tries"] += 1
@@ -96,12 +106,12 @@ class NearPc:
         """Before running a voice check: is this a pass that still needs one?"""
         with self.lock:
             p = self._match(secret)
-            return bool(p and not p["voice_ok"])
+            return bool(p and not p["voice_ok"] and self._turn(p, "voice"))
 
     def voice_passed(self, secret: str | None) -> dict[str, Any]:
         with self.lock:
             p = self._match(secret)
-            if not p:
+            if not p or not self._turn(p, "voice"):
                 raise PermissionError("That phone pass ended. Start again.")
             p["voice_ok"] = True
             self._maybe_activate(p)

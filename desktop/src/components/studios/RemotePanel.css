@@ -27,6 +27,7 @@
 .near .near__cancel{min-height:32px;font-size:12px;font-weight:400}
 .near__step{display:grid;gap:8px;padding:12px}
 .near__step--done b{color:#7fe3a8}
+.near__step--later{opacity:.55}
 .near__code{display:flex;gap:8px}
 .near__code input{flex:1;min-width:0;min-height:44px;padding:0 12px;border-radius:var(--zx-radius-sm,8px);border:1px solid var(--zx-line,#22344a);background:transparent;color:var(--zx-text,#dbe8f6);font:inherit;font-size:22px;letter-spacing:.3em}
 .near__phrase{font-size:18px;font-weight:600;color:var(--accent,#e0a353)}

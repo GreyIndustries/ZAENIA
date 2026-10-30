@@ -6,7 +6,7 @@ import { recordLoginVoice } from "../../core/voiceLogin";
 import type { VoiceRecording } from "../../core/voiceLogin";
 
 /**
- * Confirm from the phone while it's at the PC (Grey, 2026-10-30: code plus voice, in either order). Once both are
+ * Confirm from the phone while it's at the PC (Grey, 2026-10-30: code plus voice, ZAE picks the order at random). Once both are
  * done, this phone can approve waiting file changes, Code Doctor fixes and app launches for 10 minutes.
  */
 const OFF: NearPassState = { pass: false, code: false, voice: false, active: false, secondsLeft: 0 };
@@ -70,31 +70,36 @@ export function NearPassCard() {
 
   if (!state.pass) return <section className="zx-card near">
     <p className="mv-kicker">Phone confirms</p>
-    <p className="mv-muted">At the PC? Type the code it shows and pass a voice check, in either order, and this phone can approve things for 10 minutes.</p>
+    <p className="mv-muted">At the PC? Type the code it shows and pass a voice check (ZAE picks which comes first), and this phone can approve things for 10 minutes.</p>
     <button type="button" className="near__start" disabled={busy} onClick={() => void run(startNearPass)}>Confirm from this phone</button>
     {error && <p className="mv-error" role="alert">{error}</p>}
   </section>;
 
+  // ZAE picks which step comes first; the second opens once the first is done.
+  const codeStep = (number: number, open: boolean) => <div key="code" className={`near__step zx-inset ${state.code ? "near__step--done" : open ? "" : "near__step--later"}`}>
+    <b>{state.code ? "✓ Code matched" : `${number}. Code on the PC screen`}</b>
+    {!state.code && open && <form onSubmit={sendCode} className="near__code">
+      <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} placeholder="6 digits" value={code}
+        onChange={event => setCode(event.target.value)} aria-label="Code shown on the PC"/>
+      <button type="submit" disabled={busy || code.replace(/\D/g, "").length !== 6}>Check</button>
+    </form>}
+    {!state.code && !open && <p className="mv-muted">Opens after the voice check.</p>}
+  </div>;
+  const voiceStep = (number: number, open: boolean) => <div key="voice" className={`near__step zx-inset ${state.voice ? "near__step--done" : open ? "" : "near__step--later"}`}>
+    <b>{state.voice ? "✓ Voice matched" : `${number}. Voice check`}</b>
+    {!state.voice && open && !challenge && <button type="button" disabled={busy} onClick={() => void getPrompt()}>Get words to say</button>}
+    {!state.voice && open && challenge && <>
+      <p className="near__phrase">“{challenge.phrase}”</p>
+      {voicePhase === "idle" && <button type="button" disabled={busy} onClick={() => void record()}>Start recording</button>}
+      {voicePhase === "recording" && <button type="button" disabled={busy} onClick={() => void checkVoice()}>Said it, check my voice</button>}
+      {voicePhase === "checking" && <p className="mv-muted" role="status">Checking on your PC…</p>}
+    </>}
+    {!state.voice && !open && <p className="mv-muted">Opens after the code.</p>}
+  </div>;
+
   return <section className="zx-card near">
     <div className="mv-row"><p className="mv-kicker">Phone confirms · {clock(left)} to finish</p><button type="button" className="near__cancel" onClick={stop}>Cancel</button></div>
-    <div className={`near__step zx-inset ${state.code ? "near__step--done" : ""}`}>
-      <b>{state.code ? "✓ Code matched" : "Code on the PC screen"}</b>
-      {!state.code && <form onSubmit={sendCode} className="near__code">
-        <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} placeholder="6 digits" value={code}
-          onChange={event => setCode(event.target.value)} aria-label="Code shown on the PC"/>
-        <button type="submit" disabled={busy || code.replace(/\D/g, "").length !== 6}>Check</button>
-      </form>}
-    </div>
-    <div className={`near__step zx-inset ${state.voice ? "near__step--done" : ""}`}>
-      <b>{state.voice ? "✓ Voice matched" : "Voice check"}</b>
-      {!state.voice && !challenge && <button type="button" disabled={busy} onClick={() => void getPrompt()}>Get words to say</button>}
-      {!state.voice && challenge && <>
-        <p className="near__phrase">“{challenge.phrase}”</p>
-        {voicePhase === "idle" && <button type="button" disabled={busy} onClick={() => void record()}>Start recording</button>}
-        {voicePhase === "recording" && <button type="button" disabled={busy} onClick={() => void checkVoice()}>Said it, check my voice</button>}
-        {voicePhase === "checking" && <p className="mv-muted" role="status">Checking on your PC…</p>}
-      </>}
-    </div>
+    {(state.first === "voice" ? [voiceStep, codeStep] : [codeStep, voiceStep]).map((step, index) => step(index + 1, index === 0 || (state.first === "voice" ? state.voice : state.code)))}
     {error && <p className="mv-error" role="alert">{error}</p>}
   </section>;
 }

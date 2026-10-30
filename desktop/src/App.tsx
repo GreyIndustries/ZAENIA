@@ -1303,7 +1303,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
     {nearCode && <div className="near-code" role="dialog" aria-label="Code for your phone">
-      <p>Type this on your phone{nearCode.voice ? " (voice already checked)" : ", then do the voice check"}</p>
+      <p>Type this on your phone{nearCode.voice ? " to finish (voice checked)" : ", then do the voice check"}</p>
       <b>{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</b>
       <p>Changes in {nearCode.secondsLeft} s</p>
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>

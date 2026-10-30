@@ -88,7 +88,7 @@ def create_mobile_auth_router(service: MobileAuth) -> APIRouter:
         guard(request)
         secret = request.headers.get(PASS_HEADER)
         if not near_pc().pending(secret):
-            raise HTTPException(403, "That phone pass ended or already has its voice check. Start again.")
+            raise HTTPException(403, "It isn't the voice check's turn, or that phone pass ended.")
         if request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
             raise HTTPException(415, "Send a voice recording as JSON.")
         raw = bytearray()

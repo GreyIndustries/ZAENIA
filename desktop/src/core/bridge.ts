@@ -204,7 +204,7 @@ export async function api<T = unknown>(method: Method, path: string, body?: unkn
  * order, let this phone approve the listed confirms for 10 minutes. The pass lives only in this page's memory.
  */
 const NEAR_HEADER = "X-ZAENIA-NEAR-PASS";
-export type NearPassState = { pass: boolean; code: boolean; voice: boolean; active: boolean; secondsLeft: number };
+export type NearPassState = { pass: boolean; first?: "code" | "voice"; code: boolean; voice: boolean; active: boolean; secondsLeft: number };
 let nearPass: { secret: string; until: number; active: boolean } | null = null;
 function nearChanged(state: NearPassState) {
   if (nearPass) { nearPass.active = state.active; nearPass.until = Date.now() + state.secondsLeft * 1000; }
@@ -217,7 +217,7 @@ export function nearPassActive(): boolean { return Boolean(nearPass?.active && D
 export async function startNearPass(): Promise<NearPassState> {
   const reply = await callServer("/api/near/start", requireToken(), STATUS_TIMEOUT_MS, {}) as NearPassState & { secret: string };
   nearPass = { secret: reply.secret, until: 0, active: false };
-  return nearChanged({ pass: reply.pass, code: reply.code, voice: reply.voice, active: reply.active, secondsLeft: reply.secondsLeft });
+  return nearChanged({ pass: reply.pass, first: reply.first, code: reply.code, voice: reply.voice, active: reply.active, secondsLeft: reply.secondsLeft });
 }
 export async function nearPassStatus(): Promise<NearPassState> {
   if (!nearPass) return { pass: false, code: false, voice: false, active: false, secondsLeft: 0 };

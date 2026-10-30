@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.30  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.31  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1086,3 +1086,14 @@ Grey chose "code plus voice, in either order" for letting the phone confirm thin
 - **Still desktop-only:** direct file edits, code run and implement, folder grants, approval settings, operator missions, Security, the Vault, the passkey and pairing. The phone-side pass is held in page memory only.
 - **Phone UI:** a **Phone confirms** card in PC remote shows both steps with ticks and a countdown, plus Turn off. On the phone, Files shows **Approve and apply** while the pass is on.
 - **Tests:** 7 in `core/api/near_pc_test.py`. They cover code then voice, voice then code, a wrong pass, a wrong code and an old code, 5 strikes, expiry and replacement, and an end-to-end HTTP run. That run shows approval is refused until both steps are done and allowed after, the voice step sets no sign-in cookie, direct edits are still refused, and ending the pass stops it.
+
+### 28.33 Phone confirms: random order — Claude, 2026-10-30 (v3.31)
+
+Grey clarified that "either order" means ZAE should pick the order of the two steps at random.
+
+- **Server:** each new pass picks code-first or voice-first at random (`secrets.choice`), and the second step only opens after the first:
+  - A code sent too early is refused with "Do the voice check first this time." That doesn't count as a wrong code.
+  - The PC shows no code until it's the code's turn.
+  - The voice step is refused until its turn.
+- **Phone:** the card numbers the steps in the chosen order and greys out the second one ("Opens after the code" or "Opens after the voice check").
+- **Tests:** 9 in `near_pc_test.py`. They now also check that both orders come up and that the second step waits for the first.
