@@ -1,0 +1,19 @@
+/* Phone as a remote for the PC: big thumb-size buttons, the PC's open tabs, then tabs to open. */
+.remote{display:grid;gap:var(--zx-gap,12px);max-width:560px}
+.remote__pc{display:flex;align-items:center;gap:14px}
+.remote__pc b{display:block;font-size:20px;margin:2px 0}
+.remote__pc p{margin:0}
+.remote__dot{flex:none;width:14px;height:14px;border-radius:50%;background:var(--zx-muted,#9fb6cf);opacity:.5}
+.remote__dot--on{background:#7fe3a8;opacity:1;box-shadow:0 0 12px #7fe3a8}
+.remote__big{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.remote__big button{display:grid;place-items:center;gap:4px;min-height:84px;color:var(--zx-text,#dbe8f6);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.remote__big button span{font-size:24px;color:var(--accent,#e0a353)}
+.remote button:disabled{opacity:.5;cursor:default}
+.remote__list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px}
+.remote__list li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 6px 6px 12px;font-size:14px}
+.remote__list em{font-style:normal;color:var(--zx-muted,#9fb6cf);font-size:12px}
+.remote__item--active{border-color:var(--accent,#e0a353)}
+.remote__actions{display:flex;gap:6px}
+.remote__actions button{min-width:44px;min-height:36px;border-radius:var(--zx-radius-sm,8px);border:1px solid var(--zx-line,#22344a);background:transparent;color:var(--zx-text,#dbe8f6);font:inherit;font-size:12px;cursor:pointer}
+.remote__grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.remote__grid button{min-height:44px;color:var(--zx-text,#dbe8f6);font:inherit;font-size:13px;cursor:pointer;text-align:left;padding:0 12px}

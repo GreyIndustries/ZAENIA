@@ -81,19 +81,20 @@ import { CATEGORIES } from "./core/categories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
 import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
+import { RemotePanel } from "./components/studios/RemotePanel";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
 import "./styles/phone-app.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena" | "remote";
 type IconName = "codefile" | "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
 type VisualMode = "blend" | "progress";
 
 // Conversations live in the chat box under the core: its thread opens above the
 // chat bar. Security is its own tab, locked behind the passkey or spoken phrase.
-const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
+const nav = ([
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
   { id: "status", label: "Status", short: "Status", icon: "pulse" },
   { id: "security", label: "Security", short: "Security", icon: "shield" },
@@ -107,7 +108,9 @@ const nav: { id: Section; label: string; short: string; icon: IconName }[] = [
   { id: "arena", label: "Arena", short: "Arena", icon: "brain" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "system", label: "Settings", short: "Settings", icon: "system" },
-];
+  // The phone and browser only: a remote for the desktop app on the PC.
+  { id: "remote", label: "PC remote", short: "Remote", icon: "core" },
+] as { id: Section; label: string; short: string; icon: IconName }[]).filter(item => item.id !== "remote" || !IN_TAURI);
 const sections: Record<Section, { title: string; label: string; description: string }> = {
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
   status: { title: "Status", label: "READINESS", description: "Live module readiness, PC load and ZAE's overall security level." },
@@ -128,6 +131,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
+  remote: { title: "PC remote", label: "CONTROL THE PC FROM HERE", description: "See what's open on your PC and open, hide or close tabs, show the dashboard or switch to Calm view. Saving, launching and approvals stay at the PC." },
   system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
 };
 // On desktop every workspace page opens as a window over the core.
@@ -715,6 +719,40 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
     return applied;
   }
+  // Phone as a remote (Grey, 2026-10-30): the desktop app collects what the phone asked for and carries out only screen
+  // commands. Saving files, launching apps and approvals are not on the list; they stay behind the desktop key.
+  const remoteRef = useRef<(command: { action: string; target: string }) => void>(() => undefined);
+  remoteRef.current = ({ action, target }) => {
+    const tab = WINDOW_IDS.includes(target) ? target as Section : null;
+    if (action === "open" && tab) { setCalmOpen(false); setCalmNote(null); openSection(tab); }
+    else if (action === "close" && tab) { shell.close(tab); if (!windowed && section === tab) openSection("overview"); }
+    else if (action === "minimize" && tab) shell.minimize(tab);
+    else if (action === "show_desktop") openSection("overview");
+    else if (action === "restore_all") shell.restoreAll();
+    else if (action === "calm") goCalm("Calm view from your phone.");
+    else if (action === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+  };
+  const remoteSnapshot = useRef("");
+  remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
+    active: shell.active ?? null, calm: calmOpen, section });
+  useEffect(() => {
+    if (!IN_TAURI) return;
+    let sent = "", sentAt = 0, busy = false;
+    const timer = window.setInterval(() => {
+      if (busy) return;
+      busy = true;
+      void (async () => {
+        try {
+          const reply = await api<{ commands: { action: string; target: string }[] }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          for (const command of reply.commands) remoteRef.current(command);
+          const snapshot = remoteSnapshot.current;
+          if (snapshot !== sent || Date.now() - sentAt > 8000) { await api("POST", "/api/remote/state", JSON.parse(snapshot), { desktop: true }); sent = snapshot; sentAt = Date.now(); }
+        } catch { /* server off or not paired yet: try again next time */ }
+        finally { busy = false; }
+      })();
+    }, 1500);
+    return () => window.clearInterval(timer);
+  }, []);
   // Your request is the authorization: creates save straight away (deleting a memory still asks).
   const applyRef = useRef<(id: number) => void>(() => undefined);
   applyRef.current = (id: number) => { void applyProposal(id); };
@@ -1211,6 +1249,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "files", label: "Files", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><FilesPanel onPendingChange={setPendingFiles}/></Suspense> },
         { id: "source", label: "Source", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SourceSearch/></Suspense> },
       ]}/>;
+      case "remote": return <RemotePanel tabs={nav.filter(item => WINDOW_IDS.includes(item.id)).map(item => ({ id: item.id, label: item.label }))}/>;
       case 'arena': return <PageTabs id="arena" tabs={[
         { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
         { id: "board", label: "Leaderboard & brain", render: () => <ArenaPanel/> },

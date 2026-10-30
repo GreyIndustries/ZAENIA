@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.28  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.29  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1046,3 +1046,17 @@ Grey: the mobile version should differ slightly for size and look, and the web v
   - Fields use 16 px text, so iPhone doesn't zoom in.
   - Sideways overscroll is turned off.
 - **Checked at 402 × 874 in preview:** swiping from the dashboard went to Plan and then Fitness, then through Fitness's sub-tabs and back.
+
+### 28.31 Phone as a remote for the PC — Claude, 2026-10-30 (v3.29)
+
+Grey: make the web version a remote for the PC, and let the phone confirm things when it's near the PC.
+
+- **Remote tab** (phone and browser only; hidden in the desktop app): `desktop/src/components/studios/RemotePanel.tsx`. It shows whether the PC app is connected and what it's on, the PC's open tabs (show, hide, close each), big buttons for Calm view / Wake, Dashboard and Restore all, and a grid of tabs to open on the PC.
+- **Server** (`core/api/remote_control.py`, routes in `ui_routes.py`):
+  - `POST /api/remote/commands` (operation `assistant.desktop.manage`, audited) queues one command from a fixed list: open, close, minimize (a real tab name only), show_desktop, restore_all, calm, wake. Anything else is refused.
+  - `GET /api/remote/collect` and `POST /api/remote/state` need the desktop key, so only the paired desktop app on the PC takes commands or reports state.
+  - `GET /api/remote/state` (status.read) tells the phone what's open and whether the PC reported in the last 15 s.
+  - Commands live in memory only, are handed out once, and are dropped after 2 minutes, so an old tap never fires later.
+- **Desktop app**: checks for commands every 1.5 s and reports its tabs and Calm state when they change (or every 8 s). It carries out only the listed screen commands.
+- **Not on the remote**: saving files, launching apps, restoring workspaces and approvals. They still need the desktop key at the PC. Letting the phone approve them when it's near the PC waits on Grey's choice of how ZAE knows the phone is there (code on the PC screen, same Wi-Fi, or code plus voice).
+- Tests: 4 in `core/api/remote_control_test.py` (only listed actions and real tab names, hand-out-once and expiry, state and connection, route permissions).

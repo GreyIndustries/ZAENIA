@@ -79,6 +79,11 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/assistant/wake", "chat.reply"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
+        # Phone as a remote: the phone queues screen commands; only the paired desktop app collects them.
+        ("POST", r"/api/remote/commands", "assistant.desktop.manage"),
+        ("GET", r"/api/remote/state", "status.read"),
+        ("GET", r"/api/remote/collect", "files.read"),
+        ("POST", r"/api/remote/state", "files.read"),
         # Code Doctor, Suggestions, Arena, source search (tools_routes.py).
         ("POST", r"/api/code/scan", "files.read"),
         ("POST", r"/api/code/explain", "chat.reply"),
@@ -247,6 +252,26 @@ class DutyStatusUpdate(BaseModel):
 class GameCoachRequest(BaseModel):
     model_config = {"extra": "forbid"}
     on: bool
+
+
+class RemoteCommand(BaseModel):
+    model_config = {'extra': 'forbid'}
+    action: str = Field(min_length=2, max_length=20)
+    target: str = Field(default="", max_length=20)
+
+
+class RemoteWindow(BaseModel):
+    id: str = Field(max_length=20)
+    title: str = Field(default="", max_length=60)
+    minimized: bool = False
+
+
+class RemoteState(BaseModel):
+    model_config = {'extra': 'forbid'}
+    windows: list[RemoteWindow] = Field(default_factory=list, max_length=30)
+    active: str | None = Field(default=None, max_length=20)
+    calm: bool = False
+    section: str = Field(default="", max_length=20)
 
 
 class ScreenWatchRequest(BaseModel):
@@ -676,6 +701,32 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         result = game_coach().set_enabled(body.on)
         audit("assistant.game_coach", operation="assistant.desktop.manage", reason_code="on" if body.on else "off")
         return result
+
+    @router.post("/api/remote/commands")
+    def remote_command(body: RemoteCommand) -> dict[str, Any]:
+        from core.api import remote_control
+        try:
+            result = remote_control.queue_command(body.action, body.target)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        audit("assistant.remote_command", operation="assistant.desktop.manage", reason_code=body.action)
+        return result
+
+    @router.get("/api/remote/state")
+    def remote_state() -> dict[str, Any]:
+        from core.api import remote_control
+        return remote_control.state()
+
+    @router.get("/api/remote/collect", dependencies=[Depends(require_desktop)])
+    def remote_collect() -> dict[str, Any]:
+        from core.api import remote_control
+        return {"commands": remote_control.collect()}
+
+    @router.post("/api/remote/state", dependencies=[Depends(require_desktop)])
+    def remote_report(body: RemoteState) -> dict[str, Any]:
+        from core.api import remote_control
+        remote_control.report_state([w.model_dump() for w in body.windows], body.active, body.calm, body.section)
+        return {"ok": True}
 
     @router.get("/api/weather/now")
     def weather_now() -> dict[str, Any]:
