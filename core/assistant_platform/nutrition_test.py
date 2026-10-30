@@ -61,6 +61,27 @@ class NutritionTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             nutrition.barcode_lookup("not a barcode")
 
+    def test_barcode_reads_a_us_upc_with_its_nutrition(self):
+        product = {"code": "0028400090896", "brands": "Doritos", "product_name": "Nacho Cheese",
+                   "nutriments": {"energy-kcal_100g": 536, "proteins_100g": 7.1, "sodium_100g": 0.75}}
+        with patch.object(nutrition, "_request", return_value={"code": "0028400090896", "product": product}) as request:
+            found = nutrition.barcode_lookup("028400090896")
+        self.assertIn("/api/v2/product/028400090896.json", request.call_args[0][0])
+        self.assertTrue(found["found"])
+        self.assertEqual(found["nutrients"]["calories"], 536)
+        self.assertEqual(found["nutrients"]["sodiumMg"], 750)
+
+    def test_barcode_retries_with_a_leading_zero_and_reports_a_miss(self):
+        import urllib.error
+        missing = urllib.error.HTTPError("u", 404, "not found", {}, None)
+        product = {"code": "0049000028911", "product_name": "Diet Coke", "nutriments": {"energy-kcal_100g": 0}}
+        with patch.object(nutrition, "_request", side_effect=[missing, {"status": 1, "product": product}]):
+            self.assertTrue(nutrition.barcode_lookup("049000028911")["found"])
+        with patch.object(nutrition, "_request", return_value={"status": 0, "status_verbose": "product not found"}):
+            miss = nutrition.barcode_lookup("12345670")
+        self.assertFalse(miss["found"])
+        self.assertIn("12345670", miss["question"])
+
     def test_totals_mark_missing_facts_instead_of_counting_them_as_zero(self):
         self.assertEqual(nutrition.totals([{"nutrients": {"calories": 140, "protein": 12, "fiber": 0, "fat": None}},
                                            {"nutrients": {"calories": 100, "protein": 4, "fiber": 2, "fat": 5}}]),

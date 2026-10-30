@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.34  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.35  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1161,3 +1161,12 @@ Grey approved building the remaining picks from the preview canvas. All of them 
 - **Memory & rules (A+C):** saved facts and learned patterns with Keep and Forget, plus your rules: talking (live switches), acting and notices, and the first rule.
 
 **Tests:** 5 new in `core/api/second_views_test.py` (uptime counts, changes and server gaps; test-set grading and runs; the experiment record; routes). The full suite passes: 861 tests, 14 skipped. A smoke test in preview opened every new sub-tab without errors.
+
+### 28.37 Barcode lookups fixed, and barcodes from photos — Claude, 2026-10-30 (v3.35)
+
+Grey reported that scanned barcodes did not pull up the product, and asked to use photos for barcodes.
+
+- Cause: `nutrition.barcode_lookup` called Open Food Facts API v3.6. That version answers US 12-digit UPCs with `status: "success_with_warnings"` (it pads them to 13 digits), which the code treated as "not found", and it returns `nutriments` empty, so even found products had no nutrition. A missing product also came back as HTTP 404, which surfaced as an error instead of the "not in the catalog" message.
+- Fix: the lookup uses API v2 (`status` 1/0, full nutriments), treats a 404 as a miss, and retries once with or without the leading 0 (12 ↔ 13 digits). Checked live against Diet Coke (049000028911), Doritos (0028400090896) and Nutella (3017620422003); two new tests in `nutrition_test.py`.
+- Photos: the live scanner has a **Use a photo** button that opens the photo library. The Scan food page's photo field no longer forces the camera (`capture` removed), so the phone offers both taking a photo and picking one. `readPhoto` also tries five closer crops, so a small barcode in a wider photo is found.
+- Tests: 863 Python tests pass (14 skipped), type check clean, node tests pass.

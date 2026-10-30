@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -37,11 +38,20 @@ def barcode_lookup(code: str) -> dict:
     code = re.sub(r"\D", "", str(code))
     if not 8 <= len(code) <= 14:
         raise ValueError("Enter a barcode with 8–14 digits.")
-    payload = _request(f"https://world.openfoodfacts.org/api/v3.6/product/{code}.json?fields=code,product_name,brands,quantity,nutriments,serving_size,url")
-    if payload.get("status") != "success":
-        return {"found": False, "question": "That barcode is not in the catalog. Scan the nutrition label or enter the values manually."}
-    product = payload.get("product") or {}
-    return _off_product(product, f"https://world.openfoodfacts.org/product/{code}")
+    # API v2: v3.6 answers US 12-digit UPCs with "success_with_warnings" and returns its nutriments empty, which made
+    # every scan look like a miss. A code that misses is tried once more with or without the leading 0.
+    tries = [code] + ([code[1:]] if len(code) == 13 and code.startswith("0") else ["0" + code] if len(code) == 12 else [])
+    for attempt in tries:
+        try:
+            payload = _request(f"https://world.openfoodfacts.org/api/v2/product/{attempt}.json?fields=code,product_name,brands,quantity,nutriments,serving_size")
+        except urllib.error.HTTPError as failure:
+            if failure.code == 404:
+                continue
+            raise
+        product = payload.get("product") or {}
+        if payload.get("status", 1) == 1 and product:
+            return {**_off_product(product, f"https://world.openfoodfacts.org/product/{product.get('code') or attempt}"), "code": product.get("code") or attempt}
+    return {"found": False, "code": code, "question": f"Barcode {code} is not in the Open Food Facts catalog yet. Scan the nutrition label or enter the values manually."}
 
 
 def _off_product(product: dict, source: str = "") -> dict:

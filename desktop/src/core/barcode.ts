@@ -162,15 +162,20 @@ export async function readCanvas(canvas: HTMLCanvasElement): Promise<string | nu
   return decodeGray(toGray(context.getImageData(0, 0, canvas.width, canvas.height)));
 }
 
-/** Read a barcode from a photo file, trying a few sizes. */
+/** Read a barcode from a photo file (camera or photo library), trying a few sizes, then closer crops for a small barcode. */
 export async function readPhoto(file: File): Promise<string | null> {
   const bitmap = await createImageBitmap(file);
   try {
-    for (const target of [1000, 1600, 700]) {
-      const scale = Math.min(1, target / Math.max(bitmap.width, bitmap.height));
+    const { width: w, height: h } = bitmap;
+    // [crop x, y, width, height as fractions, longest side in pixels]
+    const tries: [number, number, number, number, number][] = [[0, 0, 1, 1, 1000], [0, 0, 1, 1, 1600], [0, 0, 1, 1, 700],
+      [.2, .2, .6, .6, 1000], [0, 0, .6, .6, 1000], [.4, 0, .6, .6, 1000], [0, .4, .6, .6, 1000], [.4, .4, .6, .6, 1000]];
+    for (const [fx, fy, fw, fh, target] of tries) {
+      const sw = w * fw, sh = h * fh;
+      const scale = Math.min(1, target / Math.max(sw, sh));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
-      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      canvas.width = Math.round(sw * scale); canvas.height = Math.round(sh * scale);
+      canvas.getContext("2d")!.drawImage(bitmap, w * fx, h * fy, sw, sh, 0, 0, canvas.width, canvas.height);
       const code = await readCanvas(canvas);
       if (code) return code;
     }

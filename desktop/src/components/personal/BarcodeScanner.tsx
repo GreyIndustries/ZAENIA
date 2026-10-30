@@ -8,7 +8,9 @@ import "./BarcodeScanner.css";
  * inside the guide box with ZAE's own reader (so it works on iPhone), buzzes when it finds a code and closes.
  * Frames stay on the device; only the digits are sent on for the nutrition lookup.
  */
-export function BarcodeScanner({ onCode, onClose, qr }: { onCode: (code: string) => void; onClose: () => void;
+export function BarcodeScanner({ onCode, onClose, onPhoto, qr }: { onCode: (code: string) => void; onClose: () => void;
+  /** Read the barcode from a saved photo instead (opens the photo library). */
+  onPhoto?: (file: File) => void;
   /** Read a QR code (Phone confirms at the PC) instead of a food barcode: a square guide box and the QR reader. */
   qr?: (canvas: HTMLCanvasElement) => Promise<string | null> }) {
   const video = useRef<HTMLVideoElement>(null);
@@ -74,6 +76,7 @@ export function BarcodeScanner({ onCode, onClose, qr }: { onCode: (code: string)
     <div className="barcode-scanner__shade" aria-hidden="true"><span className={`barcode-scanner__box ${qr ? "barcode-scanner__box--square" : ""}`}><i/></span></div>
     <div className="barcode-scanner__top">
       <button type="button" onClick={onClose}>Cancel</button>
+      {onPhoto && <label className="barcode-scanner__photo">Use a photo<input type="file" accept="image/*" onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onPhoto(file); }}/></label>}
       {torch && <button type="button" aria-pressed={torch.on} onClick={() => void toggleTorch()}>{torch.on ? "Light off" : "Light on"}</button>}
     </div>
     <p className="barcode-scanner__status" role="status">{error ?? status}</p>
