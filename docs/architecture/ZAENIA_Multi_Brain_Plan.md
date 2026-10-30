@@ -39,10 +39,10 @@ The same layer drives the new wake-up and sleep phrases. Their responses depend 
 
 | Brain | Job | Model (starting point) | Budget | Runs on |
 |---|---|---|---|---|
-| **Talk** | Talks with Grey: answers from what it knows and from short context; confirms and asks short questions | qwen3:4b (or llama3.2 3B if faster on this card), always loaded | First words within 2 s | GPU, highest priority |
-| **Seek** | Quick lookups: semantic and system indexes, notes, records, calendar, Open Food Facts, web search and page reading. Returns a short evidence pack with sources | qwen3:4b (shared with Talk) plus embeddings | 3–15 s | GPU, second priority |
-| **Keep** | Background jobs: security checks, backups, news and watch topics, index freshness, pattern learning ("Grey logs food late on PT days") | qwen2.5:1.5b, or none for jobs that need no model | Unlimited, but pauses while Grey talks | CPU first, GPU only when idle |
-| **Study** | Deep research: multi-step plans, many sources, cross-checking, long write-ups | llama3.1:8b or qwen3:8b, long context | Minutes | GPU when free; queues behind Talk |
+| **Talk** | Talks with Grey: answers from what it knows and from short context; confirms and asks short questions | **qwen3.5:4b** in non-thinking mode (already installed, about 3.3 GB), always loaded | First words within 2 s | GPU, highest priority |
+| **Seek** | Quick lookups: semantic and system indexes, notes, records, calendar, Open Food Facts, web search and page reading. Returns a short evidence pack with sources | **qwen3.5:9b** (about 6.5 GB, strong tool calling) plus nomic-embed-text | 3–15 s | GPU, second priority |
+| **Keep** | Background jobs: security checks, backups, news and watch topics, index freshness, pattern learning ("Grey logs food late on PT days") | **qwen3:1.7b** on the CPU (qwen2.5:1.5b, installed, until then), or none for jobs that need no model | Unlimited, but pauses while Grey talks | CPU first, GPU only when idle |
+| **Study** | Deep research: multi-step plans, many sources, cross-checking, long write-ups | **qwen3:14b** day to day (about 9.3 GB); **gpt-oss:20b** (about 14 GB) for overnight deep runs when Talk can unload | Minutes | GPU when free; queues behind Talk |
 
 **Memory budget.**
 - Loaded together: Talk/Seek (about 2.5 GB), embeddings (0.3 GB) and Study (about 5 GB).
@@ -50,6 +50,22 @@ The same layer drives the new wake-up and sleep phrases. Their responses depend 
 - Keep stays on the CPU.
 - Ollama setting: `OLLAMA_MAX_LOADED_MODELS=3` and a small `OLLAMA_NUM_PARALLEL`. If Study needs the memory, it unloads while Talk stays loaded.
 - These are estimates. Phase 1 measures them on this PC.
+
+### 3.1 Best model for each brain (researched 2026-10-30)
+
+Grey asked for the best model for each role. These are picks for this PC's 16 GB RTX 4070 Ti SUPER, from current published comparisons. They are not measured on this PC yet; Phase 1 times them here before anything is switched.
+
+- **Talk: qwen3.5:4b (already installed).** Small enough to stay loaded beside the others, and fast with thinking turned off. Backup: llama3.2 3B (installed). Larger chat picks such as gpt-oss:20b (about 14 GB, reported 80–140 tokens a second on 16 GB cards) would leave no room for the other brains.
+- **Seek: qwen3.5:9b.** The Qwen 3 family is the most often recommended for reliable local tool calling, and the 9B ran at about 91 tokens a second in a 16 GB test using 9.3 GB. It fits next to Talk (about 10 GB together). Needs a download.
+- **Keep: qwen3:1.7b on the CPU.** Background jobs don't need speed, and keeping it off the GPU leaves the card for Talk and Seek. Most Keep jobs (backups, security checks, news refresh) need no model at all. Needs a download (qwen2.5:1.5b, installed, works until then).
+- **Study: qwen3:14b, with gpt-oss:20b for overnight deep research.** qwen3:14b is the common pick for instruction-following at this size (about 62 tokens a second in a 16 GB test, 12 GB in use with its context). gpt-oss:20b is the strongest model that fits whole on a 16 GB card, but at about 14 GB it can only run when Talk and Seek unload, so Keep schedules it for overnight jobs or when Grey says "take everything to the background". Avoid models that spill past the card's memory: one 15 GB model fell to about 5.5 tokens a second.
+- **Not chosen:** Phi-4 14B (reported weak at tool calling), DeepSeek-R1 14B (good reasoning but slow and chatty for tools), Gemma 4 26B-A4B (strong, but about 15 GB leaves no room for Talk).
+
+**Memory plan with these picks:** Talk 3.3 GB + Seek 6.5 GB + embeddings 0.3 GB, about 10 GB loaded at once with their caches. Study's qwen3:14b loads when called, and Seek unloads to make room. Keep runs on the CPU.
+
+**Downloads needed (about 17 GB in total):** qwen3.5:9b, qwen3:14b, qwen3:1.7b, and later gpt-oss:20b. Nothing has been downloaded; Grey approves first.
+
+Sources: [Best LLMs for Ollama on 16GB VRAM GPU (benchmarks)](https://www.glukhov.org/llm-performance/benchmarks/choosing-best-llm-for-ollama-on-16gb-vram-gpu/), [Ollama models by VRAM](https://computingforgeeks.com/ollama-models-cheat-sheet/), [Best local LLMs for 16GB VRAM in 2026](https://runaihome.com/blog/best-local-llm-16gb-vram-2026/), [Best Ollama models ranked (October 2026)](https://www.morphllm.com/best-ollama-models), [Best Ollama model for tool-calling agents](https://webscraft.org/blog/yaku-model-ollama-obrati-dlya-agenta-z-tool-calling-porivnyannya-i-benchmarki?lang=en).
 
 ## 4. Multi-level reasoning (the Conductor)
 
@@ -138,6 +154,6 @@ Phrases, the speaker check and the replies all go through Level 0 and Talk. The 
 
 ## 7. Decisions for Grey
 
-- Talk's model: qwen3:4b or llama3.2 3B. Phase 1 measures both, then Grey picks.
+- Approve downloading the picked models (qwen3.5:9b, qwen3:14b, qwen3:1.7b; gpt-oss:20b later). Phase 1 then measures them on this PC before switching.
 - Pattern learning: what Keep may learn and how long it keeps it (the plan's default is to keep everything visible and deletable in Settings).
 - Whether Study may use the web without asking each time (default: yes, for public pages only, never logged-in accounts).
