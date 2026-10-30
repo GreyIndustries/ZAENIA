@@ -193,3 +193,16 @@ Phrases, the speaker check and the replies all go through Level 0 and Talk. The 
 | Voice owner rejection | Existing design checks the enrolled speaker before admitting PC voice | Live owner/other-speaker trial pending |
 
 This is an initial scorecard, not a claim of production-complete evaluation. Core has been restarted and the new build is installed; complete the remaining live checks on this runtime, starting with owner/other-speaker rejection.
+
+## 9. Claude handoff — next actions, 2026-10-30
+
+The Conductor implementation through Phase 5 is merged, installed and live. Continue with verification and tuning; do not rebuild those phases from scratch.
+
+1. **Start at the shared head:** fetch `origin/main` at `faaddbc`, then create a new feature branch. The recovery point `zaenia-pristine-2026-10-30` (`d84d62b`) is pushed to GitHub. The earlier `codex/conductor-weekend-2` branch is stale after merge. Do not merge without owner approval.
+2. **Voice gate:** test enrolled-owner acceptance and other-speaker rejection through the current voice recognition path. Keep startup authentication, passkey behavior, thresholds and Engine 3 permissions unchanged. Record the test conditions and observed outcomes.
+3. **Seek citations:** in the running app, ask a question that explicitly needs current public information. Confirm source references reach the UI as links, empty evidence yields the cannot-verify response, and page text cannot cause an action. Do not test using private or logged-in pages.
+4. **Keep preemption:** run a background Keep task while Talk is responding and audio is active. Confirm foreground Talk wins, stale work can yield/cancel as designed, and background work reports progress when the owner marked it priority. Add focused regression tests for any defect found.
+5. **Phase 6 scorecard:** use a fixed nine-prompt Talk set; record warm first-token latency for all nine and cold start separately. Record Seek handoff, Keep CPU load/preemption, and Study latency/VRAM with model versions and machine conditions. Update section 8 with measured results; leave unmeasured cells pending. `gpt-oss:20b` overnight scheduling is still optional future work.
+6. **Release only if code changes:** run affected tests, `npm run build`, `npm run build:web`, and `npm run tauri build -- --no-bundle`; update `desktop/dist-web` and the installed app only under `AGENTS.md` release instructions. Preserve the recovery tag and never commit secrets, credentials or personal data.
+
+**Runtime:** the production Core is live on `127.0.0.1:8766`; the Vite development server on `127.0.0.1:1420` is stopped. In the current sandbox, Python fixture tests must set `TEMP` and `TMP` to a writable directory inside the project. Latest verified build/test status is in `HANDOFF_2026-10-30.md` section 7.
