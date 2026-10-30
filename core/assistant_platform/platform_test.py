@@ -99,6 +99,40 @@ class SchedulingTests(unittest.TestCase):
             self.assertFalse(entered.wait(.08))
         self.assertTrue(finished.wait(2)); worker.join(2)
 
+    def test_nested_model_call_reuses_its_own_background_slot(self):
+        # Keep's insight learner is a background call that makes a model call inside; it must not wait on itself.
+        from core.assistant_platform.performance import background_call, model_call
+        @model_call
+        def inner():
+            return "ok"
+        @background_call
+        def outer():
+            return inner()
+        box = {}
+        worker = threading.Thread(target=lambda: box.setdefault("result", outer()), daemon=True)
+        worker.start(); worker.join(2)
+        self.assertEqual(box.get("result"), "ok")
+
+    def test_background_waits_for_talk_and_yields_when_a_new_question_arrives(self):
+        coordinator = ModelCoordinator(); talking = threading.Event(); done = threading.Event(); outcome = {}
+        def talk():
+            with coordinator.slot("foreground"):
+                talking.set(); done.wait(2)
+        threading.Thread(target=talk, daemon=True).start(); talking.wait(1)
+        def keep():
+            try:
+                with coordinator.slot("background"):
+                    outcome["ran"] = True
+            except WorkCancelled as error:
+                outcome["cancelled"] = str(error)
+        worker = threading.Thread(target=keep, daemon=True); worker.start()
+        worker.join(0.3)
+        self.assertNotIn("ran", outcome)  # Keep waits while Talk is answering
+        threading.Thread(target=lambda: coordinator.slot("foreground").__enter__(), daemon=True).start()
+        worker.join(2)
+        self.assertIn("superseded", outcome.get("cancelled", ""))  # a newer question makes the queued Keep work yield
+        done.set()
+
     def test_new_question_cancels_only_obsolete_automatic_jobs(self):
         manager=JobManager(workers=2); entered=threading.Event(); release=threading.Event()
         def run(context):

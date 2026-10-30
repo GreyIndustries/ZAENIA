@@ -9,6 +9,9 @@ import threading
 import time
 
 WORK_KIND = ContextVar("zae_work_kind", default="foreground")
+# Set while this thread/context already holds a model slot, so a nested model call (for example Keep's
+# insight learner calling its HTTP helper) reuses that slot instead of waiting forever for itself.
+HOLDING = ContextVar("zae_holding_slot", default="")
 STOP = ContextVar("zae_work_stop", default=None)
 
 
@@ -29,6 +32,9 @@ class ModelCoordinator:
     @contextmanager
     def slot(self, kind=None, cancel=None):
         kind = kind or WORK_KIND.get()
+        if HOLDING.get() == kind:  # same kind of work already holds a slot in this context: reuse it
+            yield {"queueMs": 0, "kind": kind, "nested": True}
+            return
         if kind not in {"foreground","intent","background","deferred","priority"}:
             raise ValueError("Unknown model work priority.")
         cancel = cancel or STOP.get()
@@ -59,9 +65,11 @@ class ModelCoordinator:
             finally:
                 if kind == "foreground":
                     self.foreground_waiting -= 1
+        held = HOLDING.set(kind)
         try:
             yield {"queueMs": round((time.monotonic() - started) * 1000), "kind": kind}
         finally:
+            HOLDING.reset(held)
             with self.condition:
                 if kind == "foreground":
                     self.foreground -= 1
