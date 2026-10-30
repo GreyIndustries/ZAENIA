@@ -2,11 +2,11 @@
 .ov-wrap{flex:1;min-height:0;width:100%;display:flex;container-type:inline-size}
 .ov{position:relative;flex:1;min-height:0;width:100%;display:grid;grid-template-columns:minmax(230px,280px) minmax(0,1fr) minmax(230px,280px);
   gap:var(--zx-gap,12px);align-items:stretch;color:var(--zx-text,#dbe8f6)}
-.ov--calm{grid-template-columns:minmax(0,1fr)}
+.ov-rail{transition:opacity .4s ease,visibility .4s}
+.ov--calm .ov-rail{opacity:0;visibility:hidden}
 .ov-rail{display:flex;flex-direction:column;gap:var(--zx-gap,12px);min-height:0;overflow:auto;scrollbar-width:thin;padding:2px}
 .ov-center{position:relative;display:flex;flex-direction:column;align-items:center;min-width:0;min-height:0}
 .ov-center>.progress-stage{width:100%;max-width:720px;margin:0 auto}
-.ov--calm .ov-center>.progress-stage{max-width:790px}
 
 /* Cards: small caps kicker over a title, like the reference */
 .ov-card{display:flex;flex-direction:column;gap:10px;padding:12px 14px!important;--ov-tone:var(--accent,#e0a353)}
@@ -79,7 +79,7 @@
 /* Narrow windows: not enough room beside the core, so it stands alone (as in Calm view) */
 @container (max-width:980px){
   .ov{grid-template-columns:minmax(0,1fr)}
-  .ov-rail,.ov:not(.ov-phone) .ov-tag--btn{display:none}
+  .ov-rail{display:none}
 }
 
 /* Phone (iPhone 16 Pro, 402 × 874): one scrolling app screen between the header and the chat bar */
@@ -112,3 +112,42 @@
 .ov-phone .ov-actions b{font-size:14px}.ov-phone .ov-actions small{font-size:12px}
 .ov-phone .ov-open{width:36px!important;height:36px!important}
 .ov-phone .ov-head b{font-size:16px}
+
+/* Calm view switch: sits with the quick asks, clear of the tab strip at the top */
+.ov .ov-calm-btn{font-size:12px;padding:7px 14px;border-radius:999px;border:1px dashed var(--zx-line-strong,#2b4366);background:transparent;color:var(--zx-muted,#9fb6cf);
+  text-transform:var(--zx-btn-case,none);letter-spacing:var(--zx-btn-spacing,0)}
+.ov .ov-calm-btn:hover,.ov .ov-calm-btn[aria-pressed=true]{color:var(--accent,#e0a353);border-color:var(--accent,#e0a353)}
+
+/* Bottom row under the core (week trends), and Calm view's spotlight in the same slot so the core keeps its size */
+.ov-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--zx-gap,12px);width:100%;flex:none;margin-top:10px}
+.ov-bottom .ov-card{min-height:150px}
+.ov-week{display:flex;align-items:flex-end;gap:6px;height:70px}
+.ov-week>span{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
+.ov-week i{width:100%;border-radius:3px 3px 0 0;background:var(--accent,#e0a353);opacity:.85;transition:height .6s ease}
+.ov-week i.ov-week--none{background:var(--zx-line,#16253a);opacity:1}
+.ov-week small{font-size:10px;color:var(--zx-muted,#9fb6cf)}
+.ov-trend{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
+.ov-trend>span{display:flex;flex-direction:column}.ov-trend b{font-size:26px;font-weight:300}.ov-trend small{font-size:11px;color:var(--zx-muted,#9fb6cf)}
+.ov-trend svg{width:100%;height:46px;overflow:visible}
+.ov-trend polyline{fill:none;stroke:var(--ov-tone);stroke-width:2;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 4px var(--ov-tone))}
+.ov-dots{display:flex;align-items:center;gap:5px}
+.ov-dots i{width:9px;height:9px;border-radius:50%;border:1px solid var(--zx-line-strong,#2b4366)}
+.ov-dots i.ov-dot--on{background:var(--ov-tone);border-color:transparent;box-shadow:0 0 6px var(--ov-tone)}
+.ov-dots small{margin-left:6px;font-size:11px;color:var(--zx-muted,#9fb6cf)}
+
+.ov-spotlight{width:100%;max-width:760px;flex:none;margin-top:10px;min-height:150px;justify-content:center;align-items:center;text-align:center;--ov-tone:var(--accent,#e0a353)}
+.ov .ov-spotlight__body{display:flex;flex-direction:column;align-items:center;gap:6px;border:0;background:none;padding:4px 10px;animation:ov-fade .6s ease}
+.ov-spotlight__body small{font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--ov-tone)}
+.ov-spotlight__body b{font-family:var(--zx-title-font,inherit);font-size:clamp(18px,2.4cqi,28px);font-weight:300;line-height:1.3;max-width:640px}
+.ov-spotlight__body span{font-size:13px;color:var(--zx-muted,#9fb6cf)}
+.ov-spotlight__dots{display:flex;gap:6px;justify-content:center}
+.ov .ov-spotlight__dots button{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:var(--zx-line-strong,#2b4366)}
+.ov .ov-spotlight__dots button[aria-selected=true]{background:var(--ov-tone);width:18px;border-radius:4px}
+@keyframes ov-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.zaenia-app[data-motion="off"] .ov-spotlight__body{animation:none}
+@media (prefers-reduced-motion:reduce){.ov-spotlight__body{animation:none}.ov-rail{transition:none}}
+
+/* Phone: the week row stacks, the spotlight is full width */
+.ov-phone .ov-bottom{grid-template-columns:minmax(0,1fr);margin-top:0}
+.ov-phone .ov-spotlight{margin-top:0;min-height:170px}
+.ov-phone .ov-calm-btn{flex:none;min-height:40px;font-size:14px}

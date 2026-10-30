@@ -72,7 +72,7 @@ import { AppearanceSettings } from "./components/settings/AppearanceSettings";
 import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
-import { OverviewFrame } from "./components/overview/OverviewFrame";
+import { OverviewFrame, OverviewIdleSetting } from "./components/overview/OverviewFrame";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -1104,6 +1104,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
   const coreSettings = <>
           <AppearanceSettings value={appearance} onChange={setAppearance}/>
+          <OverviewIdleSetting/>
           <ScreenWatchSettings/>
           <GameCoachSettings/>
           <div className="detail-panel__block"><div className="section-heading"><span className="subheading">VISUAL SOURCE</span><span>LOCAL</span></div><h2>Neural Core</h2><p>The sphere and its six nerves are one network. Signals leave the nucleus and travel each branch to its module.</p><div className="mode-grid">{([{id:"blend",label:"Neural View"},{id:"progress",label:"Technical"}] as {id:VisualMode;label:string}[]).map(o=><button key={o.id} type="button" className={mode===o.id?"choice choice--active":"choice"} onClick={()=>{setMode(o.id);openSection("overview");}} aria-pressed={mode===o.id}>{o.label}</button>)}</div>
