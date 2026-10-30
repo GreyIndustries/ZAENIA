@@ -81,12 +81,12 @@ async function load(category: string): Promise<Panel[]> {
   if (category === "build") {
     const [suggestions, proposals, arena] = await Promise.all([
       get<{ suggestions: { title: string; status: string; created: string }[] }>("/api/suggestions"),
-      get<{ proposals: { status: string; path?: string; file?: string; summary?: string; created?: string; createdAt?: string }[] }>("/api/files/proposals"),
+      get<{ proposals: { status: string; path?: string; note?: string; createdAt?: string }[] }>("/api/files/proposals"),
       get<{ board: { model: string; wins: number; rounds: number }[]; rounds: { question?: string; prompt?: string; at?: string; created?: string }[] }>("/api/arena"),
     ]);
     return [
       { id: "suggestions", title: "Code Doctor ideas", tab: "codedoctor", tabLabel: "Code Doctor & Files", items: suggestions && suggestions.suggestions.filter(s => s.status === "new").slice(0, 5).map(s => ({ primary: s.title, meta: when(s.created) })) },
-      { id: "files", title: "File changes", tab: "files", tabLabel: "Files", items: proposals && proposals.proposals.slice(0, 5).map(p => ({ primary: p.path ?? p.file ?? "Change", secondary: p.summary, meta: `${p.status}${p.createdAt || p.created ? ` · ${when(p.createdAt ?? p.created)}` : ""}` })) },
+      { id: "files", title: "File changes", tab: "files", tabLabel: "Files", items: proposals && proposals.proposals.slice(0, 5).map(p => ({ primary: p.path ?? "Change", secondary: p.note, meta: `${p.status}${p.createdAt ? ` · ${when(p.createdAt)}` : ""}` })) },
       { id: "arena", title: "Arena leaderboard", tab: "arena", tabLabel: "Arena", items: arena && arena.board.slice(0, 5).map(b => ({ primary: b.model, meta: `${b.wins} of ${b.rounds} won` })) },
     ];
   }
