@@ -62,7 +62,7 @@ def facts(kind: str, s: dict[str, Any]) -> list[str]:
         out.append(f"{int(_num(s.get('news')))} new tech stories.")
     if _num(s.get("security")) is not None:
         out.append(f"Security score {int(_num(s.get('security')))}.")
-    for key, label in (("finished", "Finished while calm"), ("running", "Still running")):
+    for key, label in ((("finished", "Finished while calm"),) if kind == "wake" else ()) + (("running", "Still running"),):
         items = [str(x)[:80] for x in (s.get(key) or [])][:3]
         if items:
             out.append(f"{label}: {', '.join(items)}.")
@@ -110,7 +110,8 @@ def prompt(kind: str, phrase: str, s: dict[str, Any]) -> str:
             "capable, JARVIS-like tone, as a statement or a question that fits his words and the moment. Mention the "
             "single most useful fact.") if kind == "wake" else (
             "Grey just said this sleep phrase; you're switching to Calm view and moving running work to the background. "
-            "Answer in one short sentence that fits his words and the moment.")
+            "Answer in one short sentence that fits his words and the moment. Don't promise any action other than keeping "
+            "the running work going in the background.")
     return (f"You are ZAE, Grey's local assistant. {task} Use only the facts below, never invent any. Never claim human "
             f"feelings or experiences. No emoji, no lists, under 35 words.\n\nGrey said: \"{phrase[:120]}\"\nFacts:\n{lines}")
 
@@ -128,7 +129,7 @@ def compose(kind: str, phrase_id: int, situation: dict[str, Any], *, run: Callab
         worker = threading.Thread(target=lambda: box.setdefault("text", run(prompt(kind, phrase, situation))), daemon=True)
         worker.start()
         worker.join(timeout)
-        text = " ".join(str(box.get("text", "")).replace("*", "").split())
+        text = " ".join(str(box.get("text", "")).replace("*", "").split()).strip("\"'“” ")
         if 8 <= len(text) <= 280:
             line, source = text, "brain"
     return {"kind": kind, "phrase": phrase, "line": line, "focus": focus_for(kind, situation), "source": source}

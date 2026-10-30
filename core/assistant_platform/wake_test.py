@@ -23,7 +23,7 @@ class WakeTest(unittest.TestCase):
 
     def test_brain_line_is_used_when_quick_and_sensible(self):
         prompts = []
-        reply = wake.compose("wake", 2, self.SITUATION, run=lambda p: prompts.append(p) or "Never fully. Your PT session is at 8:30.")
+        reply = wake.compose("wake", 2, self.SITUATION, run=lambda p: prompts.append(p) or '"Never fully. Your PT session is at 8:30."')
         self.assertEqual((reply["line"], reply["source"]), ("Never fully. Your PT session is at 8:30.", "brain"))
         self.assertIn("Sleeping on the job?", prompts[0])
         self.assertIn("Never claim human feelings", prompts[0])
@@ -35,6 +35,7 @@ class WakeTest(unittest.TestCase):
         self.assertTrue(reply["line"].startswith("Awake and ready."))
 
     def test_sleep_mentions_work_kept_running(self):
+        self.assertNotIn("Finished while calm", wake.prompt("sleep", "I'm going to sleep", {"finished": ["the backup"]}))
         reply = wake.compose("sleep", 2, {"hour": 23, "running": ["the research on sleep"]})
         self.assertIn("Good night", reply["line"])
         self.assertIn("the research on sleep", reply["line"])
