@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.32  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.33  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1109,3 +1109,18 @@ Grey asked for the PC code to be a random QR code and approved two packages: `qr
   - 10 in `near_pc_test.py`. This adds a check that the QR key works and that an old QR key doesn't.
   - `scripts/qr.test.cjs` has 3 round trips confirming that a QR drawn by `qrcode` is read back by `jsQR`.
 - **Note:** `npm audit` reports a high-severity issue in the existing dev-only `vite` 8.3.x, not in the new packages. Fixing it is a separate vite update.
+
+### 28.35 Core zoom plays in reverse on the way back — Claude, 2026-10-30 (v3.33)
+
+Grey: coming out of one of the six category icons back to the core should play the zoom in reverse.
+
+- `OverviewFrame.tsx`: "← Core", Escape and the sphere all play the zoom in reverse.
+  1. The category panels slide away toward their side (0.26 s).
+  2. The core pulls back out from the same spot it zoomed into (0.9 s). The zoom origin is kept through the return with the `ov--returning` class, where before it jumped to the centre.
+  3. The dashboard cards fade back in from 0.5 s, as the core settles.
+- Opening a tab from a panel still goes straight there.
+- The steps run on timers that are cleared if you pick another category mid-way. Motion-off and reduced-motion settings make it instant.
+- Checked in preview (1440 × 900):
+  - The panel exit plays.
+  - The core's transition runs from scale(3.4) to none at the original origin.
+  - The cards' transition delay is 0.5 s during the return.
