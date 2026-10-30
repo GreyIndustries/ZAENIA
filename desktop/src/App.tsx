@@ -72,6 +72,7 @@ import { ScreenWatchSettings } from "./components/settings/ScreenWatchSettings";
 import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting } from "./components/overview/OverviewFrame";
+import { AssistantFront } from "./components/overview/AssistantFront";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -1163,7 +1164,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       ]}/>;
       case "tasks":
       case "calendar": return <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
-      case "assistant": return <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></>;
+      // Assistant: the front page ("The ZAE Daily") first, then the existing assistant tools.
+      case "assistant": return <PageTabs id="assistant" tabs={[
+        { id: "front", label: "Today's edition", render: () => <AssistantFront onAsk={text => submit(text)} onOpen={next => openSection(next as Section)} notice={inbox.notice ? { title: inbox.notice.title, message: inbox.notice.message } : null} unread={inbox.unreadCount}/> },
+        { id: "tools", label: "Assistant tools", render: () => <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></> },
+      ]}/>;
       case "system": return <PageTabs id="settings" tabs={[
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },

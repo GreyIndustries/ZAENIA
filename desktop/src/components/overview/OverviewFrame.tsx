@@ -38,7 +38,7 @@ const fmt = (n: number | null | undefined) => n === null || n === undefined ? "â
 const clock = (time: string) => { const [h, m] = time.split(":").map(Number); return Number.isFinite(h) ? new Date(2000, 0, 1, h, m || 0).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : time; };
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; };
 
-function useOverviewData() {
+export function useOverviewData() {
   const [data, setData] = useState<Data>(EMPTY);
   const load = useCallback(async () => {
     if (!LIVE_API) return;
