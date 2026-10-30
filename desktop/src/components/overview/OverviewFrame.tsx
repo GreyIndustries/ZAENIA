@@ -122,7 +122,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const idle = useIdle(docked ? 0 : idleAfter);
   const quiet = calm || idle;
   const [spot, setSpot] = useState(0);
-  const paused = useRef(false);
+  const holdUntil = useRef(0);
   const [now, setNow] = useState(() => new Date());
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 30_000); return () => window.clearInterval(timer); }, []);
   const today = iso(now);
@@ -219,7 +219,8 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     </Card>
   </div>;
 
-  // Calm view's spotlight: one thing at a time, cycling every 8 seconds (paused while hovered).
+  // Calm view's spotlight: one thing at a time, cycling every 8 seconds. Picking a dot holds that item for 20 seconds;
+  // resting the mouse over it does not stop it (when idle, the mouse is usually left there).
   const spotlight: { kicker: string; big: string; detail: string; tab: string; tone: string }[] = [
     { kicker: "Next up", big: nextEvent ? nextEvent.title : "Nothing else today", tone: "#8fc8ff", tab: "tasks",
       detail: nextEvent ? `${nextEvent.allDay ? "All day" : clock(nextEvent.time)}${nextEvent.date === today ? " today" : " tomorrow"}` : nextReminder ? `Reminder: ${nextReminder.text}` : "Your calendar is clear." },
@@ -235,16 +236,15 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   ];
   useEffect(() => {
     if (!quiet) return;
-    const timer = window.setInterval(() => { if (!paused.current) setSpot(index => index + 1); }, 8000);
+    const timer = window.setInterval(() => { if (Date.now() > holdUntil.current) setSpot(index => index + 1); }, 8000);
     return () => window.clearInterval(timer);
   }, [quiet]);
   const current = spotlight[spot % spotlight.length];
-  const spotlightPanel = <section className="ov-spotlight zx-card" style={{ "--ov-tone": current.tone } as CSSProperties} aria-live="polite"
-    onMouseEnter={() => { paused.current = true; }} onMouseLeave={() => { paused.current = false; }}>
+  const spotlightPanel = <section className="ov-spotlight zx-card" style={{ "--ov-tone": current.tone } as CSSProperties} aria-live="polite">
     <button key={spot % spotlight.length} type="button" className="ov-spotlight__body" onClick={() => onOpen(current.tab)}>
       <small>{current.kicker}</small><b>{current.big}</b><span>{current.detail}</span></button>
     <div className="ov-spotlight__dots" role="tablist" aria-label="Spotlight">
-      {spotlight.map((item, i) => <button key={i} type="button" role="tab" aria-selected={i === spot % spotlight.length} aria-label={`${item.kicker}: ${item.big}`} onClick={() => setSpot(i)}/>)}
+      {spotlight.map((item, i) => <button key={i} type="button" role="tab" aria-selected={i === spot % spotlight.length} aria-label={`${item.kicker}: ${item.big}`} onClick={() => { holdUntil.current = Date.now() + 20_000; setSpot(i); }}/>)}
     </div>
   </section>;
 
