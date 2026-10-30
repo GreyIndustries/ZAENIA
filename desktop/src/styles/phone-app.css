@@ -1,0 +1,19 @@
+/* Phone version (Grey, 2026-10-30): sized and laid out like an app. Sub-tab rows become one swipeable strip that stays
+   at the top while you scroll; a swipe across the page slides to the next sub-tab (core/swipe.ts). */
+.zaenia-app--phone .research-page{gap:10px}
+.zaenia-app--phone .research-page__tabs{flex-wrap:nowrap;overflow-x:auto;align-self:stretch;max-width:100%;scroll-snap-type:x proximity;scrollbar-width:none;
+  position:sticky;top:0;z-index:6;padding:4px;border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.zaenia-app--phone .research-page__tabs::-webkit-scrollbar{display:none}
+.zaenia-app--phone .research-page__tab{flex:none;scroll-snap-align:center;min-height:40px;padding:8px 15px;font-size:13px;border-radius:11px}
+/* Slide-in after a swipe (transform only, so paused animations never hide content) */
+.main-stage[data-swipe="next"] [role="tabpanel"]:not([hidden]),.main-stage[data-swipe="next"] .glass-module{animation:zae-swipe-next .3s ease}
+.main-stage[data-swipe="previous"] [role="tabpanel"]:not([hidden]),.main-stage[data-swipe="previous"] .glass-module{animation:zae-swipe-previous .3s ease}
+@keyframes zae-swipe-next{from{transform:translateX(28px)}to{transform:none}}
+@keyframes zae-swipe-previous{from{transform:translateX(-28px)}to{transform:none}}
+.zaenia-app[data-motion="off"] .main-stage[data-swipe] *{animation:none!important}
+@media (prefers-reduced-motion:reduce){.main-stage[data-swipe] *{animation:none!important}}
+/* Larger, thumb-friendly controls and tighter cards on phones */
+.zaenia-app--phone .zx-card{padding:calc(var(--zx-pad,14px) * .85)}
+.zaenia-app--phone .main-stage button:not(.research-page__tab):not(.core-orb):not(.core-tap){min-height:36px}
+.zaenia-app--phone .main-stage input,.zaenia-app--phone .main-stage select{font-size:16px} /* stops iPhone zooming into fields */
+.zaenia-app--phone .main-stage{overscroll-behavior-x:none;touch-action:pan-y pinch-zoom}

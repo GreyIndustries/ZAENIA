@@ -75,6 +75,7 @@ import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./comp
 import { CalmView } from "./components/overview/CalmView";
 import { matchCalmPhrase, type CalmPhrase } from "./core/calmPhrases";
 import { situationNow } from "./core/wakeSituation";
+import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
@@ -84,6 +85,7 @@ import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
 import "./App.css";
+import "./styles/phone-app.css";
 
 type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena";
 type IconName = "codefile" | "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
@@ -131,6 +133,7 @@ const sections: Record<Section, { title: string; label: string; description: str
 // On desktop every workspace page opens as a window over the core.
 // Phone bottom bar: these first, the open tab if it's another one, then "More" for everything.
 const PHONE_TABS: readonly string[] = ["overview", "tasks", "fitness", "research"];
+const mainStage = () => document.querySelector<HTMLElement>(".main-stage");
 const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "research", "codedoctor", "arena", "assistant", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 // News lives in Research and Files in Code Doctor now (Grey, 2026-10-30); the old names open the right sub-tab.
@@ -404,6 +407,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (!windowed) return;
     if (next === "overview") shell.showDesktop(); else shell.open(next);
   };
+  // Phone: swipe across the page for the next or previous sub-tab, then the neighbouring tab (bottom-bar order first).
+  useSwipeNavigation({ enabled: isPhone, root: mainStage, current: section, open: page => openSection(page as Section),
+    pages: [...PHONE_TABS, ...nav.map(item => item.id).filter(id => !PHONE_TABS.includes(id))] });
   // Fonts and colours (System → Appearance), saved on this device.
   const [appearance, setAppearance] = useState<Appearance>(() => { try { return parseAppearance(localStorage.getItem("zaenia.appearance")); } catch { return { ...DEFAULT_APPEARANCE }; } });
   useEffect(() => { try { localStorage.setItem("zaenia.appearance", JSON.stringify(appearance)); } catch { /* optional */ } }, [appearance]);
