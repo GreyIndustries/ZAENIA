@@ -201,6 +201,14 @@
 .ov-wrap:not(.ov-wrap--phone){overflow:hidden}
 .ov-center>.progress-stage,.ov-phone__core>.progress-stage{transition:transform .9s cubic-bezier(.6,0,.2,1),filter .9s ease}
 .ov--zoomed .ov-center>.progress-stage,.ov--zoomed .ov-phone__core>.progress-stage{transform-origin:var(--zoom-ox,50%) var(--zoom-oy,45%);transform:scale(3.4);filter:brightness(.42) saturate(.85)}
+/* The way back: pull out from the same spot, and bring the cards back once the core is nearly home. */
+.ov--returning .ov-center>.progress-stage,.ov--returning .ov-phone__core>.progress-stage{transform-origin:var(--zoom-ox,50%) var(--zoom-oy,45%)}
+.ov--returning .ov-rail,.ov--returning .ov-hero,.ov--returning .ov-bottom,.ov--returning .ov-spotlight,.ov--returning .ov-tiles,.ov--returning .ov-phone>.ov-card{transition-delay:.5s}
+.ov-catwrap--out .ov-cat{animation:ov-cat-out .26s ease-in forwards}
+.ov-catwrap--left.ov-catwrap--out .ov-cat{--cat-out:-28px}
+@keyframes ov-cat-out{to{transform:translateX(var(--cat-out,28px)) scale(.97);opacity:0}}
+.zaenia-app[data-motion="off"] .ov-catwrap--out .ov-cat{animation-duration:.01s}
+@media (prefers-reduced-motion:reduce){.ov-catwrap--out .ov-cat{animation-duration:.01s}}
 .ov-rail,.ov-hero,.ov-bottom,.ov-spotlight{transition:opacity .45s ease,visibility .45s}
 .ov--zoomed .ov-rail,.ov--zoomed .ov-hero,.ov--zoomed .ov-bottom,.ov--zoomed .ov-spotlight,.ov--zoomed .ov-tiles,.ov--zoomed .ov-phone>.ov-card{opacity:0;visibility:hidden}
 .ov--zoomed .core-orb,.ov--zoomed .core-state,.ov--zoomed .core-tap,.ov--zoomed .core-hud{opacity:0!important;pointer-events:none}
