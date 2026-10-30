@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import { beginVoiceLogin, endNearPass, errorText, nearPassStatus, nearVoice, startNearPass, submitNearCode } from "../../core/bridge";
 import type { NearPassState, VoiceChallenge } from "../../core/bridge";
 import { recordLoginVoice } from "../../core/voiceLogin";
+import { readQr } from "../../core/qr";
+import { BarcodeScanner } from "../personal/BarcodeScanner";
 import type { VoiceRecording } from "../../core/voiceLogin";
 
 /**
@@ -19,6 +21,8 @@ export function NearPassCard() {
   const [challenge, setChallenge] = useState<VoiceChallenge | null>(null);
   const [voicePhase, setVoicePhase] = useState<"idle" | "recording" | "checking">("idle");
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recording = useRef<VoiceRecording | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -45,6 +49,7 @@ export function NearPassCard() {
     try { await work(); } catch (failure) { setError(errorText(failure)); } finally { setBusy(false); }
   };
   const sendCode = (event: FormEvent) => { event.preventDefault(); void run(async () => { await submitNearCode(code); setCode(""); }); };
+  const scanned = (value: string) => { setScanning(false); void run(() => submitNearCode(value)); };
   const getPrompt = () => run(async () => { setChallenge(await beginVoiceLogin()); });
   const record = () => run(async () => {
     recording.current?.cancel();
@@ -77,13 +82,16 @@ export function NearPassCard() {
 
   // ZAE picks which step comes first; the second opens once the first is done.
   const codeStep = (number: number, open: boolean) => <div key="code" className={`near__step zx-inset ${state.code ? "near__step--done" : open ? "" : "near__step--later"}`}>
-    <b>{state.code ? "✓ Code matched" : `${number}. Code on the PC screen`}</b>
-    {!state.code && open && <form onSubmit={sendCode} className="near__code">
+    <b>{state.code ? "✓ QR code matched" : `${number}. QR code on the PC screen`}</b>
+    {!state.code && open && <button type="button" className="near__start" disabled={busy} onClick={() => setScanning(true)}>Scan the QR code</button>}
+    {!state.code && open && !typing && <button type="button" className="near__cancel" onClick={() => setTyping(true)}>Camera won't focus? Type the code</button>}
+    {!state.code && open && typing && <form onSubmit={sendCode} className="near__code">
       <input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} placeholder="6 digits" value={code}
         onChange={event => setCode(event.target.value)} aria-label="Code shown on the PC"/>
       <button type="submit" disabled={busy || code.replace(/\D/g, "").length !== 6}>Check</button>
     </form>}
     {!state.code && !open && <p className="mv-muted">Opens after the voice check.</p>}
+    {scanning && <BarcodeScanner qr={readQr} onCode={scanned} onClose={() => setScanning(false)}/>}
   </div>;
   const voiceStep = (number: number, open: boolean) => <div key="voice" className={`near__step zx-inset ${state.voice ? "near__step--done" : open ? "" : "near__step--later"}`}>
     <b>{state.voice ? "✓ Voice matched" : `${number}. Voice check`}</b>

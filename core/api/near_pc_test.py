@@ -52,6 +52,19 @@ class NearPcTest(unittest.TestCase):
         self.clock.now += ACTIVE_SECONDS + 1
         self.assertFalse(self.near.allows(secret))
 
+    def test_the_qr_key_works_and_an_old_one_does_not(self):
+        with first("code"):
+            secret = self.near.start()["secret"]
+        shown = self.near.code_for_pc()
+        self.assertTrue(shown["qr"].startswith("zae-near:"))
+        self.assertGreater(len(shown["qr"]), 30)
+        self.clock.now += CODE_SECONDS + 1
+        fresh = self.near.code_for_pc()["qr"]
+        self.assertNotEqual(fresh, shown["qr"])
+        with self.assertRaises(ValueError):
+            self.near.submit_code(secret, shown["qr"])
+        self.assertTrue(self.near.submit_code(secret, fresh)["code"])
+
     def test_voice_then_code_works_too(self):
         with first("voice"):
             secret = self.near.start()["secret"]

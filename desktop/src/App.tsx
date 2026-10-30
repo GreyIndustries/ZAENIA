@@ -82,6 +82,7 @@ import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
 import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
 import { RemotePanel } from "./components/studios/RemotePanel";
+import { NearQr } from "./components/studios/NearQr";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -733,7 +734,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     else if (action === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
   };
   // The code for "Phone confirms": shown here only while the phone asks for it (it changes every minute).
-  type NearCode = { code: string; secondsLeft: number; voice: boolean };
+  type NearCode = { code: string; qr: string; secondsLeft: number; voice: boolean };
   const [nearCode, setNearCode] = useState<NearCode | null>(null);
   const remoteSnapshot = useRef("");
   remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
@@ -1302,10 +1303,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
-    {nearCode && <div className="near-code" role="dialog" aria-label="Code for your phone">
-      <p>Type this on your phone{nearCode.voice ? " to finish (voice checked)" : ", then do the voice check"}</p>
-      <b>{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</b>
-      <p>Changes in {nearCode.secondsLeft} s</p>
+    {nearCode && <div className="near-code" role="dialog" aria-label="QR code for your phone">
+      <p>Scan with your phone{nearCode.voice ? " to finish (voice checked)" : ", then do the voice check"}</p>
+      <NearQr value={nearCode.qr}/>
+      <p>Changes in {nearCode.secondsLeft} s · backup code <span className="near-code__digits">{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</span></p>
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
     </div>}
     {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}

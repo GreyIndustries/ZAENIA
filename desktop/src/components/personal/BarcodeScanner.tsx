@@ -8,7 +8,9 @@ import "./BarcodeScanner.css";
  * inside the guide box with ZAE's own reader (so it works on iPhone), buzzes when it finds a code and closes.
  * Frames stay on the device; only the digits are sent on for the nutrition lookup.
  */
-export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => void; onClose: () => void }) {
+export function BarcodeScanner({ onCode, onClose, qr }: { onCode: (code: string) => void; onClose: () => void;
+  /** Read a QR code (Phone confirms at the PC) instead of a food barcode: a square guide box and the QR reader. */
+  qr?: (canvas: HTMLCanvasElement) => Promise<string | null> }) {
   const video = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [torch, setTorch] = useState<{ on: boolean; track: MediaStreamTrack } | null>(null);
@@ -40,17 +42,18 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
       const track = stream.getVideoTracks()[0];
       const caps = (track.getCapabilities?.() ?? {}) as { torch?: boolean };
       if (caps.torch) setTorch({ on: false, track });
-      setStatus("Line the barcode up inside the box");
+      setStatus(qr ? "Point the camera at the QR code on your PC" : "Line the barcode up inside the box");
       const scan = async () => {
         if (stopped) return;
         const width = element.videoWidth, height = element.videoHeight;
         if (width && height) {
-          // The guide box: the middle 80% across and 40% down of the picture.
-          const sx = width * 0.1, sy = height * 0.3, sw = width * 0.8, sh = height * 0.4;
+          // The guide box: the middle 80% across and 40% down of the picture (a centred square for QR codes).
+          const side = Math.min(width, height) * 0.8;
+          const [sx, sy, sw, sh] = qr ? [(width - side) / 2, (height - side) / 2, side, side] : [width * 0.1, height * 0.3, width * 0.8, height * 0.4];
           const scale = Math.min(1, 900 / sw);
           canvas.width = Math.round(sw * scale); canvas.height = Math.round(sh * scale);
           canvas.getContext("2d", { willReadFrequently: true })!.drawImage(element, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-          const code = await readCanvas(canvas).catch(() => null);
+          const code = await (qr ?? readCanvas)(canvas).catch(() => null);
           if (code && !stopped) { navigator.vibrate?.(60); stop(); found.current(code); return; }
         }
         timer = window.setTimeout(() => void scan(), 120);
@@ -66,9 +69,9 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
   };
 
   // On top of everything (header, chat bar, tab bar), whatever panel opened it.
-  return createPortal(<div className="barcode-scanner" role="dialog" aria-modal="true" aria-label="Scan a food barcode">
+  return createPortal(<div className="barcode-scanner" role="dialog" aria-modal="true" aria-label={qr ? "Scan the QR code on your PC" : "Scan a food barcode"}>
     <video ref={video} playsInline muted autoPlay aria-hidden="true"/>
-    <div className="barcode-scanner__shade" aria-hidden="true"><span className="barcode-scanner__box"><i/></span></div>
+    <div className="barcode-scanner__shade" aria-hidden="true"><span className={`barcode-scanner__box ${qr ? "barcode-scanner__box--square" : ""}`}><i/></span></div>
     <div className="barcode-scanner__top">
       <button type="button" onClick={onClose}>Cancel</button>
       {torch && <button type="button" aria-pressed={torch.on} onClick={() => void toggleTorch()}>{torch.on ? "Light off" : "Light on"}</button>}

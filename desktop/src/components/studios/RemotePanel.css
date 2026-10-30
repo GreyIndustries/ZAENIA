@@ -35,5 +35,7 @@
 .near-code{position:fixed;right:24px;bottom:24px;z-index:9000;display:grid;gap:6px;min-width:260px;padding:18px 20px;
   background:var(--zx-panel,#0d1828);border:1px solid var(--accent,#e0a353);border-radius:var(--zx-radius,14px);box-shadow:0 18px 50px rgba(0,0,0,.55)}
 .near-code p{margin:0;font-size:12px;color:var(--zx-muted,#9fb6cf)}
-.near-code b{font-size:40px;letter-spacing:.18em;font-variant-numeric:tabular-nums;color:var(--zx-text,#dbe8f6)}
+.near-code__qr{width:220px;height:220px;border-radius:10px;overflow:hidden;background:#f4f7fb}
+.near-code__qr svg{display:block;width:100%;height:100%}
+.near-code__digits{font-variant-numeric:tabular-nums;letter-spacing:.12em;color:var(--zx-text,#dbe8f6)}
 .near-code button{justify-self:start;min-height:30px;border-radius:8px;border:1px solid var(--zx-line,#22344a);background:transparent;color:var(--zx-muted,#9fb6cf);font:inherit;font-size:12px;cursor:pointer;padding:0 10px}

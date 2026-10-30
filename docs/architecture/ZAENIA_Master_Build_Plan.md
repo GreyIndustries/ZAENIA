@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.31  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.32  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1097,3 +1097,15 @@ Grey clarified that "either order" means ZAE should pick the order of the two st
   - The voice step is refused until its turn.
 - **Phone:** the card numbers the steps in the chosen order and greys out the second one ("Opens after the code" or "Opens after the voice check").
 - **Tests:** 9 in `near_pc_test.py`. They now also check that both orders come up and that the second step waits for the first.
+
+### 28.34 Phone confirms: random QR code — Claude, 2026-10-30 (v3.32)
+
+Grey asked for the PC code to be a random QR code and approved two packages: `qrcode` 1.5.4 (draws it on the PC) and `jsqr` 1.4.0 (reads it on the phone). Both are MIT-licensed, run on the device, and are pinned exactly. `@types/qrcode` was added as a dev dependency.
+
+- **PC:** the box shows a QR code holding `zae-near:` plus a random 24-byte key. It changes every minute, together with a small 6-digit backup code (`NearQr.tsx`, dark on light).
+- **Phone:** the QR step opens the full-screen camera. `BarcodeScanner` gained a `qr` mode with a square guide box, using jsQR via `core/qr.ts`. "Camera won't focus? Type the code" shows the backup field.
+- **Server:** `submit_code` accepts the current QR key or the current 6-digit code. Wrong ones count toward the 5 tries, and both stop working when the minute is up.
+- **Tests:**
+  - 10 in `near_pc_test.py`. This adds a check that the QR key works and that an old QR key doesn't.
+  - `scripts/qr.test.cjs` has 3 round trips confirming that a QR drawn by `qrcode` is read back by `jsQR`.
+- **Note:** `npm audit` reports a high-severity issue in the existing dev-only `vite` 8.3.x, not in the new packages. Fixing it is a separate vite update.

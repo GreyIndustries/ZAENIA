@@ -1,7 +1,8 @@
 """Phone confirms when the phone is at the PC (Grey, 2026-10-30: code plus voice, in a random order).
 
-The phone asks for a pass. The PC app (desktop key) shows a 6-digit code that changes every minute; typing it on the
-phone proves someone at the PC screen. A fresh voice check on the phone (the same local speaker and spoken-words check
+The phone asks for a pass. The PC app (desktop key) shows a QR code holding a random key that changes every minute
+(Grey: "make the code a random QR code"); scanning it with the phone proves someone at the PC screen. A short typed
+code under it is the backup when the camera won't focus. A fresh voice check on the phone (the same local speaker and spoken-words check
 as voice sign-in) proves it's Grey. ZAE picks at random which step comes first each time, and the second step
 opens only after the first. Both within 3 minutes turn the pass on for 10 minutes.
 While it's on, the phone can approve a short list of confirms that otherwise need the desktop app: a waiting file
@@ -23,6 +24,7 @@ SETUP_SECONDS = 180       # both steps must be done within 3 minutes of asking
 ACTIVE_SECONDS = 600      # then the phone can confirm for 10 minutes
 CODE_SECONDS = 60         # the code on the PC screen changes every minute
 MAX_CODE_TRIES = 5        # wrong codes end the pass
+QR_PREFIX = "zae-near:"   # what the QR code holds: this prefix and a random key
 
 
 def _key(secret: str) -> str:
@@ -69,7 +71,7 @@ class NearPc:
         secret = secrets.token_urlsafe(32)
         with self.lock:
             self.current = {"key": _key(secret), "started": self.clock(), "first": secrets.choice(("code", "voice")),
-                            "code": "", "code_at": 0.0, "tries": 0,
+                            "code": "", "qr": "", "code_at": 0.0, "tries": 0,
                             "code_ok": False, "voice_ok": False, "active_until": 0.0}
             return {"secret": secret, **self._view(self.current)}
 
@@ -81,8 +83,8 @@ class NearPc:
                 return None
             now = self.clock()
             if not p["code"] or now - p["code_at"] >= CODE_SECONDS:
-                p["code"], p["code_at"] = f"{secrets.randbelow(1_000_000):06d}", now
-            return {"code": p["code"], "secondsLeft": max(1, round(CODE_SECONDS - (now - p["code_at"]))), "voice": p["voice_ok"]}
+                p["code"], p["qr"], p["code_at"] = f"{secrets.randbelow(1_000_000):06d}", QR_PREFIX + secrets.token_urlsafe(24), now
+            return {"code": p["code"], "qr": p["qr"], "secondsLeft": max(1, round(CODE_SECONDS - (now - p["code_at"]))), "voice": p["voice_ok"]}
 
     def submit_code(self, secret: str | None, code: str) -> dict[str, Any]:
         with self.lock:
@@ -92,13 +94,18 @@ class NearPc:
             if not self._turn(p, "code"):
                 raise ValueError("Do the voice check first this time.")
             fresh = p["code"] and self.clock() - p["code_at"] < CODE_SECONDS + 10
-            if not fresh or not secrets.compare_digest(p["code"], "".join(ch for ch in str(code) if ch.isdigit())[:6]):
+            code = str(code).strip()
+            scanned = code.startswith(QR_PREFIX)
+            matches = (secrets.compare_digest(p["qr"], code[:80]) if scanned
+                       else secrets.compare_digest(p["code"], "".join(ch for ch in code if ch.isdigit())[:6]))
+            if not fresh or not matches:
                 p["tries"] += 1
                 if p["tries"] >= MAX_CODE_TRIES:
                     self.current = None
                     raise PermissionError("Too many wrong codes. Start again at the PC.")
-                raise ValueError("That code doesn't match the one on the PC screen.")
-            p["code_ok"], p["code"] = True, ""
+                raise ValueError("That QR code is old or isn't from your PC. Scan the one on the screen now." if scanned
+                                 else "That code doesn't match the one on the PC screen.")
+            p["code_ok"], p["code"], p["qr"] = True, "", ""
             self._maybe_activate(p)
             return self._view(p)
 

@@ -281,7 +281,7 @@ class RemoteState(BaseModel):
 
 class NearCode(BaseModel):
     model_config = {'extra': 'forbid'}
-    code: str = Field(min_length=6, max_length=12)
+    code: str = Field(min_length=6, max_length=80)  # the typed 6 digits or the scanned QR key
 
 
 class ScreenWatchRequest(BaseModel):

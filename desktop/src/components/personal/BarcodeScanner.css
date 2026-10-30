@@ -14,3 +14,4 @@
 .barcode-scanner__top button[aria-pressed=true]{background:var(--accent,#e0a353);color:#1a1206;border-color:transparent}
 .barcode-scanner__status{position:absolute;left:16px;right:16px;bottom:calc(28px + env(safe-area-inset-bottom,0px));margin:0;text-align:center;
   font-size:15px;line-height:1.45;padding:10px 14px;border-radius:12px;background:rgba(0,0,0,.55)}
+.barcode-scanner__box--square{width:min(72vw,72vh);height:min(72vw,72vh);max-height:none}
