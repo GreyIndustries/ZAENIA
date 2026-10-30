@@ -73,6 +73,7 @@ import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting } from "./components/overview/OverviewFrame";
 import { AssistantFront } from "./components/overview/AssistantFront";
+import { CATEGORIES } from "./core/categories";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
 import { attendedWindow } from "./core/windowLayout";
@@ -395,6 +396,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [sidebarHidden, setSidebarHidden] = useState(() => { try { return localStorage.getItem("zaenia.sidebarHidden") === "1"; } catch { return false; } });
   useEffect(() => { try { localStorage.setItem("zaenia.sidebarHidden", sidebarHidden ? "1" : "0"); } catch { /* optional */ } }, [sidebarHidden]);
   const working = windowed && shell.windows.some(win => !win.minimized);
+  // Grey (2026-10-30): the dashboard has no sidebar; it shows only inside a tab. Home lives in the ZÆNIA menu.
+  const onDashboard = !isPhone && (windowed ? !working : section === "overview");
   const coreDock: Spot = coreSpot !== "auto" ? coreSpot : working ? "top-left" : "center";
   const [brandOpen, setBrandOpen] = useState(false);
   const [restartNote, setRestartNote] = useState<string | null>(null);
@@ -1178,7 +1181,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden ? " zaenia-app--no-sidebar" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
+  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
@@ -1191,8 +1194,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
           <span className="brand-type"><strong>ZÆNIA</strong><span className={showExpandedIdentity ? "brand-type__definition" : "brand-type__subtitle"}>{showExpandedIdentity ? ZAENIA_IDENTITY_DESCRIPTION : "Z.A.E.N.I.A. · Zack’s Ædaptive, Neural, Intelligent Agent"}</span></span>
         </button>
         {brandOpen && <div className="brand-menu__drop" role="menu" aria-label="Parts of ZÆNIA">
+          <button type="button" role="menuitem" className="brand-menu__item brand-menu__item--home" onClick={() => { openSection("overview"); setBrandOpen(false); }}>
+            <Icon name="home" size={15}/><span>Home</span><em className="brand-menu__pill">Dashboard</em></button>
           <div className="brand-menu__group">WORKSPACE</div>
-          {nav.map(item => <button key={item.id} type="button" role="menuitem" className="brand-menu__item" onClick={() => { openSection(item.id); setBrandOpen(false); }}>
+          {nav.filter(item => item.id !== "overview").map(item => <button key={item.id} type="button" role="menuitem" className="brand-menu__item" onClick={() => { openSection(item.id); setBrandOpen(false); }}>
             <Icon name={item.icon} size={15}/><span>{item.label}</span>
             {item.id === "codedoctor" && pendingFiles > 0 && <em className="brand-menu__pill brand-menu__pill--pending">{pendingFiles} waiting</em>}
           </button>)}
@@ -1225,7 +1230,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         {isPhone && <button type="button" className="sheet-toggle" aria-label={sheetOpen ? "Close core panel" : "Open core panel"} aria-expanded={sheetOpen} aria-controls="core-panel" onClick={()=>setSheetOpen(v=>!v)}><Icon name="panel" size={18}/></button>}
       </div></div>
     </header>
-    {!sidebarHidden && <aside className="sidebar" aria-label="Main navigation">
+    {!sidebarHidden && !onDashboard && <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar__group-label">WORKSPACE</div>
       {isPhone && phoneMore && createPortal(<div className="phone-more" role="dialog" aria-label="All tabs" onClick={() => setPhoneMore(false)}>
         <div className="phone-more__sheet" onClick={event => event.stopPropagation()}>
@@ -1234,7 +1239,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             onClick={() => { setPhoneMore(false); openSection(item.id); }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
         </div>
       </div>, document.body)}
-      <nav className="sidebar__nav">{(isPhone ? [...nav.filter(item => PHONE_TABS.includes(item.id)), ...(PHONE_TABS.includes(section) ? [] : nav.filter(item => item.id === section))].slice(0, 4) : nav).map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "codedoctor" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}
+      <nav className="sidebar__nav">{(isPhone ? [...nav.filter(item => PHONE_TABS.includes(item.id)), ...(PHONE_TABS.includes(section) ? [] : nav.filter(item => item.id === section))].slice(0, 4) : nav.filter(item => item.id !== "overview")).map(item => <button key={item.id} className={`nav-item ${section===item.id?"nav-item--active":""}`} aria-current={section===item.id?"page":undefined} type="button" onClick={()=>openSection(item.id)} title={item.label}><Icon name={item.icon}/><span>{isPhone ? item.short : item.label}</span>{item.id === "codedoctor" && pendingFiles > 0 && <span className="nav-item__badge" aria-label={`${pendingFiles} file change${pendingFiles > 1 ? "s" : ""} waiting`}>{pendingFiles}</span>}{section===item.id && <span className="nav-item__indicator"/>}</button>)}
         {isPhone && <button type="button" className={`nav-item${phoneMore ? " nav-item--active" : ""}`} onClick={() => setPhoneMore(open => !open)} aria-expanded={phoneMore} title="All tabs"><Icon name="panel"/><span>More</span></button>}</nav>
       <div className="sidebar__bottom"><SidebarCheck/><div className="sidebar__separator"/><div className="identity-card"><div className="identity-card__initial">Z</div><div><strong>Desktop Interface</strong><span>Local-first UI</span></div></div><span className="sidebar__version">ZÆNIA / NEURAL CORE 06</span></div>
     </aside>}
@@ -1248,8 +1253,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             ? <h1 id="main-title" className="sr-only">{info.title}</h1>
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
           {stageSection === "overview" && <OverviewFrame telemetry={telemetry} look={tabAppearance(appearance, "overview").look} style={tabAppearance(appearance, "overview").style as CSSProperties}
-            docked={coreDock !== "center"} phone={isPhone} calm={overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
-            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
+            docked={coreDock !== "center"} apps={nav.filter(item => item.id !== "overview").map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon}/> }))} phone={isPhone} calm={overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
+            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}
+              categories={coreDock === "center" ? CATEGORIES : undefined} onCategory={index => window.dispatchEvent(new CustomEvent("zae:core-category", { detail: index }))}
+              onCore={coreDock === "center" ? () => window.dispatchEvent(new CustomEvent("zae:core-apps")) : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
           </OverviewFrame>}
           {!windowed && section !== "overview" && glassBody(section, false)}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>

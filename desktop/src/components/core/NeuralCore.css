@@ -95,3 +95,7 @@
 .core-orb__plate .core-orb__plate-status--good{color:#8de2ae}
 .core-orb__plate .core-orb__plate-status--fix{color:#ffb08a}
 .core-orb__plate .core-orb__plate-status--idle{color:#a9c3dc}
+
+/* Clicking the sphere opens the tab list: an invisible round button over it. */
+.core-tap{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:0;background:transparent;cursor:pointer;z-index:2}
+.core-tap:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:4px}

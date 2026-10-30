@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { api, LIVE_API } from "../../core/bridge";
 import type { CoreTelemetry } from "../../core/coreTelemetry";
+import { CATEGORIES } from "../../core/categories";
 import "./OverviewFrame.css";
 
 /**
@@ -112,8 +113,10 @@ function Meter({ label, value, max = 100, tone }: { label: string; value: number
     <i><em style={{ width: `${share * 100}%`, background: tone }}/></i></div>;
 }
 
-export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm, docked, phone }: {
-  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties; docked: boolean; phone: boolean;
+export type AppTab = { id: string; label: string; icon: ReactNode };
+
+export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk, calm, onCalm, docked, phone, apps = [] }: {
+  children: ReactNode; telemetry: CoreTelemetry | null; look: string; style?: CSSProperties; docked: boolean; phone: boolean; apps?: AppTab[];
   onOpen: (section: string) => void; onAsk: (text: string) => void; calm: boolean; onCalm: (calm: boolean) => void;
 }) {
   const data = useOverviewData();
@@ -124,6 +127,54 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const [spot, setSpot] = useState(0);
   const holdUntil = useRef(0);
   const [now, setNow] = useState(() => new Date());
+  // Core navigation: a category icon zooms in toward the core, then shows that category's tabs (or opens its only tab);
+  // clicking the sphere lists every tab, grouped by category.
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
+  const [allTabs, setAllTabs] = useState(false);
+  useEffect(() => {
+    const category = (event: globalThis.Event) => {
+      const index = (event as CustomEvent<number>).detail;
+      const entry = CATEGORIES[index];
+      if (!entry) return;
+      setAllTabs(false); setPicked(null); setZoom(index);
+      window.setTimeout(() => {
+        setZoom(null);
+        if (entry.tabs.length === 1) onOpen(entry.tabs[0]); else setPicked(index);
+      }, 650);
+    };
+    const list = () => { setPicked(null); setAllTabs(open => !open); };
+    window.addEventListener("zae:core-category", category); window.addEventListener("zae:core-apps", list);
+    return () => { window.removeEventListener("zae:core-category", category); window.removeEventListener("zae:core-apps", list); };
+  }, [onOpen]);
+  useEffect(() => {
+    if (picked === null && !allTabs) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") { setPicked(null); setAllTabs(false); } };
+    window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close);
+  }, [picked, allTabs]);
+  const appFor = (id: string) => apps.find(app => app.id === id);
+  const go = (id: string) => { setPicked(null); setAllTabs(false); onOpen(id); };
+  const navLayer = <>
+    {zoom !== null && <div className="ov-zoom" aria-hidden="true"><span>{CATEGORIES[zoom].name}</span></div>}
+    {picked !== null && <div className="ov-sheet" role="dialog" aria-label={`${CATEGORIES[picked].name} tabs`} onClick={() => setPicked(null)}>
+      <div className="ov-sheet__box zx-card" onClick={event => event.stopPropagation()}>
+        <header><span className="ov-kicker">{CATEGORIES[picked].name}</span><small>{CATEGORIES[picked].description}</small>
+          <button type="button" className="ov-sheet__close" onClick={() => setPicked(null)} aria-label="Close">✕</button></header>
+        <div className="ov-sheet__grid">{CATEGORIES[picked].tabs.map(id => appFor(id)).filter(Boolean).map(app =>
+          <button key={app!.id} type="button" className="ov-app ov-app--big" onClick={() => go(app!.id)}>{app!.icon}<span>{app!.label}</span></button>)}</div>
+      </div>
+    </div>}
+    {allTabs && <div className="ov-sheet" role="dialog" aria-label="Every tab" onClick={() => setAllTabs(false)}>
+      <div className="ov-sheet__box ov-sheet__box--wide zx-card" onClick={event => event.stopPropagation()}>
+        <header><span className="ov-kicker">Every tab</span><small>Grouped by the core's six categories</small>
+          <button type="button" className="ov-sheet__close" onClick={() => setAllTabs(false)} aria-label="Close">✕</button></header>
+        <div className="ov-groups">{CATEGORIES.map(category => <section key={category.id}>
+          <h3>{category.name}</h3>
+          {category.tabs.map(id => appFor(id)).filter(Boolean).map(app => <button key={app!.id} type="button" className="ov-app" onClick={() => go(app!.id)}>{app!.icon}<span>{app!.label}</span></button>)}
+        </section>)}</div>
+      </div>
+    </div>}
+  </>;
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 30_000); return () => window.clearInterval(timer); }, []);
   const today = iso(now);
   const nowTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -193,7 +244,20 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
   const spark = weights.map((w, i) => `${(i / Math.max(1, weights.length - 1)) * 200},${46 - ((w.weightLb - wMin) / Math.max(0.1, wMax - wMin)) * 40}`).join(" ");
   const workouts = data.training?.habits.workouts.slice(-7) ?? [];
   const sources = data.topics?.reduce((sum, t) => sum + t.sources, 0) ?? null;
+  // Day board (from preview 3, made small): the next few things, flight-board style.
+  const tomorrow = iso(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+  const boardRows = [
+    ...(data.events ?? []).filter(e => e.date > today || (e.date === today && (e.allDay || e.time >= nowTime)))
+      .map(e => ({ at: `${e.date} ${e.allDay ? "00:00" : e.time}`, time: e.allDay ? "ALL DAY" : e.time.slice(0, 5), what: e.title, status: e.date === today ? "TODAY" : e.date === tomorrow ? "TOMORROW" : e.date.slice(5), tone: "#8fc8ff" })),
+    ...overdue.map(task => ({ at: "0", time: "LATE", what: task.title, status: "OVERDUE", tone: "#ffb4a2" })),
+    ...dueToday.map(task => ({ at: `${today} ${task.deadline!.slice(11, 16) || "23:59"}`, time: task.deadline!.slice(11, 16) || "TODAY", what: task.title, status: "DUE", tone: "#e0a353" })),
+    ...(data.reminders ?? []).filter(r => !r.done && new Date(r.due) >= now).map(r => { const d = new Date(r.due); return { at: `${iso(d)} ${d.toTimeString().slice(0, 5)}`, time: d.toTimeString().slice(0, 5), what: r.text, status: "REMINDER", tone: "#c08cff" }; }),
+  ].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
   const bottomRow = <div className="ov-bottom">
+    <Card kicker="Day board" title="Next up" tone="#e0a353" onOpen={() => onOpen("tasks")}>
+      <ul className="ov-board">{boardRows.map((row, i) => <li key={i}><b>{row.time}</b><span>{row.what}</span><em style={{ color: row.tone }}>● {row.status}</em></li>)}
+        {boardRows.length === 0 && <li className="ov-muted">Nothing scheduled.</li>}</ul>
+    </Card>
     <Card kicker="Activity · this week" title="Tasks done" tone="#8fc8ff" onOpen={() => onOpen("tasks")} side={<span className="ov-pill">{data.tasks === null ? "—" : doneTotal}</span>}>
       <div className="ov-week" aria-label={`Tasks completed each day this week: ${doneByDay.join(", ")}`}>
         {doneByDay.map((count, i) => <span key={week[i]}><i style={{ height: `${Math.max(4, count / peakDone * 100)}%` }} className={count ? "" : "ov-week--none"}/>
@@ -253,7 +317,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
 
   // Phone (sized for an iPhone 16 Pro, 402 × 874): one scrolling app screen. A smaller core, the greeting and quick asks
   // in a swipeable row, four widget tiles, then Today, Ask ZAE and Music & news as full-width cards.
-  if (phone) return <div className="ov-wrap ov-wrap--phone" data-look={look} style={style}><div className="ov ov-phone">
+  if (phone) return <div className="ov-wrap ov-wrap--phone" data-look={look} style={style}>{navLayer}<div className="ov ov-phone">
     <div className="ov-phone__core">{children}</div>
     {hero}
     {quiet && spotlightPanel}
@@ -277,7 +341,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     </>}
   </div></div>;
 
-  return <div className="ov-wrap" data-look={look} style={style}><div className={`ov${quiet ? " ov--calm" : ""}`}>
+  return <div className="ov-wrap" data-look={look} style={style}>{navLayer}<div className={`ov${quiet ? " ov--calm" : ""}${zoom !== null ? " ov--zooming" : ""}`}>
     <div className="ov-rail ov-rail--left" aria-hidden={quiet || undefined} inert={quiet || undefined}>
       <Card kicker="Today" title={now.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" })} tone="#8fc8ff" onOpen={() => onOpen("tasks")}>
         <div className="ov-stats">

@@ -20,6 +20,11 @@ type Props = {
   phase?: VoicePhase;
   /** When the no-name follow-up window closes (ms since epoch), or 0. */
   followUntil?: () => number;
+  /** The six category icons (in slot order) that replace the module orbs on the dashboard. */
+  categories?: readonly { name: string; description: string; icon: ReactNode }[];
+  onCategory?: (index: number) => void;
+  /** Clicking the sphere itself (the dashboard shows every tab). */
+  onCore?: () => void;
 };
 
 const phaseCopy: Record<VoicePhase, string> = { idle: "STANDING BY", listening: "LISTENING", thinking: "THINKING", speaking: "SPEAKING" };
@@ -70,7 +75,7 @@ function usePrefersReducedMotion() {
  * the branches belong to the organism. Module orbs and labels sit on top as
  * real buttons for keyboard and screen-reader access.
  */
-export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil }: Props) {
+export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<NeuralField | null>(null);
@@ -157,8 +162,21 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
           <i aria-hidden="true"/>{following ? <>FOLLOW-UP OPEN <small>{Math.ceil(followLeft / 1000)}s · no name needed</small></> : phaseCopy[phase]}
         </div>
       </>}
+      {onCore && startup.ready && <button type="button" className="core-tap" aria-label="Show every tab"
+        style={{ left: layout.cx, top: layout.cy, width: layout.r * 1.7, height: layout.r * 1.7 }} onClick={onCore}/>}
       {BRANCHES.map((branch, index) => {
         const place = layout.orbs[index];
+        const category = categories?.[index];
+        if (category) {
+          const wakeLevel = nodeWakeLevel(startup.progress, index);
+          return <button key={branch.key} type="button"
+            className={`core-orb core-orb--${branch.tone} core-orb--${branch.side < 0 ? "left" : "right"}${place.labelAbove ? " core-orb--label-above" : ""}`}
+            style={{ left: place.x, top: place.y, width: layout.orbR * 2, height: layout.orbR * 2, opacity: 0.12 + wakeLevel * 0.88 } as CSSProperties}
+            onClick={() => onCategory?.(index)} aria-label={`${category.name}: ${category.description}`}>
+            <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{category.icon}</svg>
+            <span className="core-orb__plate" aria-hidden="true"><strong>{category.name}</strong><small>{category.description}</small></span>
+          </button>;
+        }
         const wake = nodeWakeLevel(startup.progress, index);
         const status = statusFor(branch.key);
         const style = { left: place.x, top: place.y, width: layout.orbR * 2, height: layout.orbR * 2, opacity: 0.12 + wake * 0.88 } as CSSProperties;

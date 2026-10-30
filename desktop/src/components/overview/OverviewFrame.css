@@ -119,7 +119,7 @@
 .ov .ov-calm-btn:hover,.ov .ov-calm-btn[aria-pressed=true]{color:var(--accent,#e0a353);border-color:var(--accent,#e0a353)}
 
 /* Bottom row under the core (week trends), and Calm view's spotlight in the same slot so the core keeps its size */
-.ov-bottom{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--zx-gap,12px);width:100%;flex:none;margin-top:10px}
+.ov-bottom{display:grid;grid-template-columns:minmax(0,1.35fr) repeat(3,minmax(0,1fr));gap:var(--zx-gap,12px);width:100%;flex:none;margin-top:10px}
 .ov-bottom .ov-card{height:150px;overflow:hidden}
 .ov-week{display:flex;align-items:flex-end;gap:6px;height:70px}
 .ov-week>span{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:4px}
@@ -151,3 +151,41 @@
 .ov-phone .ov-bottom{grid-template-columns:minmax(0,1fr);margin-top:0}
 .ov-phone .ov-spotlight{margin-top:0;min-height:170px}
 .ov-phone .ov-calm-btn{flex:none;min-height:40px;font-size:14px}
+
+/* Core navigation: zoom toward the core, then the category's tabs or the full tab list */
+.ov-wrap{position:relative}
+.ov--zooming .ov-center>.progress-stage,.ov--zooming .ov-phone__core{animation:ov-zoom-in .65s cubic-bezier(.5,0,.75,0) forwards;transform-origin:50% 45%}
+.ov--zooming .ov-rail,.ov--zooming .ov-hero,.ov--zooming .ov-bottom,.ov--zooming .ov-spotlight{transition:opacity .35s ease;opacity:0}
+@keyframes ov-zoom-in{0%{transform:scale(1);filter:none;opacity:1}70%{opacity:1}100%{transform:scale(3.2);filter:blur(6px) brightness(1.6);opacity:0}}
+.ov-zoom{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;
+  background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--accent,#e0a353) 35%,transparent) 0,transparent 40%);animation:ov-zoom-glow .65s ease forwards}
+.ov-zoom span{font-size:12px;letter-spacing:.4em;text-transform:uppercase;color:var(--zx-text,#fff);opacity:0;animation:ov-zoom-label .65s ease forwards}
+@keyframes ov-zoom-glow{from{opacity:0}to{opacity:1}}
+@keyframes ov-zoom-label{60%{opacity:0;transform:scale(.9)}100%{opacity:1;transform:none}}
+.zaenia-app[data-motion="off"] .ov--zooming .ov-center>.progress-stage,.zaenia-app[data-motion="off"] .ov-zoom,.zaenia-app[data-motion="off"] .ov-zoom span{animation-duration:.01s}
+@media (prefers-reduced-motion:reduce){.ov--zooming .ov-center>.progress-stage,.ov-zoom,.ov-zoom span{animation-duration:.01s}}
+.ov-sheet{position:absolute;inset:0;z-index:21;display:grid;place-items:center;background:rgba(2,4,8,.55);backdrop-filter:blur(6px);animation:ov-sheet-in .3s ease}
+@keyframes ov-sheet-in{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.ov-sheet__box{width:min(560px,92%);display:flex;flex-direction:column;gap:14px;color:var(--zx-text,#dbe8f6)}
+.ov-sheet__box--wide{width:min(980px,94%);max-height:86%;overflow:auto}
+.ov-sheet__box header{display:flex;align-items:baseline;gap:10px}.ov-sheet__box header small{color:var(--zx-muted,#9fb6cf);font-size:12px}
+.ov .ov-sheet__close,.ov-sheet__close{margin-left:auto;width:32px;height:32px;border-radius:var(--zx-radius-sm,8px);border:1px solid var(--zx-line,#1f3149);background:transparent;color:var(--zx-muted,#9fb6cf);cursor:pointer;font:inherit}
+.ov-sheet__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ov-groups{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ov-groups section{display:flex;flex-direction:column;gap:6px}
+.ov-groups h3{margin:0 0 2px;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent,#e0a353);font-weight:600}
+.ov-app{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--zx-radius-sm,10px);border:1px solid var(--zx-line,#1f3149);background:var(--zx-inset,#08111f);
+  color:var(--zx-text,#dbe8f6);font:inherit;font-size:13px;cursor:pointer;text-align:left}
+.ov-app:hover,.ov-app:focus-visible{border-color:var(--accent,#e0a353);outline:none}
+.ov-app svg{width:18px;height:18px;flex:none}
+.ov-app--big{flex-direction:column;align-items:flex-start;padding:14px;min-height:84px;font-size:14px}
+@container (max-width:700px){.ov-groups{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+
+/* Day board: a small flight-board panel */
+.ov-board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;font-family:"Cascadia Mono","JetBrains Mono",Consolas,ui-monospace,monospace}
+.ov-board li{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--zx-line,#16253a);font-size:11px}
+.ov-board li:first-child{border-top:0}
+.ov-board b{font-weight:500;color:var(--accent,#e0a353);background:var(--zx-inset,#08111f);border-radius:3px;padding:1px 5px;text-align:center}
+.ov-board span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;letter-spacing:.03em}
+.ov-board em{font-style:normal;font-size:9px;letter-spacing:.12em}
+.ov-phone .ov-board li{font-size:13px;padding:8px 0}
