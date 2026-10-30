@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { readCanvas } from "../../core/barcode";
 import "./BarcodeScanner.css";
 
@@ -64,7 +65,8 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
     try { await torch.track.applyConstraints({ advanced: [{ torch: !torch.on } as MediaTrackConstraintSet] }); setTorch({ ...torch, on: !torch.on }); } catch { setTorch(null); }
   };
 
-  return <div className="barcode-scanner" role="dialog" aria-modal="true" aria-label="Scan a food barcode">
+  // On top of everything (header, chat bar, tab bar), whatever panel opened it.
+  return createPortal(<div className="barcode-scanner" role="dialog" aria-modal="true" aria-label="Scan a food barcode">
     <video ref={video} playsInline muted autoPlay aria-hidden="true"/>
     <div className="barcode-scanner__shade" aria-hidden="true"><span className="barcode-scanner__box"><i/></span></div>
     <div className="barcode-scanner__top">
@@ -72,5 +74,5 @@ export function BarcodeScanner({ onCode, onClose }: { onCode: (code: string) => 
       {torch && <button type="button" aria-pressed={torch.on} onClick={() => void toggleTorch()}>{torch.on ? "Light off" : "Light on"}</button>}
     </div>
     <p className="barcode-scanner__status" role="status">{error ?? status}</p>
-  </div>;
+  </div>, document.body);
 }

@@ -1,5 +1,5 @@
 /* Full-screen barcode camera: the picture, a dimmed frame with a clear guide box, Cancel / light at the top. */
-.barcode-scanner{position:fixed;inset:0;z-index:200;background:#000;color:#fff;font:inherit}
+.barcode-scanner{position:fixed;inset:0;z-index:2147483000;background:#000;color:#fff;font:inherit}
 .barcode-scanner video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .barcode-scanner__shade{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
 /* Matches the area the reader looks at: 80% wide, 40% tall of the camera picture */
