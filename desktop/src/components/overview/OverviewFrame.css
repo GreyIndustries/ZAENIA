@@ -143,7 +143,7 @@
 .ov-spotlight__dots{display:flex;gap:6px;justify-content:center}
 .ov .ov-spotlight__dots button{width:7px;height:7px;padding:0;border-radius:50%;border:0;background:var(--zx-line-strong,#2b4366)}
 .ov .ov-spotlight__dots button[aria-selected=true]{background:var(--ov-tone);width:18px;border-radius:4px}
-@keyframes ov-fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ov-fade{from{transform:translateY(6px)}to{transform:none}}
 .zaenia-app[data-motion="off"] .ov-spotlight__body{animation:none}
 @media (prefers-reduced-motion:reduce){.ov-spotlight__body{animation:none}.ov-rail{transition:none}}
 
