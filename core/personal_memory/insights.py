@@ -253,13 +253,25 @@ def grounded_candidates(found, batch):
     return result
 
 
-from core.assistant_platform.performance import background_call
+from core.assistant_platform.performance import background_call, model_call
+
+
+@model_call
+def _keep_model_request(endpoint: str, payload: dict[str, Any]) -> dict[str, Any]:
+    import urllib.request
+    from core.assistant_operator.local_http import opener
+    request = urllib.request.Request(endpoint, data=json.dumps(payload).encode(),
+                                     headers={"Content-Type": "application/json"})
+    with opener().open(request, timeout=60) as response:
+        raw = response.read(2_000_001)
+    if len(raw) > 2_000_000:
+        return {}
+    return json.loads(json.loads(raw).get("message", {}).get("content", "") or "{}")
 
 @background_call
 def extract_with_local_brain(lines: list[str], known: list[str], activity: str | None = None) -> list[dict[str, Any]]:
     """Ask the local model for durable key points about Zack. [] if unavailable."""
-    import urllib.request
-    from core.brain.local_llm import active_model, check_ollama_available, get_brain_settings
+    from core.brain.local_llm import check_ollama_available, get_brain_settings
     if not lines or not check_ollama_available():
         return []
     settings = get_brain_settings()
@@ -280,17 +292,13 @@ def extract_with_local_brain(lines: list[str], known: list[str], activity: str |
     try:
         if settings["endpoint"] not in {'http://127.0.0.1:11434/api/chat','http://localhost:11434/api/chat'}:
             return []
+        keep = learning_settings()
         payload = {
-            "model": active_model(settings), "stream": False, "think": False, "format": "json",
-            "keep_alive": settings["keep_alive"], "options": {"temperature": 0.2},
+            "model": keep["model"], "stream": False, "think": False, "format": "json",
+            "keep_alive": settings["keep_alive"], "options": {"temperature": 0.2, "num_gpu": 0},
             "messages": [{"role": "user", "content": prompt}],
         }
-        from core.assistant_operator.local_http import opener
-        request = urllib.request.Request(settings["endpoint"],data=json.dumps(payload).encode(),headers={'Content-Type':'application/json'})
-        with opener().open(request,timeout=60) as response:
-            raw=response.read(2_000_001)
-        if len(raw)>2_000_000:return []
-        data = json.loads(json.loads(raw).get("message", {}).get("content", "") or "{}")
+        data = _keep_model_request(settings["endpoint"], payload)
     except Exception:
         return []
     found = data.get("insights") if isinstance(data, dict) else None
@@ -307,7 +315,9 @@ def learning_settings() -> dict[str, Any]:
         every = int(raw.get("every_turns", 6))
     except (TypeError, ValueError):
         every = 6
-    return {"enabled": raw.get("enabled", True) is not False, "every_turns": min(50, max(2, every))}
+    model = str(raw.get("model") or "qwen3:1.7b").strip()[:100]
+    return {"enabled": raw.get("enabled", True) is not False, "every_turns": min(50, max(2, every)),
+            "model": model or "qwen3:1.7b"}
 
 
 class InsightLearner:

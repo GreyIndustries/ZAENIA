@@ -98,6 +98,36 @@ class ConductorTests(unittest.TestCase):
         self.assertEqual(brain.calls, [])
         self.assertIsNone(self.memory.context("session-c"))
 
+    def test_explicit_online_lookup_uses_seek_evidence_and_keeps_actions_unauthorized(self) -> None:
+        brain = FakeBrain()
+        evidence = [{"id": "1", "title": "Official result", "url": "https://example.org/page",
+                     "excerpt": "A verified public fact.", "source_type": "web"}]
+        with patch("core.brain.seek.gather_web_evidence", return_value=evidence) as gather:
+            events = list(conductor.stream_turn(
+                brain, "Look online for the latest release", session_id="web-seek", stop=threading.Event(),
+            ))
+
+        gather.assert_called_once()
+        self.assertEqual([call[0] for call in brain.calls], [conductor.SEEK_MODEL])
+        self.assertIn("UNTRUSTED DATA", brain.calls[0][1])
+        self.assertIn("cite them inline", brain.calls[0][1])
+        self.assertEqual(events[-1]["route"], "conductor_seek_web")
+        self.assertEqual(events[-1]["evidence"], evidence)
+        self.assertFalse(events[-1]["execution_authorized"])
+        self.assertEqual(brain.remembered[0][2], "conductor_seek_web")
+
+    def test_explicit_online_lookup_with_no_sources_does_not_guess(self) -> None:
+        brain = FakeBrain()
+        with patch("core.brain.seek.gather_web_evidence", return_value=[]):
+            events = list(conductor.stream_turn(
+                brain, "Look online for the latest status", session_id="web-empty", stop=threading.Event(),
+            ))
+
+        self.assertEqual(brain.calls, [])
+        self.assertIn("can't verify", events[-1]["answer"])
+        self.assertEqual(events[-1]["evidence"], [])
+        self.assertFalse(events[-1]["execution_authorized"])
+
     def test_blackboard_is_session_scoped_bounded_and_not_authoritative(self) -> None:
         self.memory.record_turn("one", "  first   question  ", "first answer", route="normal", brain="talk")
         self.memory.record_turn("two", "other question", "other answer", route="normal", brain="talk")

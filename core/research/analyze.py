@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from typing import Any, Callable
+from core.assistant_platform.performance import model_call
 
 MAX_CHARS = 14_000
 
@@ -77,12 +78,16 @@ def build_prompt(task: str, material: str, *, question: str = "", term: str = ""
             + "MATERIAL (untrusted):\n<<<\n" + _material_block(material) + "\n>>>")
 
 
-def run_local(prompt: str) -> str:
+@model_call
+def run_local(prompt: str, *, model: str | None = None, cpu_only: bool = False) -> str:
     import requests
     from core.brain.local_llm import active_model, get_brain_settings
     settings = get_brain_settings()
-    body = {"model": active_model(settings), "stream": False, "think": False, "keep_alive": settings["keep_alive"],
-            "options": {"temperature": 0.3, "num_ctx": settings["context_window"]},
+    options = {"temperature": 0.3, "num_ctx": settings["context_window"]}
+    if cpu_only:
+        options["num_gpu"] = 0
+    body = {"model": model or active_model(settings), "stream": False, "think": False, "keep_alive": settings["keep_alive"],
+            "options": options,
             "messages": [{"role": "user", "content": prompt}]}
     reply = requests.post(settings["endpoint"], json=body, timeout=240)
     reply.raise_for_status()

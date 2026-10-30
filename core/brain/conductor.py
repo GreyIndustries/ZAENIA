@@ -152,6 +152,87 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
     """Stream with a warm Talk budget, allowing one measured cold load before Seek."""
     if stop.is_set():
         return
+    # Online/current lookups go to Seek first, and only when the user asks for
+    # web research. Search terms are the user's own words; no private memory is
+    # sent to the web. Page text remains untrusted context for the local model.
+    from core.brain.seek import needs_web_evidence, gather_web_evidence, evidence_context
+    if needs_web_evidence(question):
+        yield {"type": "say", "text": "I’m checking current sources."}
+        yield {"type": "route", "route": "conductor_seek_web", "brain": "seek", "level": 2, "model": SEEK_MODEL}
+        try:
+            evidence = gather_web_evidence(question)
+        except Exception:
+            evidence = []
+        if not evidence:
+            # Do not ask Seek to answer a current-fact question from pretraining
+            # when lookup failed; return an explicit, deterministic no-evidence reply.
+            answer = "I couldn't reach usable sources, so I can't verify the current information right now."
+            yield {"type": "text", "text": answer, "verified": True}
+            if remember:
+                _remember(brain, question, answer, "conductor_seek_web")
+            if commit_working_memory:
+                _WORKING_MEMORY.record_turn(
+                    session_id, question, answer, route="conductor_seek_web", brain="seek", evidence=[],
+                )
+            yield {
+                "type": "final", "answer": answer, "route": "conductor_seek_web",
+                "evidence": [], "brain": SEEK_MODEL, "level": 2,
+                "execution_authorized": False,
+            }
+            return
+        prior = _WORKING_MEMORY.context(session_id)
+        seek_context = "\n\n".join(part for part in (prior, evidence_context(evidence)) if part)
+        events, worker, attempt_stop = _start_attempt(
+            brain, question, model=SEEK_MODEL, context=seek_context, timeout=120,
+            parent_stop=stop,
+        )
+        deadline = time.monotonic() + 120
+        final_event: dict[str, Any] | None = None
+        parts: list[str] = []
+        while not stop.is_set() and time.monotonic() < deadline:
+            try:
+                kind, payload = events.get(timeout=0.2)
+            except Empty:
+                if not worker.is_alive() and events.empty():
+                    break
+                continue
+            if kind == "error":
+                attempt_stop.set()
+                raise payload if isinstance(payload, Exception) else RuntimeError(str(payload))
+            if kind == "done":
+                break
+            event = dict(payload) if isinstance(payload, dict) else {}
+            if event.get("type") == "text":
+                parts.append(str(event.get("text") or ""))
+                yield event
+            elif event.get("type") == "final":
+                final_event = event
+                break
+            elif event.get("type") == "route":
+                # Keep the user-visible route aligned with the evidence handoff.
+                continue
+        if stop.is_set():
+            attempt_stop.set()
+            return
+        if final_event is None:
+            attempt_stop.set()
+            raise TimeoutError("The local Seek evidence answer did not finish in time.")
+        answer = str(final_event.get("answer") or "".join(parts)).strip()
+        final_event["route"] = "conductor_seek_web"
+        final_event["evidence"] = evidence
+        final_event["brain"] = SEEK_MODEL
+        final_event["level"] = 2
+        final_event["execution_authorized"] = False
+        if remember:
+            _remember(brain, question, answer, "conductor_seek_web")
+        if commit_working_memory:
+            _WORKING_MEMORY.record_turn(
+                session_id, question, answer, route="conductor_seek_web", brain=SEEK_MODEL,
+                evidence=evidence,
+            )
+        yield final_event
+        return
+
     from core.brain.local_llm import model_is_loaded
     talk_resident = model_is_loaded(TALK_MODEL)
     cold_start = talk_resident is False

@@ -23,7 +23,7 @@ import { HomeConversation } from "./components/chat/HomeConversation";
 import { ClarifyCard } from "./components/chat/ClarifyCard";
 import type { ChatPhoto } from "./core/photos";
 import type { ChatFile } from "./core/sharedFiles";
-import type { ChatMessage, HistoryState } from "./components/chat/HomeConversation";
+import type { ChatMessage, ChatSource, HistoryState } from "./components/chat/HomeConversation";
 import { useSpeech } from "./core/speech";
 import { useVoiceInput } from "./core/voiceInput";
 import type { Transcript, VoiceMode } from "./core/voiceInput";
@@ -843,7 +843,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const live = () => turn === turnRef.current;
     const id = ++messageCounter.current;
     const key = `m${id}`;
-    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal } = { id, text: "", added: false, at: new Date().toISOString() };
+    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; sources?: ChatSource[] } = { id, text: "", added: false, at: new Date().toISOString() };
     replyRef.current = reply;
     sendingRef.current = true;
     setSending(true);
@@ -898,7 +898,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         photoTurns.current = [...photoHistory, { role: "user", content: message.slice(0, 4000) }, { role: "assistant", content: text.slice(0, 4000) }].slice(-6) as typeof photoHistory;
       }
       if (text) {
-        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal };
+        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal, sources: reply.sources };
         if (reply.proposal && !interrupted && policyRef.current?.chatAutomatic.includes(reply.proposal.kind) && (IN_TAURI || !["app.launch", "workspace.restore"].includes(reply.proposal.kind))) automaticCandidates.current.add(id);
         const shown = reply.added;
         reply.added = true;
@@ -920,7 +920,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       setChat(prev => [...prev, { id: ++messageCounter.current, role: "error", text }]);
     };
 
-    const outcome: { reply: string | null; interrupted: boolean; failure: string | null } = { reply: null, interrupted: false, failure: null };
+    const outcome: { reply: string | null; interrupted: boolean; failure: string | null; sources?: ChatSource[] } = { reply: null, interrupted: false, failure: null };
     const stream = streamChat(message, event => {
       if (!live()) return;
       if (event.type === "delta") {
@@ -950,6 +950,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       } else if (event.type === "done") {
         outcome.reply = event.reply;
         outcome.interrupted = event.interrupted;
+        outcome.sources = event.sources;
+        reply.sources = event.sources;
       } else if (event.type === "error") outcome.failure = event.detail;
     }, photoQuestion || fileQuestion ? {
       ...(photoQuestion ? { images: sharedPhotos.map(photo => photo.data.split(",")[1]), photoHistory } : {}),

@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse
+from core.assistant_platform.performance import background_call
 
 from core.research import web
 
@@ -121,6 +122,23 @@ def _ask_local(prompt: str) -> str:
     return run_local(prompt)
 
 
+def _local_model_call(prompt: str, model: str, cpu_only: bool = False) -> str:
+    from core.research.analyze import run_local
+    return run_local(prompt, model=model, cpu_only=cpu_only)
+
+
+@background_call
+def _ask_study(prompt: str) -> str:
+    """Long research work uses Study locally; it never changes action authority."""
+    return _local_model_call(prompt, model="qwen3:14b")
+
+
+@background_call
+def _ask_keep(prompt: str) -> str:
+    """Small scheduled watch summaries stay on Keep's CPU model."""
+    return _local_model_call(prompt, model="qwen3:1.7b", cpu_only=True)
+
+
 def plan_queries(question: str, ask: Callable[[str], str]) -> list[str]:
     reply = ask("You are ZAE's web research planner. Write up to 3 short web search queries (3-8 words each) that "
                 f"together would answer the question below. Today is {datetime.now().strftime('%d %B %Y')}. Don't add a "
@@ -184,7 +202,7 @@ def _save(path: Path, items: list[dict[str, Any]]) -> None:
 class Agent:
     """Background web research: one question at a time, results kept for later."""
 
-    def __init__(self, path: Path = JOBS_FILE, *, ask: Callable[[str], str] = _ask_local, searcher: Callable[..., list] = search,
+    def __init__(self, path: Path = JOBS_FILE, *, ask: Callable[[str], str] = _ask_study, searcher: Callable[..., list] = search,
                  reader: Callable[[str], dict[str, str]] = read_page, pause: float = 1.2, notify: Callable[..., None] = _notify):
         self.path, self.ask, self.searcher, self.reader, self.pause, self.notify = Path(path), ask, searcher, reader, pause, notify
         self.busy = threading.Lock()
@@ -268,7 +286,7 @@ class Agent:
 class Watch:
     """Topics ZAE checks about once a day for anything new."""
 
-    def __init__(self, path: Path = WATCH_FILE, *, ask: Callable[[str], str] = _ask_local, news_source: Callable[..., list] = news,
+    def __init__(self, path: Path = WATCH_FILE, *, ask: Callable[[str], str] = _ask_keep, news_source: Callable[..., list] = news,
                  searcher: Callable[..., list] = search, notify: Callable[..., None] = _notify):
         self.path, self.ask, self.news_source, self.searcher, self.notify = Path(path), ask, news_source, searcher, notify
         self.stop_event = threading.Event()

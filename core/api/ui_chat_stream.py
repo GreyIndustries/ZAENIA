@@ -252,6 +252,7 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
     finished = False
     failure: str | None = None
     final_answer = ""
+    final_sources: list[dict[str, Any]] = []
     think = _ThinkFilter()
     generator = None
     try:
@@ -444,6 +445,9 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             elif kind == "final":
                 finished = True
                 final_answer = "".join(parts).strip() or think.feed(str(event.get("answer") or "")).strip()
+                raw_sources = event.get("evidence")
+                if isinstance(raw_sources, list):
+                    final_sources = [item for item in raw_sources[:8] if isinstance(item, dict)]
     except Exception as error:  # Ollama down, model missing, etc.
         failure = str(error).splitlines()[0][:300] if str(error) else type(error).__name__
     finally:
@@ -473,4 +477,5 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
         "reply": final_answer if finished else partial,
         "interrupted": not finished,
         "route": route,
+        "sources": final_sources,
     })

@@ -167,13 +167,29 @@ Phrases, the speaker check and the replies all go through Level 0 and Talk. The 
 |---|---|---|
 | 1. Measure | Time each model on this PC: time to first word, tokens per second and VRAM. Pick Talk's model | A table in this doc. Talk's first words land in under 2 s for 9 of 10 test questions |
 | 2. Conductor and Talk | `core/brain/conductor.py`, Level 1 Talk and Seek retry, filler, bounded in-memory blackboard; Level 0 remains in deterministic permission-checked routes. Wake/sleep replies use Talk | Implemented on feature branch; 31 focused tests pass. Warm Talk and real Seek handoff verified locally. Verify speaker rejection with a live voice trial |
-| 3. Seek | Evidence packs from the indexes and the web; handoff and replies with sources | Lookup questions cite sources. A thin answer says so |
-| 4. Keep | Scheduler: security checks, backups, news and watch topics, pattern learning to `personal_memory` with evidence, confidence and dates. It pauses while Grey talks | Jobs run on time. No jobs run during speech. Learned patterns can be viewed and deleted in Settings |
-| 5. Study | Long research jobs, using the existing research agent and Desk | Research reports with sources appear in Research |
-| 6. Tune | Ollama settings, priorities, model swaps, the evaluation scorecard (section 12) | Scorecard recorded |
+| 3. Seek | Evidence packs from local indexes and explicitly requested web lookups; handoff and replies with sources | Implemented on the feature branch: explicit current/online lookup routes to Seek, gathers up to four public sources, labels page text untrusted, and returns source references to chat. Local grounded-system answers also expose their verified index paths. No-source lookups return a deterministic cannot-verify answer. Focused tests pass; verify live citations in the running app |
+| 4. Keep | Existing startup services handle security checks, backups, news and watch topics; pattern learning uses evidence-reviewed `personal_memory`. Keep is pinned to qwen3:1.7b on CPU, and model calls use the background priority gate | Implemented in the feature branch. Existing insight rules reject sensitive/unsupported facts and provide review/delete controls. Focused Keep and service tests pass; verify live pause behavior while speaking |
+| 5. Study | Long research jobs, using the existing research agent and Desk | Implemented in the feature branch: web-agent research uses qwen3:14b via local background-priority model calls and keeps source links in the report. Keep watch summaries use its CPU model. Research tests pass. Overnight gpt-oss:20b scheduling remains a later optional optimization |
+| 6. Tune | Ollama settings, priorities, model swaps, the evaluation scorecard (section 8) | Initial measurements recorded below; live voice, Seek citation-quality and Keep preemption trials remain |
 
 ## 7. Decisions for Grey
 
 - Approve downloading the picked models (qwen3.5:9b, qwen3:14b, qwen3:1.7b; gpt-oss:20b later). Phase 1 then measures them on this PC before switching.
 - Pattern learning: what Keep may learn and how long it keeps it (the plan's default is to keep everything visible and deletable in Settings).
 - Whether Study may use the web without asking each time (default: yes, for public pages only, never logged-in accounts).
+
+## 8. Evaluation scorecard — 2026-10-30
+
+| Measure | Current evidence | Status |
+|---|---|---|
+| Talk warm first text | 0.16 s measured locally; target under 2 s | Pass on the sampled turn; 9/10 evaluation set still needed |
+| Talk cold first text | 3.91 s measured locally; cold window is 8 s | Pass on the sampled cold turn |
+| Seek handoff | Real local qwen3.5:9b answer returned in about 1.02 s when loaded | Pass on the sampled handoff |
+| Seek evidence and citations | 10 focused tests cover public source bounds, untrusted text, source refs and empty-source refusal | Automated pass; live web citation quality not yet measured |
+| Keep memory safety | Evidence must quote an owner statement; sensitive categories are rejected; inferred points remain reviewable/deletable | Focused tests pass; model is pinned to qwen3:1.7b CPU |
+| Keep priority | Existing coordinator tests verify ordinary background work yields to foreground slots; new Keep/research calls use that gate | Automated pass; verify live speech under load |
+| Study reports | Research agent uses qwen3:14b locally and preserves source links; prior local measurement was 54 tok/s at 8.9 GB VRAM | Integration tests pass; fresh timing not collected |
+| Action authority | Conductor tests assert `execution_authorized=false`; existing Engine 3 routes remain unchanged | Automated pass; no model output is an execution grant |
+| Voice owner rejection | Existing design checks the enrolled speaker before admitting PC voice | Live owner/other-speaker trial pending |
+
+This is an initial scorecard, not a claim of production-complete evaluation. Repeat on the installed runtime after the owner voice trial and Core restart approval.

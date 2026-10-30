@@ -192,3 +192,5 @@ system_prompt: |
 learning:
   enabled: true
   every_turns: 6
+  # Keep distills durable preferences on CPU so the GPU stays available to Talk and Seek.
+  model: qwen3:1.7b

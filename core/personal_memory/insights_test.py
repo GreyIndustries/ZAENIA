@@ -4,6 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from core.personal_memory.insights import InsightLearner, InsightStore, clean_insight, render_insights
 
@@ -57,6 +58,16 @@ class InsightTest(unittest.TestCase):
             learner.observe(text)
         self.assertEqual(self.store.list(), [])
         self.assertIsNone(learner.context())
+
+    def test_keep_learning_uses_its_configured_small_model(self):
+        from core.personal_memory.insights import learning_settings
+        with patch("core.brain.local_llm.load_brain_config", return_value={
+            "learning": {"enabled": True, "every_turns": 4, "model": "qwen3:1.7b"}
+        }):
+            self.assertEqual(learning_settings(), {"enabled": True, "every_turns": 4, "model": "qwen3:1.7b"})
+
+        with patch("core.brain.local_llm.load_brain_config", return_value={"learning": {"enabled": True}}):
+            self.assertEqual(learning_settings()["model"], "qwen3:1.7b")
 
 
 if __name__ == "__main__":
