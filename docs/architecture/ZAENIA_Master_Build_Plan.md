@@ -986,3 +986,5 @@ Grey approved downloading the four picked models and asked to finish the new scr
 - **Security (A):** Shield, the overall level and score, last full check, "Run a full check", and the eight areas the level covers. Each area's own result and the fixes stay behind the passkey in Details.
 - **Settings (A):** Control center, working switches (listening, speak replies, core motion, hand controls, sidebar in tabs, Calm view when idle, Calm view now, PC voice), accent colour and text size, and links to Appearance, Notifications and the Vault.
 - **Checks:** the type-check and node tests pass. In preview, each tab opens on its new first view (Settings showed every switch). Views that read records need the server, so they were checked for opening, not for data.
+
+- 2026-10-30: Calm view now shows the dashboard's own core (the same canvas and six category icons), dimmed to about 40% brightness and not clickable; the day, calorie and task rings moved to small gauges under it.
