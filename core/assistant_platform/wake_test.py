@@ -20,6 +20,7 @@ class WakeTest(unittest.TestCase):
         self.assertEqual(wake.focus_for("wake", {"kcalLeft": 900, "hour": 13}), "fitness")
         self.assertEqual(wake.focus_for("wake", {"news": 3}), "news")
         self.assertEqual(wake.focus_for("sleep", {"overdue": 3}), "system")
+        self.assertEqual(wake.focus_in("Affirmative. You have 300 calories remaining.", "wake", {"next": {"title": "PT", "hoursAway": 1}}), "fitness")
 
     def test_brain_line_is_used_when_quick_and_sensible(self):
         prompts = []

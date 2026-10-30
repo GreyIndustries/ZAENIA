@@ -132,4 +132,20 @@ def compose(kind: str, phrase_id: int, situation: dict[str, Any], *, run: Callab
         text = " ".join(str(box.get("text", "")).replace("*", "").split()).strip("\"'“” ")
         if 8 <= len(text) <= 280:
             line, source = text, "brain"
-    return {"kind": kind, "phrase": phrase, "line": line, "focus": focus_for(kind, situation), "source": source}
+    return {"kind": kind, "phrase": phrase, "line": line, "focus": focus_in(line, kind, situation), "source": source}
+
+
+def focus_in(line: str, kind: str, situation: dict[str, Any]) -> str:
+    """The card that matches what she actually said (so the dashboard follows her words), else what matters most."""
+    text = line.lower()
+    title = str((situation.get("next") or {}).get("title") or "").lower()
+    if kind == "wake":
+        if "calorie" in text or "protein" in text or "kcal" in text:
+            return "fitness"
+        if "overdue" in text or "task" in text:
+            return "tasks"
+        if (title and title[:12] in text) or "calendar" in text:
+            return "calendar"
+        if "news" in text or "stor" in text:
+            return "news"
+    return focus_for(kind, situation)

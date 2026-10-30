@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.20  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.21  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -953,3 +953,14 @@ Grey's direction after the Overview v2 previews: dashboard of 1 (Command Deck) a
 - **Calm view previews**: A Split, B Halo, C Horizon on the preview canvas page "Calm view · pick one". Calm view build and the wake-up / sleep phrases wait on Grey's pick.
 - **Multi-brain plan**: `docs/architecture/ZAENIA_Multi_Brain_Plan.md` (Talk, Seek, Keep, Study; the Conductor's levels; shared working memory; wake and sleep phrase handling; phases and Grey's decisions).
 - **Tests**: Python 819 OK (14 skipped); desktop type-check and node tests pass; checked in preview (no sidebar on the dashboard, six categories, zoom then tiles, the full tab list, Code Doctor & Files sub-tabs).
+
+### 28.22 Calm view A, wake-up calls and sleep phrases, best model per brain — Claude, 2026-10-30 (v3.21)
+
+Grey picked core icons option 1 and Calm view 1 (A, Split), and asked for the best model for each brain.
+
+- **Calm view A** (`components/overview/CalmView.tsx`): a full-screen layer over any screen. The left side holds a dimmed core, three rings (waking day 6 AM to midnight, calories eaten of target, today's tasks done) and the clock. The right side shows one important item at a time, cycling every 9 seconds (Next up, Tasks, Fitness & health, top three news stories, Studio, System), each with three facts, plus a progress strip and the next four queued. It starts after the idle time set in Settings (now counted on every screen, not only the dashboard), from the Calm view button, or from a sleep phrase. **Rule:** leaving Calm view always goes to the dashboard. The old in-dashboard calm mode is replaced by this layer.
+- **Wake-up calls** (`core/calmPhrases.ts`, 18 checks): "Wake up sleepy, we have work to do", "Sleeping on the job?", "The boss is here", "Zae, you're still there?", "The day is not yet over" / "The night is still young". Small wording changes match; long sentences that only contain the words don't. They are accepted only from the app mic after the turn passed Grey's voice check, so typing them or another voice does nothing. While calm, all other speech is ignored. If the mic is off, holding Wake for two seconds is the fallback (a short press does nothing).
+- **Sleep phrases**: "Take everything to the background", "I'm going to sleep", "Let's put a pin in this and continue tomorrow", "Calm view", spoken or typed. Running background jobs keep going while calm.
+- **ZAE's replies** (`core/assistant_platform/wake.py`, `POST /api/assistant/wake`, chat.reply; 6 tests): the app sends the situation (time, how long she was calm, next event, due and overdue tasks, calories left, news count, security score, jobs finished while calm or still running, current tab). Her local brain writes one short JARVIS-style line from only those facts, as a statement or a question, never claiming feelings; if it takes over 4 seconds, a written line from the same facts is used. She speaks it. On waking, the dashboard shows her line and the card she talks about glows (tasks, calendar/day board, fitness, news or system), chosen from her actual words. Live trial with llama3.1:8b: replies in 0.3–0.7 s once loaded (the first, cold call used the written line).
+- **Best model per brain** (in the multi-brain plan, section 3.1, with sources): Talk qwen3.5:4b (installed), Seek qwen3.5:9b, Keep qwen3:1.7b on the CPU, Study qwen3:14b with gpt-oss:20b for overnight deep runs. About 17 GB of downloads, waiting on Grey's OK; Phase 1 measures them on this PC first.
+- **Tests**: Python 824 OK (14 skipped); node tests including calm-phrases pass; preview checks: Calm view layout, hold-to-wake (2 s only), typed sleep phrase opens Calm view.
