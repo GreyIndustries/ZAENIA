@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.25  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.27  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1020,7 +1020,7 @@ Grey approved downloading the four picked models and asked to finish the new scr
 - **Verification:** 35 focused Python Conductor/Seek/Keep/Research tests pass when the temp directory is pointed into the writable project workspace. All 15 desktop Node test scripts pass. TypeScript, desktop Vite build, browser Vite build, and Tauri release build pass. Vite reports the existing 580 KB main JavaScript chunk warning.
 - **Remaining validation:** live speaker rejection, live web citation quality, Keep preemption while speaking, and Phase 6 multi-brain tuning/scorecard remain to be checked. The standalone Vite development server on port 1420 is not running.
 
-### 28.29 Conductor validation, four fixes, Phase 6 scorecard — Claude, 2026-10-30 (v3.25)
+### 28.29 Conductor validation, four fixes, Phase 6 scorecard — Claude, 2026-10-30 (v3.27)
 
 I followed Codex's handoff (multi-brain plan, section 9), validating on a fresh branch from `main` and then merging into the live install.
 
