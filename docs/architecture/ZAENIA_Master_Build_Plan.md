@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.21  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.22  |  Date: 2026-10-29 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -972,3 +972,17 @@ Grey: the zoom should end with us close to that part of the core as the backgrou
 - Picking a core category now scales the core about 3.4x around that icon (0.9 s ease, instant with motion off), dims it, and keeps it as the background; the side cards, hero and bottom row fade away. Panels appear on the icon's side; "← Core" or Escape zooms back out.
 - `components/overview/CategoryPanels.tsx` reads recent items from each tab: Plan (coming up, open tasks, reminders, recent notes); Health (eaten today, today's training, today so far, recent weigh-ins); Know (research topics, top stories, web research, from ZAE); Create (songs in progress, releases, workbench projects); Build (Code Doctor ideas, file changes, Arena leaderboard); System (this PC now, security, recent security activity). Each panel has "Open <tab>"; a source that doesn't answer says so instead of guessing.
 - The category tab-tiles sheet is gone; clicking the sphere still lists every tab. Checked in preview: zoom origin at the Plan icon, panels on the left, back restores the dashboard.
+
+### 28.24 Brain models installed and timed; the rest of the new tab screens — Claude, 2026-10-30 (v3.22)
+
+Grey approved downloading the four picked models and asked to finish the new screens so every new look loads.
+
+- **Models:** qwen3.5:9b, qwen3:1.7b, qwen3:14b and gpt-oss:20b are installed in Ollama. Timed on this PC (multi-brain plan 3.2): Talk qwen3.5:4b gives its first word in 0.07 s at 122 tokens/s using 3.7 GB, and Talk + Seek fit together in about 10 GB. Chat still uses llama3.1:8b until the Conductor (phase 2) is built.
+- **Code Doctor (picks A, C, B):** Health first (score out of 100, errors, warnings, notes, secrets, size, problems worst first, problems over the last 10 scans, biggest files, with vendored files skipped; `code_doctor.scan` now returns `biggest`). Then the Review queue: fixes and ZAE's ideas one at a time; a fix is written, shown as a diff and saved only on "Approve and apply" (desktop app, backup kept, protected files refused); ideas can be approved or dismissed. The Playground is the editor (B). The old Scanner, Suggestions, Files and Source follow.
+- **Notes (A):** Board, a pinboard of notes tinted by tag, pinned or long notes larger, #tag filters, and a quick-add box (the first line becomes the title). "All notes" is the editor.
+- **Workbench (A):** Project lab, project cards with a grid cover, stage badge, subject chips and stage progress. "Projects" is the editor.
+- **Status (B):** Live first: CPU, memory, GPU memory and disk gauges, a 10-minute CPU and GPU chart (sampled every 5 s while open), and the biggest programs by memory (`GET /api/status/processes`, names, CPU and memory only).
+- **Arena (A):** Head to head, the same question to two hidden models, then vote (A, B, tie, both bad). Leaderboard & brain is the next tab.
+- **Security (A):** Shield, the overall level and score, last full check, "Run a full check", and the eight areas the level covers. Each area's own result and the fixes stay behind the passkey in Details.
+- **Settings (A):** Control center, working switches (listening, speak replies, core motion, hand controls, sidebar in tabs, Calm view when idle, Calm view now, PC voice), accent colour and text size, and links to Appearance, Notifications and the Vault.
+- **Checks:** the type-check and node tests pass. In preview, each tab opens on its new first view (Settings showed every switch). Views that read records need the server, so they were checked for opening, not for data.

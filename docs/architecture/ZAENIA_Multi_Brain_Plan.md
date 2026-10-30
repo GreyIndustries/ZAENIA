@@ -67,6 +67,26 @@ Grey asked for the best model for each role. These are picks for this PC's 16 GB
 
 Sources: [Best LLMs for Ollama on 16GB VRAM GPU (benchmarks)](https://www.glukhov.org/llm-performance/benchmarks/choosing-best-llm-for-ollama-on-16gb-vram-gpu/), [Ollama models by VRAM](https://computingforgeeks.com/ollama-models-cheat-sheet/), [Best local LLMs for 16GB VRAM in 2026](https://runaihome.com/blog/best-local-llm-16gb-vram-2026/), [Best Ollama models ranked (October 2026)](https://www.morphllm.com/best-ollama-models), [Best Ollama model for tool-calling agents](https://webscraft.org/blog/yaku-model-ollama-obrati-dlya-agenta-z-tool-calling-porivnyannya-i-benchmarki?lang=en).
 
+### 3.2 Phase 1: measured on this PC (2026-10-30)
+
+Grey approved the downloads; all four are installed. Each model was loaded alone, then given three short prompts (4,096-token context, thinking off where the model allows it). Graphics memory is what loading the model added.
+
+| Model | Role | Cold load | First word | Speed | Graphics memory |
+|---|---|---|---|---|---|
+| qwen3.5:4b | Talk | 4.6 s | 0.07 s | 122 tokens/s | 3.7 GB |
+| qwen3.5:9b | Seek | 6.1 s | 0.09 s | 79 tokens/s | 6.3 GB |
+| qwen3:1.7b | Keep | 7.6 s | 0.04 s | 245 tokens/s (on the card) | 1.7 GB |
+| qwen3:14b | Study | 16.0 s | 0.06 s | 54 tokens/s | 8.9 GB |
+| gpt-oss:20b | Study, overnight | 25.0 s | 2.67 s (it always reasons first) | 121 tokens/s | 12.3 GB |
+| llama3.1:8b | today's brain | 4.3 s | 0.04 s | 108 tokens/s | 4.9 GB |
+
+**What this means:**
+- Talk (qwen3.5:4b) easily meets the 2-second rule, with the first word in under a tenth of a second once loaded.
+- Talk and Seek together take about 10 GB, and Talk with Study (qwen3:14b) about 12.6 GB, so both pairs fit on the 16 GB card.
+- gpt-oss:20b is fast once it starts, but it reasons before every answer and needs 12.3 GB, so it stays an overnight Study model as planned.
+- The phase 1 exit criterion (Talk's first words in under 2 s) is met.
+- Next is phase 2: the Conductor, which routes each turn to these brains. Until it's built, chat keeps using llama3.1:8b, so nothing changes in how ZAE talks today.
+
 ## 4. Multi-level reasoning (the Conductor)
 
 One coordinator, `core/brain/conductor.py`, takes every turn (typed, app mic or PC voice) through these levels. It stops at the first level that can finish the turn.
