@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./MainViews.css";
 import "./RemotePanel.css";
+import { NearPassCard } from "./NearPassCard";
 
 /**
  * Phone as a remote for the PC (Grey, 2026-10-30). The phone queues a screen command; the desktop app on the PC
@@ -53,6 +54,7 @@ export function RemotePanel({ tabs }: { tabs: RemoteTab[] }) {
       <button type="button" className="zx-inset" disabled={busy !== null || !open.some(win => win.minimized)} onClick={() => void send("restore_all", "", "Bringing tabs back.")}>
         <span aria-hidden="true">⧉</span>Restore all</button>
     </div>
+    <NearPassCard/>
     {note && <p className="mv-note" role="status">{note}</p>}
     {error && <p className="mv-error" role="alert">{error}</p>}
     <section className="zx-card">
@@ -74,6 +76,6 @@ export function RemotePanel({ tabs }: { tabs: RemoteTab[] }) {
         {closed.map(tab => <button key={tab.id} type="button" className="zx-inset" disabled={busy !== null} onClick={() => void send("open", tab.id, `Opening ${tab.label}.`)}>{tab.label}</button>)}
       </div>
     </section>
-    <p className="mv-muted">The remote only moves tabs and screens. Saving files, launching apps and approvals still happen at the PC.</p>
+    <p className="mv-muted">The remote only moves tabs and screens. Approving from the phone needs Phone confirms above; Security, the Vault and settings stay at the PC.</p>
   </div>;
 }

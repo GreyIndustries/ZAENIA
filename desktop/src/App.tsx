@@ -732,6 +732,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     else if (action === "calm") goCalm("Calm view from your phone.");
     else if (action === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
   };
+  // The code for "Phone confirms": shown here only while the phone asks for it (it changes every minute).
+  type NearCode = { code: string; secondsLeft: number; voice: boolean };
+  const [nearCode, setNearCode] = useState<NearCode | null>(null);
   const remoteSnapshot = useRef("");
   remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
     active: shell.active ?? null, calm: calmOpen, section });
@@ -743,8 +746,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       busy = true;
       void (async () => {
         try {
-          const reply = await api<{ commands: { action: string; target: string }[] }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null }>("GET", "/api/remote/collect", undefined, { desktop: true });
           for (const command of reply.commands) remoteRef.current(command);
+          setNearCode(reply.nearCode ?? null);
           const snapshot = remoteSnapshot.current;
           if (snapshot !== sent || Date.now() - sentAt > 8000) { await api("POST", "/api/remote/state", JSON.parse(snapshot), { desktop: true }); sent = snapshot; sentAt = Date.now(); }
         } catch { /* server off or not paired yet: try again next time */ }
@@ -1298,6 +1302,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
+    {nearCode && <div className="near-code" role="dialog" aria-label="Code for your phone">
+      <p>Type this on your phone{nearCode.voice ? " (voice already checked)" : ", then do the voice check"}</p>
+      <b>{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</b>
+      <p>Changes in {nearCode.secondsLeft} s</p>
+      <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
+    </div>}
     {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
       core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES}/>}/>}
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>

@@ -1,4 +1,5 @@
-"""Browser-only voice authentication. No owner or desktop approval authority."""
+"""Browser-only voice authentication. No owner or desktop approval authority on its own; /voice/near is the voice
+half of the phone-at-the-PC pass (near_pc.py), which also needs the code shown on the PC screen."""
 from __future__ import annotations
 
 import json
@@ -77,6 +78,43 @@ def create_mobile_auth_router(service: MobileAuth) -> APIRouter:
         response = JSONResponse({"success": True}, headers={"Cache-Control": "no-store"})
         response.set_cookie(COOKIE, token, max_age=SESSION_TTL, path="/api", secure=request.url.scheme == "https",
                             httponly=True, samesite="strict")
+        response.delete_cookie(CHALLENGE_COOKIE, path="/api/auth/voice")
+        return response
+
+    @router.post("/voice/near")
+    async def near_voice(request: Request):
+        """The voice step of a phone-at-the-PC pass: a fresh voice check that signs nothing in."""
+        from core.api.near_pc import PASS_HEADER, near_pc
+        guard(request)
+        secret = request.headers.get(PASS_HEADER)
+        if not near_pc().pending(secret):
+            raise HTTPException(403, "That phone pass ended or already has its voice check. Start again.")
+        if request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+            raise HTTPException(415, "Send a voice recording as JSON.")
+        raw = bytearray()
+        async for chunk in request.stream():
+            raw.extend(chunk)
+            if len(raw) > 650_000:
+                raise HTTPException(413, "The voice recording is too large.")
+        try:
+            body = json.loads(raw)
+            if not isinstance(body, dict) or not isinstance(body.get("challenge_id"), str) or len(body["challenge_id"]) > 128:
+                raise ValueError()
+        except (ValueError, UnicodeError):
+            raise HTTPException(400, "The voice check could not be read.")
+        from starlette.concurrency import run_in_threadpool
+        try:
+            token = await run_in_threadpool(service.verify, body["challenge_id"], request.cookies.get(CHALLENGE_COOKIE, ""), peer(request), body.get("audio"))
+        except VoiceLoginError as error:
+            failure(error)
+        service.logout(token)  # the check only proves the voice; it doesn't start another phone session
+        try:
+            result = near_pc().voice_passed(secret)
+        except PermissionError as error:
+            raise HTTPException(403, str(error)) from error
+        from core.foundation.security.audit import audit
+        audit("assistant.near_pc", operation="assistant.desktop.manage", reason_code="active" if result["active"] else "voice_ok")
+        response = JSONResponse(result, headers={"Cache-Control": "no-store"})
         response.delete_cookie(CHALLENGE_COOKIE, path="/api/auth/voice")
         return response
 

@@ -66,7 +66,7 @@ function failureFor(status: number): BridgeFailure {
   return "server";
 }
 
-async function callServer(path: string, token: string, timeoutMs: number, body?: unknown, method?: Method): Promise<unknown> {
+async function callServer(path: string, token: string, timeoutMs: number, body?: unknown, method?: Method, extra: Record<string, string> = {}): Promise<unknown> {
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), timeoutMs);
   const headers: Record<string, string> = { Accept: "application/json", [TOKEN_HEADER]: token };
@@ -76,7 +76,7 @@ async function callServer(path: string, token: string, timeoutMs: number, body?:
     reply = await fetch(path, {
       method: method ?? (body === undefined ? "GET" : "POST"),
       cache: "no-store", credentials: "same-origin", referrerPolicy: "no-referrer",
-      headers: { ...headers, "X-ZAENIA-APP": "1" }, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal,
+      headers: { ...headers, ...extra, "X-ZAENIA-APP": "1" }, body: body === undefined ? undefined : JSON.stringify(body), signal: controller.signal,
     });
   } catch {
     if (controller.signal.aborted) throw new BridgeError("ZÆNIA didn't answer in time. Your PC may be busy or asleep.", "offline");
@@ -194,8 +194,48 @@ export async function api<T = unknown>(method: Method, path: string, body?: unkn
     try { return await invoke<T>("zaenia_api", { method, path, body: body ?? null, desktop: Boolean(options.desktop) }); }
     catch (error) { throw fromTauri(error); }
   }
-  if (WEB_APP) return await callServer(path, requireToken(), options.timeoutMs ?? 30_000, body, method) as T;
+  if (WEB_APP) return await callServer(path, requireToken(), options.timeoutMs ?? 30_000, body, method,
+    options.desktop && nearPass ? { [NEAR_HEADER]: nearPass.secret } : {}) as T;
   throw new BridgeError("This needs the ZÆNIA server. Open the desktop app or the phone app.", "offline");
+}
+
+/**
+ * Phone confirms at the PC (Grey, 2026-10-30): the code on the PC screen plus a voice check on the phone, in either
+ * order, let this phone approve the listed confirms for 10 minutes. The pass lives only in this page's memory.
+ */
+const NEAR_HEADER = "X-ZAENIA-NEAR-PASS";
+export type NearPassState = { pass: boolean; code: boolean; voice: boolean; active: boolean; secondsLeft: number };
+let nearPass: { secret: string; until: number; active: boolean } | null = null;
+function nearChanged(state: NearPassState) {
+  if (nearPass) { nearPass.active = state.active; nearPass.until = Date.now() + state.secondsLeft * 1000; }
+  if (!state.pass) nearPass = null;
+  window.dispatchEvent(new CustomEvent("zae:near-pass", { detail: state }));
+  return state;
+}
+/** True while this phone can approve listed confirms. */
+export function nearPassActive(): boolean { return Boolean(nearPass?.active && Date.now() < nearPass.until); }
+export async function startNearPass(): Promise<NearPassState> {
+  const reply = await callServer("/api/near/start", requireToken(), STATUS_TIMEOUT_MS, {}) as NearPassState & { secret: string };
+  nearPass = { secret: reply.secret, until: 0, active: false };
+  return nearChanged({ pass: reply.pass, code: reply.code, voice: reply.voice, active: reply.active, secondsLeft: reply.secondsLeft });
+}
+export async function nearPassStatus(): Promise<NearPassState> {
+  if (!nearPass) return { pass: false, code: false, voice: false, active: false, secondsLeft: 0 };
+  return nearChanged(await callServer("/api/near/status", requireToken(), STATUS_TIMEOUT_MS, undefined, "GET", { [NEAR_HEADER]: nearPass.secret }) as NearPassState);
+}
+export async function submitNearCode(code: string): Promise<NearPassState> {
+  if (!nearPass) throw new BridgeError("Start again from the remote.", "invalid");
+  try { return nearChanged(await callServer("/api/near/code", requireToken(), STATUS_TIMEOUT_MS, { code }, "POST", { [NEAR_HEADER]: nearPass.secret }) as NearPassState); }
+  catch (error) { if (error instanceof BridgeError && error.status === 403) nearChanged({ pass: false, code: false, voice: false, active: false, secondsLeft: 0 }); throw error; }
+}
+export async function nearVoice(challengeId: string, audio: string): Promise<NearPassState> {
+  if (!nearPass) throw new BridgeError("Start again from the remote.", "invalid");
+  return nearChanged(await callServer("/api/auth/voice/near", "", 120_000, { challenge_id: challengeId, audio }, "POST", { [NEAR_HEADER]: nearPass.secret }) as NearPassState);
+}
+export async function endNearPass(): Promise<void> {
+  const secret = nearPass?.secret;
+  nearChanged({ pass: false, code: false, voice: false, active: false, secondsLeft: 0 });
+  if (secret) await callServer("/api/near/end", requireToken(), STATUS_TIMEOUT_MS, {}, "POST", { [NEAR_HEADER]: secret }).catch(() => undefined);
 }
 
 export const errorText = (error: unknown) => error instanceof Error ? error.message : String(error);

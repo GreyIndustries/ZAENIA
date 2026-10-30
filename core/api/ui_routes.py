@@ -84,6 +84,11 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/remote/state", "status.read"),
         ("GET", r"/api/remote/collect", "files.read"),
         ("POST", r"/api/remote/state", "files.read"),
+        # Phone confirms at the PC: code on the PC screen plus a voice check on the phone (near_pc.py).
+        ("POST", r"/api/near/start", "assistant.desktop.manage"),
+        ("GET", r"/api/near/status", "status.read"),
+        ("POST", r"/api/near/code", "assistant.desktop.manage"),
+        ("POST", r"/api/near/end", "status.read"),
         # Code Doctor, Suggestions, Arena, source search (tools_routes.py).
         ("POST", r"/api/code/scan", "files.read"),
         ("POST", r"/api/code/explain", "chat.reply"),
@@ -272,6 +277,11 @@ class RemoteState(BaseModel):
     active: str | None = Field(default=None, max_length=20)
     calm: bool = False
     section: str = Field(default="", max_length=20)
+
+
+class NearCode(BaseModel):
+    model_config = {'extra': 'forbid'}
+    code: str = Field(min_length=6, max_length=12)
 
 
 class ScreenWatchRequest(BaseModel):
@@ -720,13 +730,47 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     @router.get("/api/remote/collect", dependencies=[Depends(require_desktop)])
     def remote_collect() -> dict[str, Any]:
         from core.api import remote_control
-        return {"commands": remote_control.collect()}
+        from core.api.near_pc import near_pc
+        return {"commands": remote_control.collect(), "nearCode": near_pc().code_for_pc()}
 
     @router.post("/api/remote/state", dependencies=[Depends(require_desktop)])
     def remote_report(body: RemoteState) -> dict[str, Any]:
         from core.api import remote_control
         remote_control.report_state([w.model_dump() for w in body.windows], body.active, body.calm, body.section)
         return {"ok": True}
+
+    @router.post("/api/near/start")
+    def near_start() -> dict[str, Any]:
+        from core.api.near_pc import near_pc
+        result = near_pc().start()
+        audit("assistant.near_pc", operation="assistant.desktop.manage", reason_code="started")
+        return result
+
+    @router.get("/api/near/status")
+    def near_status(x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS")) -> dict[str, Any]:
+        from core.api.near_pc import near_pc
+        return near_pc().status(x_zaenia_near_pass)
+
+    @router.post("/api/near/code")
+    def near_code(body: NearCode, x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS")) -> dict[str, Any]:
+        from core.api.near_pc import near_pc
+        try:
+            result = near_pc().submit_code(x_zaenia_near_pass, body.code)
+        except PermissionError as error:
+            audit("assistant.near_pc", operation="assistant.desktop.manage", reason_code="ended_wrong_codes")
+            raise HTTPException(403, str(error)) from error
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+        audit("assistant.near_pc", operation="assistant.desktop.manage", reason_code="active" if result["active"] else "code_ok")
+        return result
+
+    @router.post("/api/near/end")
+    def near_end(x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS"),
+                 x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY")) -> dict[str, Any]:
+        from core.api.desktop_key import verify
+        from core.api.near_pc import near_pc
+        near_pc().end(x_zaenia_near_pass, from_pc=verify(x_zaenia_desktop_key))
+        return {"ended": True}
 
     @router.get("/api/weather/now")
     def weather_now() -> dict[str, Any]:
@@ -783,10 +827,15 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def proposals_get(proposal_id: str) -> dict[str, Any]:
         return file_call(lambda: ui_files.get_proposal(proposal_id))
 
-    @router.post("/api/files/proposals/{proposal_id}/approve", dependencies=[Depends(require_desktop)])
-    def proposals_approve(proposal_id: str) -> dict[str, Any]:
+    @router.post("/api/files/proposals/{proposal_id}/approve")
+    def proposals_approve(proposal_id: str, x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY"),
+                          x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS")) -> dict[str, Any]:
+        from core.api.near_pc import desktop_or_near
+        proof = desktop_or_near(x_zaenia_desktop_key, x_zaenia_near_pass)
+        if proof is None:
+            require_desktop(x_zaenia_desktop_key)
         result = file_call(lambda: ui_files.approve_proposal(proposal_id))
-        audit("ui.file_changed", operation="files.desktop.apply", reason_code="proposal_applied")
+        audit("ui.file_changed", operation="files.desktop.apply", reason_code="proposal_applied" if proof == "desktop" else "proposal_applied_phone_at_pc")
         return result
 
     @router.post("/api/files/proposals/{proposal_id}/reject")
@@ -798,6 +847,6 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     @router.get("/api/desktop/check")
     def desktop_check(x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY")) -> dict[str, Any]:
         from core.api.desktop_key import is_paired, verify
-        return {"paired": is_paired(), "approver": verify(x_zaenia_desktop_key)}
+        return {"paired": is_paired(), "approver": verify(x_zaenia_desktop_key)}  # the phone's pass only covers listed confirms
 
     return router

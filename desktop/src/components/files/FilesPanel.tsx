@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
-import { api, DESKTOP_APPROVER, errorText, LIVE_API } from "../../core/bridge";
+import { api, DESKTOP_APPROVER, errorText, LIVE_API, nearPassActive } from "../../core/bridge";
 import "./FilesPanel.css";
 
 type FileEntry = { path: string; name: string; kind: "file" | "dir"; size?: number; modified?: string; editable?: boolean };
@@ -81,6 +81,9 @@ export function FilesPanel({ onPendingChange }: { onPendingChange?: (count: numb
     if (reply) { setProposal(reply); setFile(null); setEditing(false); setMessage(null); }
   }
   const canApply = DESKTOP_APPROVER && approver?.approver === true;
+  // Phone confirms at the PC (code + voice) let this phone approve a waiting change, not edit files directly.
+  const [phoneConfirms, setPhoneConfirms] = useState(nearPassActive);
+  useEffect(() => { const update = () => setPhoneConfirms(nearPassActive()); window.addEventListener("zae:near-pass", update); return () => window.removeEventListener("zae:near-pass", update); }, []);
 
   async function save() {
     if (!file) return;
@@ -200,9 +203,9 @@ export function FilesPanel({ onPendingChange }: { onPendingChange?: (count: numb
           {proposal.diffTruncated && <p className="files-panel__note">Long change: only the first part is shown.</p>}
           {proposal.status === "pending" && <div className="files-panel__actions">
             <button type="button" onClick={() => void decide("reject")} disabled={busy}>{canApply ? "Reject" : "Withdraw"}</button>
-            {canApply
+            {canApply || phoneConfirms
               ? <button type="button" className="files-panel__primary" onClick={() => void decide("approve")} disabled={busy || !proposal.baseMatches}>Approve and apply</button>
-              : <span className="files-panel__note">Approve it in the desktop app on the PC.</span>}
+              : <span className="files-panel__note">Approve it in the desktop app on the PC, or turn on Phone confirms in PC remote.</span>}
           </div>}
           {proposal.backup && <p className="files-panel__note">Backup of the old version: {proposal.backup}</p>}
         </article>}

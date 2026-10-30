@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.29  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.30  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1060,3 +1060,29 @@ Grey: make the web version a remote for the PC, and let the phone confirm things
 - **Desktop app**: checks for commands every 1.5 s and reports its tabs and Calm state when they change (or every 8 s). It carries out only the listed screen commands.
 - **Not on the remote**: saving files, launching apps, restoring workspaces and approvals. They still need the desktop key at the PC. Letting the phone approve them when it's near the PC waits on Grey's choice of how ZAE knows the phone is there (code on the PC screen, same Wi-Fi, or code plus voice).
 - Tests: 4 in `core/api/remote_control_test.py` (only listed actions and real tab names, hand-out-once and expiry, state and connection, route permissions).
+
+### 28.32 Phone confirms at the PC: code plus voice — Claude, 2026-10-30 (v3.30)
+
+Grey chose "code plus voice, in either order" for letting the phone confirm things when it's at the PC.
+
+- **How it works** (`core/api/near_pc.py`):
+  1. In PC remote, the phone taps **Confirm from this phone**. The server makes a pass and returns its secret to the phone only.
+  2. The PC app shows a 6-digit code in a box at the bottom right. The code changes every minute. The box also has a "That's not me, cancel" button that ends the pass from the PC.
+  3. The phone does two steps, in either order:
+     - It types the code (`POST /api/near/code`).
+     - It passes a voice check: the six spoken words plus the local speaker check, the same check as voice sign-in, through `POST /api/auth/voice/near`. This check signs nothing in.
+  4. Both steps must finish within 3 minutes. The pass is then on for 10 minutes.
+- **Limits:**
+  - Five wrong codes end the pass.
+  - Only one pass exists at a time. It is kept in memory only, so a server restart ends it.
+  - Every step and every use is audited.
+- **What the pass allows:** with the `X-ZAENIA-NEAR-PASS` header, the phone can do these confirms, which otherwise need the desktop key:
+  - approve a waiting file change
+  - apply a Code Doctor fix
+  - open a registered app
+  - restore a workspace with its apps
+
+  Engine 3 still authorizes each operation as before.
+- **Still desktop-only:** direct file edits, code run and implement, folder grants, approval settings, operator missions, Security, the Vault, the passkey and pairing. The phone-side pass is held in page memory only.
+- **Phone UI:** a **Phone confirms** card in PC remote shows both steps with ticks and a countdown, plus Turn off. On the phone, Files shows **Approve and apply** while the pass is on.
+- **Tests:** 7 in `core/api/near_pc_test.py`. They cover code then voice, voice then code, a wrong pass, a wrong code and an old code, 5 strikes, expiry and replacement, and an end-to-end HTTP run. That run shows approval is refused until both steps are done and allowed after, the voice step sets no sign-in cookie, direct edits are still refused, and ending the pass stops it.

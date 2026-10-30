@@ -113,6 +113,12 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
         if not verify(key): raise HTTPException(403,"Use the paired desktop app to approve local file, process, or policy changes.")
         return key
 
+    def desktop_or_phone_at_pc(key: str | None = Header(default=None,alias="X-ZAENIA-DESKTOP-KEY"),
+                               near: str | None = Header(default=None,alias="X-ZAENIA-NEAR-PASS")):
+        # Opening a registered app or restoring one: the desktop app, or the phone with an active at-the-PC pass.
+        from core.api.near_pc import desktop_or_near
+        if desktop_or_near(key,near) is None: desktop(key)
+
     def call(function):
         from core.assistant_platform.store import Conflict
         try: return function()
@@ -196,7 +202,7 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
     @router.delete("/api/platform/apps/{identifier}",dependencies=[Depends(desktop)])
     def forget_app(identifier:str): return {"removed":get().store.delete("app",identifier)}
 
-    @router.post("/api/platform/apps/{identifier}/launch",dependencies=[Depends(desktop)])
+    @router.post("/api/platform/apps/{identifier}/launch",dependencies=[Depends(desktop_or_phone_at_pc)])
     def launch(identifier:str):
         service=get()
         result=call(lambda:service.apps.open(identifier))
@@ -221,8 +227,9 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
     def delete_workspace(identifier:str): return {"removed":get().store.delete("workspace",identifier)}
 
     @router.post("/api/platform/workspaces/{identifier}/restore")
-    def restore_workspace(identifier:str,body:RestoreBody,key:str|None=Header(default=None,alias="X-ZAENIA-DESKTOP-KEY")):
-        if body.launchApps: desktop(key); authorize("assistant.apps.launch")
+    def restore_workspace(identifier:str,body:RestoreBody,key:str|None=Header(default=None,alias="X-ZAENIA-DESKTOP-KEY"),
+                          near:str|None=Header(default=None,alias="X-ZAENIA-NEAR-PASS")):
+        if body.launchApps: desktop_or_phone_at_pc(key,near); authorize("assistant.apps.launch")
         return call(lambda:get().restore_workspace(identifier,authorize,launch_apps=body.launchApps,revision=body.revision))
 
     @router.get("/api/platform/projects")

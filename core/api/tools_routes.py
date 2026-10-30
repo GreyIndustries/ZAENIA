@@ -138,10 +138,14 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         except Exception as error:
             raise _bad(error) from error
 
-    @router.post("/api/code/apply", dependencies=[Depends(require_desktop)])
-    def code_apply(body: ApplyBody) -> dict[str, Any]:
+    @router.post("/api/code/apply")
+    def code_apply(body: ApplyBody, x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY"),
+                   x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS")) -> dict[str, Any]:
+        from core.api.near_pc import desktop_or_near
         from core.assistant_platform.code_doctor import apply_fix
         from core.foundation.security.audit import audit
+        if desktop_or_near(x_zaenia_desktop_key, x_zaenia_near_pass) is None:
+            require_desktop(x_zaenia_desktop_key)
         try:
             result = apply_fix(body.project, body.file, body.text, body.oldHash)
         except Exception as error:
