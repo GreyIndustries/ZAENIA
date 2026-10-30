@@ -74,5 +74,6 @@ Do not overwrite another assistant's work without review.
 
 Do not merge changes without owner approval.
 
+## Latest handoff
 
-
+Read docs/architecture/HANDOFF_2026-10-30.md first: it lists what Claude finished, how to build, test and install, and what is next.
