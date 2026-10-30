@@ -15,7 +15,7 @@ import "./PlanStudio.css";
 type CalendarEvent = { id: string; date: string; time: string; endTime: string | null; allDay: boolean; title: string; source: string };
 type Reminder = { id: string; text: string; due: string; done?: boolean };
 type TrainingCell = { date: string; workout: string };
-type Tab = "week" | "priorities" | "day" | "month";
+type Tab = "week" | "priorities" | "day" | "month" | "reminders";
 type Item = { key: string; kind: "event" | "task" | "training" | "reminder"; title: string; time: string; minutes: number; task?: TaskRecord };
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -94,7 +94,8 @@ export function PlanStudio({ tasksVersion = 0, calendarVersion = 0 }: { tasksVer
   }, [events, tasks, training, reminders]);
 
   if (!LIVE_API) return <PlanPanel remote={false} tasksVersion={tasksVersion} calendarVersion={calendarVersion}/>;
-  const tabs: [Tab, string][] = [["week", "Week"], ["priorities", "Priorities"], ["day", "Day"], ["month", "Month & reminders"]];
+  // The old Month & reminders sub-tabs (Both / Calendar / Tasks / Reminders) became Month (calendar with tasks) and Reminders (Grey, 2026-10-30).
+  const tabs: [Tab, string][] = [["week", "Week"], ["priorities", "Priorities"], ["day", "Day"], ["month", "Month"], ["reminders", "Reminders"]];
   return <div className="ps">
     <nav className="research-page__tabs" role="tablist" aria-label="Tasks and calendar sections">
       {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id}
@@ -106,7 +107,8 @@ export function PlanStudio({ tasksVersion = 0, calendarVersion = 0 }: { tasksVer
     {tab === "day" && <Day day={day} setDay={setDay} tasks={tasks} itemsFor={itemsFor} busy={busy} onAdd={addTask}
       onToggle={t => void patchTask(t.id, { status: t.status === "Completed" ? "Pending" : "Completed" })}
       onSchedule={(t, mins) => { const d = new Date(`${day}T00:00:00`); d.setMinutes(mins); void patchTask(t.id, { deadline: d.toISOString() }); }}/>}
-    {tab === "month" && <PlanPanel remote tasksVersion={tasksVersion} calendarVersion={calendarVersion}/>}
+    {tab === "month" && <PlanPanel remote fixed="both" tasksVersion={tasksVersion} calendarVersion={calendarVersion}/>}
+    {tab === "reminders" && <PlanPanel remote fixed="reminders" tasksVersion={tasksVersion} calendarVersion={calendarVersion}/>}
   </div>;
 }
 

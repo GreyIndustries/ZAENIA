@@ -19,15 +19,17 @@ function readView(): View {
  * the task list on the other (stacked in a narrow window). Tasks with a
  * deadline also show on their day in the calendar.
  */
-export function PlanPanel({ remote, tasksVersion = 0, calendarVersion = 0 }: { remote: boolean; tasksVersion?: number; calendarVersion?: number }) {
-  const [view, setView] = useState<View>(readView);
+export function PlanPanel({ remote, tasksVersion = 0, calendarVersion = 0, fixed }: { remote: boolean; tasksVersion?: number; calendarVersion?: number; fixed?: View }) {
+  // Tasks & Calendar picks the view itself (Month = calendar and tasks together), so the Both/Calendar/Tasks/Reminders row is hidden there.
+  const [chosen, setView] = useState<View>(readView);
+  const view = fixed ?? chosen;
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const choose = (next: View) => { setView(next); try { localStorage.setItem(VIEW_KEY, next); } catch { /* optional */ } };
   return <div className="plan-panel" data-view={view}>
-    <div className="plan-panel__switch" role="radiogroup" aria-label="Show">
+    {!fixed && <div className="plan-panel__switch" role="radiogroup" aria-label="Show">
       {VIEWS.map(item => <button key={item.id} type="button" role="radio" aria-checked={view === item.id}
         className={view === item.id ? "plan-panel__view plan-panel__view--on" : "plan-panel__view"} onClick={() => choose(item.id)}>{item.label}</button>)}
-    </div>
+    </div>}
     <div className="plan-panel__cols">
       {/* Both stay mounted (one hidden by CSS), so task deadlines still show on the calendar. */}
       <section className="plan-panel__col plan-panel__col--calendar" aria-label="Calendar" hidden={view === "tasks" || view === "reminders"}>
