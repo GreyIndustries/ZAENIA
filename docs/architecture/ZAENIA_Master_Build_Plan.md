@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.33  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.34  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1124,3 +1124,40 @@ Grey: coming out of one of the six category icons back to the core should play t
   - The panel exit plays.
   - The core's transition runs from scale(3.4) to none at the original origin.
   - The cards' transition delay is 0.5 s during the return.
+
+### 28.36 Every tab's 2nd and 3rd designs built — Claude, 2026-10-30 (v3.34)
+
+Grey approved building the remaining picks from the preview canvas. All of them use real data and the look-styles tokens. They are in `components/studios/SecondViews.tsx`, `SecondViews2.tsx` and `ThirdViews.tsx`, with CSS in `SecondViews.css` and `ThirdViews.css`.
+
+**Notes**
+- **Notebook (B):** three panes. Folders on the left are All, Pinned, This week, ZAE can read, and your tags. The list is in the middle and the editor on the right. Pin, ZAE-readable and Save work in place.
+- **Map (C):** the 18 most recent notes are joined by a shared tag or by shared words. A side panel lists the linked notes. "ZAE noticed" points out notes that share words but no tag.
+
+**Workbench**
+- **Blueprint (B):** a full grid canvas on each project's existing `strokes`, with pen, line, box and measure tools and 5 inks. It shows live lengths in the project's units. Undo, Export SVG and Save are included. Project-note lines starting with "- " show as the parts list.
+- **Experiments (C):** a new `experiments` personal collection, using the `Experiment` and `Reading` schemas in `personal_tools.py` (memory.read and memory.write routes). Each experiment holds a hypothesis, what changes, what's held the same, what's measured, and up to 4 groups. It has a readings chart, a log and a result.
+
+**Arena**
+- **Leaderboard (B):** win rate, wins, speed and size, with "Make ZAE's brain" (desktop only).
+- **Test set (C):** `core/assistant_platform/arena_bench.py` and the `/api/arena/bench*` routes. It holds up to 30 of your questions, each with what a good answer mentions (comma-separated). Runs go one model at a time in the background. A mention of every phrase grades ✓, some grades ½, none grades ✕.
+
+**Security** (both stay behind the same passkey or phrase unlock as Details)
+- **Activity (B):** notable events per day for 7 days, plus a filterable log.
+- **Plan (C):** posture areas in three columns (who can get in, what it can touch, if something goes wrong) with "How to fix".
+
+**Status**
+- **Readiness (A):** the status modules plus the desktop-app and backup checks, in three groups. Voice has a Start button.
+- **Uptime (C):** `core/api/uptime.py` checks the server, local brain, desktop app and backups every 5 minutes. It keeps 30 days of per-day counts and a list of changes, including times the server was off. The data lives in `data/ui/uptime.json`, and history starts from this update.
+
+**Settings**
+- **Search (B):** real switches with live values, plus places that open the right tab.
+- **Make ZAE yours (C):** a live preview of window style, accent, font, glow, text size, panel see-through, corners, spacing and motion. Nothing changes until you press "Use this look".
+
+**Code Doctor**
+- **Side by side (C):** the files to fix, then Write the fix, then the changed area before and after, then Approve and apply. Applying needs the desktop key or Phone confirms.
+- **Editor (B):** the file list with finding counts, a code view with finding lines highlighted, ZAE's notes with Explain and Write the fix, and a scan summary bar.
+
+**Assistant**
+- **Memory & rules (A+C):** saved facts and learned patterns with Keep and Forget, plus your rules: talking (live switches), acting and notices, and the first rule.
+
+**Tests:** 5 new in `core/api/second_views_test.py` (uptime counts, changes and server gaps; test-set grading and runs; the experiment record; routes). The full suite passes: 861 tests, 14 skipped. A smoke test in preview opened every new sub-tab without errors.
