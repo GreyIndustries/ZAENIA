@@ -82,6 +82,7 @@ import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
 import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
 import { RemotePanel } from "./components/studios/RemotePanel";
+import { ArenaLeaderboard, NotesMap, NotesThreePane, SecurityActivity, SecurityPlan } from "./components/studios/SecondViews";
 import { NearQr } from "./components/studios/NearQr";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
@@ -1229,6 +1230,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     switch (id) {
       case 'notes': return <PageTabs id="notes" tabs={[
         { id: "board", label: "Board", render: () => <NotesBoard onOpenEditor={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "notes", tab: "editor" } }))}/> },
+        { id: "panes", label: "Notebook", render: () => <NotesThreePane/> },
+        { id: "map", label: "Map", render: () => <NotesMap/> },
         { id: "editor", label: "All notes", render: () => <NotesPanel draft={notesDraft.current} onDraft={next => { notesDraft.current = next; }}/> },
       ]}/>;
       case 'workbench': return <PageTabs id="workbench" tabs={[
@@ -1257,10 +1260,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "remote": return <RemotePanel tabs={nav.filter(item => WINDOW_IDS.includes(item.id)).map(item => ({ id: item.id, label: item.label }))}/>;
       case 'arena': return <PageTabs id="arena" tabs={[
         { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
-        { id: "board", label: "Leaderboard & brain", render: () => <ArenaPanel/> },
+        { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
+        { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
+        { id: "activity", label: "Activity", render: () => <SecurityActivity/> },
+        { id: "plan", label: "Plan", render: () => <SecurityPlan/> },
         { id: "details", label: "Details", render: () => <SecurityPanel/> },
       ]}/>;
       case "status": return <PageTabs id="status" tabs={[
