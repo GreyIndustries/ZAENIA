@@ -55,6 +55,26 @@ class WebTest(unittest.TestCase):
                     "https://user:pw@example.com/", "http://100.100.100.100/", "https://pc.tail39c50b.ts.net/"):
             self.assertFalse(web.safe_url(url), url)
 
+    def test_pages_without_a_header_charset_are_read_as_their_own_encoding(self):
+        from unittest import mock
+
+        class Reply:
+            def __init__(self, body, ctype):
+                self.content, self.headers, self.encoding = body, {"content-type": ctype}, "ISO-8859-1"
+
+            @property
+            def text(self):
+                return self.content.decode(self.encoding)
+
+        page = "<html><head><title>What’s new</title></head></html>".encode("utf-8")
+        with mock.patch.object(web, "_get", return_value=Reply(page, "text/html")):
+            self.assertIn("What’s new", web.get_text("https://docs.python.org/3/whatsnew/"))
+        latin = '<html><head><meta charset="windows-1252"><title>Café</title></head></html>'.encode("cp1252")
+        with mock.patch.object(web, "_get", return_value=Reply(latin, "text/html")):
+            self.assertIn("Café", web.get_text("https://example.com/"))
+        with mock.patch.object(web, "_get", return_value=Reply("Café".encode("latin-1"), "text/html; charset=ISO-8859-1")):
+            self.assertEqual(web.get_text("https://example.com/"), "Café")
+
     def test_readable_text_skips_menus_and_scripts(self):
         html = ("<html><head><title>Story</title><script>steal()</script></head><body><nav><p>Home | World | Sport menu links here</p></nav>"
                 "<article><h2>Heading</h2><p>This is the first real paragraph of the story, long enough to keep.</p>"

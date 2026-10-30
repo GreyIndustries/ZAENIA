@@ -103,7 +103,11 @@ def post_form_text(url: str, form: dict[str, str], timeout: float = 20) -> str:
 
 def get_text(url: str, timeout: float = 20) -> str:
     reply = _get(url, timeout=timeout)
-    reply.encoding = reply.encoding or "utf-8"
+    # Without a charset in the header, requests assumes ISO-8859-1 for text/*, which garbles UTF-8 pages
+    # ("Whatâs new"). Use the page's own <meta charset>, else UTF-8.
+    if "charset=" not in str(reply.headers.get("content-type", "")).lower():
+        meta = re.search(rb"""<meta[^>]+charset=["']?([\w-]+)""", reply.content[:4096], re.I)
+        reply.encoding = meta.group(1).decode("ascii", "ignore") if meta else "utf-8"
     return reply.text
 
 
