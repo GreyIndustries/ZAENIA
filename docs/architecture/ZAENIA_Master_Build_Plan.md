@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.24  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.25  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1019,3 +1019,16 @@ Grey approved downloading the four picked models and asked to finish the new scr
 - **Release:** rebuilt the native desktop app and browser site from promoted `main`. The installed `%LOCALAPPDATA%\Programs\ZAENIA\ZAENIA.exe` matches `desktop/src-tauri/target/release/desktop.exe` by SHA-256. Rebuilt `desktop/dist-web` is served by the restarted local Core on port 8766. `/health` and `/app/` both returned HTTP 200; health reports token-protected unattended mode and running assistant follow-through.
 - **Verification:** 35 focused Python Conductor/Seek/Keep/Research tests pass when the temp directory is pointed into the writable project workspace. All 15 desktop Node test scripts pass. TypeScript, desktop Vite build, browser Vite build, and Tauri release build pass. Vite reports the existing 580 KB main JavaScript chunk warning.
 - **Remaining validation:** live speaker rejection, live web citation quality, Keep preemption while speaking, and Phase 6 multi-brain tuning/scorecard remain to be checked. The standalone Vite development server on port 1420 is not running.
+
+### 28.29 Conductor validation, four fixes, Phase 6 scorecard — Claude, 2026-10-30 (v3.25)
+
+I followed Codex's handoff (multi-brain plan, section 9), validating on a fresh branch from `main` and then merging into the live install.
+
+- **Fixes:**
+  - Talk no longer races Seek. After 2 s it says "I'm looking through our data." and keeps going, and Seek steps in only if Talk fails or stays quiet for 25 s.
+  - Time words no longer send personal questions to web search.
+  - Keep's insight learner no longer waits on its own model slot.
+  - Pages without a header charset read correctly.
+- **Results:** Talk was 8 of 9 under 2 s (median 0.39 s; before the fix, 0 of 9), with a 3.5 s cold start. Seek's web lookups give cited sources, it says "can't verify" when there are none, and page text that tries to give orders is ignored. The full scorecard and conditions are in multi-brain plan section 8.1.
+- **Tests:** 842 OK, 14 skipped.
+- **Pending:** the live owner/other-speaker voice trial with Grey at 17:00.

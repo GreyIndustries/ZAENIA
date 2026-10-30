@@ -194,6 +194,32 @@ Phrases, the speaker check and the replies all go through Level 0 and Talk. The 
 
 This is an initial scorecard, not a claim of production-complete evaluation. Core has been restarted and the new build is installed; complete the remaining live checks on this runtime, starting with owner/other-speaker rejection.
 
+### 8.1 Validation and Phase 6 measurements — Claude, 2026-10-30
+
+**Conditions:** RTX 4070 Ti SUPER (16 GB, driver 617.14) running Ollama on this PC. Models: qwen3.5:4b `d8b0f5e9760c`, qwen3.5:9b `56671c2ab938`, qwen3:1.7b `8f68893c685c`, qwen3:14b `bdbd181c33f2`. The turns went through the real `conductor.stream_turn` with `BrainService` from the live install, with no memory written. The production Core was running at the same time.
+
+**Defects found and fixed while validating** (merged at `186afc6`):
+1. **Talk raced Seek.** When Talk missed 2 s (for example while Ollama reloaded it after another model took the card), Seek started at the same time. Both models then fought for the graphics card, so warm turns took about 20 s (0 of 9 under 2 s). Now Talk says "I'm looking through our data." at 2 s and keeps going. Seek takes over only if Talk fails or stays quiet for 25 s more. Talk's request timeout went from 2 s to 29 s so a reload isn't cut off.
+2. **"Today" sent personal questions to the web.** Words like "today" or "latest" sent "what should I focus on first today?" to a web search. Now a time word only means "look it up" when the question isn't about Grey's own day.
+3. **Keep's learning waited on itself.** The insight learner (a background call that makes a model call inside) waited forever for its own slot, until a new question cancelled it. Model slots are now reused by nested calls of the same kind.
+4. **Garbled source titles.** Web pages without a charset in the header were read as Latin-1 ("Whatâs new"). They are now read using their own `<meta charset>`, or UTF-8 if there is none.
+
+Tests were added for each (842 Python tests OK, 14 skipped).
+
+| Check | Result |
+|---|---|
+| Talk, cold start | 3.52 s to the first text |
+| Talk, 9 warm prompts (fixed set) | **8 of 9 under 2 s**; median 0.39 s; the outlier was 4.31 s (the filler line covers it); before the fix, 0 of 9 |
+| Seek web lookup (3 questions) | 9.6–16.3 s to the first text, including search and reading pages. An earlier run with Seek warm took 4.0 s and returned 4 sources with an inline [1] citation |
+| Seek, no sources | Gives the fixed "can't verify" reply and doesn't guess |
+| Seek, page tries to give orders | Page text was ignored: nothing was acted on and `execution_authorized` stayed false. The reply's wording was odd but safe |
+| Keep while Talk answers | Keep's CPU job (qwen3:1.7b) took 10.2 s. Talk's first text during it: 7.68, 4.36, then 0.44 s; the first was likely Talk reloading after Seek used the card |
+| Keep yielding | Unit tests confirm queued Keep work waits while Talk runs and is cancelled when a newer question arrives. A Keep call already running on the CPU is not interrupted |
+| Study | qwen3:14b wrote 273 words in 18.7 s |
+| Voice owner/other speaker | **Pending: the live trial with Grey is at 17:00** |
+
+**Still open:** graphics memory pressure when Seek (6.6 GB) and Study (9.7 GB) load together evicts Talk. A rule that keeps Talk loaded and unloads Study after each job would remove the slow first turn after research.
+
 ## 9. Claude handoff — next actions, 2026-10-30
 
 The Conductor implementation through Phase 5 is merged, installed and live. Continue with verification and tuning; do not rebuild those phases from scratch.
