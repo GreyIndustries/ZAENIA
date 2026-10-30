@@ -90,3 +90,53 @@
 .sv-check__text{flex:1;display:flex;flex-direction:column;gap:3px;font-size:13px;line-height:1.45;min-width:0}
 .sv-check__fix{color:var(--zx-text,#dbe8f6);font-size:12px;padding-top:4px}
 .sv-check button{flex:none;height:30px;padding:0 10px;border-radius:8px;border:0;background:var(--accent,#e0a353);color:#1a1206;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+
+/* Batch 2 shared */
+.sv-field{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--zx-muted,#9fb6cf);min-width:0}
+.sv-field input,.sv-field textarea,.sv-blue select,.mv select.zx-inset,.sv-result{font:inherit;font-size:13px;color:var(--zx-text,#dbe8f6);background:var(--zx-inset,#08111f);border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px);padding:8px}
+.sv-field input{height:36px;padding:0 8px}
+.sv-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:820px}
+.sv-form .sv-actions{grid-column:1/-1;justify-content:flex-end}
+.sv-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.sv-facts>div{display:flex;flex-direction:column;gap:2px;padding:12px 14px;font-size:13px}
+.sv-chart{width:100%;height:auto;max-height:320px}
+.sv-reading{display:grid;grid-template-columns:repeat(auto-fit,minmax(70px,1fr));gap:8px}
+.sv-logline{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--zx-line,#111e30);font-size:12px}
+.sv-result{resize:vertical;width:100%;box-sizing:border-box}
+@container (max-width:900px){.sv-form,.sv-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Workbench B: blueprint */
+.sv-blue{display:grid;grid-template-columns:64px minmax(0,1fr) 280px;gap:var(--zx-gap,12px);color:var(--zx-text,#dbe8f6)}
+.sv-blue__tools{display:flex;flex-direction:column;gap:8px;align-items:center;padding:12px 8px}
+.sv-blue__tools button{width:42px;height:42px;border-radius:10px;border:1px solid var(--zx-line,#1f3149);background:var(--zx-inset,#0c1524);color:inherit;font:inherit;font-size:11px;cursor:pointer}
+.sv-blue__tools button[aria-pressed=true]{border-color:var(--accent,#e0a353);color:var(--accent,#e0a353)}
+.sv-blue__tools .sv-blue__ink{width:26px;height:26px;border-radius:50%;border:2px solid transparent}
+.sv-blue__tools .sv-blue__ink[aria-pressed=true]{border-color:var(--zx-text,#dbe8f6)}
+.sv-blue__sep{width:30px;height:1px;background:var(--zx-line,#1f3149)}
+.sv-blue__board{display:flex;flex-direction:column;gap:10px;min-width:0}
+.sv-blue__top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sv-blue__top select{height:36px;min-width:200px}
+.sv-blue__surface{width:100%;height:auto;border-radius:var(--zx-radius-sm,8px);touch-action:none;cursor:crosshair;display:block}
+.sv-blue__side{min-width:0}
+.sv-blue__stat{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;font-size:13px}
+.sv-blue__foot{margin-top:auto}
+@container (max-width:900px){.sv-blue{grid-template-columns:minmax(0,1fr)}.sv-blue__tools{flex-direction:row;flex-wrap:wrap}.sv-blue__sep{width:1px;height:30px}}
+
+/* Arena C: benchmark */
+.sv-bench{display:flex;flex-direction:column;overflow-x:auto}
+.sv-bench__row{display:grid;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--zx-line,#111e30);font-size:13px;min-width:480px}
+.sv-bench__head{font-size:11px;color:var(--zx-muted,#9fb6cf)}
+.sv-bench__total{font-weight:700;border-bottom:0}
+.sv-bench button{width:28px;height:28px;border-radius:6px;border:1px solid var(--zx-line,#1f3149);background:transparent;color:var(--zx-muted,#9fb6cf);cursor:pointer;font:inherit}
+.sv-grade{display:inline-block;min-width:34px;text-align:center;padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700}
+.sv-grade--ok{background:#13261f;color:#7fe3a8}.sv-grade--no{background:#2a1414;color:#ffb4a2}.sv-grade--half{background:#2a2112;color:#e0c08a}
+
+/* Status C: uptime */
+.sv-uptime{display:grid;grid-template-columns:160px minmax(0,1fr) 70px;gap:14px;align-items:center;font-size:13px}
+.sv-uptime>b{text-align:right}
+.sv-uptime__days{display:flex;gap:3px}
+.sv-day{display:inline-block;flex:1;height:26px;border-radius:3px}
+.sv-legend .sv-day{flex:none;width:10px;height:10px;border-radius:2px;vertical-align:middle}
+.sv-day--ok{background:#2f9a68}.sv-day--slow{background:#b07a2a}.sv-day--down{background:#a8443a}.sv-day--none{background:var(--zx-line,#16253a)}
+.sv-legend{display:flex;gap:14px;font-size:11px;flex-wrap:wrap}
+@container (max-width:700px){.sv-uptime{grid-template-columns:minmax(0,1fr) 60px}.sv-uptime__days{grid-column:1/-1;grid-row:2}}

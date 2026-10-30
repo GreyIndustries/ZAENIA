@@ -46,9 +46,18 @@ def queue_command(action: str, target: str = "", *, now: float | None = None) ->
     return {"queued": command["id"], "pcOnline": pc_online(now)}
 
 
+_seen = {"at": 0.0}
+
+
+def last_collect() -> float:
+    """When the desktop app last checked in (Status → Uptime counts it as running)."""
+    return _seen["at"]
+
+
 def collect(*, now: float | None = None) -> list[dict[str, Any]]:
     """For the desktop app: every fresh command, oldest first; each is handed out once."""
     now = now if now is not None else time.time()
+    _seen["at"] = now
     with _lock:
         fresh = [c for c in _queue if now - c["at"] <= TTL_SECONDS]
         _queue.clear()

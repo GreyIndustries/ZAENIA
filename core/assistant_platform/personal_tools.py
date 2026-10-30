@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 from core.assistant_platform.store import Conflict, now_text
 
 CATEGORIES = ("Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI")
-COLLECTIONS = {"workbench": "workbench", "music": "music", "food": "fitness_food", "recipes": "fitness_recipe", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings"}
+COLLECTIONS = {"workbench": "workbench", "experiments": "workbench_experiment", "music": "music", "food": "fitness_food", "recipes": "fitness_recipe", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings"}
 
 
 class Record(BaseModel):
@@ -52,6 +52,34 @@ class Stroke(BaseModel):
         if any(len(point) != 2 or not 0 <= point[0] <= 1000 or not 0 <= point[1] <= 600 for point in points):
             raise ValueError("Sketch points must fit the drawing surface.")
         return points
+
+
+class Reading(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    day: int = Field(ge=0, le=3650)
+    values: list[FiniteFloat | None] = Field(min_length=1, max_length=4)
+    note: str = Field(default="", max_length=300)
+
+
+class Experiment(Record):
+    """Workbench "Experiment log" (Grey's pick C): a hypothesis, what changes, what's held the same, and readings."""
+    projectId: str = Field(default="", max_length=32)
+    hypothesis: str = Field(default="", max_length=1000)
+    variable: str = Field(default="", max_length=160)
+    constants: str = Field(default="", max_length=300)
+    measured: str = Field(default="", max_length=160)
+    unit: str = Field(default="", max_length=20)
+    groups: list[str] = Field(default_factory=lambda: ["A", "B"], min_length=1, max_length=4)
+    plannedDays: int = Field(default=14, ge=1, le=3650)
+    readings: list[Reading] = Field(default_factory=list, max_length=500)
+    result: str = Field(default="", max_length=3000)
+
+    @field_validator("groups")
+    @classmethod
+    def group_names(cls, value):
+        if any(not item.strip() or len(item) > 40 for item in value):
+            raise ValueError("Name each group in a few words.")
+        return [item.strip() for item in value]
 
 
 Subject = Literal["Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI"]
@@ -281,7 +309,7 @@ class FitnessSettings(Record):
     baselineCalories: FiniteFloat | None = Field(default=None, ge=0, le=20000)
 
 
-SCHEMAS = {"workbench": Project, "music": Music, "food": Food, "recipes": Recipe, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings}
+SCHEMAS = {"workbench": Project, "experiments": Experiment, "music": Music, "food": Food, "recipes": Recipe, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings}
 
 
 def validate_record(collection, body):

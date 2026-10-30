@@ -62,6 +62,12 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/security/summary", "status.read"),
         ("GET", r"/api/status/bar", "status.read"),
         ("GET", r"/api/status/processes", "status.read"),
+        ("GET", r"/api/status/uptime", "status.read"),
+        # Arena test set (arena_bench.py): your own questions, run on every model and graded against expected answers.
+        ("GET", r"/api/arena/bench", "status.read"),
+        ("POST", r"/api/arena/bench/questions", "memory.write"),
+        ("DELETE", r"/api/arena/bench/questions/[0-9a-f]{32}", "memory.write"),
+        ("POST", r"/api/arena/bench/run", "chat.reply"),
         ("POST", r"/api/security/unlock", "status.read"),
         ("GET", r"/api/security/unlock/[0-9a-f]{32}", "status.read"),
         ("POST", r"/api/security/session", "status.read"),
@@ -277,6 +283,17 @@ class RemoteState(BaseModel):
     active: str | None = Field(default=None, max_length=20)
     calm: bool = False
     section: str = Field(default="", max_length=20)
+
+
+class BenchQuestion(BaseModel):
+    model_config = {'extra': 'forbid'}
+    question: str = Field(min_length=3, max_length=600)
+    expect: str = Field(min_length=1, max_length=300)
+
+
+class BenchRun(BaseModel):
+    model_config = {'extra': 'forbid'}
+    models: list[str] = Field(min_length=1, max_length=6)
 
 
 class NearCode(BaseModel):
@@ -550,6 +567,37 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         return {**result, **security_checks().state()}
 
     # Status tab: the overall security level only; the details are on the locked Security tab.
+    @router.get("/api/status/uptime")
+    def status_uptime() -> dict[str, Any]:
+        from core.api.uptime import uptime
+        return uptime().view()
+
+    @router.get("/api/arena/bench")
+    def arena_bench() -> dict[str, Any]:
+        from core.assistant_platform.arena_bench import bench
+        return bench().view()
+
+    @router.post("/api/arena/bench/questions")
+    def arena_bench_add(body: BenchQuestion) -> dict[str, Any]:
+        from core.assistant_platform.arena_bench import bench
+        try:
+            return bench().add(body.question, body.expect)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+
+    @router.delete("/api/arena/bench/questions/{question_id}")
+    def arena_bench_remove(question_id: str) -> dict[str, Any]:
+        from core.assistant_platform.arena_bench import bench
+        return bench().remove(question_id)
+
+    @router.post("/api/arena/bench/run")
+    def arena_bench_run(body: BenchRun) -> dict[str, Any]:
+        from core.assistant_platform.arena_bench import bench
+        try:
+            return bench().start(body.models)
+        except ValueError as error:
+            raise HTTPException(422, str(error)) from error
+
     @router.get("/api/status/processes")
     def status_processes() -> dict[str, Any]:
         from core.api.status_bar import top_processes

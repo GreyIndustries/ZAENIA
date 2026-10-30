@@ -83,6 +83,7 @@ import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/Mai
 import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
 import { RemotePanel } from "./components/studios/RemotePanel";
 import { ArenaLeaderboard, NotesMap, NotesThreePane, SecurityActivity, SecurityPlan } from "./components/studios/SecondViews";
+import { ArenaBench, ExperimentLog, StatusUptime, WorkbenchBlueprint } from "./components/studios/SecondViews2";
 import { NearQr } from "./components/studios/NearQr";
 import { PageTabs } from "./components/shell/PageTabs";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
@@ -1236,6 +1237,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       ]}/>;
       case 'workbench': return <PageTabs id="workbench" tabs={[
         { id: "lab", label: "Project lab", render: () => <WorkbenchLab onOpenEditor={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "workbench", tab: "projects" } }))}/> },
+        { id: "blueprint", label: "Blueprint", render: () => <WorkbenchBlueprint/> },
+        { id: "experiments", label: "Experiments", render: () => <ExperimentLog/> },
         { id: "projects", label: "Projects", render: () => <WorkbenchPanel drafts={personalDrafts.current}/> },
         { id: "tools", label: "Tools", render: () => <ToolsPanel/> },
         { id: "labs", label: "Labs", render: () => <LabsPanel/> },
@@ -1261,6 +1264,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'arena': return <PageTabs id="arena" tabs={[
         { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
+        { id: "bench", label: "Test set", render: () => <ArenaBench/> },
         { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
@@ -1272,6 +1276,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "status": return <PageTabs id="status" tabs={[
         { id: "live", label: "Live", render: () => <StatusGauges/> },
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },
+        { id: "uptime", label: "Uptime", render: () => <StatusUptime/> },
         { id: "protocols", label: "Protocols", render: () => <ProtocolsPanel/> },
         { id: "selfsustain", label: "Self-Sustain", render: () => <SelfSustainPanel/> },
         { id: "pc", label: "This PC", render: () => <PcSpecsPanel/> },

@@ -175,6 +175,8 @@ def create_app(
             reminders().start(reminder_due)  # time-based nudges: on screen, spoken, and texted if asked
             from core.assistant_platform.selfcare import NIGHTLY
             NIGHTLY.start()  # nightly backup of data/
+            from core.api.uptime import uptime
+            uptime().start()  # every 5 minutes: is each part working (Status → Uptime)
             from core.assistant_platform.game_coach import game_coach
             game_coach().start()  # watches Grey play and learns his style (game mode only; can be turned off)
             from core.tech_news.service import tech_news
