@@ -66,6 +66,12 @@ class SecureRuntime:
         if self._reply_was_active and self.response is not None and self.response.finished_event.is_set():
             self._reply_was_active=False;self.attention.open()
         was_active=self.attention.is_active(replying=self.response is not None and not self.response.finished_event.is_set())
+        # Calm view: a wake-up call (while calm) or sleep phrase (while not) goes to the app; while calm,
+        # everything else is ignored, as with the app mic (core/voice_listener/calm_state.py).
+        try:
+            from core.voice_listener.calm_state import calm_turn
+            if calm_turn(text):return
+        except Exception:pass
         result=filter_utterance(text,approved_voice=True)
         decision=result['decision']
         if decision=='background':

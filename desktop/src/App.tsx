@@ -745,6 +745,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   type NearCode = { code: string; qr: string; secondsLeft: number; voice: boolean };
   const [nearCode, setNearCode] = useState<NearCode | null>(null);
   const remoteSnapshot = useRef("");
+  // A wake-up call or sleep phrase the PC voice heard (it has the mic, so the app's own mic is off).
+  const calmEventRef = useRef<(event: CalmPhrase) => void>(() => undefined);
+  calmEventRef.current = event => { if ((event.kind === "wake") === calmOpen) void calmPhrase(event, true); };
   remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
     active: shell.active ?? null, calm: calmOpen, section });
   useEffect(() => {
@@ -755,8 +758,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       busy = true;
       void (async () => {
         try {
-          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null; calmEvent?: CalmPhrase | null }>("GET", "/api/remote/collect", undefined, { desktop: true });
           for (const command of reply.commands) remoteRef.current(command);
+          if (reply.calmEvent) calmEventRef.current(reply.calmEvent);
           setNearCode(reply.nearCode ?? null);
           const snapshot = remoteSnapshot.current;
           if (snapshot !== sent || Date.now() - sentAt > 8000) { await api("POST", "/api/remote/state", JSON.parse(snapshot), { desktop: true }); sent = snapshot; sentAt = Date.now(); }
@@ -1336,7 +1340,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       <p>Changes in {nearCode.secondsLeft} s · backup code <span className="near-code__digits">{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</span></p>
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
     </div>}
-    {calmOpen && <CalmView listening={listen.mode === "always"} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
+    {calmOpen && <CalmView listening={listen.mode === "always" || pcTakesOver} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
       core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES}/>}/>}
     <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}

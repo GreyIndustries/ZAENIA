@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.36  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.37  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1182,3 +1182,12 @@ Grey asked to finish brain tuning (multi-brain plan Phase 6) and get the owner/o
 - **Voice trial:** Status › Readiness has a Voice trial card. A round ("You" or "Someone else", 10 tries) records each app-mic voice check: accepted or not, the reason and the score; no audio or words. `core/voice_security/voice_trial.py`, `GET/POST /api/voice/trial` (POST desktop-only). The gate, threshold and rejection behavior are unchanged; starting a round clears the 45 s short-reply window, and any short reply still accepted during a round is counted. Pass = at least 5 checked tries each, owner let in 8 of 10 or better, nobody else let in. Results in `data/voice_trial.json`.
 - **Category zoom:** the tiles take two-thirds of the screen at full height (first panel spans two rows with 3 or 5 panels, 3 columns with 6) and show up to 8 items. The core zooms to 2.2× instead of 3.4× with a slight depth-of-field blur, a slow drift and a scrim behind the tiles. A failed panel retries once and has a Try again link.
 - **Tests:** 872 Python tests pass (14 skipped); type check clean.
+
+### 28.39 Calm view hears the PC voice — Claude, 2026-10-31 (v3.37)
+
+Grey: "mic is listening but calm says mic is off". When ZAE's PC voice service has the microphone, the app's own mic is switched off (so two mics don't answer the same sentence). Calm view only looked at the app mic, so it said "The mic is off", and wake-up calls said to the PC voice never reached it.
+
+- Calm view counts the PC voice as listening.
+- `core/voice_listener/calm_state.py`: the app's Calm state is written to `data/ui/calm.json` through `/api/remote/state` (it counts for 30 s, so a closed app can't leave the PC voice deaf). In the PC voice service, a verified turn goes to `calm_turn` first: a wake-up call while calm, or a sleep phrase while not, is written to `data/ui/calm_event.json` and handed to the app through `/api/remote/collect` (`calmEvent`), which wakes or calms as if the app mic had heard it. While calm, other speech is ignored, as with the app mic. Only turns already verified as Grey's voice reach it.
+- The phrase lists are copied from `desktop/src/core/calmPhrases.ts`; a test fails if they drift apart.
+- Tests: 873 Python tests pass (14 skipped), `calm_state_test` 5; type check and node tests pass. The PC voice service must be restarted to pick up the change.

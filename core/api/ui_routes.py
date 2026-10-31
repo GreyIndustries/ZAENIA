@@ -804,12 +804,18 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
     def remote_collect() -> dict[str, Any]:
         from core.api import remote_control
         from core.api.near_pc import near_pc
-        return {"commands": remote_control.collect(), "nearCode": near_pc().code_for_pc()}
+        from core.voice_listener.calm_state import take_event
+        return {"commands": remote_control.collect(), "nearCode": near_pc().code_for_pc(), "calmEvent": take_event()}
 
     @router.post("/api/remote/state", dependencies=[Depends(require_desktop)])
     def remote_report(body: RemoteState) -> dict[str, Any]:
         from core.api import remote_control
         remote_control.report_state([w.model_dump() for w in body.windows], body.active, body.calm, body.section)
+        try:
+            from core.voice_listener.calm_state import report
+            report(body.calm)
+        except OSError:
+            pass
         return {"ok": True}
 
     @router.post("/api/near/start")

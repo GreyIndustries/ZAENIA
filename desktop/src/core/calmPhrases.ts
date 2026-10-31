@@ -1,6 +1,6 @@
 /**
- * Grey's wake-up calls and sleep phrases (2026-10-30). Wake-up calls only count from the app mic, after the turn has
- * been checked as Grey's voice; sleep phrases work spoken or typed. Matching allows small wording changes but not
+ * Grey's wake-up calls and sleep phrases (2026-10-30). Wake-up calls only count by voice (the app mic, or the PC voice
+ * through core/voice_listener/calm_state.py, which keeps a copy of these lists), after the turn has been checked as Grey's voice; sleep phrases work spoken or typed. Matching allows small wording changes but not
  * long sentences that merely contain the words, so normal conversation doesn't trigger them.
  */
 export type CalmPhrase = { kind: "wake" | "sleep"; id: number; phrase: string };
