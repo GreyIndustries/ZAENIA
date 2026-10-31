@@ -133,6 +133,15 @@ def _ask_study(prompt: str) -> str:
     return _local_model_call(prompt, model="qwen3:14b")
 
 
+def _study_done() -> None:
+    """After a research job: free Study's graphics memory and bring Talk back, so the next chat turn isn't a cold start."""
+    from core.brain.conductor import TALK_KEEP_ALIVE, TALK_MODEL
+    from core.brain.local_llm import _game_keep_alive, set_residency
+    set_residency("qwen3:14b", 0)
+    if _game_keep_alive(TALK_KEEP_ALIVE) == TALK_KEEP_ALIVE:
+        set_residency(TALK_MODEL, TALK_KEEP_ALIVE)
+
+
 @background_call
 def _ask_keep(prompt: str) -> str:
     """Small scheduled watch summaries stay on Keep's CPU model."""
@@ -203,8 +212,10 @@ class Agent:
     """Background web research: one question at a time, results kept for later."""
 
     def __init__(self, path: Path = JOBS_FILE, *, ask: Callable[[str], str] = _ask_study, searcher: Callable[..., list] = search,
-                 reader: Callable[[str], dict[str, str]] = read_page, pause: float = 1.2, notify: Callable[..., None] = _notify):
+                 reader: Callable[[str], dict[str, str]] = read_page, pause: float = 1.2, notify: Callable[..., None] = _notify,
+                 after: Callable[[], None] | None = None):
         self.path, self.ask, self.searcher, self.reader, self.pause, self.notify = Path(path), ask, searcher, reader, pause, notify
+        self.after = after if after is not None else (_study_done if ask is _ask_study else (lambda: None))
         self.busy = threading.Lock()
 
     def list(self) -> list[dict[str, Any]]:
@@ -281,6 +292,10 @@ class Agent:
                 job["status"], job["step"], job["error"] = "failed", "Stopped", str(error)[:300] or type(error).__name__
             job["finished"] = _now()
             self._update(job)
+            try:
+                self.after()
+            except Exception:
+                pass
 
 
 class Watch:

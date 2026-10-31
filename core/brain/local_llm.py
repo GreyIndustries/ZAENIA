@@ -111,6 +111,15 @@ def check_ollama_available() -> bool:
         return False
 
 
+def set_residency(model: str, keep_alive: str | int, endpoint: str = "http://127.0.0.1:11434") -> bool:
+    """Load a model and keep it for keep_alive, or unload it now with 0. An empty prompt generates nothing."""
+    try:
+        response = requests.post(endpoint + "/api/generate", json={"model": model, "keep_alive": keep_alive}, timeout=60)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
 def model_is_loaded(model: str) -> bool | None:
     """Whether a model is resident in local Ollama; None when its status is unknown."""
     try:
@@ -311,7 +320,8 @@ def build_payload(
     if model:
         settings = {**settings, "model": model}
     if keep_alive:
-        settings = {**settings, "keep_alive": keep_alive}
+        # A caller's own keep-alive (Talk stays loaded) still lets go of graphics memory in game mode.
+        settings = {**settings, "keep_alive": _game_keep_alive(keep_alive)}
 
     return {
         "model": active_model(settings),

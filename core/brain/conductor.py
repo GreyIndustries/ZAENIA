@@ -20,7 +20,8 @@ SEEK_MODEL = "qwen3.5:9b"
 TALK_FIRST_TEXT_BUDGET = 2.0
 TALK_COLD_START_BUDGET = 8.0
 TALK_COLD_START_TIMEOUT = 15
-TALK_KEEP_ALIVE = "30m"
+# Talk stays loaded all day so the first reply is fast (game mode still frees it; see local_llm._game_keep_alive).
+TALK_KEEP_ALIVE = "24h"
 # Grey's rule: if Talk can't answer within 2 s, say so and keep going. Talk keeps working after the
 # filler (starting a second model at the same time made both fight for the graphics card, about 20 s);
 # Seek only takes over if Talk fails or goes quiet for TALK_PATIENCE seconds.

@@ -82,6 +82,24 @@ class AgentTest(unittest.TestCase):
                 bot.start("x")
 
 
+    def test_study_lets_go_of_the_card_and_brings_talk_back_after_each_job(self):
+        calls = []
+        with tempfile.TemporaryDirectory() as folder:
+            ran = []
+            bot = agent.Agent(Path(folder) / "j.json", ask=lambda p: "q", pause=0, searcher=lambda q: [], notify=lambda *a: None,
+                              after=lambda: ran.append(1))
+            bot.start("nothing found", wait=True)          # runs after a failed job too
+            self.assertEqual(ran, [1])
+            self.assertIs(agent.Agent(Path(folder) / "k.json").after, agent._study_done)
+        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", side_effect=lambda d: d):
+            agent._study_done()
+        self.assertEqual(calls, [("qwen3:14b", 0), ("qwen3.5:4b", "24h")])
+        calls.clear()
+        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", return_value="1m"):
+            agent._study_done()                             # game mode: don't load Talk onto the card
+        self.assertEqual(calls, [("qwen3:14b", 0)])
+
+
 class WatchTest(unittest.TestCase):
     def test_new_items_are_summarised_once_and_briefed_once(self):
         items = [{"title": "Chip", "url": "https://n.com/1", "snippet": "s", "published": "today"}]
