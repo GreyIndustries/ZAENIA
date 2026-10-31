@@ -257,3 +257,10 @@
   box-shadow:0 20px 60px rgba(0,0,0,.45),inset 0 0 80px rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
 .ov--zoomed .ov-center>.progress-stage,.ov--returning .ov-center>.progress-stage{border-color:transparent;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
 .ov--calm .ov-center>.progress-stage{border-color:transparent;background:transparent;box-shadow:none;backdrop-filter:none}
+
+/* Grey, 2026-10-31: no blank space. The last card in each rail takes the remaining height, and the greeting moves
+   up into the bottom of the core's panel. */
+.ov-rail:not(.ov-phone *)>.ov-card:last-child{flex:1 1 auto;min-height:0}
+.ov-rail .ov-card .ov-lines{overflow:hidden}
+.ov:not(.ov--calm):not(.ov--zoomed):not(.ov-phone) .ov-center>.ov-hero{margin-top:clamp(-84px,-7vh,0px);position:relative;z-index:2}
+.ov-bottom .ov-board li{padding:4px 0}

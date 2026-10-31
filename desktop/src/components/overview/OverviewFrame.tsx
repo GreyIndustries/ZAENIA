@@ -26,9 +26,17 @@ type Data = {
   weather: { place: string; temperature: number | null; condition: string } | null;
   training: { weights: { date: string; weightLb: number }[]; habits: { workouts: boolean[]; dates: string[] } } | null;
   notes: { total: number; notes: { title: string; updatedAt: string }[] } | null; topics: { name: string; sources: number }[] | null;
+  inbox: { title: string; message: string; dueAt: string }[] | null; jobs: { question: string; status: string; started: string }[] | null;
 };
 const EMPTY: Data = { events: null, tasks: null, reminders: null, day: null, bar: null, security: null, songs: null, news: null, weather: null,
-  training: null, notes: null, topics: null };
+  training: null, notes: null, topics: null, inbox: null, jobs: null };
+const ago = (text?: string | null) => {
+  if (!text) return "";
+  const d = new Date(text);
+  if (Number.isNaN(d.getTime())) return "";
+  const days = Math.round((Date.now() - d.getTime()) / 864e5);
+  return days <= 0 ? d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : days === 1 ? "yesterday" : days < 7 ? `${days}d ago` : d.toLocaleDateString([], { month: "short", day: "numeric" });
+};
 const IDLE_KEY = "zaenia.overview.idleMinutes";
 export const IDLE_CHOICES = [0, 1, 2, 5, 10, 15, 30] as const;
 export function idleMinutes(): number {
@@ -46,16 +54,19 @@ export function useOverviewData() {
     if (!LIVE_API) return;
     const today = iso(new Date());
     const get = <T,>(path: string) => api<T>("GET", path, undefined, { timeoutMs: 30_000 }).then(value => value, () => null);
-    const [events, tasks, reminders, day, bar, security, music, news, weather, training, notes, topics] = await Promise.all([
-      get<{ events: Event[] }>(`/api/calendar?start=${today}&days=2`), get<{ tasks: Task[] }>("/api/tasks"), get<{ reminders: Reminder[] }>("/api/reminders"),
+    const [events, tasks, reminders, day, bar, security, music, news, weather, training, notes, topics, inbox, jobs] = await Promise.all([
+      get<{ events: Event[] }>(`/api/calendar?start=${today}&days=7`), get<{ tasks: Task[] }>("/api/tasks"), get<{ reminders: Reminder[] }>("/api/reminders"),
       get<Day>(`/api/platform/personal/training/day?day=${today}`), get<Bar>("/api/status/bar"), get<{ level: string; score: number }>("/api/security/summary"),
       get<{ songs: Song[] }>("/api/platform/personal/music/overview"), get<{ stories: { title: string }[] }>("/api/news/tech"),
       get<{ place: string; temperature: number | null; condition: string }>("/api/weather/now"),
-      get<Data["training"]>("/api/platform/personal/training"), get<Data["notes"]>("/api/platform/notes?limit=3"),
+      get<Data["training"]>("/api/platform/personal/training"), get<Data["notes"]>("/api/platform/notes?limit=5"),
       get<{ topics: { name: string; sources: number }[] }>("/api/research/notebook"),
+      get<{ notifications: { title: string; message: string; dueAt: string }[] }>("/api/assistant/notifications?includeRead=true"),
+      get<{ jobs: { question: string; status: string; started: string }[] }>("/api/research/agent"),
     ]);
     setData({ events: events?.events ?? null, tasks: tasks?.tasks ?? null, reminders: reminders?.reminders ?? null, day, bar, security,
-      songs: music?.songs ?? null, news: news?.stories ?? null, weather, training, notes, topics: topics?.topics ?? null });
+      songs: music?.songs ?? null, news: news?.stories ?? null, weather, training, notes, topics: topics?.topics ?? null,
+      inbox: inbox?.notifications ?? null, jobs: jobs?.jobs ?? null });
   }, []);
   useEffect(() => {
     void load();
@@ -282,7 +293,29 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
     ...overdue.map(task => ({ at: "0", time: "LATE", what: task.title, status: "OVERDUE", tone: "#ffb4a2" })),
     ...dueToday.map(task => ({ at: `${today} ${task.deadline!.slice(11, 16) || "23:59"}`, time: task.deadline!.slice(11, 16) || "TODAY", what: task.title, status: "DUE", tone: "#e0a353" })),
     ...(data.reminders ?? []).filter(r => !r.done && new Date(r.due) >= now).map(r => { const d = new Date(r.due); return { at: `${iso(d)} ${d.toTimeString().slice(0, 5)}`, time: d.toTimeString().slice(0, 5), what: r.text, status: "REMINDER", tone: "#c08cff" }; }),
-  ].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 4);
+  ].sort((a, b) => a.at.localeCompare(b.at)).slice(0, 5);
+  const boardTasks = (open ?? []).filter(task => !overdue.includes(task) && !dueToday.includes(task)).slice(0, Math.max(0, 5 - boardRows.length))
+    .map(task => ({ at: "z", time: task.deadline ? task.deadline.slice(5, 10) : "OPEN", what: task.title, status: "TASK", tone: "#9fb6cf" }));
+  boardRows.push(...boardTasks);
+  // Rails (Grey, 2026-10-31: fill the blank space): the rest of the week, ZAE's inbox, research and notes.
+  const weekLater = (data.events ?? []).filter(e => e.date > tomorrow).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 5);
+  const weekCard = <Card kicker="This week" title="Coming up" tone="#8fc8ff" onOpen={() => onOpen("tasks")}>
+    <ul className="ov-lines">{weekLater.map(e => <li key={e.id}><span>{e.title}</span>
+      <b>{new Date(`${e.date}T00:00`).toLocaleDateString([], { weekday: "short" })}{e.allDay ? "" : ` ${clock(e.time)}`}</b></li>)}
+      {weekLater.length === 0 && <li className="ov-muted">Nothing else on the calendar this week.</li>}</ul>
+  </Card>;
+  const inboxCard = <Card kicker="Follow-ups" title="From ZAE" tone="#c08cff" onOpen={() => onOpen("assistant")}>
+    <ul className="ov-lines">{(data.inbox ?? []).slice(0, 4).map((n, i) => <li key={i}><span title={n.message}>{n.title}</span><b>{ago(n.dueAt)}</b></li>)}
+      {data.inbox?.length === 0 && <li className="ov-muted">Nothing new from ZAE.</li>}
+      {data.inbox === null && <li className="ov-muted">Inbox unavailable.</li>}</ul>
+  </Card>;
+  const researchCard = <Card kicker="Research & notes" title="Recently" tone="#7fd1c8" onOpen={() => onOpen("research")}>
+    <ul className="ov-lines">
+      {(data.jobs ?? []).slice(0, 2).map((j, i) => <li key={`j${i}`}><button type="button" className="ov-link" onClick={() => onOpen("research")}>{j.question}</button><b>{j.status === "done" ? "ready" : j.status}</b></li>)}
+      {(data.notes?.notes ?? []).slice(0, 4).map((n, i) => <li key={`n${i}`}><button type="button" className="ov-link" onClick={() => onOpen("notes")}>{n.title}</button><b>{ago(n.updatedAt)}</b></li>)}
+      {!(data.jobs?.length) && !(data.notes?.notes.length) && <li className="ov-muted">No research or notes yet.</li>}
+    </ul>
+  </Card>;
   const bottomRow = <div className="ov-bottom">
     <Card kicker="Day board" title="Next up" tone="#e0a353" onOpen={() => onOpen("tasks")} hot={hot("calendar")}>
       <ul className="ov-board">{boardRows.map((row, i) => <li key={i}><b>{row.time}</b><span>{row.what}</span><em style={{ color: row.tone }}>● {row.status}</em></li>)}
@@ -400,6 +433,8 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
           </div>
         </div>
       </Card>
+      {weekCard}
+      {inboxCard}
     </div>
 
     <div className="ov-center">
@@ -417,6 +452,7 @@ export function OverviewFrame({ children, telemetry, look, style, onOpen, onAsk,
       </Card>
       {askCard}
       {musicCard}
+      {researchCard}
     </div>
   </div></div>;
 }
