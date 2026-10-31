@@ -92,8 +92,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const nightNow = () => { const h = new Date().getHours(); return h >= 19 || h < 6; };
   const [night, setNight] = useState(nightNow);
   useEffect(() => { const id = window.setInterval(() => setNight(nightNow()), 60_000); return () => window.clearInterval(id); }, []);
-  // Live upgrades (Grey picked 1, 3 and 5): mood-coloured rings, a bead per running job, the night side.
-  const extras: CoreExtras = { ...preview, mood: preview.mood ?? true, beads: preview.beads ?? Math.min(6, activeJobs), night: preview.night ?? night };
+  // Live upgrades (Grey picked 1, 2, 3 and 5): mood-coloured rings, voice ripples while she speaks, a bead per running job, the night side.
+  const extras: CoreExtras = { ...preview, mood: preview.mood ?? true, pulse: preview.pulse ?? true, beads: preview.beads ?? Math.min(6, activeJobs), night: preview.night ?? night };
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
