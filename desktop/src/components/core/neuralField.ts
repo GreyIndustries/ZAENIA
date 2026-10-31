@@ -98,12 +98,18 @@ export type FieldState = { progress: number; motion: boolean; processing: boolea
  */
 type VoidLook = { roll: number; squash: number; hot: string; mid: string; cool: string; ring: string; hole: number;
   /** Where the disk runs, in core radii (default 1.04 to DISK_OUTER). "void-photo" keeps it inside the core. */
-  diskIn?: number; diskOut?: number; contained?: boolean };
+  diskIn?: number; diskOut?: number; contained?: boolean;
+  /** No neural core at all: only the black hole (Grey, 2026-10-31: "clear core ... exact copy of the picture"). */
+  clear?: boolean };
 const VOID_LOOKS: Record<string, VoidLook> = {
   "void-ember": { roll: -0.5, squash: 0.38, hot: "255,224,160", mid: "255,150,60", cool: "214,84,28", ring: "255,200,120", hole: 0.74 },
   "void-white": { roll: -1.02, squash: 0.15, hot: "255,250,244", mid: "255,214,184", cool: "196,128,92", ring: "255,244,232", hole: 0.7 },
   // Grey's photo (2026-10-31): compact, nothing past the core's own circle. A black void, a bright gold rim, the
   // lensed ring hugging it, and a tilted dusty disk rising from lower left to upper right.
+  // Grey's photo, as is: a black hole only. Void, thin bright rim, a thick gold lensed ring brightest at the upper
+  // left, and a wide dusty disk rising from lower left to upper right and crossing in front of the void.
+  "void-exact": { roll: -0.6, squash: 0.36, hot: "255,222,150", mid: "232,128,48", cool: "120,60,28", ring: "255,206,120", hole: 0.5,
+    diskIn: 0.6, diskOut: 2.25, clear: true },
   "void-photo": { roll: -0.62, squash: 0.3, hot: "255,226,160", mid: "236,140,58", cool: "150,72,30", ring: "255,214,140", hole: 0.46,
     diskIn: 0.5, diskOut: 1.0, contained: true },
   "void-flat": { roll: -0.06, squash: 0.09, hot: "255,240,244", mid: "255,186,170", cool: "170,150,255", ring: "255,236,240", hole: 0.76 },
@@ -435,6 +441,12 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
   const S = buildSphere();
   const SA = sprite(255, 165, 55), SB = sprite(120, 165, 255), SW = sprite(255, 238, 196);
   const RINGS = buildRings();
+  // Dust for the "void-exact" disk: many faint specks, denser and brighter close to the hole.
+  const DUST = (() => {
+    const rnd = seeded(9090);
+    return Array.from({ length: 1100 }, () => ({ u: Math.pow(rnd(), 1.6), a: rnd() * TAU, lift: (rnd() - 0.5) * 2, size: 1.5 + rnd() * 5,
+      alpha: 0.15 + rnd() * 0.6, hot: rnd() < 0.35, speed: 0.04 + rnd() * 0.06 }));
+  })();
   const bloom = document.createElement("canvas");
   const bctx = bloom.getContext("2d");
   const canBlur = !!bctx && "filter" in bctx;
@@ -522,6 +534,17 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         body.addColorStop(1, `rgba(${vl.cool},0)`);
         ctx.fillStyle = body; ctx.fill();
       }
+      if (vl?.clear) {
+        const inner = vl.diskIn ?? 1.04, outer = vl.diskOut ?? DISK_OUTER;
+        for (const d of DUST) {
+          const a = ((d.a + time * d.speed * Math.pow(1 / (inner + d.u * (outer - inner)), 1.5)) % TAU + TAU) % TAU;
+          if ((a < Math.PI) !== front) continue;
+          const rad = (inner + d.u * (outer - inner)) * r;
+          const x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash + d.lift * r * 0.07 * (1 - d.u * 0.4);
+          spr(d.hot ? SW : SA, cx + x * cR - y * sR, cy + x * sR + y * cR, d.size * sc, d.alpha * (1 - d.u * 0.7) * ringReveal * (front ? 1 : 0.7));
+        }
+        ctx.globalAlpha = 1;
+      }
       for (const s of vl ? RINGS.dense : RINGS.strands) {
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
@@ -557,6 +580,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     };
     drawRings(false);
 
+    // The neural sphere itself (skipped when the look is a black hole only).
+    if (!vl?.clear) {
     // Dark, warm body blocks the backdrop so the network reads as a solid ball.
     const body = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
     body.addColorStop(0, `rgba(36,12,4,${0.94 * pe})`);
@@ -780,6 +805,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       }
     }
 
+    }
     // Module nerves grow out of the core as each module wakes (not with the rings).
     if (state.ringed && !vl) drawRings(true);
     if (!state.ringed) geo.forEach((b, bi) => {
@@ -856,12 +882,29 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       edge.addColorStop(vl.contained ? 0.8 : 0.35, `rgba(0,0,0,${vl.contained ? 0.9 : 0.55})`);
       edge.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = edge;
-      ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill();
+      if (!vl.clear) { ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill(); }
       ctx.fillStyle = "#000";
       ctx.beginPath(); ctx.arc(cx, cy, hr, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = "lighter";
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
-      for (let i = 0; i < 18; i++) {
+      if (vl.clear) {
+        // The lensed ring: a thick band of light wrapped round the void, brightest at the upper left like the photo.
+        for (let i = 0; i < 34; i++) {
+          const rad = hr * (1.01 + i * 0.016 + 0.004 * Math.sin(time * 0.8 + i * 1.7));
+          const cone = ctx.createConicGradient(-Math.PI * 0.95 + Math.sin(time * 0.2) * 0.1, cx, cy);
+          const a = Math.max(0, 1 - i * 0.027) * glow;
+          cone.addColorStop(0, `rgba(${vl.hot},${a})`);
+          cone.addColorStop(0.18, `rgba(${vl.mid},${a * 0.75})`);
+          cone.addColorStop(0.45, `rgba(${vl.mid},${a * 0.28})`);
+          cone.addColorStop(0.7, `rgba(${vl.cool},${a * 0.18})`);
+          cone.addColorStop(0.88, `rgba(${vl.mid},${a * 0.6})`);
+          cone.addColorStop(1, `rgba(${vl.hot},${a})`);
+          ctx.strokeStyle = cone;
+          ctx.lineWidth = (i < 4 ? 2.4 : 1.4) * sc;
+          ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.03, rad, roll * 0.25, 0, TAU); ctx.stroke();
+        }
+      }
+      for (let i = 0; i < (vl.clear ? 0 : 18); i++) {
         const rad = hr * (1.02 + i * 0.03 + 0.006 * Math.sin(time * 0.7 + i));
         const start = (i * 0.83 + time * (0.35 - i * 0.008)) % TAU;
         const len = TAU * (0.45 + ((i * 53) % 10) / 22);
