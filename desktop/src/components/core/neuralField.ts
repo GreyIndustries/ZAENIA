@@ -527,17 +527,17 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       if (ringReveal <= 0) return;
       ctx.globalCompositeOperation = "lighter";
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
-      for (let i = 0; i < 7; i++) {
-        const rad = r * (1.05 + i * 0.03);
+      for (let i = 0; i < 9; i++) {
+        const rad = r * (1.04 + i * 0.035);
         const g = ctx.createLinearGradient(cx, cy - rad, cx, cy + rad);
-        const a = (0.42 - i * 0.045) * glow;
+        const a = (0.85 - i * 0.08) * glow;
         g.addColorStop(0, `rgba(255,214,150,${a})`);
         g.addColorStop(0.32, `rgba(255,150,60,${a * 0.18})`);
         g.addColorStop(0.5, "rgba(255,150,60,0)");
         g.addColorStop(0.68, `rgba(255,150,60,${a * 0.12})`);
         g.addColorStop(1, `rgba(255,190,110,${a * 0.55})`);
         ctx.strokeStyle = g;
-        ctx.lineWidth = (i === 0 ? 2.2 : 1.1) * sc;
+        ctx.lineWidth = (i === 0 ? 3 : 1.6) * sc;
         ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.01, rad, RING_ROLL, 0, TAU); ctx.stroke();
       }
       ctx.strokeStyle = `rgba(255,240,210,${0.75 * glow})`;
@@ -772,13 +772,13 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     // Module nerves grow out of the core as each module wakes (not with the rings).
     if (state.ringed) {
       // The event horizon: the centre of the core falls dark, its nerves glowing around the edge.
-      const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.72);
-      hole.addColorStop(0, `rgba(0,0,0,${0.82 * pe})`);
-      hole.addColorStop(0.55, `rgba(2,1,1,${0.55 * pe})`);
+      const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.86);
+      hole.addColorStop(0, `rgba(0,0,0,${0.94 * pe})`);
+      hole.addColorStop(0.6, `rgba(2,1,1,${0.7 * pe})`);
       hole.addColorStop(1, "rgba(0,0,0,0)");
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = hole;
-      ctx.beginPath(); ctx.arc(cx, cy, r * 0.72, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.86, 0, TAU); ctx.fill();
       drawLensing();
       drawRings(true);
     }
