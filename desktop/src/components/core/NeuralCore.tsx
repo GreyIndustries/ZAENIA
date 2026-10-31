@@ -84,6 +84,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const [layout, setLayout] = useState<FieldLayout | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const reduced = usePrefersReducedMotion();
+  // Core look: "" (Saturn rings) or a black-hole preview variant from localStorage "zaenia.coreLook".
+  const [look] = useState(() => { try { return localStorage.getItem("zaenia.coreLook") ?? ""; } catch { return ""; } });
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
@@ -108,8 +110,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed });
-  }, [startup.progress, animate, paused, processing, phase, layout, ringed]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed, look });
+  }, [startup.progress, animate, paused, processing, phase, layout, ringed, look]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 

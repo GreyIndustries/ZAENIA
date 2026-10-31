@@ -89,7 +89,19 @@ export function computeLayout(width: number, height: number, ringed = false): Fi
 
 /** What ZÆNIA is doing right now; the core reacts the way a live assistant does. */
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking";
-export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean };
+export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean; look?: string };
+
+/**
+ * Black-hole variants (Grey's pictures, 2026-10-31): the middle of the core is a void with no light, ringed by a bright
+ * photon ring and the core's own nerves swirling around it as the lensed disk; the accretion disk crosses in front.
+ * Previews only until Grey picks one. roll = disk tilt on screen, squash = how open the disk looks.
+ */
+type VoidLook = { roll: number; squash: number; hot: string; mid: string; cool: string; ring: string; hole: number };
+const VOID_LOOKS: Record<string, VoidLook> = {
+  "void-ember": { roll: -0.42, squash: 0.24, hot: "255,224,160", mid: "255,150,60", cool: "214,84,28", ring: "255,200,120", hole: 0.74 },
+  "void-white": { roll: -1.02, squash: 0.15, hot: "255,250,244", mid: "255,214,184", cool: "196,128,92", ring: "255,244,232", hole: 0.7 },
+  "void-flat": { roll: -0.06, squash: 0.09, hot: "255,240,244", mid: "255,186,170", cool: "170,150,255", ring: "255,236,240", hole: 0.76 },
+};
 
 /* ------------------------------------------------------------------ */
 /* Saturn rings: the nerves wrapped around the core                    */
@@ -466,10 +478,12 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
 
     // Saturn rings. The far half is drawn first so the sphere hides what passes behind it.
     const ringReveal = state.ringed ? smooth(clamp((pe - 0.35) / 0.65)) : 0;
-    const cR = Math.cos(RING_ROLL), sR = Math.sin(RING_ROLL);
+    const vl = state.ringed && state.look ? VOID_LOOKS[state.look] : undefined;
+    const roll = vl ? vl.roll : RING_ROLL, squash = vl ? vl.squash : RING_SQUASH;
+    const cR = Math.cos(roll), sR = Math.sin(roll);
     const ringPoint = (s: RingStrand, a: number): [number, number] => {
       const rad = s.radius * (1 + s.wobble * Math.sin(a * s.freq + s.phase + time * 0.4)) * r;
-      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * RING_SQUASH;
+      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash;
       return [cx + x * cR - y * sR, cy + x * sR + y * cR];
     };
     const drawRings = (front: boolean) => {
@@ -482,7 +496,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
         const span = Math.PI * shown;
-        const col = s.blue ? RGB[BLUE] : RGB[AMBER];
+        const col = vl ? (s.radius < 1.4 ? vl.hot : s.radius < 1.9 ? vl.mid : vl.cool) : s.blue ? RGB[BLUE] : RGB[AMBER];
         const depth = front ? 1 : 0.55;
         ctx.beginPath();
         const steps = Math.round(RING_POINTS / 2);
@@ -737,7 +751,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     }
 
     // Module nerves grow out of the core as each module wakes (not with the rings).
-    if (state.ringed) drawRings(true);
+    if (state.ringed && !vl) drawRings(true);
     if (!state.ringed) geo.forEach((b, bi) => {
       const wake = nodeWakeLevel(state.progress, bi);
       if (wake <= 0) return;
@@ -800,6 +814,42 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.globalAlpha = 0.36;
       ctx.drawImage(bloom, 0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = 1;
+    }
+    if (vl && ringReveal > 0) {
+      // The void: nothing comes out of the middle. Then the photon ring, the swirling lensed ring of nerves, and the
+      // near side of the disk crossing in front.
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+      const hr = r * vl.hole;
+      const edge = ctx.createRadialGradient(cx, cy, hr * 0.96, cx, cy, r * 1.02);
+      edge.addColorStop(0, "rgba(0,0,0,1)");
+      edge.addColorStop(0.35, "rgba(0,0,0,0.55)");
+      edge.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = edge;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#000";
+      ctx.beginPath(); ctx.arc(cx, cy, hr, 0, TAU); ctx.fill();
+      ctx.globalCompositeOperation = "lighter";
+      const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
+      for (let i = 0; i < 26; i++) {
+        const rad = hr * (1.02 + i * 0.022 + 0.004 * Math.sin(time * 0.7 + i));
+        const start = (i * 0.83 + time * (0.35 - i * 0.008)) % TAU;
+        const len = TAU * (0.45 + ((i * 53) % 10) / 22);
+        const a = Math.max(0, (0.75 - i * 0.026)) * glow;
+        ctx.strokeStyle = `rgba(${i < 6 ? vl.hot : i < 16 ? vl.mid : vl.cool},${a})`;
+        ctx.lineWidth = (i < 3 ? 2.4 : 1.1) * sc;
+        ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.02, rad, roll * 0.2, start, start + len); ctx.stroke();
+      }
+      const halo = ctx.createRadialGradient(cx, cy, hr, cx, cy, hr * 1.9);
+      halo.addColorStop(0, `rgba(${vl.ring},${0.32 * glow})`);
+      halo.addColorStop(1, `rgba(${vl.ring},0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath(); ctx.arc(cx, cy, hr * 1.9, 0, TAU); ctx.arc(cx, cy, hr, 0, TAU, true); ctx.fill();
+      ctx.strokeStyle = `rgba(${vl.ring},${0.95 * glow})`;
+      ctx.lineWidth = 1.8 * sc;
+      ctx.beginPath(); ctx.arc(cx, cy, hr * 1.005, 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
+      drawRings(true);
     }
     ctx.globalCompositeOperation = "source-over";
   };
