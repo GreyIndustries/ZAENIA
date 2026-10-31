@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.39  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.40  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1205,3 +1205,14 @@ Grey: "wake up calls and sleep calls will not be word for word but be more flexi
 - **While awake:** a sentence with a rest cue (`SLEEP_CUE`: bed, goodnight, call it a night, that's it for today, background, standby…) goes to Talk, which decides whether he is wrapping up ("I'm heading to bed") or just talking about rest ("how much sleep do I need"). Only a yes starts Calm view. "Go quiet" is left to the existing background command.
 - The app mic asks `POST /api/assistant/calm-intent` when Calm view is up or a rest cue is heard; otherwise the turn carries on as before. The PC voice uses the same function in `calm_turn`. Typed sleep phrases still need the listed wording.
 - Live check with Talk: 12 of 12 sample sentences decided correctly, about 0.1–0.5 s each. Tests: 874 Python OK (14 skipped); `SLEEP_CUE` and the phrase lists are checked against `calmPhrases.ts`.
+
+### 28.42 One reply when both mics hear Grey — Claude, 2026-10-31 (v3.40)
+
+Grey heard two replies at once. When PC voice keeps rejecting his voice, the app keeps its own mic on too, so both can hear a sentence; `claim_turn` should let only one answer. It missed when (a) the PC was still checking and transcribing a long sentence after the app had waited its 2.5 s, or (b) the two transcribers worded the sentence differently enough to fall under the 0.5 word-overlap mark.
+
+- PC voice reports "hearing" again right before it checks and transcribes a finished sentence (`runtime.feed`), so the app waits for it.
+- The app waits up to 6 s (was 2.5 s) while the PC is hearing; word overlap of 0.34 counts as the same sentence (was 0.5).
+- The app acts on a wake-up call or sleep phrase once even if both mics report it within 8 s.
+- Tests: 876 Python OK (14 skipped), two new `voice_turn_test` cases. Needs a PC voice restart.
+
+The other finding from the same report: since 23:00 UTC the voice check rejected 56 of 91 app-mic sentences and 45 PC-voice sentences as not Grey's voice. The profile was calibrated 2026-10-13 from 5 samples (threshold 0.363). Grey was offered retraining (recommended) or turning off the app-mic voice requirement; awaiting his choice. The threshold is unchanged.

@@ -50,8 +50,11 @@ class Heartbeat:
 # claims a turn before answering; whichever claims second drops it, so ZAE
 # answers once. A claim holds hashed words and a time only, never the text.
 TURN_FILE = PROJECT_ROOT / "data" / "ui" / "voice_turn.json"
+# The PC checks and transcribes a whole sentence after it ends (a few seconds for a long one), and its
+# transcriber words things differently from the app's, so the app waits longer and matches loosely.
 SAME_TURN_SECONDS = 12.0
-PC_HEARING_WAIT = 2.5
+PC_HEARING_WAIT = 6.0
+SIMILAR = 0.34
 
 
 def _hashes(text: str) -> list[str]:
@@ -63,7 +66,7 @@ def _hashes(text: str) -> list[str]:
 
 def _similar(left: list[str], right: list[str]) -> bool:
     a, b = set(left), set(right)
-    return bool(a and b) and len(a & b) / len(a | b) >= 0.5
+    return bool(a and b) and len(a & b) / len(a | b) >= SIMILAR
 
 
 def _read_turn() -> dict:

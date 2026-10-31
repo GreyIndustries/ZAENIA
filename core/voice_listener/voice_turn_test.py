@@ -45,6 +45,20 @@ class OneAnswerPerTurnTest(unittest.TestCase):
         self.now += status.SAME_TURN_SECONDS + 1
         self.assertTrue(status.claim_turn("app", "what's the weather tomorrow", clock=self.clock))
 
+    def test_two_transcribers_wording_one_sentence_differently_still_count_once(self):
+        self.assertTrue(status.claim_turn("app", "hey zae what's the weather looking like tomorrow", clock=self.clock))
+        self.now += 4  # the PC finishes checking and transcribing a few seconds later
+        self.assertFalse(status.claim_turn("pc", "hey zay what is the weather look like for tomorrow", clock=self.clock))
+
+    def test_app_waits_through_a_long_pc_check(self):
+        self.pc_state("hearing")
+
+        def sleep(seconds):
+            self.now += seconds
+            if self.now >= 1004.5 and not status.TURN_FILE.exists():
+                status.claim_turn("pc", "read me my notes from today", clock=self.clock)
+        self.assertFalse(status.claim_turn("app", "read me my notes from today", wait_for_pc=True, clock=self.clock, sleep=sleep))
+
     def test_same_source_can_repeat_itself(self):
         status.claim_turn("pc", "say that again", clock=self.clock)
         self.assertTrue(status.claim_turn("pc", "say that again", clock=self.clock))

@@ -217,6 +217,12 @@ class SecureRuntime:
         if any(e['type']=='speech_end' for e in events) and self.collecting:
             audio=b''.join(self.audio);self.audio=[];self.collecting=False;self.prefix.clear()
             self.identity.authorize()
+            # Still "hearing" while the clip is checked and transcribed, so the app mic waits for this
+            # sentence instead of answering it too (Grey heard two replies at once, 2026-10-31).
+            heartbeat=getattr(self,'heartbeat',None)
+            if heartbeat is not None:
+                try:heartbeat.report('hearing',force=True)
+                except Exception:pass
             self.pipeline.process(audio,microphone_identity())
             # Track whether the owner's voice is being recognised, so the app
             # can keep its own mic on when PC Voice keeps rejecting him.
@@ -246,7 +252,7 @@ def run():
             print('No wake word: just talk. ZAE decides what is meant for her, answers it, and may offer help when it is clearly useful. Ctrl+C stops voice.')
         else:
             print('Address ZAE anywhere in a request, or say “hey assistant”. Continue naturally for 30 seconds after her reply. Ctrl+C stops voice.')
-        heartbeat.report('listening',force=True)
+        heartbeat.report('listening',force=True);runtime.heartbeat=heartbeat
         with sd.RawInputStream(samplerate=16000,blocksize=runtime.detector.frame_samples,device=microphone[0],
                                dtype='int16',channels=1,callback=callback) as stream:
             checked=0.0

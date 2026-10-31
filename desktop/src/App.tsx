@@ -832,8 +832,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   /** One message to ZÆNIA, typed or spoken. Sending while she's busy interrupts her. */
   const [clarify, setClarify] = useState<{ original: string; questions: { question: string; options: string[] }[] } | null>(null);
   // Wake-up calls (voice only) and sleep phrases (voice or typed): ZAE answers from the situation, then the screen follows.
+  const lastCalmPhrase = useRef({ kind: "", at: 0 });
   async function calmPhrase(match: CalmPhrase, byVoice: boolean) {
     if (match.kind === "wake" && !byVoice) return false;
+    // The app mic and the PC voice can both hear the same sentence: one reply.
+    if (lastCalmPhrase.current.kind === match.kind && Date.now() - lastCalmPhrase.current.at < 8000) return true;
+    lastCalmPhrase.current = { kind: match.kind, at: Date.now() };
     const jobs = platformRuntime.summary?.jobs ?? [];
     const running = jobs.filter(job => !/done|complete|fail|cancel/i.test(job.status)).map(job => job.title);
     const calmMinutes = calmOpen ? Math.round((Date.now() - calmSince.current) / 60000) : 0;
