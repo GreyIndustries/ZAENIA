@@ -79,11 +79,14 @@ def embed_local(texts: list[str]) -> list[list[float]]:
 
 def _chat_json(system: str, user: str, *, max_tokens: int, timeout: float) -> dict[str, Any]:
     import requests
-    from core.brain.local_llm import active_model, get_brain_settings
+    from core.brain.conductor import TALK_KEEP_ALIVE, TALK_MODEL
+    from core.brain.local_llm import _game_keep_alive, get_brain_settings
     settings = get_brain_settings()
-    payload = {"model": active_model(settings), "stream": False, "format": "json", "think": False,
-               "keep_alive": settings.get("keep_alive"),
-               "options": {"temperature": 0, "num_predict": max_tokens},
+    # Talk's model, already loaded, with chat's context size so Ollama doesn't reload it. The older default
+    # model (llama3.1:8b) loaded 5 GB next to Talk for every topic check and cost about 5 s after research.
+    payload = {"model": TALK_MODEL, "stream": False, "format": "json", "think": False,
+               "keep_alive": _game_keep_alive(TALK_KEEP_ALIVE),
+               "options": {"temperature": 0, "num_predict": max_tokens, "num_ctx": settings["context_window"]},
                "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]}
     reply = requests.post(settings["endpoint"], json=payload, timeout=timeout)
     reply.raise_for_status()
