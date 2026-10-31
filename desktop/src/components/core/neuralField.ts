@@ -114,7 +114,7 @@ const RING_POINTS = 120;
 type RingStrand = { radius: number; wobble: number; phase: number; freq: number; blue: boolean; alpha: number; width: number; order: number };
 type RingSignal = { strand: number; angle: number; speed: number; blue: boolean };
 
-function buildRings(): { strands: RingStrand[]; signals: RingSignal[] } {
+function buildRings(): { strands: RingStrand[]; signals: RingSignal[]; dense: RingStrand[] } {
   const rnd = seeded(4242);
   const strands: RingStrand[] = [];
   // Three bands with Saturn-like gaps between them: inner (faint), main (bright), outer (thin).
@@ -130,7 +130,14 @@ function buildRings(): { strands: RingStrand[]; signals: RingSignal[] } {
   for (let i = 0; i < 26; i++) {
     signals.push({ strand: Math.floor(rnd() * strands.length), angle: rnd() * TAU, speed: (0.12 + rnd() * 0.22) * (rnd() < 0.85 ? 1 : -1), blue: rnd() < 0.2 });
   }
-  return { strands, signals };
+  // The black-hole disk: one wide, dense, streaky band with no gaps (Grey's pictures).
+  const dense: RingStrand[] = [];
+  for (let i = 0; i < 90; i++) {
+    const u = i / 89;
+    dense.push({ radius: 1.04 + u * (RING_OUTER - 1.04) + (rnd() - 0.5) * 0.01, wobble: 0.003 + rnd() * 0.02, phase: rnd() * TAU,
+      freq: 2 + Math.floor(rnd() * 7), blue: false, alpha: (0.35 + rnd() * 0.65) * (1 - u * 0.55), width: 0.5 + rnd() * 2.2 * (1 - u * 0.5), order: rnd() * 0.6 });
+  }
+  return { strands, signals, dense };
 }
 
 export type NeuralField = {
@@ -492,7 +499,20 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       const rate = (state.processing ? 1.8 : 1) + thk * 0.8 + spk * 0.5;
       const glow = 1 + lis * 0.25 + spk * 0.35;
       ctx.globalCompositeOperation = "lighter";
-      for (const s of RINGS.strands) {
+      if (vl) {
+        // A soft luminous body under the strands, brightest near the hole.
+        const steps = 48, a0 = start;
+        ctx.beginPath();
+        for (let k = 0; k <= steps; k++) { const a = a0 + Math.PI * (k / steps), rad = RING_OUTER * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; const px = cx + x * cR - y * sR, py = cy + x * sR + y * cR; if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+        for (let k = steps; k >= 0; k--) { const a = a0 + Math.PI * (k / steps), rad = 1.02 * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; ctx.lineTo(cx + x * cR - y * sR, cy + x * sR + y * cR); }
+        ctx.closePath();
+        const body = ctx.createRadialGradient(cx, cy, r, cx, cy, RING_OUTER * r);
+        body.addColorStop(0, `rgba(${vl.hot},${(front ? 0.42 : 0.24) * glow * ringReveal})`);
+        body.addColorStop(0.45, `rgba(${vl.mid},${(front ? 0.22 : 0.12) * glow * ringReveal})`);
+        body.addColorStop(1, `rgba(${vl.cool},0)`);
+        ctx.fillStyle = body; ctx.fill();
+      }
+      for (const s of vl ? RINGS.dense : RINGS.strands) {
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
         const span = Math.PI * shown;
@@ -831,20 +851,21 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.beginPath(); ctx.arc(cx, cy, hr, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = "lighter";
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
-      for (let i = 0; i < 26; i++) {
-        const rad = hr * (1.02 + i * 0.022 + 0.004 * Math.sin(time * 0.7 + i));
+      for (let i = 0; i < 44; i++) {
+        const rad = hr * (1.02 + i * 0.03 + 0.006 * Math.sin(time * 0.7 + i));
         const start = (i * 0.83 + time * (0.35 - i * 0.008)) % TAU;
         const len = TAU * (0.45 + ((i * 53) % 10) / 22);
-        const a = Math.max(0, (0.75 - i * 0.026)) * glow;
+        const a = Math.max(0, (1 - i * 0.021)) * glow;
         ctx.strokeStyle = `rgba(${i < 6 ? vl.hot : i < 16 ? vl.mid : vl.cool},${a})`;
-        ctx.lineWidth = (i < 3 ? 2.4 : 1.1) * sc;
+        ctx.lineWidth = (i < 4 ? 3.2 : i < 16 ? 1.8 : 1.1) * sc;
         ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.02, rad, roll * 0.2, start, start + len); ctx.stroke();
       }
-      const halo = ctx.createRadialGradient(cx, cy, hr, cx, cy, hr * 1.9);
-      halo.addColorStop(0, `rgba(${vl.ring},${0.32 * glow})`);
+      const halo = ctx.createRadialGradient(cx, cy, hr, cx, cy, hr * 2.3);
+      halo.addColorStop(0, `rgba(${vl.ring},${0.55 * glow})`);
+      halo.addColorStop(0.3, `rgba(${vl.mid},${0.22 * glow})`);
       halo.addColorStop(1, `rgba(${vl.ring},0)`);
       ctx.fillStyle = halo;
-      ctx.beginPath(); ctx.arc(cx, cy, hr * 1.9, 0, TAU); ctx.arc(cx, cy, hr, 0, TAU, true); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, hr * 2.3, 0, TAU); ctx.arc(cx, cy, hr, 0, TAU, true); ctx.fill();
       ctx.strokeStyle = `rgba(${vl.ring},${0.95 * glow})`;
       ctx.lineWidth = 1.8 * sc;
       ctx.beginPath(); ctx.arc(cx, cy, hr * 1.005, 0, TAU); ctx.stroke();
