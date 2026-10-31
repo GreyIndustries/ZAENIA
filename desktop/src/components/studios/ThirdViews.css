@@ -92,3 +92,17 @@
 .sv-chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--zx-panel-2,#13233a);white-space:nowrap}
 .sv-first{font-size:13px;color:var(--zx-muted,#c9d8ea)}
 .sv-first b{color:var(--accent,#e0a353)}
+
+/* Voice trial (Status > Readiness) */
+.sv-trial{margin-top:var(--zx-gap,14px)}
+.sv-trial__head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.sv-trial__head p{margin:4px 0 0;font-size:13px;max-width:70ch}
+.sv-trial__side{display:flex;flex-direction:column;gap:6px;padding:14px}
+.sv-trial__side button{align-self:flex-start;height:34px;padding:0 14px;color:inherit;font:inherit;cursor:pointer;margin-top:4px}
+.sv-trial__side button:disabled{opacity:.45;cursor:default}
+.sv-trial__big{font-size:26px;font-weight:600}.sv-trial__big small{font-size:13px;font-weight:400;color:var(--zx-muted,#9fb6cf)}
+.sv-trial__live{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0;font-size:14px}
+.sv-trial__live button{height:30px;padding:0 12px;color:inherit;font:inherit;cursor:pointer}
+.sv-trial__verdict--pass{background:rgba(79,227,154,.18);color:#a5eeaa}.sv-trial__verdict--fail{background:rgba(255,122,107,.16);color:#ffb4a2}
+.sv-trial details summary{cursor:pointer;font-size:13px;margin-bottom:6px}
+.sv-trial details>button{margin-top:10px;height:32px;padding:0 12px;color:inherit;font:inherit;cursor:pointer}

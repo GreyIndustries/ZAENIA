@@ -112,9 +112,14 @@ def check_ollama_available() -> bool:
 
 
 def set_residency(model: str, keep_alive: str | int, endpoint: str = "http://127.0.0.1:11434") -> bool:
-    """Load a model and keep it for keep_alive, or unload it now with 0. An empty prompt generates nothing."""
+    """Load a model and keep it for keep_alive, or unload it now with 0. An empty prompt generates nothing.
+
+    Loading uses chat's context size: Ollama reloads a model whose num_ctx changes, which would undo the warm-up."""
+    body: dict[str, Any] = {"model": model, "keep_alive": keep_alive}
+    if keep_alive != 0:
+        body["options"] = {"num_ctx": get_brain_settings()["context_window"]}
     try:
-        response = requests.post(endpoint + "/api/generate", json={"model": model, "keep_alive": keep_alive}, timeout=60)
+        response = requests.post(endpoint + "/api/generate", json=body, timeout=60)
         return response.status_code == 200
     except requests.RequestException:
         return False

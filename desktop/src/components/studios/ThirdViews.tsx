@@ -115,7 +115,54 @@ export function StatusReadiness({ telemetry, onStartVoice }: { telemetry: CoreTe
       </div>)}
       {!g.parts.length && <p className="mv-muted">Nothing reported.</p>}
     </section>)}</div>
+    <VoiceTrial/>
   </div>;
+}
+
+type TrialSide = { tries: number; checked: number; accepted: number; acceptedWithoutCheck: number; tooShort: number; failed: number; scoreMin: number | null; scoreMax: number | null; scoreAverage: number | null };
+type TrialView = { round: { who: "owner" | "other"; target: number; count: number } | null; threshold: number | null; verdict: "not_run" | "in_progress" | "pass" | "fail";
+  summary: { owner: TrialSide; other: TrialSide }; attempts: { who: string; accepted: boolean; reason: string; score: number | null; at: number }[] };
+const TRIAL_REASON: Record<string, string> = { recognised: "Recognised", not_recognised: "Not recognised", too_short: "Too short to check",
+  short_reply_in_conversation: "Short reply, no check", check_failed: "Check failed", not_set_up: "Voice not set up" };
+const VERDICT: Record<TrialView["verdict"], string> = { not_run: "Not run yet", in_progress: "In progress", pass: "Passed", fail: "Needs work" };
+
+/** Owner / other-speaker voice trial: counts every app-mic voice check during a round. The gate itself is unchanged. */
+export function VoiceTrial() {
+  const [view, setView] = useState<TrialView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => api<TrialView>("GET", "/api/voice/trial").then(v => { setView(v); setError(null); }, f => setError(errorText(f))), []);
+  useEffect(() => { if (!LIVE_API) return; void load(); const id = window.setInterval(() => void load(), view?.round ? 1500 : 6000); return () => window.clearInterval(id); }, [load, Boolean(view?.round)]);
+  const change = async (body: { action: "start" | "stop" | "clear"; who?: "owner" | "other"; target?: number }) => {
+    try { setView(await api<TrialView>("POST", "/api/voice/trial", body, { desktop: true })); setError(null); } catch (f) { setError(errorText(f)); }
+  };
+  const side = (who: "owner" | "other", label: string, good: (s: TrialSide) => string) => {
+    const s = view?.summary[who];
+    return <div className="zx-inset sv-trial__side">
+      <b>{label}</b>
+      <span className="sv-trial__big">{s ? `${s.accepted} of ${s.checked}` : "–"}<small> let in</small></span>
+      <span className="mv-muted">{s ? good(s) : ""}</span>
+      {s && s.scoreAverage != null && <span className="mv-muted">Scores {s.scoreMin} to {s.scoreMax} (average {s.scoreAverage})</span>}
+      {s && (s.tooShort > 0 || s.failed > 0) && <span className="mv-muted">{s.tooShort} too short, {s.failed} not checked</span>}
+      <button type="button" className="zx-inset" disabled={Boolean(view?.round)} onClick={() => void change({ action: "start", who, target: 10 })}>Start 10 tries</button>
+    </div>;
+  };
+  return <section className="zx-card sv-stack sv-trial">
+    <div className="sv-trial__head"><div><h3 className="mv-muted">VOICE TRIAL</h3>
+      <p className="mv-muted">Turn on Listening, start a round, then speak normal sentences to ZAE (each try is one sentence of about 2 seconds or more). For "someone else", have another person speak, or play a recording of another voice. Only the result and score of each check are kept, not the audio or words.</p></div>
+      <span className={`sv-chip sv-trial__verdict sv-trial__verdict--${view?.verdict ?? "not_run"}`}>{VERDICT[view?.verdict ?? "not_run"]}</span></div>
+    {view?.round && <p className="sv-trial__live" role="status">Listening for <b>{view.round.who === "owner" ? "you" : "someone else"}</b>: try {view.round.count + 1} of {view.round.target}. <button type="button" className="zx-inset" onClick={() => void change({ action: "stop" })}>Stop round</button></p>}
+    <div className="sv-cols">
+      {side("owner", "You (Grey)", s => s.checked ? `${s.checked - s.accepted} wrongly turned away` : "Start this round first")}
+      {side("other", "Someone else", s => s.checked || s.acceptedWithoutCheck ? `${s.accepted + s.acceptedWithoutCheck} wrongly let in${s.acceptedWithoutCheck ? ` (${s.acceptedWithoutCheck} as a short reply)` : ""}` : "Should be 0 let in")}
+    </div>
+    {view?.threshold != null && <p className="mv-muted">Pass mark: a score of {view.threshold} or higher on every part of the sentence. Passing the trial needs at least 5 checked tries each, you let in 8 of 10 times or better, and nobody else let in.</p>}
+    {!!view?.attempts.length && <details><summary>Every try ({view.attempts.length})</summary>
+      {view.attempts.map((a, i) => <div key={i} className="sv-rule"><span><b>{a.who === "owner" ? "You" : "Someone else"}: {TRIAL_REASON[a.reason] ?? a.reason}</b><span className="mv-muted">{new Date(a.at * 1000).toLocaleTimeString()}</span></span><span className="sv-chip">{a.score == null ? (a.accepted ? "let in" : "turned away") : `${a.score} · ${a.accepted ? "let in" : "turned away"}`}</span></div>)}
+      <button type="button" className="zx-inset" onClick={() => void change({ action: "clear" })}>Clear results</button>
+    </details>}
+    {!LIVE_API && <p className="mv-muted">The voice trial needs the server.</p>}
+    {error && <p role="alert">{error}</p>}
+  </section>;
 }
 
 // ---------------------------------------------------------------- Code Doctor: shared bits

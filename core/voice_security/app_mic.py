@@ -116,6 +116,11 @@ class AppMicGate:
     def _note(self, accepted: bool, reason: str, score: float | None) -> dict[str, Any]:
         if reason != "short_reply_in_conversation":
             self.recent.append({"accepted": accepted, "reason": reason, "score": score, "at": time.time()})
+        try:  # the owner/other-speaker trial only watches; it never changes the verdict
+            from core.voice_security.voice_trial import voice_trial
+            voice_trial().note(accepted, reason, score)
+        except Exception:
+            pass
         return {"accepted": accepted, "reason": reason}
 
     def stats(self) -> dict[str, Any]:

@@ -63,6 +63,8 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/status/bar", "status.read"),
         ("GET", r"/api/status/processes", "status.read"),
         ("GET", r"/api/status/uptime", "status.read"),
+        ("GET", r"/api/voice/trial", "status.read"),
+        ("POST", r"/api/voice/trial", "assistant.desktop.manage"),
         # Arena test set (arena_bench.py): your own questions, run on every model and graded against expected answers.
         ("GET", r"/api/arena/bench", "status.read"),
         ("POST", r"/api/arena/bench/questions", "memory.write"),
@@ -294,6 +296,13 @@ class BenchQuestion(BaseModel):
 class BenchRun(BaseModel):
     model_config = {'extra': 'forbid'}
     models: list[str] = Field(min_length=1, max_length=6)
+
+
+class VoiceTrialBody(BaseModel):
+    model_config = {'extra': 'forbid'}
+    action: Literal['start', 'stop', 'clear']
+    who: Literal['owner', 'other'] = 'owner'
+    target: int = Field(default=10, ge=1, le=50)
 
 
 class NearCode(BaseModel):
@@ -567,6 +576,22 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         return {**result, **security_checks().state()}
 
     # Status tab: the overall security level only; the details are on the locked Security tab.
+    @router.get("/api/voice/trial")
+    def voice_trial_view() -> dict[str, Any]:
+        from core.voice_security.voice_trial import voice_trial
+        return voice_trial().view()
+
+    @router.post("/api/voice/trial", dependencies=[Depends(require_desktop)])
+    def voice_trial_change(body: VoiceTrialBody) -> dict[str, Any]:
+        from core.voice_security.voice_trial import voice_trial
+        trial = voice_trial()
+        try:
+            if body.action == "start":
+                return trial.start(body.who, body.target)
+            return trial.stop() if body.action == "stop" else trial.clear()
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from error
+
     @router.get("/api/status/uptime")
     def status_uptime() -> dict[str, Any]:
         from core.api.uptime import uptime
