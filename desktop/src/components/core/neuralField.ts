@@ -594,8 +594,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.globalCompositeOperation = "source-over";
       ctx.globalAlpha = 1;  // sprites drawn just before leave their own alpha set
       const veil = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.02);
-      veil.addColorStop(0, `rgba(8,4,2,${0.45 * reveal})`);
-      veil.addColorStop(0.9, `rgba(8,4,2,${0.62 * reveal})`);
+      veil.addColorStop(0, `rgba(8,4,2,${0.6 * reveal})`);
+      veil.addColorStop(0.9, `rgba(8,4,2,${0.75 * reveal})`);
       veil.addColorStop(1, "rgba(8,4,2,0)");
       ctx.fillStyle = veil;
       ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill();
@@ -611,9 +611,9 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
           const seed = shell * 31 + k * 7;
           const start = turn + (k / segments) * TAU;
           const len = (TAU / segments) * (0.35 + ((seed * 13) % 10) / 18);
-          const a = Math.min(1, (0.6 + ((seed * 7) % 10) / 18) * glow * (1 - shell * 0.04));
+          const a = Math.min(1, (0.85 + ((seed * 7) % 10) / 18) * glow * (1 - shell * 0.03));
           ctx.strokeStyle = `rgba(255,${180 + (seed % 5) * 10},${70 + (seed % 3) * 25},${a})`;
-          ctx.lineWidth = (shell % 3 === 0 ? 3 : 1.7) * sc;
+          ctx.lineWidth = (shell % 3 === 0 ? 4.4 : 2.6) * sc;
           ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * tilt, shell * 0.35, start, start + len); ctx.stroke();
           // Circuit ticks and little blocks along the arc.
           const ticks = Math.max(2, Math.round(len * 6));
