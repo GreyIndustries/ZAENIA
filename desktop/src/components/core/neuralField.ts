@@ -89,7 +89,18 @@ export function computeLayout(width: number, height: number, ringed = false): Fi
 
 /** What ZÆNIA is doing right now; the core reacts the way a live assistant does. */
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking";
-export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean };
+export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean; extras?: CoreExtras };
+
+/**
+ * Core upgrades Grey is choosing from (2026-10-31), switched on one at a time for previews:
+ *  mood   - ring colour follows her state (listening blue, thinking gold, speaking white, resting dim amber)
+ *  pulse  - while she speaks, ripples run out through the rings in time with her voice
+ *  beads  - one bright bead per background job travelling round the middle ring
+ *  tilt   - ring tilt/openness (the hand gesture would turn this live)
+ *  night  - day/night: a soft night side across the sphere and warmer, calmer light after sunset
+ */
+export type CoreExtras = { mood?: boolean; pulse?: boolean; beads?: number; tilt?: number; night?: boolean; voice?: number };
+const MOOD_RGB = { idle: "220,120,50", listening: "120,190,255", thinking: "255,206,96", speaking: "255,246,232" };
 
 /* ------------------------------------------------------------------ */
 /* Saturn rings: the nerves wrapped around the core                    */
@@ -466,10 +477,13 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
 
     // Saturn rings. The far half is drawn first so the sphere hides what passes behind it.
     const ringReveal = state.ringed ? smooth(clamp((pe - 0.35) / 0.65)) : 0;
-    const cR = Math.cos(RING_ROLL), sR = Math.sin(RING_ROLL);
+    const ex = state.extras ?? {};
+    const roll = RING_ROLL + (ex.tilt ?? 0) * -0.35, squash = RING_SQUASH + (ex.tilt ?? 0) * 0.2;
+    const cR = Math.cos(roll), sR = Math.sin(roll);
+    const moodCol = ex.mood ? MOOD_RGB[state.phase ?? "idle"] : null;
     const ringPoint = (s: RingStrand, a: number): [number, number] => {
       const rad = s.radius * (1 + s.wobble * Math.sin(a * s.freq + s.phase + time * 0.4)) * r;
-      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * RING_SQUASH;
+      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash;
       return [cx + x * cR - y * sR, cy + x * sR + y * cR];
     };
     const drawRings = (front: boolean) => {
@@ -482,8 +496,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
         const span = Math.PI * shown;
-        const col = s.blue ? RGB[BLUE] : RGB[AMBER];
-        const depth = front ? 1 : 0.55;
+        const col = moodCol ? (s.blue ? RGB[BLUE] : moodCol) : s.blue ? RGB[BLUE] : RGB[AMBER];
+        const depth = (front ? 1 : 0.55) * (moodCol && (state.phase ?? "idle") === "idle" ? 0.55 : 1);
         ctx.beginPath();
         const steps = Math.round(RING_POINTS / 2);
         for (let k = 0; k <= steps; k++) {
@@ -498,6 +512,27 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         ctx.strokeStyle = `rgba(${col},${Math.min(1, s.alpha * depth * glow)})`;
         ctx.lineWidth = s.width * sc;
         ctx.stroke();
+      }
+      // Her voice rippling out through the rings.
+      if (ex.pulse && spk > 0.01) {
+        const level = 0.55 + 0.45 * (ex.voice ?? (0.5 + 0.5 * Math.sin(time * 9) * Math.sin(time * 3.3)));
+        for (let k = 0; k < 4; k++) {
+          const u = (time * 0.9 + k / 4) % 1;
+          const rad = (1.15 + u * 1.05) * r;
+          ctx.strokeStyle = `rgba(${moodCol ?? RGB[HOT]},${0.75 * spk * level * (1 - u)})`;
+          ctx.lineWidth = (3.4 - 2.4 * u) * sc * level;
+          ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * squash, roll, front ? 0 : Math.PI, front ? Math.PI : TAU); ctx.stroke();
+        }
+      }
+      // A bead per background job, travelling round the middle ring.
+      for (let b = 0; b < (ex.beads ?? 0); b++) {
+        const s = { radius: 1.68, wobble: 0, phase: 0, freq: 1, blue: false, alpha: 1, width: 1, order: 0 };
+        const a = ((time * (0.35 + b * 0.07) + b * (TAU / Math.max(1, ex.beads ?? 1))) % TAU + TAU) % TAU;
+        if ((a < Math.PI) !== front) continue;
+        for (let k = 6; k >= 0; k--) {
+          const [tx, ty] = ringPoint(s, a - k * 0.035);
+          spr(k === 0 ? SW : SA, tx, ty, (k === 0 ? 30 : 16 - k * 1.5) * sc, (k === 0 ? 1 : 0.5 - k * 0.06) * ringReveal * (front ? 1 : 0.6));
+        }
       }
       // Signals running around the rings.
       for (const g of RINGS.signals) {
@@ -737,6 +772,26 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     }
 
     // Module nerves grow out of the core as each module wakes (not with the rings).
+    // Night side: after sunset a soft shadow falls across the sphere from the right.
+    if (ex.night) {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      const shade = ctx.createLinearGradient(cx - r, cy - r * 0.3, cx + r, cy + r * 0.3);
+      shade.addColorStop(0, "rgba(4,6,14,0)");
+      shade.addColorStop(0.45, "rgba(4,6,14,0.1)");
+      shade.addColorStop(0.7, "rgba(4,6,14,0.62)");
+      shade.addColorStop(1, "rgba(4,6,14,0.85)");
+      ctx.fillStyle = shade;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.01, 0, TAU); ctx.fill();
+      // City-light glints on the dark side.
+      for (let k = 0; k < 40; k++) {
+        const ang = k * 2.39996, rr = r * Math.sqrt((k + 0.5) / 40) * 0.95;
+        const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr;
+        if (x < cx + r * 0.15) continue;
+        spr(SA, x, y, 5 * sc, 0.55 + 0.35 * Math.sin(time * 2 + k));
+      }
+      ctx.globalAlpha = 1;
+    }
     if (state.ringed) drawRings(true);
     if (!state.ringed) geo.forEach((b, bi) => {
       const wake = nodeWakeLevel(state.progress, bi);

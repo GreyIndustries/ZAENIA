@@ -3,7 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { nodeWakeLevel } from "../../core/coreWake";
 import type { CoreTelemetry, ModulePhase } from "../../core/coreTelemetry";
 import { BRANCHES, computeLayout, createNeuralField } from "./neuralField";
-import type { BranchKey, FieldLayout, NeuralField, VoicePhase } from "./neuralField";
+import type { BranchKey, CoreExtras, FieldLayout, NeuralField, VoicePhase } from "./neuralField";
 import "./NeuralCore.css";
 
 type Section = "status" | "security" | "tasks" | "calendar" | "files" | "system";
@@ -84,6 +84,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const [layout, setLayout] = useState<FieldLayout | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const reduced = usePrefersReducedMotion();
+  // Preview switches for the core upgrades (localStorage "zaenia.corePreview": {"mood":true,"phase":"listening",...}).
+  const [preview] = useState<{ phase?: VoicePhase } & CoreExtras>(() => { try { return JSON.parse(localStorage.getItem("zaenia.corePreview") ?? "{}"); } catch { return {}; } });
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
@@ -108,7 +110,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed });
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase: preview.phase ?? phase, ringed, extras: preview });
   }, [startup.progress, animate, paused, processing, phase, layout, ringed]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
