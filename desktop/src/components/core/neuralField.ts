@@ -592,6 +592,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       if (reveal <= 0) return;
       // Quiet the neural web so the hologram reads first; it stays faintly visible inside, like the planet's body.
       ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;  // sprites drawn just before leave their own alpha set
       const veil = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.02);
       veil.addColorStop(0, `rgba(8,4,2,${0.45 * reveal})`);
       veil.addColorStop(0.9, `rgba(8,4,2,${0.62 * reveal})`);
