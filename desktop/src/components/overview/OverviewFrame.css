@@ -249,3 +249,11 @@
 .ov-cat__panel li small{font-size:11px;color:var(--zx-muted,#9fb6cf);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ov-cat__panel li em{font-style:normal;font-size:11px;color:var(--zx-muted,#9fb6cf);white-space:nowrap}
 @container (max-width:980px){.ov-cat{width:100%;height:auto}.ov-cat__grid{grid-template-columns:minmax(0,1fr);grid-auto-rows:auto}.ov-cat__grid>:first-child{grid-row:auto}.ov-catwrap::before{background:rgba(3,6,12,.6)}}
+
+/* Grey, 2026-10-31: darker dashboard cards whatever the window-opacity setting, and the core in its own panel. */
+.ov .ov-card.zx-card{background:linear-gradient(rgba(4,8,15,.74),rgba(4,8,15,.74)),var(--zx-panel,rgba(12,21,36,.86));backdrop-filter:blur(12px) saturate(1.1);-webkit-backdrop-filter:blur(12px) saturate(1.1);border-color:color-mix(in srgb,var(--zx-line,#1f3149) 80%,#fff 6%)}
+.ov-center>.progress-stage{border-radius:calc(var(--zx-radius,14px) * 1.6);border:1px solid color-mix(in srgb,var(--zx-line,#1f3149) 80%,#fff 6%);
+  background:radial-gradient(ellipse 60% 62% at 50% 50%,color-mix(in srgb,var(--accent,#e0a353) 10%,rgba(6,10,18,.55)) 0,rgba(4,8,15,.82) 62%,rgba(3,6,12,.9) 100%);
+  box-shadow:0 20px 60px rgba(0,0,0,.45),inset 0 0 80px rgba(0,0,0,.5);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.ov--zoomed .ov-center>.progress-stage,.ov--returning .ov-center>.progress-stage{border-color:transparent;background:transparent;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.ov--calm .ov-center>.progress-stage{border-color:transparent;background:transparent;box-shadow:none;backdrop-filter:none}
