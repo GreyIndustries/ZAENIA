@@ -98,7 +98,7 @@ export type FieldState = { progress: number; motion: boolean; processing: boolea
  */
 type VoidLook = { roll: number; squash: number; hot: string; mid: string; cool: string; ring: string; hole: number };
 const VOID_LOOKS: Record<string, VoidLook> = {
-  "void-ember": { roll: -0.42, squash: 0.24, hot: "255,224,160", mid: "255,150,60", cool: "214,84,28", ring: "255,200,120", hole: 0.74 },
+  "void-ember": { roll: -0.5, squash: 0.38, hot: "255,224,160", mid: "255,150,60", cool: "214,84,28", ring: "255,200,120", hole: 0.74 },
   "void-white": { roll: -1.02, squash: 0.15, hot: "255,250,244", mid: "255,214,184", cool: "196,128,92", ring: "255,244,232", hole: 0.7 },
   "void-flat": { roll: -0.06, squash: 0.09, hot: "255,240,244", mid: "255,186,170", cool: "170,150,255", ring: "255,236,240", hole: 0.76 },
 };
@@ -108,6 +108,7 @@ const VOID_LOOKS: Record<string, VoidLook> = {
 /* ------------------------------------------------------------------ */
 
 export const RING_OUTER = 2.15;
+const DISK_OUTER = 2.5;   // the black-hole disk reaches a little wider (Grey: "wider rings")
 const RING_SQUASH = 0.27;   // how open the rings look (0 = edge on)
 const RING_ROLL = -0.33;    // tilt of the ring plane on screen
 const RING_POINTS = 120;
@@ -134,7 +135,7 @@ function buildRings(): { strands: RingStrand[]; signals: RingSignal[]; dense: Ri
   const dense: RingStrand[] = [];
   for (let i = 0; i < 90; i++) {
     const u = i / 89;
-    dense.push({ radius: 1.04 + u * (RING_OUTER - 1.04) + (rnd() - 0.5) * 0.01, wobble: 0.003 + rnd() * 0.02, phase: rnd() * TAU,
+    dense.push({ radius: 1.04 + u * (DISK_OUTER - 1.04) + (rnd() - 0.5) * 0.01, wobble: 0.003 + rnd() * 0.02, phase: rnd() * TAU,
       freq: 2 + Math.floor(rnd() * 7), blue: false, alpha: (0.35 + rnd() * 0.65) * (1 - u * 0.55), width: 0.5 + rnd() * 2.2 * (1 - u * 0.5), order: rnd() * 0.6 });
   }
   return { strands, signals, dense };
@@ -503,10 +504,10 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         // A soft luminous body under the strands, brightest near the hole.
         const steps = 48, a0 = start;
         ctx.beginPath();
-        for (let k = 0; k <= steps; k++) { const a = a0 + Math.PI * (k / steps), rad = RING_OUTER * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; const px = cx + x * cR - y * sR, py = cy + x * sR + y * cR; if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
+        for (let k = 0; k <= steps; k++) { const a = a0 + Math.PI * (k / steps), rad = DISK_OUTER * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; const px = cx + x * cR - y * sR, py = cy + x * sR + y * cR; if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); }
         for (let k = steps; k >= 0; k--) { const a = a0 + Math.PI * (k / steps), rad = 1.02 * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; ctx.lineTo(cx + x * cR - y * sR, cy + x * sR + y * cR); }
         ctx.closePath();
-        const body = ctx.createRadialGradient(cx, cy, r, cx, cy, RING_OUTER * r);
+        const body = ctx.createRadialGradient(cx, cy, r, cx, cy, DISK_OUTER * r);
         body.addColorStop(0, `rgba(${vl.hot},${(front ? 0.42 : 0.24) * glow * ringReveal})`);
         body.addColorStop(0.45, `rgba(${vl.mid},${(front ? 0.22 : 0.12) * glow * ringReveal})`);
         body.addColorStop(1, `rgba(${vl.cool},0)`);
@@ -851,18 +852,18 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.beginPath(); ctx.arc(cx, cy, hr, 0, TAU); ctx.fill();
       ctx.globalCompositeOperation = "lighter";
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
-      for (let i = 0; i < 44; i++) {
+      for (let i = 0; i < 18; i++) {
         const rad = hr * (1.02 + i * 0.03 + 0.006 * Math.sin(time * 0.7 + i));
         const start = (i * 0.83 + time * (0.35 - i * 0.008)) % TAU;
         const len = TAU * (0.45 + ((i * 53) % 10) / 22);
-        const a = Math.max(0, (1 - i * 0.021)) * glow;
+        const a = Math.max(0, (0.5 - i * 0.026)) * glow;
         ctx.strokeStyle = `rgba(${i < 6 ? vl.hot : i < 16 ? vl.mid : vl.cool},${a})`;
-        ctx.lineWidth = (i < 4 ? 3.2 : i < 16 ? 1.8 : 1.1) * sc;
+        ctx.lineWidth = (i < 3 ? 1.8 : 1) * sc;
         ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.02, rad, roll * 0.2, start, start + len); ctx.stroke();
       }
       const halo = ctx.createRadialGradient(cx, cy, hr, cx, cy, hr * 2.3);
-      halo.addColorStop(0, `rgba(${vl.ring},${0.55 * glow})`);
-      halo.addColorStop(0.3, `rgba(${vl.mid},${0.22 * glow})`);
+      halo.addColorStop(0, `rgba(${vl.ring},${0.14 * glow})`);
+      halo.addColorStop(0.3, `rgba(${vl.mid},${0.05 * glow})`);
       halo.addColorStop(1, `rgba(${vl.ring},0)`);
       ctx.fillStyle = halo;
       ctx.beginPath(); ctx.arc(cx, cy, hr * 2.3, 0, TAU); ctx.arc(cx, cy, hr, 0, TAU, true); ctx.fill();
