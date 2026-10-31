@@ -902,8 +902,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.globalCompositeOperation = "source-over";
       const shadow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.97);
-      shadow.addColorStop(0, `rgba(0,0,0,${0.97 * pe})`);
-      shadow.addColorStop(0.85, `rgba(0,0,0,${0.9 * pe})`);
+      shadow.addColorStop(0, `rgba(0,0,0,${0.93 * pe})`);
+      shadow.addColorStop(0.7, `rgba(0,0,0,${0.82 * pe})`);
       shadow.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = shadow;
       ctx.beginPath(); ctx.arc(cx, cy, r * 0.97, 0, TAU); ctx.fill();
