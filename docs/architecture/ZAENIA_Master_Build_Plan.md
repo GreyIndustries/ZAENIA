@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.35  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.36  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1170,3 +1170,15 @@ Grey reported that scanned barcodes did not pull up the product, and asked to us
 - Fix: the lookup uses API v2 (`status` 1/0, full nutriments), treats a 404 as a miss, and retries once with or without the leading 0 (12 ↔ 13 digits). Checked live against Diet Coke (049000028911), Doritos (0028400090896) and Nutella (3017620422003); two new tests in `nutrition_test.py`.
 - Photos: the live scanner has a **Use a photo** button that opens the photo library. The Scan food page's photo field no longer forces the camera (`capture` removed), so the phone offers both taking a photo and picking one. `readPhoto` also tries five closer crops, so a small barcode in a wider photo is found.
 - Tests: 863 Python tests pass (14 skipped), type check clean, node tests pass.
+
+### 28.38 Brain tuning finished, voice trial ready, category zoom fills the screen — Claude, 2026-10-31 (v3.36)
+
+Grey asked to finish brain tuning (multi-brain plan Phase 6) and get the owner/other-speaker voice trial ready, then to make the category zoom's tiles fill the screen and the zoomed core look better.
+
+- **Talk stays loaded:** `TALK_KEEP_ALIVE` is 24 h. Game mode still frees it: an explicit keep-alive now goes through `_game_keep_alive` in `local_llm.chat_payload`, which it previously bypassed.
+- **Study unloads after each research job:** `research.agent._study_done` unloads qwen3:14b, reloads Talk (`local_llm.set_residency`, with chat's `num_ctx` so Ollama doesn't reload it again) and warms the topic embedder. Not done in game mode.
+- **Topic checks use Talk's model:** `conversation_threads._chat_json` (the "does this continue the subject?" judge) used the old default llama3.1:8b, which loaded 5 GB next to Talk on many turns and cost about 5 s after research. It now uses qwen3.5:4b with chat's context size.
+- **Measured (multi-brain plan 8.2):** Talk warm 10 of 10 under 2 s (median 0.64 s, max 0.74 s); cold 3.7 s; first reply after a research job 0.85–1.9 s (was 5–10 s); Seek web 5.0–11.0 s to first text with sources shown as links in chat; Study 18.2 s for 241 words.
+- **Voice trial:** Status › Readiness has a Voice trial card. A round ("You" or "Someone else", 10 tries) records each app-mic voice check: accepted or not, the reason and the score; no audio or words. `core/voice_security/voice_trial.py`, `GET/POST /api/voice/trial` (POST desktop-only). The gate, threshold and rejection behavior are unchanged; starting a round clears the 45 s short-reply window, and any short reply still accepted during a round is counted. Pass = at least 5 checked tries each, owner let in 8 of 10 or better, nobody else let in. Results in `data/voice_trial.json`.
+- **Category zoom:** the tiles take two-thirds of the screen at full height (first panel spans two rows with 3 or 5 panels, 3 columns with 6) and show up to 8 items. The core zooms to 2.2× instead of 3.4× with a slight depth-of-field blur, a slow drift and a scrim behind the tiles. A failed panel retries once and has a Try again link.
+- **Tests:** 872 Python tests pass (14 skipped); type check clean.

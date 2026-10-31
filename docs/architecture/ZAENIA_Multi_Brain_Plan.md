@@ -232,3 +232,17 @@ The Conductor implementation through Phase 5 is merged, installed and live. Cont
 6. **Release only if code changes:** run affected tests, `npm run build`, `npm run build:web`, and `npm run tauri build -- --no-bundle`; update `desktop/dist-web` and the installed app only under `AGENTS.md` release instructions. Preserve the recovery tag and never commit secrets, credentials or personal data.
 
 **Runtime:** the production Core is live on `127.0.0.1:8766`; the Vite development server on `127.0.0.1:1420` is stopped. In the current sandbox, Python fixture tests must set `TEMP` and `TMP` to a writable directory inside the project. Latest verified build/test status is in `HANDOFF_2026-10-30.md` section 7.
+
+### 8.2 Phase 6 tuning — Claude, 2026-10-31
+
+Changes: Talk keep-alive 24 h (game mode still frees it); Study unloaded and Talk plus the embedder reloaded after each research job; the topic judge moved from llama3.1:8b to Talk's qwen3.5:4b.
+
+| Check | Result |
+|---|---|
+| Talk, 10 warm prompts | **10 of 10 under 2 s**; median 0.64 s, max 0.74 s |
+| Talk, cold start | 3.69 s |
+| First Talk reply after a research job | 0.85–1.9 s over three runs (was 5–10 s) |
+| Seek web lookup (3 questions) | 5.0–11.0 s to first text; sources reach chat as links |
+| Keep on CPU while Talk answers | 0.6 s for later turns; the first turn after Seek was 6.9 s because the running server still loaded llama3.1:8b for topic checks (fixed in this release) |
+| Study | 241 words in 18.2 s |
+| Voice owner/other speaker | Ready to run from Status › Readiness › Voice trial |
