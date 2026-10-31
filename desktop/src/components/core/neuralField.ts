@@ -540,23 +540,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         haze.addColorStop(1, "rgba(255,214,224,0)");
         ctx.fillStyle = haze;
         ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.04, r * 1.95, r * 1.6, 0, Math.PI, TAU); ctx.fill();
-        for (let i = 0; i < 12; i++) {
-          const rx = r * (1.1 + i * 0.055), ry = r * (0.98 + i * 0.05);
-          const a = Math.min(1, (1.25 - i * 0.085) * glow);
-          const g = ctx.createLinearGradient(cx - rx, cy, cx + rx, cy);
-          g.addColorStop(0, `rgba(255,190,200,${a * 0.25})`);
-          g.addColorStop(0.35, `rgba(255,236,240,${a})`);
-          g.addColorStop(0.65, `rgba(255,236,240,${a * 0.9})`);
-          g.addColorStop(1, `rgba(255,190,200,${a * 0.2})`);
-          ctx.strokeStyle = g;
-          ctx.lineWidth = (i < 4 ? 4.2 : 2.2) * sc;
-          ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.04, rx, ry, 0, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
-        }
-        for (let i = 0; i < 5; i++) {
-          ctx.strokeStyle = `rgba(255,210,220,${(0.38 - i * 0.06) * glow})`;
-          ctx.lineWidth = 1.4 * sc;
-          ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.03, r * (1.05 + i * 0.04), r * (0.94 + i * 0.03), 0, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
-        }
+        // (Grey, 2026-10-31: no arch lines above or below; the soft haze, the glow beneath and the rim stay.)
         // Light pouring out beneath the hole.
         ctx.save();
         ctx.translate(cx, cy + r * 0.95); ctx.scale(0.42, 1.6);
@@ -567,13 +551,6 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         ctx.fillStyle = pour;
         ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, TAU); ctx.fill();
         ctx.restore();
-        for (let i = 0; i < 9; i++) {
-          const x = cx + (i - 4) * r * 0.07, len = r * (0.5 + ((i * 37) % 9) / 9 * 0.9);
-          const g = ctx.createLinearGradient(x, cy + r * 0.7, x, cy + r * 0.7 + len);
-          g.addColorStop(0, `rgba(255,236,242,${0.5 * glow})`); g.addColorStop(1, "rgba(255,236,242,0)");
-          ctx.strokeStyle = g; ctx.lineWidth = (i % 3 === 0 ? 2.2 : 1) * sc;
-          ctx.beginPath(); ctx.moveTo(x, cy + r * 0.7); ctx.lineTo(x + (i - 4) * r * 0.02, cy + r * 0.7 + len); ctx.stroke();
-        }
         ctx.strokeStyle = `rgba(255,246,250,${0.85 * glow})`;
         ctx.lineWidth = 1.6 * sc;
         ctx.beginPath(); ctx.arc(cx, cy, r * 1.01, 0, TAU); ctx.stroke();
