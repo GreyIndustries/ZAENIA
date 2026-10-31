@@ -179,6 +179,8 @@ def transcribe(audio: Any, wake: bool = False) -> dict[str, Any]:
             from core.personal_memory.speech_style import mark_spoken, speech_style
             mark_spoken(result["text"])
             speech_style().observe_speech(len(result["text"].split()), voiced_seconds(pcm))
+            from core.personal_memory.voice_tone import observe
+            observe(pcm, len(result["text"].split()))  # Ædaptive: how he sounds this turn
         except Exception:
             pass
     return result

@@ -527,6 +527,11 @@ class BrainService:
             style = speech_style().hint()
             if style:
                 owner = f"{owner}\n\n{style}" if owner else style
+            # Ædaptive: how he sounded just now, if he spoke this turn.
+            from core.personal_memory.voice_tone import hint as tone_hint
+            tone = tone_hint()
+            if tone:
+                owner = f"{owner}\n\n{tone}" if owner else tone
         except Exception:
             owner = None
         screen = None

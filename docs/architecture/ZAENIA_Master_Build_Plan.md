@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.44  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.45  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1249,3 +1249,13 @@ Grey: "Lets fill in the blank spaces" (the dashboard, with empty rail space unde
 ### 28.46 Home in the top bar — Claude, 2026-10-31 (v3.44)
 
 Grey asked for Home out of the ZAENIA menu and into the top bar next to the ZAENIA box. Home is now its own button right of that box (icon over the word, accent underline while the dashboard is showing); the menu no longer lists it. Desktop only; the phone keeps its bottom bar. Checked in the preview.
+
+### 28.47 New name, and Ædaptive: reading how Grey sounds — Claude, 2026-10-31 (v3.45)
+
+Grey renamed the acronym: **ZÆNIA = Zack's Ædaptive Neural Intelligence Assystem**. Ædaptive means emotional adaptability, "able to detect through my voice any emotional or contextual info and knows how to respond to assist me"; Assystem means assistant system.
+
+- **Name:** the header subtitle, the identity reply ("what does ZAENIA stand for?") and the reasoning engine's instructions use the new wording.
+- **Ædaptive (`core/personal_memory/voice_tone.py`):** for every spoken turn that passed Grey's voice check (app mic in `ui_voice.transcribe`, PC voice in `runtime.deliver`), four measures are taken from the audio: loudness, median pitch, pitch movement and pace. Each is compared with his own running average (8 turns before anything is judged; turns that stand out move the average less). Clear differences (pace ±20 %, loudness ±4 dB, pitch +1.5 semitones, pitch movement ±30–40 %) become a tentative reading: rushed or under pressure → brief, calm, direct; tired or low → gentle and short, offer to take something off his plate; energized → match the energy; and so on.
+- The reading lasts 45 s and reaches the brain as one context paragraph next to "how Zack talks" (`brain_service`), telling it not to name or diagnose his mood unless asked, never to claim feelings itself, and to let his words win.
+- Only the four numbers and the turn count are stored (`data/personal_memory/voice_tone.json`); no audio, no words. The last reading is shared between the app server and the PC voice through `data/ui/voice_tone_now.json`.
+- Tests: 885 Python OK (14 skipped), `voice_tone_test` 5 (synthetic voices: pitch and loudness found, nothing judged before the baseline, a rushed turn and a tired turn, numbers only). Needs a PC voice restart.

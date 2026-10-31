@@ -1378,7 +1378,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         <button type="button" className="identity-header__panel" onClick={() => setBrandOpen(open => !open)} aria-expanded={brandOpen} aria-haspopup="menu"
           aria-label="ZÆNIA: show every part of the app and its status">
           <span className="brand-glyph"><Icon name="system" size={29}/></span>
-          <span className="brand-type"><strong>ZÆNIA</strong><span className={showExpandedIdentity ? "brand-type__definition" : "brand-type__subtitle"}>{showExpandedIdentity ? ZAENIA_IDENTITY_DESCRIPTION : "Z.A.E.N.I.A. · Zack’s Ædaptive, Neural, Intelligent Agent"}</span></span>
+          <span className="brand-type"><strong>ZÆNIA</strong><span className={showExpandedIdentity ? "brand-type__definition" : "brand-type__subtitle"}>{showExpandedIdentity ? ZAENIA_IDENTITY_DESCRIPTION : "Z.Æ.N.I.A. · Zack’s Ædaptive Neural Intelligence Assystem"}</span></span>
         </button>
         {brandOpen && <div className="brand-menu__drop" role="menu" aria-label="Parts of ZÆNIA">
           <div className="brand-menu__group">WORKSPACE</div>

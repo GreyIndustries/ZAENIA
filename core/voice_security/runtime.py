@@ -61,6 +61,13 @@ class SecureRuntime:
         from core.conversation_runtime.fluid_runtime_test import StreamingResponse
         from core.voice_listener.attention import is_quiet_acknowledgement
         self.identity.authorize()
+        # Ædaptive: how he sounds this turn (numbers only), before the turn is answered or handed to the app.
+        audio=getattr(self,'_turn_audio',None);self._turn_audio=None
+        if audio:
+            try:
+                from core.personal_memory.voice_tone import observe
+                observe(audio,len(str(text).split()))
+            except Exception:pass
         # Finish bookkeeping here as well as in the heartbeat: a follow-up can
         # arrive before the next half-second heartbeat after a long reply.
         if self._reply_was_active and self.response is not None and self.response.finished_event.is_set():
@@ -231,6 +238,7 @@ class SecureRuntime:
             if heartbeat is not None:
                 try:heartbeat.report('hearing',force=True)
                 except Exception:pass
+            self._turn_audio=audio
             self.pipeline.process(audio,microphone_identity())
             # Track whether the owner's voice is being recognised, so the app
             # can keep its own mic on when PC Voice keeps rejecting him.

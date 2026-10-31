@@ -1,7 +1,7 @@
 /** Public identity metadata. No authorization or private information is exposed. */
-export const ZAENIA_IDENTITY_DESCRIPTION = "Zack’s Ædaptive, Neural, Intelligent Agent";
+export const ZAENIA_IDENTITY_DESCRIPTION = "Zack’s Ædaptive Neural Intelligence Assystem";
 export const ZAENIA_IDENTITY_REPLY =
-  "I am ZÆNIA, Zack’s Ædaptive, Neural, Intelligent Agent. My everyday role is your Assisting System.";
+  "I am ZÆNIA: Zack’s Ædaptive Neural Intelligence Assystem. Ædaptive means emotional adaptability: I listen to how you sound as well as what you say, and adjust how I help. Assystem means assistant system.";
 
 /** Only direct questions about the assistant's identity are intercepted locally. */
 export function isZaeniaIdentityQuestion(input: string): boolean {
