@@ -535,16 +535,21 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
       if (garg) {
         // The far disk, lifted by gravity into a bright arch over the top of the hole, and a thinner one beneath.
+        const haze = ctx.createRadialGradient(cx, cy - r * 0.2, r * 0.9, cx, cy - r * 0.2, r * 1.9);
+        haze.addColorStop(0, `rgba(255,214,224,${0.32 * glow})`);
+        haze.addColorStop(1, "rgba(255,214,224,0)");
+        ctx.fillStyle = haze;
+        ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.04, r * 1.95, r * 1.6, 0, Math.PI, TAU); ctx.fill();
         for (let i = 0; i < 12; i++) {
           const rx = r * (1.1 + i * 0.055), ry = r * (0.98 + i * 0.05);
-          const a = (0.95 - i * 0.07) * glow;
+          const a = Math.min(1, (1.25 - i * 0.085) * glow);
           const g = ctx.createLinearGradient(cx - rx, cy, cx + rx, cy);
           g.addColorStop(0, `rgba(255,190,200,${a * 0.25})`);
           g.addColorStop(0.35, `rgba(255,236,240,${a})`);
           g.addColorStop(0.65, `rgba(255,236,240,${a * 0.9})`);
           g.addColorStop(1, `rgba(255,190,200,${a * 0.2})`);
           ctx.strokeStyle = g;
-          ctx.lineWidth = (i < 3 ? 3.2 : 1.8) * sc;
+          ctx.lineWidth = (i < 4 ? 4.2 : 2.2) * sc;
           ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.04, rx, ry, 0, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
         }
         for (let i = 0; i < 5; i++) {
@@ -822,7 +827,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       // The event horizon: the centre of the core falls dark, its nerves glowing around the edge.
       const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * (garg ? 1.0 : 0.86));
       hole.addColorStop(0, `rgba(0,0,0,${(garg ? 0.99 : 0.94) * pe})`);
-      hole.addColorStop(0.6, `rgba(2,1,1,${0.7 * pe})`);
+      hole.addColorStop(garg ? 0.82 : 0.6, `rgba(2,1,1,${(garg ? 0.97 : 0.7) * pe})`);
       hole.addColorStop(1, "rgba(0,0,0,0)");
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = hole;
@@ -892,6 +897,29 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.globalAlpha = 0.36;
       ctx.drawImage(bloom, 0, 0, canvas.width, canvas.height);
       ctx.globalAlpha = 1;
+    }
+    if (state.ringed && state.look === "gargantua") {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalCompositeOperation = "source-over";
+      const shadow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.97);
+      shadow.addColorStop(0, `rgba(0,0,0,${0.97 * pe})`);
+      shadow.addColorStop(0.85, `rgba(0,0,0,${0.9 * pe})`);
+      shadow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = shadow;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.97, 0, TAU); ctx.fill();
+      // The near side of the disk crosses in front of the shadow.
+      ctx.save(); ctx.beginPath(); ctx.rect(0, cy - r * 0.2, W, r * 0.45); ctx.clip();
+      const glowAgain = (1 + lis * 0.25 + spk * 0.35);
+      for (const s of RINGS.strands) {
+        if (s.radius > 1.45) continue;
+        ctx.beginPath();
+        for (let k = 0; k <= 40; k++) { const [x, y] = ringPoint(s, Math.PI * (k / 40)); if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+        ctx.strokeStyle = `rgba(255,236,240,${Math.min(1, s.alpha * glowAgain) * 0.8})`;
+        ctx.lineWidth = s.width * sc;
+        ctx.globalCompositeOperation = "lighter";
+        ctx.stroke();
+      }
+      ctx.restore();
     }
     ctx.globalCompositeOperation = "source-over";
   };
