@@ -50,8 +50,14 @@ const COMPACT_RING: Record<BranchKey, [number, number]> = {
 };
 
 /** Places the core and its six orbs so the outer label plates always fit. */
-export function computeLayout(width: number, height: number): FieldLayout {
+export function computeLayout(width: number, height: number, ringed = false): FieldLayout {
   const compact = width < 760;
+  if (ringed) {
+    // Grey, 2026-10-31: the core by itself, its nerves wrapped around it like Saturn's rings (outer ring 2.15 r).
+    const cx = width / 2, cy = height * (compact ? 0.5 : 0.47);
+    const r = Math.max(48, Math.min((width / 2 - 12) / RING_OUTER, height * (compact ? 0.4 : 0.36), cy - 14, 300));
+    return { width, height, cx, cy, r, orbR: 0, compact, orbs: [] };
+  }
   if (compact) {
     const orbR = clamp(width * 0.06, 20, 26);
     const cx = width / 2, cy = height / 2;
@@ -83,7 +89,37 @@ export function computeLayout(width: number, height: number): FieldLayout {
 
 /** What ZÆNIA is doing right now; the core reacts the way a live assistant does. */
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking";
-export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase };
+export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean };
+
+/* ------------------------------------------------------------------ */
+/* Saturn rings: the nerves wrapped around the core                    */
+/* ------------------------------------------------------------------ */
+
+export const RING_OUTER = 2.15;
+const RING_SQUASH = 0.27;   // how open the rings look (0 = edge on)
+const RING_ROLL = -0.33;    // tilt of the ring plane on screen
+const RING_POINTS = 120;
+type RingStrand = { radius: number; wobble: number; phase: number; freq: number; blue: boolean; alpha: number; width: number; order: number };
+type RingSignal = { strand: number; angle: number; speed: number; blue: boolean };
+
+function buildRings(): { strands: RingStrand[]; signals: RingSignal[] } {
+  const rnd = seeded(4242);
+  const strands: RingStrand[] = [];
+  // Three bands with Saturn-like gaps between them: inner (faint), main (bright), outer (thin).
+  const bands: [number, number, number, number][] = [[1.28, 1.42, 7, 0.32], [1.5, 1.86, 16, 0.72], [1.94, RING_OUTER, 6, 0.42]];
+  for (const [from, to, count, strength] of bands) {
+    for (let i = 0; i < count; i++) {
+      const u = (i + rnd() * 0.8) / count;
+      strands.push({ radius: from + (to - from) * u, wobble: 0.004 + rnd() * 0.012, phase: rnd() * TAU, freq: 2 + Math.floor(rnd() * 5),
+        blue: rnd() < 0.18, alpha: strength * (0.45 + rnd() * 0.55), width: 0.6 + rnd() * (strength > 0.6 ? 1.3 : 0.6), order: rnd() });
+    }
+  }
+  const signals: RingSignal[] = [];
+  for (let i = 0; i < 26; i++) {
+    signals.push({ strand: Math.floor(rnd() * strands.length), angle: rnd() * TAU, speed: (0.12 + rnd() * 0.22) * (rnd() < 0.85 ? 1 : -1), blue: rnd() < 0.2 });
+  }
+  return { strands, signals };
+}
 
 export type NeuralField = {
   setLayout(layout: FieldLayout): void;
@@ -372,6 +408,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
   if (!ctx) return null;
   const S = buildSphere();
   const SA = sprite(255, 165, 55), SB = sprite(120, 165, 255), SW = sprite(255, 238, 196);
+  const RINGS = buildRings();
   const bloom = document.createElement("canvas");
   const bctx = bloom.getContext("2d");
   const canBlur = !!bctx && "filter" in bctx;
@@ -426,6 +463,55 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     ctx.clearRect(0, 0, W, H);
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+
+    // Saturn rings. The far half is drawn first so the sphere hides what passes behind it.
+    const ringReveal = state.ringed ? smooth(clamp((pe - 0.35) / 0.65)) : 0;
+    const cR = Math.cos(RING_ROLL), sR = Math.sin(RING_ROLL);
+    const ringPoint = (s: RingStrand, a: number): [number, number] => {
+      const rad = s.radius * (1 + s.wobble * Math.sin(a * s.freq + s.phase + time * 0.4)) * r;
+      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * RING_SQUASH;
+      return [cx + x * cR - y * sR, cy + x * sR + y * cR];
+    };
+    const drawRings = (front: boolean) => {
+      if (ringReveal <= 0) return;
+      const start = front ? 0 : Math.PI;
+      const rate = (state.processing ? 1.8 : 1) + thk * 0.8 + spk * 0.5;
+      const glow = 1 + lis * 0.25 + spk * 0.35;
+      ctx.globalCompositeOperation = "lighter";
+      for (const s of RINGS.strands) {
+        const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
+        if (shown <= 0) continue;
+        const span = Math.PI * shown;
+        const col = s.blue ? RGB[BLUE] : RGB[AMBER];
+        const depth = front ? 1 : 0.55;
+        ctx.beginPath();
+        const steps = Math.round(RING_POINTS / 2);
+        for (let k = 0; k <= steps; k++) {
+          const a = start + span * (k / steps);
+          const [x, y] = ringPoint(s, a);
+          if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = `rgba(${col},${s.alpha * 0.16 * depth * glow})`;
+        ctx.lineWidth = s.width * 3.2 * sc;
+        ctx.stroke();
+        ctx.strokeStyle = `rgba(${col},${Math.min(1, s.alpha * depth * glow)})`;
+        ctx.lineWidth = s.width * sc;
+        ctx.stroke();
+      }
+      // Signals running around the rings.
+      for (const g of RINGS.signals) {
+        const s = RINGS.strands[g.strand];
+        const a = ((g.angle + time * g.speed * rate + spin * 0.6) % TAU + TAU) % TAU;
+        const isFront = a < Math.PI;
+        if (isFront !== front) continue;
+        const [x, y] = ringPoint(s, a);
+        spr(g.blue ? SB : SW, x, y, (front ? 13 : 9) * sc, (front ? 0.95 : 0.5) * ringReveal);
+      }
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    };
+    drawRings(false);
 
     // Dark, warm body blocks the backdrop so the network reads as a solid ball.
     const body = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
@@ -635,7 +721,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     }
 
     // Side particle streams drift from the sphere toward the stage edges.
-    const fanReach = smooth(clamp((pe - 0.55) / 0.45));
+    const fanReach = state.ringed ? 0 : smooth(clamp((pe - 0.55) / 0.45));
     if (fanReach > 0) {
       for (const fan of fans) {
         for (const p of fan.particles) {
@@ -650,8 +736,9 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       }
     }
 
-    // Module nerves grow out of the core as each module wakes.
-    geo.forEach((b, bi) => {
+    // Module nerves grow out of the core as each module wakes (not with the rings).
+    if (state.ringed) drawRings(true);
+    if (!state.ringed) geo.forEach((b, bi) => {
       const wake = nodeWakeLevel(state.progress, bi);
       if (wake <= 0) return;
       const upto = Math.max(1, Math.round(wake * (STRAND_SAMPLES - 1)));
@@ -769,7 +856,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       canvas.height = Math.max(1, Math.round(next.height * dpr));
       bloom.width = Math.max(1, Math.round(next.width * 0.5));
       bloom.height = Math.max(1, Math.round(next.height * 0.5));
-      geo = BRANCHES.map((b, i) => buildBranch(b, next.orbs[i], next, i));
+      geo = next.orbs.length ? BRANCHES.map((b, i) => buildBranch(b, next.orbs[i], next, i)) : [];
       fans = next.compact ? [] : [buildFan(-1, next), buildFan(1, next)];
       dirty = true;
       schedule();

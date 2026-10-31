@@ -25,6 +25,8 @@ type Props = {
   onCategory?: (index: number) => void;
   /** Clicking the sphere itself (the dashboard shows every tab). */
   onCore?: () => void;
+  /** The core by itself with its nerves as Saturn-like rings, and no module or category icons (Grey, 2026-10-31). */
+  ringed?: boolean;
 };
 
 const phaseCopy: Record<VoicePhase, string> = { idle: "STANDING BY", listening: "LISTENING", thinking: "THINKING", speaking: "SPEAKING" };
@@ -75,13 +77,15 @@ function usePrefersReducedMotion() {
  * the branches belong to the organism. Module orbs and labels sit on top as
  * real buttons for keyboard and screen-reader access.
  */
-export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore }: Props) {
+export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore, ringed = true }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<NeuralField | null>(null);
   const [layout, setLayout] = useState<FieldLayout | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const reduced = usePrefersReducedMotion();
+  const ringedRef = useRef(ringed);
+  ringedRef.current = ringed;
   const animate = motion && !reduced;
 
   useEffect(() => {
@@ -93,7 +97,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     const measure = () => {
       const box = wrap.getBoundingClientRect();
       if (box.width < 40 || box.height < 40) return;
-      const next = computeLayout(box.width, box.height);
+      const next = computeLayout(box.width, box.height, ringedRef.current);
       field.setLayout(next);
       setLayout(next);
     };
@@ -104,8 +108,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase });
-  }, [startup.progress, animate, paused, processing, phase, layout]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed });
+  }, [startup.progress, animate, paused, processing, phase, layout, ringed]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 
@@ -164,7 +168,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
       </>}
       {onCore && startup.ready && <button type="button" className="core-tap" aria-label="Show every tab"
         style={{ left: layout.cx, top: layout.cy, width: layout.r * 1.7, height: layout.r * 1.7 }} onClick={onCore}/>}
-      {BRANCHES.map((branch, index) => {
+      {!ringed && BRANCHES.map((branch, index) => {
         const place = layout.orbs[index];
         const category = categories?.[index];
         if (category) {
