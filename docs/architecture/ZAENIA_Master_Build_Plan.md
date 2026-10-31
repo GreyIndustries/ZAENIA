@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.43  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.44  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1245,3 +1245,7 @@ Grey: "Lets fill in the blank spaces" (the dashboard, with empty rail space unde
 - **Day board:** up to 5 rows; when the calendar is light, open tasks fill the rest.
 - **Core panel:** the greeting moves up into the bottom of the panel (up to 84 px, less on short screens), not in calm or zoom.
 - Checked in the preview at 2000 × 1088; type check clean.
+
+### 28.46 Home in the top bar — Claude, 2026-10-31 (v3.44)
+
+Grey asked for Home out of the ZAENIA menu and into the top bar next to the ZAENIA box. Home is now its own button right of that box (icon over the word, accent underline while the dashboard is showing); the menu no longer lists it. Desktop only; the phone keeps its bottom bar. Checked in the preview.
