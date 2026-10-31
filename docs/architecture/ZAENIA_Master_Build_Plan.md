@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.37  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.38  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1191,3 +1191,7 @@ Grey: "mic is listening but calm says mic is off". When ZAE's PC voice service h
 - `core/voice_listener/calm_state.py`: the app's Calm state is written to `data/ui/calm.json` through `/api/remote/state` (it counts for 30 s, so a closed app can't leave the PC voice deaf). In the PC voice service, a verified turn goes to `calm_turn` first: a wake-up call while calm, or a sleep phrase while not, is written to `data/ui/calm_event.json` and handed to the app through `/api/remote/collect` (`calmEvent`), which wakes or calms as if the app mic had heard it. While calm, other speech is ignored, as with the app mic. Only turns already verified as Grey's voice reach it.
 - The phrase lists are copied from `desktop/src/core/calmPhrases.ts`; a test fails if they drift apart.
 - Tests: 873 Python tests pass (14 skipped), `calm_state_test` 5; type check and node tests pass. The PC voice service must be restarted to pick up the change.
+
+### 28.40 Darker dashboard cards, the core in its own panel — Claude, 2026-10-31 (v3.38)
+
+Grey asked for darker backgrounds on the panels around the core and the core in a panel of its own. Dashboard cards (`.ov .ov-card`) now lay a dark tint (rgba 4,8,15 at 74%) and a backdrop blur over the look's panel color, so they stay readable whatever the window-opacity setting. The core's stage on the dashboard is a rounded panel with a dark radial background, a faint accent glow behind the sphere, a border and a shadow; it turns transparent during the category zoom and in calm mode. CSS only (`OverviewFrame.css`), checked in the preview at 1920 × 1040.
