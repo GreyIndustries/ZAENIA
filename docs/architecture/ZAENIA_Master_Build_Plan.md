@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.42  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.43  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1234,3 +1234,14 @@ Grey: "when i tell her to log something, she says she saved it locally but its n
 - **Show and glow:** the chat stream's `protocol` event carries `focus` (the item's title, or the name/exercise/task from the action). The app opens the tab and `core/glow.ts` finds that item on screen (skipping chat lines; retrying while the tab loads; falling back to the longest word) and gives it a pulsing accent outline for about 5 s, scrolled into view. Applied task and event cards open Tasks or Calendar and glow the new item too.
 - **No false claims:** `conversation_rules` now says the chat brain can't save, log, add, open, change or delete anything itself and must never say it did unless the app's report is in the conversation.
 - Tests: 880 Python OK (14 skipped), new `SpokenRequestTest`; type check and node tests pass.
+
+### 28.45 Dashboard without blank space — Claude, 2026-10-31 (v3.43)
+
+Grey: "Lets fill in the blank spaces" (the dashboard, with empty rail space under the cards, an empty band at the bottom of the core's panel and a one-line day board).
+
+- **Left rail:** after Today, Fitness and Health come **Coming up** (the rest of the week's events; the calendar fetch is now 7 days) and **From ZAE** (her latest follow-ups from the Assistant inbox).
+- **Right rail:** after ZAE's systems, Ask ZAE and Music & news comes **Research & notes** (the two latest web-research jobs and the four latest notes).
+- The last card in each rail stretches to the bottom.
+- **Day board:** up to 5 rows; when the calendar is light, open tasks fill the rest.
+- **Core panel:** the greeting moves up into the bottom of the panel (up to 84 px, less on short screens), not in calm or zoom.
+- Checked in the preview at 2000 × 1088; type check clean.
