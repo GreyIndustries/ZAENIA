@@ -162,7 +162,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
         <svg className={`core-hud${animate ? " core-hud--motion" : ""}`} style={{ left: layout.cx, top: layout.cy, width: layout.r * 2.56, height: layout.r * 2.56 }} viewBox="0 0 200 200" aria-hidden="true">
           {following && <circle className="core-hud__follow" cx="100" cy="100" r="88" pathLength="100" strokeDasharray={`${(followLeft / 30000 * 100).toFixed(2)} 100`}/>}
         </svg>
-        <div className="core-state" role="status" aria-live="polite" style={{ left: layout.cx, top: layout.cy + layout.r * (layout.compact ? 1.04 : 1.2) }}>
+        <div className="core-state" role="status" aria-live="polite" style={{ left: layout.cx, top: layout.cy + layout.r * (layout.compact || ringed ? 1.06 : 1.2) }}>
           <i aria-hidden="true"/>{following ? <>FOLLOW-UP OPEN <small>{Math.ceil(followLeft / 1000)}s · no name needed</small></> : phaseCopy[phase]}
         </div>
       </>}

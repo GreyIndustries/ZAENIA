@@ -54,8 +54,8 @@ export function computeLayout(width: number, height: number, ringed = false): Fi
   const compact = width < 760;
   if (ringed) {
     // Grey, 2026-10-31: the core by itself, its nerves wrapped around it like Saturn's rings (outer ring 2.15 r).
-    const cx = width / 2, cy = height * (compact ? 0.5 : 0.47);
-    const r = Math.max(48, Math.min((width / 2 - 12) / RING_OUTER, height * (compact ? 0.4 : 0.36), cy - 14, 300));
+    const cx = width / 2, cy = height * (compact ? 0.5 : 0.45);
+    const r = Math.max(48, Math.min((width / 2 - 12) / RING_OUTER, height * (compact ? 0.38 : 0.31), cy - 14, 280));
     return { width, height, cx, cy, r, orbR: 0, compact, orbs: [] };
   }
   if (compact) {

@@ -262,5 +262,5 @@
    up into the bottom of the core's panel. */
 .ov-rail:not(.ov-phone *)>.ov-card:last-child{flex:1 1 auto;min-height:0}
 .ov-rail .ov-card .ov-lines{overflow:hidden}
-.ov:not(.ov--calm):not(.ov--zoomed):not(.ov-phone) .ov-center>.ov-hero{margin-top:clamp(-84px,-7vh,0px);position:relative;z-index:2}
+.ov:not(.ov--calm):not(.ov--zoomed):not(.ov-phone) .ov-center>.ov-hero{margin-top:clamp(-44px,-4vh,0px);position:relative;z-index:2}
 .ov-bottom .ov-board li{padding:4px 0}
