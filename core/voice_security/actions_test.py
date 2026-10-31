@@ -385,8 +385,21 @@ class RuntimeDispatchTest(unittest.TestCase):
             'core.conversation.conversation_state': SimpleNamespace(activate_conversation=Mock(), record_user_speech=Mock()),
             'core.brain.dialogue_manager': SimpleNamespace(return_to_background=Mock()),
             'core.conversation_runtime.fluid_runtime_test': SimpleNamespace(StreamingResponse=factory),
+            # The desktop app is closed in these tests: the PC voice answers by itself.
+            'core.voice_listener.calm_state': SimpleNamespace(calm_turn=lambda text: False, hand_to_app=lambda text: False),
         }
         return runtime, modules, gate, factory
+
+    def test_with_the_app_open_a_verified_request_runs_in_the_app_instead(self):
+        runtime, modules, _, factory = self.runtime_fixture({'decision': 'attention', 'command_text': 'log two eggs for breakfast'})
+        handed = []
+        modules['core.voice_listener.calm_state'] = SimpleNamespace(calm_turn=lambda text: False,
+                                                                    hand_to_app=lambda text: handed.append(text) or True)
+        with patch.dict(sys.modules, modules):
+            runtime.deliver('ZAE log two eggs for breakfast')
+        self.assertEqual(handed, ['log two eggs for breakfast'])
+        factory.assert_not_called()
+        runtime.actions.handle.assert_not_called()
 
     def test_wake_removal_preserves_original_dates_and_times_for_action_parser(self):
         from core.voice_security.runtime import SecureRuntime

@@ -103,6 +103,14 @@ class SecureRuntime:
             self.attention.open();return
         # Unknown speakers never reach this callback, and therefore cannot stop
         # a response, update conversation state, or submit text to the brain.
+        # With the app open, the request runs in the app's chat like a typed one, so in-app actions
+        # (logging, saving, opening things) happen and their result shows on screen (2026-10-31).
+        if not self.actions.has_pending():
+            try:
+                from core.voice_listener.calm_state import hand_to_app
+                if hand_to_app(reply_text):
+                    self.stop_response();self.attention.open();return
+            except Exception:pass
         self._answer(reply_text)
     def _answer(self,reply_text):
         from core.conversation_runtime.fluid_runtime_test import StreamingResponse

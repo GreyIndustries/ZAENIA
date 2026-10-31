@@ -747,6 +747,10 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const remoteSnapshot = useRef("");
   // A wake-up call or sleep phrase the PC voice heard (it has the mic, so the app's own mic is off).
   const calmEventRef = useRef<(event: CalmPhrase) => void>(() => undefined);
+  // A request Grey said to the PC voice (already checked as his voice): it runs here like a typed one, so in-app
+  // actions happen and their result shows in the chat; the reply is spoken when Voice is on.
+  const voiceTurnRef = useRef<(text: string) => void>(() => undefined);
+  voiceTurnRef.current = text => { if (calmOpen || !text.trim()) return; setVoiceNote(null); if (speakReplies) speech.prime(); submit(text); };
   calmEventRef.current = event => { if ((event.kind === "wake") === calmOpen) void calmPhrase(event, true); };
   remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
     active: shell.active ?? null, calm: calmOpen, section });
@@ -758,7 +762,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       busy = true;
       void (async () => {
         try {
-          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null; calmEvent?: CalmPhrase | null }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null; calmEvent?: CalmPhrase | null; voiceTurns?: string[] }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          for (const text of reply.voiceTurns ?? []) voiceTurnRef.current(text);
           for (const command of reply.commands) remoteRef.current(command);
           if (reply.calmEvent) calmEventRef.current(reply.calmEvent);
           setNearCode(reply.nearCode ?? null);

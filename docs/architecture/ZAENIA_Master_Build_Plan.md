@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.40  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.41  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1216,3 +1216,11 @@ Grey heard two replies at once. When PC voice keeps rejecting his voice, the app
 - Tests: 876 Python OK (14 skipped), two new `voice_turn_test` cases. Needs a PC voice restart.
 
 The other finding from the same report: since 23:00 UTC the voice check rejected 56 of 91 app-mic sentences and 45 PC-voice sentences as not Grey's voice. The profile was calibrated 2026-10-13 from 5 samples (threshold 0.363). Grey was offered retraining (recommended) or turning off the app-mic voice requirement; awaiting his choice. The threshold is unchanged.
+
+### 28.43 Spoken requests to the PC voice run in the app — Claude, 2026-10-31 (v3.41)
+
+Grey: telling ZAE by voice to log something or do an action in the app didn't do it; he wants it done and shown for confirmation. Cause: the in-app actions (`chat_actions`: food, exercise, weight, workout check-offs, task changes, Workbench/Music, research…) run only in the app's chat stream (`ui_chat_stream.py`). The PC voice service answers through its own brain stream, which has only its small voice action set (tasks, calendar, memory, apps, workspaces), so other requests got a spoken answer and no action.
+
+- While the desktop app is open (it has reported its state in the last 20 s), a verified PC-voice request that is meant for ZAE is handed to the app (`calm_state.hand_to_app` → `data/ui/voice_handoff.json` → `/api/remote/collect` `voiceTurns`) and runs through `submit` exactly like a typed or app-mic request: the action happens, the chat shows what was done, and the reply is spoken when Voice is on. A pending PC "confirm that action" flow still finishes on the PC. With the app closed, the PC voice answers by itself as before.
+- Only turns that passed the owner voice check, the attention filter and the one-reply claim are handed over; requests older than 30 s are dropped.
+- Tests: 878 Python OK (14 skipped), new runtime and hand-off tests. Needs a PC voice restart.

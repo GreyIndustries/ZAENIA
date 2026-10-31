@@ -51,6 +51,19 @@ class CalmStateTest(unittest.TestCase):
         self.assertEqual(calm_state.intent("good morning", True, ask=lambda s, t: None)["kind"], "wake")
         self.assertEqual(calm_state.intent("you there zae", True, ask=lambda s, t: {"other_person": True})["kind"], "wake")  # her name
 
+    def test_requests_go_to_the_app_only_while_it_is_open_and_are_taken_once(self):
+        self.stack.append(patch.object(calm_state, "HANDOFF_FILE", Path(self.folder.name) / "handoff.json"))
+        self.stack[-1].start()
+        self.assertFalse(calm_state.hand_to_app("log two eggs", now=100))                  # app never reported
+        calm_state.report(False, now=100)
+        self.assertTrue(calm_state.hand_to_app("log two eggs", now=105))
+        self.assertTrue(calm_state.hand_to_app("and a coffee", now=106))
+        self.assertEqual(calm_state.take_voice_turns(now=107), ["log two eggs", "and a coffee"])
+        self.assertEqual(calm_state.take_voice_turns(now=107), [])
+        self.assertFalse(calm_state.hand_to_app("log a walk", now=100 + calm_state.APP_ONLINE_SECONDS + 1))  # app closed
+        calm_state.hand_to_app("old", now=105)
+        self.assertEqual(calm_state.take_voice_turns(now=200), [])                           # stale requests are dropped
+
     def test_a_stale_calm_report_never_leaves_the_pc_voice_deaf(self):
         calm_state.report(True, now=100)
         self.assertFalse(calm_state.calm_turn("what's on today", now=100 + calm_state.FRESH_SECONDS + 1))

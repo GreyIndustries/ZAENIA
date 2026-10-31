@@ -26,6 +26,8 @@ from typing import Any
 UI_DIR = Path(__file__).resolve().parents[2] / "data" / "ui"
 CALM_FILE = UI_DIR / "calm.json"
 EVENT_FILE = UI_DIR / "calm_event.json"
+HANDOFF_FILE = UI_DIR / "voice_handoff.json"
+APP_ONLINE_SECONDS = 20.0
 FRESH_SECONDS = 30.0
 
 WAKE_CALLS = [
@@ -171,6 +173,49 @@ def calm_turn(text: str, *, now: float | None = None) -> bool:
         _write(EVENT_FILE, {**found, "at": now})
         return True
     return calm
+
+
+def app_online(*, now: float | None = None) -> bool:
+    """The desktop app is open and reporting (it posts its state at least every 8 s)."""
+    now = now if now is not None else time.time()
+    try:
+        return now - float(_read(CALM_FILE).get("at", 0)) <= APP_ONLINE_SECONDS
+    except (TypeError, ValueError):
+        return False
+
+
+def hand_to_app(text: str, *, now: float | None = None) -> bool:
+    """While the app is open, a verified PC-voice request goes to the app's own chat, so it runs exactly like a
+    typed or app-mic request: logging, saving and every other in-app action, with the result shown on screen
+    (Grey, 2026-10-31). False when the app isn't open; the PC voice then answers by itself."""
+    now = now if now is not None else time.time()
+    text = " ".join(str(text).split())[:2000]
+    if not text or not app_online(now=now):
+        return False
+    queue = [t for t in _read(HANDOFF_FILE).get("turns", []) if isinstance(t, dict) and now - float(t.get("at", 0)) <= 30][-4:]
+    queue.append({"text": text, "at": now})
+    _write(HANDOFF_FILE, {"turns": queue})
+    return True
+
+
+def take_voice_turns(*, now: float | None = None) -> list[str]:
+    """PC-voice requests waiting for the app, once each (called from /api/remote/collect)."""
+    data = _read(HANDOFF_FILE)
+    if not data:
+        return []
+    try:
+        HANDOFF_FILE.unlink()
+    except OSError:
+        pass
+    now = now if now is not None else time.time()
+    out = []
+    for turn in data.get("turns", []):
+        try:
+            if isinstance(turn, dict) and now - float(turn.get("at", 0)) <= 30 and str(turn.get("text", "")).strip():
+                out.append(str(turn["text"])[:2000])
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 def take_event(*, now: float | None = None, max_age: float = 20.0) -> dict[str, Any] | None:
