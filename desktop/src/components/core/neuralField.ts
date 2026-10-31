@@ -108,8 +108,8 @@ const VOID_LOOKS: Record<string, VoidLook> = {
   // lensed ring hugging it, and a tilted dusty disk rising from lower left to upper right.
   // Grey's photo, as is: a black hole only. Void, thin bright rim, a thick gold lensed ring brightest at the upper
   // left, and a wide dusty disk rising from lower left to upper right and crossing in front of the void.
-  "void-exact": { roll: -0.6, squash: 0.36, hot: "255,222,150", mid: "232,128,48", cool: "120,60,28", ring: "255,206,120", hole: 0.5,
-    diskIn: 0.6, diskOut: 2.25, clear: true },
+  "void-exact": { roll: -0.6, squash: 0.3, hot: "255,222,150", mid: "232,128,48", cool: "120,60,28", ring: "255,206,120", hole: 0.5,
+    diskIn: 0.78, diskOut: 1.95, clear: true },
   "void-photo": { roll: -0.62, squash: 0.3, hot: "255,226,160", mid: "236,140,58", cool: "150,72,30", ring: "255,214,140", hole: 0.46,
     diskIn: 0.5, diskOut: 1.0, contained: true },
   "void-flat": { roll: -0.06, squash: 0.09, hot: "255,240,244", mid: "255,186,170", cool: "170,150,255", ring: "255,236,240", hole: 0.76 },
@@ -445,7 +445,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
   const DUST = (() => {
     const rnd = seeded(9090);
     return Array.from({ length: 1100 }, () => ({ u: Math.pow(rnd(), 1.6), a: rnd() * TAU, lift: (rnd() - 0.5) * 2, size: 1.5 + rnd() * 5,
-      alpha: 0.15 + rnd() * 0.6, hot: rnd() < 0.35, speed: 0.04 + rnd() * 0.06 }));
+      alpha: 0.3 + rnd() * 0.7, hot: rnd() < 0.35, speed: 0.04 + rnd() * 0.06 }));
   })();
   const bloom = document.createElement("canvas");
   const bctx = bloom.getContext("2d");
@@ -529,8 +529,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         for (let k = steps; k >= 0; k--) { const a = a0 + Math.PI * (k / steps), rad = (vl.diskIn ?? 1.02) * r, x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash; ctx.lineTo(cx + x * cR - y * sR, cy + x * sR + y * cR); }
         ctx.closePath();
         const body = ctx.createRadialGradient(cx, cy, (vl.diskIn ?? 1) * r, cx, cy, (vl.diskOut ?? DISK_OUTER) * r);
-        body.addColorStop(0, `rgba(${vl.hot},${(front ? 0.42 : 0.24) * glow * ringReveal})`);
-        body.addColorStop(0.45, `rgba(${vl.mid},${(front ? 0.22 : 0.12) * glow * ringReveal})`);
+        body.addColorStop(0, `rgba(${vl.hot},${(front ? 0.42 : 0.24) * (vl.clear ? 0.35 : 1) * glow * ringReveal})`);
+        body.addColorStop(0.45, `rgba(${vl.mid},${(front ? 0.22 : 0.12) * (vl.clear ? 0.35 : 1) * glow * ringReveal})`);
         body.addColorStop(1, `rgba(${vl.cool},0)`);
         ctx.fillStyle = body; ctx.fill();
       }
@@ -541,7 +541,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
           if ((a < Math.PI) !== front) continue;
           const rad = (inner + d.u * (outer - inner)) * r;
           const x = Math.cos(a) * rad, y = Math.sin(a) * rad * squash + d.lift * r * 0.07 * (1 - d.u * 0.4);
-          spr(d.hot ? SW : SA, cx + x * cR - y * sR, cy + x * sR + y * cR, d.size * sc, d.alpha * (1 - d.u * 0.7) * ringReveal * (front ? 1 : 0.7));
+          spr(d.hot ? SW : SA, cx + x * cR - y * sR, cy + x * sR + y * cR, d.size * 1.3 * sc, d.alpha * (1 - d.u * 0.7) * ringReveal * (front ? 1 : 0.7));
         }
         ctx.globalAlpha = 1;
       }
@@ -559,10 +559,10 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
           if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = `rgba(${col},${s.alpha * 0.16 * depth * glow})`;
+        ctx.strokeStyle = `rgba(${col},${s.alpha * 0.16 * depth * glow * (vl?.clear ? 0.4 : 1)})`;
         ctx.lineWidth = s.width * 3.2 * sc;
         ctx.stroke();
-        ctx.strokeStyle = `rgba(${col},${Math.min(1, s.alpha * depth * glow)})`;
+        ctx.strokeStyle = `rgba(${col},${Math.min(1, s.alpha * depth * glow * (vl?.clear ? (front ? 0.3 : 0.45) : 1))})`;
         ctx.lineWidth = s.width * sc;
         ctx.stroke();
       }
@@ -892,7 +892,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         for (let i = 0; i < 34; i++) {
           const rad = hr * (1.01 + i * 0.016 + 0.004 * Math.sin(time * 0.8 + i * 1.7));
           const cone = ctx.createConicGradient(-Math.PI * 0.95 + Math.sin(time * 0.2) * 0.1, cx, cy);
-          const a = Math.max(0, 1 - i * 0.027) * glow;
+          const a = Math.min(1, Math.max(0, 1.35 - i * 0.03) * glow);
           cone.addColorStop(0, `rgba(${vl.hot},${a})`);
           cone.addColorStop(0.18, `rgba(${vl.mid},${a * 0.75})`);
           cone.addColorStop(0.45, `rgba(${vl.mid},${a * 0.28})`);
