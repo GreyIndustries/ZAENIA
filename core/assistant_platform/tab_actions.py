@@ -47,6 +47,13 @@ _NOTE_UPDATE = re.compile(
     re.I | re.S)
 
 
+# "Make a note that the mixer needs a cable", "take a note: …", "note to self …", "write down …" (Grey, 2026-10-31).
+_NOTE_SAID = re.compile(r"^\s*(?:(?:hey\s+)?zae[,\s]+)?(?:please\s+)?(?:can\s+you\s+)?"
+                        r"(?:(?:make|take|add|create|start|write)\s+(?:me\s+)?(?:a\s+)?(?:new\s+|quick\s+)?note|note\s+to\s+self|note|"
+                        r"write\s+(?:this\s+|that\s+)?down|jot\s+(?:this\s+|that\s+)?down)\b"
+                        r"\s*(?:that|to|about|saying|of)?\s*[:,\-–]?\s*(?P<text>\S.{2,})$", re.I | re.S)
+
+
 def parse_note(message: str) -> dict[str, str] | None:
     """'add this to notes[: text]' → a new note; 'update <name> note with this[: text]' → add to that note."""
     text = str(message).strip()
@@ -58,7 +65,73 @@ def parse_note(message: str) -> dict[str, str] | None:
     found = _NOTE_NEW.match(text)
     if found:
         return {"action": "new", "name": "", "text": (found.group("text") or "").strip()}
+    found = _NOTE_SAID.match(text)
+    if found and not re.match(r"^\s*(?:this|that|it)(?:\s+(?:to|in|into)\b|\s*$)", found.group("text"), re.I):
+        return {"action": "new", "name": "", "text": found.group("text").strip().rstrip(".")}
     return None
+
+
+# "Open the song Midnight Drive", "open my research project on GPUs", "pull up the Arc Reactor project", "show my gym note".
+_OPEN = re.compile(r"^\s*(?:(?:hey\s+)?zae[,\s]+)?(?:please\s+)?(?:can\s+you\s+)?(?:open|pull\s+up|show(?:\s+me)?|bring\s+up|go\s+to)\s+"
+                   r"(?:up\s+)?(?:my\s+|the\s+)?(?P<kind>song|track|music\s+project|research\s+(?:project|topic)|topic|workbench\s+project|"
+                   r"project|note)\s+(?:called\s+|named\s+|on\s+|about\s+|for\s+)?[\"']?(?P<name>.+?)[\"']?[.!?]?\s*$"
+                   r"|^\s*(?:(?:hey\s+)?zae[,\s]+)?(?:please\s+)?(?:open|pull\s+up|show(?:\s+me)?|bring\s+up)\s+(?:my\s+|the\s+)?[\"']?"
+                   r"(?P<name2>.+?)[\"']?\s+(?P<kind2>song|track|research\s+(?:project|topic)|topic|project|note)[.!?]?\s*$", re.I)
+
+
+def parse_open(message: str) -> dict[str, str] | None:
+    found = _OPEN.match(str(message).strip())
+    if not found:
+        return None
+    kind = (found.group("kind") or found.group("kind2") or "").lower()
+    name = (found.group("name") or found.group("name2") or "").strip(" \"'")
+    if not name or name.lower() in ("it", "that", "this", "tab", "app"):
+        return None
+    kind = "music" if kind in ("song", "track", "music project") else "research" if ("research" in kind or kind == "topic") \
+        else "notes" if kind == "note" else "workbench" if "workbench" in kind else "project"
+    return {"kind": kind, "name": name}
+
+
+def _best(rows: list[dict[str, Any]], name: str, key: str = "title") -> dict[str, Any] | None:
+    wanted = re.sub(r"\s+", " ", name).strip().casefold()
+    for test in (lambda t: t == wanted, lambda t: t.startswith(wanted), lambda t: wanted in t,
+                 lambda t: bool(set(wanted.split()) & set(t.split())) and len(set(wanted.split()) & set(t.split())) >= max(1, len(wanted.split()) // 2)):
+        for row in rows:
+            if test(str(row.get(key, "")).casefold()):
+                return row
+    return None
+
+
+def open_record(request: dict[str, str], *, store: Any = None) -> dict[str, Any]:
+    """Find the record he named and open its tab on it: {"reply", "tab", "focus"}; ValueError when nothing matches."""
+    if store is None:
+        from core.assistant_platform.service import platform
+        store = platform().store
+    kind, name = request["kind"], request["name"]
+    tries = [kind] if kind != "project" else ["workbench", "research", "music"]
+    for where in tries:
+        if where == "music":
+            from core.assistant_platform.personal_tools import music_overview
+            row = _best(music_overview(store)["songs"], name)
+            if row:
+                return {"reply": f"Here's {row['title']}.", "tab": "music", "focus": row["title"]}
+        elif where == "workbench":
+            from core.assistant_platform.personal_tools import COLLECTIONS
+            row = _best([r for r in store.list(COLLECTIONS["workbench"]) if not r.get("archived")], name)
+            if row:
+                return {"reply": f"Here's {row['title']}.", "tab": "workbench", "focus": row["title"]}
+        elif where == "research":
+            from core.research.notebook import Notebook
+            row = _best(Notebook().topics(), name, "name")
+            if row:
+                return {"reply": f"Here's your research on {row['name']}.", "tab": "research", "focus": row["name"]}
+        elif where == "notes":
+            from core.assistant_platform.notes import Notes
+            row = Notes(store).find(name)
+            if row:
+                return {"reply": f"Here's your {row['title']} note.", "tab": "notes", "focus": row["title"]}
+    label = {"music": "song", "research": "research topic", "notes": "note", "workbench": "Workbench project"}.get(kind, "project")
+    raise ValueError(f"I couldn't find a {label} called {name}.")
 
 
 def save_note(request: dict[str, str], messages: list[dict[str, str]], *, store: Any = None, ask: Callable[[str], str] | None = None) -> dict[str, Any]:
@@ -80,7 +153,7 @@ def save_note(request: dict[str, str], messages: list[dict[str, str]], *, store:
         return {"reply": f"Added to your \"{found['title']}\" note.", "tab": "notes", "id": found["id"]}
     title = _title(content, "", ask, "Note from chat")
     note = notes.create(title, content)
-    return {"reply": f"Saved to Notes as \"{title}\".", "tab": "notes", "id": note["id"]}
+    return {"reply": f"Saved to Notes as \"{title}\".", "tab": "notes", "id": note["id"], "focus": title}
 
 
 def last_reply(messages: list[dict[str, str]]) -> tuple[str, str]:

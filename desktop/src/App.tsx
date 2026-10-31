@@ -74,6 +74,7 @@ import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./components/overview/OverviewFrame";
 import { CalmView } from "./components/overview/CalmView";
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
+import { glowItem } from "./core/glow";
 import { situationNow } from "./core/wakeSituation";
 import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
@@ -640,6 +641,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       const confirmation = confirmedAssistantAction(proposal, response);
       if (!confirmation) { uncertain(); return; }
       update({ status: "succeeded", detail: `Saved. Open ${destination} to view it.` });
+      // Show it: open the tab and light up the new task or event.
+      const madeTitle = proposal.kind === "task.create" || proposal.kind === "calendar.create" ? proposal.parameters.title : "";
+      if (proposal.kind === "task.create" || proposal.kind === "calendar.create") {
+        openSection(proposal.kind === "task.create" ? "tasks" : "calendar");
+        if (madeTitle) glowItem(madeTitle);
+      }
       setActionRefresh(previous => proposal.kind === "task.create" ? { ...previous, tasks: previous.tasks + 1 } : { ...previous, calendar: previous.calendar + 1 });
       setAssistantRefresh(previous => previous + 1);
       void inbox.refresh();
@@ -1017,6 +1024,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         // A protocol ("goodnight") can open tabs as one of its steps.
         for (const tab of event.open) if (tab in sections) openSection(tab as Section);
         window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:records-changed")), 300);
+        if (event.focus) glowItem(event.focus);
       } else if (event.type === "done") {
         outcome.reply = event.reply;
         outcome.interrupted = event.interrupted;

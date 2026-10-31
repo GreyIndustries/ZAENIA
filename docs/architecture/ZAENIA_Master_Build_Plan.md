@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.41  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.42  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1224,3 +1224,13 @@ Grey: telling ZAE by voice to log something or do an action in the app didn't do
 - While the desktop app is open (it has reported its state in the last 20 s), a verified PC-voice request that is meant for ZAE is handed to the app (`calm_state.hand_to_app` → `data/ui/voice_handoff.json` → `/api/remote/collect` `voiceTurns`) and runs through `submit` exactly like a typed or app-mic request: the action happens, the chat shows what was done, and the reply is spoken when Voice is on. A pending PC "confirm that action" flow still finishes on the PC. With the app closed, the PC voice answers by itself as before.
 - Only turns that passed the owner voice check, the attention filter and the one-reply claim are handed over; requests older than 30 s are dropped.
 - Tests: 878 Python OK (14 skipped), new runtime and hand-off tests. Needs a PC voice restart.
+
+### 28.44 Requests that really happen, shown and lit up — Claude, 2026-10-31 (v3.42)
+
+Grey: "when i tell her to log something, she says she saved it locally but its not showing in its respected tab." What should happen: say "log something / make a note / open research project / open song…", she answers, the matching tab opens and the item done glows.
+
+- **Why it failed:** several requests never reached an app action, so they fell to the chat brain, which answered as if it had saved them. "Make a note that…", "note to self…", "write down…" weren't recognised (only "add this to my notes"); "open the song X" / "open my research project on X" had no handler; "log …" without a known topic word ("log that I drank two glasses of water") skipped the action check.
+- **Now:** `tab_actions.parse_note` accepts natural note wording; `tab_actions.parse_open` + `open_record` find a song, Workbench project, research topic or note by name (exact, starts-with, contains, then shared words) and open its tab; any request starting with log/track/record gets the action check.
+- **Show and glow:** the chat stream's `protocol` event carries `focus` (the item's title, or the name/exercise/task from the action). The app opens the tab and `core/glow.ts` finds that item on screen (skipping chat lines; retrying while the tab loads; falling back to the longest word) and gives it a pulsing accent outline for about 5 s, scrolled into view. Applied task and event cards open Tasks or Calendar and glow the new item too.
+- **No false claims:** `conversation_rules` now says the chat brain can't save, log, add, open, change or delete anything itself and must never say it did unless the app's report is in the conversation.
+- Tests: 880 Python OK (14 skipped), new `SpokenRequestTest`; type check and node tests pass.

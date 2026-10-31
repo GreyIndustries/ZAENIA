@@ -304,7 +304,7 @@ export type StreamEvent =
   | { type: "route"; route: string; brain?: string; level?: number; model?: string }
   | { type: "delta"; text: string }
   | { type: "proposal"; proposal: AssistantProposal }
-  | { type: "protocol"; open: string[] }
+  | { type: "protocol"; open: string[]; focus?: string }
   | { type: "say"; text: string }
   | { type: "form"; form: string; description?: string }
   | { type: "clarify"; questions: { question: string; options: string[] }[]; original: string }

@@ -129,9 +129,19 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
             authorize("memory.write")
             from core.research.analyze import run_local
             result = tab_actions.save_note(note_request, _brain(authorize).load_recent_messages(), ask=run_local)
-            return result["reply"], "tab_action", [result["tab"]]
+            return result["reply"], "tab_action", [result["tab"]], result.get("focus")
         except PermissionError:
             return "Saving notes isn't available with the current permissions.", "tab_action", []
+        except ValueError as error:
+            return str(error), "tab_action", []
+    opening = tab_actions.parse_open(message)
+    if opening is not None:
+        try:
+            authorize("memory.read")
+            result = tab_actions.open_record(opening)
+            return result["reply"], "tab_action", [result["tab"]], result["focus"]
+        except PermissionError:
+            return "Opening that isn't available with the current permissions.", "tab_action", []
         except ValueError as error:
             return str(error), "tab_action", []
     target = tab_actions.parse(message)
@@ -189,7 +199,7 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
     if found is None:
         # Anything else a tab can do ("log 8000 steps", "mark squats done", "move Arc Reactor to prototype").
         from core.assistant_platform import chat_actions
-        if not chat_actions.maybe(message):
+        if not chat_actions.maybe(message) and not re.match(r"^\s*(?:(?:hey\s+)?zae[,\s]+)?(?:please\s+)?(?:log|track|record)\b", message, re.I):
             return None
         from core.research.analyze import run_local
         try:
@@ -207,7 +217,11 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
                 # A model estimate must never silently become a health record.
                 return "I’ll check each food and portion with nutrition sources, then show you the totals to review before logging.", "food_meal", ["fitness"]
             result = chat_actions.run(action, ask=run_local)
-            return result["reply"], "tab_action", [result["tab"]] if result["tab"] else []
+            args = action.get("args") or {}
+            focus = next((str(args[k]) for k in ("title", "name", "project", "task", "exercise", "text") if isinstance(args.get(k), str) and args[k].strip()), None)
+            if focus is None and isinstance(args.get("exercises"), list) and args["exercises"] and args["exercises"][0] != "all":
+                focus = str(args["exercises"][0])
+            return result["reply"], "tab_action", [result["tab"]] if result["tab"] else [], focus
         except PermissionError:
             return "That isn't available with the current permissions.", "tab_action", []
         except ValueError as error:
@@ -281,10 +295,12 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             return
         quick = _protocol_or_reminder(message, authorize)
         if quick is not None:
-            answer, route, tabs = quick
+            answer, route, tabs = quick[:3]
+            focus = quick[3] if len(quick) > 3 else None
             yield _line({"type": "route", "route": route})
             if tabs:
-                yield _line({"type": "protocol", "open": tabs})
+                # The tab opens on what was done; "focus" is the item to light up (2026-10-31).
+                yield _line({"type": "protocol", "open": tabs, **({"focus": str(focus)[:160]} if focus else {})})
             if route == "training_setup":
                 yield _line({"type": "form", "form": "training-setup"})
             elif route == "food_meal":

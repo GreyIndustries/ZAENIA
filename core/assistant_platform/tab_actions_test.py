@@ -70,6 +70,35 @@ class NoteCommandTest(unittest.TestCase):
             self.assertIn("started one", fresh["reply"])
 
 
+class SpokenRequestTest(unittest.TestCase):
+    def test_notes_said_naturally(self):
+        self.assertEqual(tab_actions.parse_note("make a note that the mixer needs a new cable")["text"], "the mixer needs a new cable")
+        self.assertEqual(tab_actions.parse_note("Zae, take a note: buy guitar strings")["text"], "buy guitar strings")
+        self.assertEqual(tab_actions.parse_note("note to self call Jay back")["text"], "call Jay back")
+        self.assertEqual(tab_actions.parse_note("write down the gate code is 4471")["text"], "the gate code is 4471")
+        for not_a_note in ("note that", "notes are in the tab", "make a note", "what's in my notes"):
+            self.assertIsNone(tab_actions.parse_note(not_a_note), not_a_note)
+
+    def test_open_a_record_by_name(self):
+        from core.assistant_platform.notes import Notes
+        from core.assistant_platform.personal_tools import PersonalTools
+        self.assertEqual(tab_actions.parse_open("open the song Midnight Drive"), {"kind": "music", "name": "Midnight Drive"})
+        self.assertEqual(tab_actions.parse_open("open my research project on GPUs"), {"kind": "research", "name": "GPUs"})
+        self.assertEqual(tab_actions.parse_open("pull up the Arc Reactor project"), {"kind": "project", "name": "Arc Reactor"})
+        self.assertIsNone(tab_actions.parse_open("open fitness"))
+        with tempfile.TemporaryDirectory() as folder:
+            store = PlatformStore(Path(folder) / "p.sqlite3")
+            PersonalTools(store).save("music", {"title": "Midnight Drive", "archived": False})
+            PersonalTools(store).save("workbench", {"title": "Arc Reactor Mk II", "archived": False})
+            Notes(store).create("Gym log", "Mon: bench")
+            self.assertEqual(tab_actions.open_record({"kind": "music", "name": "midnight drive"}, store=store)["focus"], "Midnight Drive")
+            found = tab_actions.open_record({"kind": "project", "name": "Arc Reactor"}, store=store)
+            self.assertEqual((found["tab"], found["focus"]), ("workbench", "Arc Reactor Mk II"))
+            self.assertEqual(tab_actions.open_record({"kind": "notes", "name": "gym"}, store=store)["tab"], "notes")
+            with self.assertRaises(ValueError):
+                tab_actions.open_record({"kind": "music", "name": "Nothing Like This"}, store=store)
+
+
 class LastReplyTest(unittest.TestCase):
     def test_skips_short_claims_after_the_plan(self):
         messages = [{"role": "user", "content": "plan from https://x.com/a"}, {"role": "assistant", "content": PLAN},

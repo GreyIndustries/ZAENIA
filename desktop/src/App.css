@@ -522,3 +522,9 @@
 /* Phone browser: each page scrolls inside the stage (it was clipped); the chat bar and tabs stay put (Grey, 2026-10-26). */
 .zaenia-app--phone .main-stage:not(.main-stage--overview)>.glass-module,
 .zaenia-app--phone .main-stage:not(.main-stage--overview)>.section-content{flex:1 1 auto!important;min-height:0!important;overflow-y:auto!important;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-bottom:12px}
+
+/* What ZAE just did glows for a few seconds (core/glow.ts, 2026-10-31). */
+.zae-glow{outline:2px solid var(--accent,#e0a353)!important;outline-offset:2px;animation:zae-glow 1.3s ease-in-out 4}
+@keyframes zae-glow{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 24px 6px color-mix(in srgb,var(--accent,#e0a353) 55%,transparent)}}
+.zaenia-app[data-motion="off"] .zae-glow{animation:none}
+@media (prefers-reduced-motion:reduce){.zae-glow{animation:none}}
