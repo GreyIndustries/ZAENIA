@@ -9,7 +9,7 @@ import { workspacePhase } from "./core/workspaceDynamics";
 import { usePlatformRuntime } from "./core/usePlatformRuntime";
 import { PlatformPanel, BackgroundWorkBadge } from "./components/assistant/PlatformPanel";
 import { HandControls } from "./components/shell/HandControls";
-import type { GestureCommand } from "./core/handGestures";
+import type { GestureAction } from "./core/gestureActions";
 import type { ShellWindow } from "./components/shell/WindowShell";
 import { parseCoreTelemetry, PREVIEW_TELEMETRY } from "./core/coreTelemetry";
 import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, openVoiceTraining, restartServer, startServer } from "./core/bridge";
@@ -347,7 +347,6 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [hands, setHands] = useState(false);
   const [handNote, setHandNote] = useState<string | null>(null);
   const handsSupported = !isPhone && typeof Worker !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
-  const gestureDrag = useRef<{ kind: "move" | "resize"; id: string; x: number; y: number; span: number; rect: ShellWindow } | null>(null);
   const restoredRequest = useRef<string | null>(null);
   const restorePending = useRef(false);
   const automaticCandidates = useRef(new Set<number>());
@@ -376,35 +375,46 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (workspace) { restoreWindows(workspace.windows); restoredRequest.current = key; }
     }).catch(() => { /* Retry a still-current request on a later poll. */ }).finally(() => { restorePending.current = false; });
   }, [platformRuntime.summary]);
-  function handleGesture(action: GestureCommand) {
-    if (action.kind === "stop") { interrupt(); return; }
-    if (action.kind === "release") { gestureDrag.current = null; return; }
-    const current = shell.windows.filter(win => !win.minimized).sort((a, b) => b.z - a.z);
-    if (action.kind === "minimize") { if (shell.active) shell.minimize(shell.active); return; }
-    if (action.kind === "next" || action.kind === "previous") {
-      const all = [...shell.windows].sort((a, b) => a.id.localeCompare(b.id));
-      const index = all.findIndex(win => win.id === shell.active);
-      const next = all[(index + (action.kind === "next" ? 1 : -1) + all.length) % all.length];
-      if (next) shell.open(next.id); return;
+  // Hand gestures for actions (Grey, 2026-10-31; core/gestureActions.ts). Returns what to show on screen.
+  function handleHandAction(action: GestureAction): string | void {
+    if (action.kind === "stop") { interrupt(); return "Stopped"; }
+    if (action.kind === "home") { openSection("overview"); return "Home"; }
+    if (action.kind === "calm") { goCalm(); return "Calm view"; }
+    if (action.kind === "mic") { const on = !listen.alwaysWanted; toggleListening(); return on ? "Mic on" : "Mic off"; }
+    if (action.kind === "category" || action.kind === "system") {
+      const category = CATEGORIES[action.kind === "system" ? CATEGORIES.length - 1 : action.index];
+      if (!category) return;
+      openSection(category.tabs[0] as Section);
+      return category.name;
     }
-    if (action.x === undefined || action.y === undefined) return;
-    const x = action.x * window.innerWidth, y = action.y * window.innerHeight;
-    const under = document.elementsFromPoint(x, y).map(element => element.closest<HTMLElement>("[data-window-id]")?.dataset.windowId).find(Boolean);
-    if (action.kind === "point") { if (under && under !== shell.active) shell.open(under); return; }
-    const box = layerRef.current?.getBoundingClientRect();
-    if (!box || box.width <= 0 || box.height <= 0) return;
-    if (!gestureDrag.current || gestureDrag.current.kind !== action.kind) {
-      const target = current.find(win => win.id === under) ?? current.find(win => win.id === shell.active);
-      if (!target) return;
-      shell.open(target.id);
-      gestureDrag.current = { kind: action.kind, id: target.id, x, y, span: Math.max(.1, action.span ?? 1), rect: { ...target } };
+    if (action.kind === "previous" || action.kind === "next") {
+      const step = action.kind === "next" ? 1 : -1;
+      if (windowed && shell.windows.length) {
+        const all = [...shell.windows].sort((a, b) => a.id.localeCompare(b.id));
+        const index = all.findIndex(win => win.id === shell.active);
+        const next = all[(index + step + all.length) % all.length];
+        if (next) { shell.open(next.id); return sections[next.id as Section]?.title ?? "Next tab"; }
+        return;
+      }
+      const order = nav.map(item => item.id).filter(id => id !== "overview" && id !== "remote");
+      const index = (order as string[]).indexOf(section);
+      const next = order[(index + step + order.length) % order.length];
+      openSection(next as Section);
+      return sections[next as Section]?.title ?? "Next tab";
     }
-    const drag = gestureDrag.current;
-    if (action.kind === "move") shell.update(drag.id, { x: Math.max(0, Math.min(1 - drag.rect.w, drag.rect.x + (x - drag.x) / box.width)), y: Math.max(0, Math.min(1 - drag.rect.h, drag.rect.y + (y - drag.y) / box.height)) });
-    else {
-      const scale = Math.max(.5, Math.min(2, (action.span ?? drag.span) / drag.span));
-      shell.update(drag.id, { w: Math.max(.26, Math.min(1 - drag.rect.x, drag.rect.w * scale)), h: Math.max(.3, Math.min(1 - drag.rect.y, drag.rect.h * scale)) });
+    if (action.kind === "minimize" || action.kind === "close") {
+      if (windowed && shell.active) { if (action.kind === "close") shell.close(shell.active); else shell.minimize(shell.active); }
+      else openSection("overview");
+      return action.kind === "close" ? "Tab closed" : "Tab minimised";
     }
+    // Thumbs up / down: the newest card still waiting. The camera can't tell whose hand it is, so cards that forget
+    // memories or open apps stay voice-or-click only.
+    const waiting = [...chat].reverse().find(message => message.proposal && !message.streaming && ["ready", "failed"].includes(actionStates.current.get(message.id) ?? message.action?.status ?? "ready"));
+    if (!waiting?.proposal) return action.kind === "confirm" ? "Nothing to confirm" : "Nothing to dismiss";
+    if (action.kind === "dismiss") { dismissProposal(waiting.id); return "Dismissed"; }
+    if (["memory.forget", "app.launch", "workspace.restore"].includes(waiting.proposal.kind)) return "Say or click to confirm this one";
+    void applyProposal(waiting.id);
+    return "Confirmed";
   }
   const stageSection: Section = windowed ? "overview" : section;
   const openSection = (requested: Section) => {
@@ -1372,7 +1382,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     </div>}
     {calmOpen && <CalmView listening={listen.mode === "always" || pcTakesOver} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
       core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES}/>}/>}
-    <HandControls enabled={hands} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); gestureDrag.current = null; }} onCommand={handleGesture}/>
+    <HandControls enabled={hands} speaking={speech.playing !== null} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">
       <div className="brand-menu" onMouseEnter={() => { setBrandOpen(true); setIdentityHovered(true); }} onMouseLeave={() => { setBrandOpen(false); setIdentityHovered(false); }}>
