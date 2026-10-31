@@ -590,11 +590,19 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     const drawHologram = () => {
       const reveal = smooth(clamp((pe - 0.2) / 0.8));
       if (reveal <= 0) return;
+      // Quiet the neural web so the hologram reads first; it stays faintly visible inside, like the planet's body.
+      ctx.globalCompositeOperation = "source-over";
+      const veil = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.02);
+      veil.addColorStop(0, `rgba(8,4,2,${0.45 * reveal})`);
+      veil.addColorStop(0.9, `rgba(8,4,2,${0.62 * reveal})`);
+      veil.addColorStop(1, "rgba(8,4,2,0)");
+      ctx.fillStyle = veil;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill();
       const glow = (1 + lis * 0.3 + spk * 0.4 + thk * 0.2) * reveal;
       const rate = (state.processing ? 1.8 : 1) + thk * 0.8;
       ctx.globalCompositeOperation = "lighter";
       for (let shell = 0; shell < 8; shell++) {
-        const rad = r * (0.26 + shell * 0.1);
+        const rad = r * (0.22 + shell * 0.115);
         const tilt = 0.55 + 0.45 * Math.cos(time * 0.12 * (shell % 2 ? 1 : -1) + shell * 0.9);   // 3D-ish turn
         const turn = time * (0.08 + (shell % 3) * 0.05) * (shell % 2 ? 1 : -1) * rate + shell * 1.3;
         const segments = 5 + (shell * 3) % 6;
@@ -602,9 +610,9 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
           const seed = shell * 31 + k * 7;
           const start = turn + (k / segments) * TAU;
           const len = (TAU / segments) * (0.35 + ((seed * 13) % 10) / 18);
-          const a = (0.35 + ((seed * 7) % 10) / 22) * glow * (1 - shell * 0.05);
+          const a = Math.min(1, (0.6 + ((seed * 7) % 10) / 18) * glow * (1 - shell * 0.04));
           ctx.strokeStyle = `rgba(255,${180 + (seed % 5) * 10},${70 + (seed % 3) * 25},${a})`;
-          ctx.lineWidth = (shell % 3 === 0 ? 2.2 : 1.2) * sc;
+          ctx.lineWidth = (shell % 3 === 0 ? 3 : 1.7) * sc;
           ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * tilt, shell * 0.35, start, start + len); ctx.stroke();
           // Circuit ticks and little blocks along the arc.
           const ticks = Math.max(2, Math.round(len * 6));
