@@ -91,11 +91,11 @@ class AgentTest(unittest.TestCase):
             bot.start("nothing found", wait=True)          # runs after a failed job too
             self.assertEqual(ran, [1])
             self.assertIs(agent.Agent(Path(folder) / "k.json").after, agent._study_done)
-        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", side_effect=lambda d: d):
+        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", side_effect=lambda d: d),              patch("core.brain.conversation_threads.embed_local", return_value=[[0.0]]):
             agent._study_done()
         self.assertEqual(calls, [("qwen3:14b", 0), ("qwen3.5:4b", "24h")])
         calls.clear()
-        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", return_value="1m"):
+        with patch("core.brain.local_llm.set_residency", side_effect=lambda m, k: calls.append((m, k)) or True),              patch("core.brain.local_llm._game_keep_alive", return_value="1m"),              patch("core.brain.conversation_threads.embed_local", return_value=[[0.0]]):
             agent._study_done()                             # game mode: don't load Talk onto the card
         self.assertEqual(calls, [("qwen3:14b", 0)])
 

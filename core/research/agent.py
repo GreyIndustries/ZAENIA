@@ -140,6 +140,11 @@ def _study_done() -> None:
     set_residency("qwen3:14b", 0)
     if _game_keep_alive(TALK_KEEP_ALIVE) == TALK_KEEP_ALIVE:
         set_residency(TALK_MODEL, TALK_KEEP_ALIVE)
+        try:  # the small topic-tracking embedder each chat turn uses
+            from core.brain.conversation_threads import embed_local
+            embed_local(["warm"])
+        except Exception:
+            pass
 
 
 @background_call
