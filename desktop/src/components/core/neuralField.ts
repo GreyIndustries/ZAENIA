@@ -853,7 +853,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       const hr = r * vl.hole;
       const edge = ctx.createRadialGradient(cx, cy, hr * 0.96, cx, cy, r * 1.02);
       edge.addColorStop(0, "rgba(0,0,0,1)");
-      edge.addColorStop(0.35, "rgba(0,0,0,0.55)");
+      edge.addColorStop(vl.contained ? 0.8 : 0.35, `rgba(0,0,0,${vl.contained ? 0.9 : 0.55})`);
       edge.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = edge;
       ctx.beginPath(); ctx.arc(cx, cy, r * 1.02, 0, TAU); ctx.fill();
@@ -865,9 +865,9 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         const rad = hr * (1.02 + i * 0.03 + 0.006 * Math.sin(time * 0.7 + i));
         const start = (i * 0.83 + time * (0.35 - i * 0.008)) % TAU;
         const len = TAU * (0.45 + ((i * 53) % 10) / 22);
-        const a = Math.max(0, (0.5 - i * 0.026)) * glow;
+        const a = Math.max(0, vl.contained ? 1 - i * 0.045 : 0.5 - i * 0.026) * glow;
         ctx.strokeStyle = `rgba(${i < 6 ? vl.hot : i < 16 ? vl.mid : vl.cool},${a})`;
-        ctx.lineWidth = (i < 3 ? 1.8 : 1) * sc;
+        ctx.lineWidth = (i < 3 ? (vl.contained ? 2.6 : 1.8) : vl.contained ? 1.4 : 1) * sc;
         ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.02, rad, roll * 0.2, start, start + len); ctx.stroke();
       }
       const halo = ctx.createRadialGradient(cx, cy, hr, cx, cy, hr * 2.3);
