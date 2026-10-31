@@ -519,8 +519,8 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         for (let k = 0; k < 4; k++) {
           const u = (time * 0.9 + k / 4) % 1;
           const rad = (1.15 + u * 1.05) * r;
-          ctx.strokeStyle = `rgba(${moodCol ?? RGB[HOT]},${0.75 * spk * level * (1 - u)})`;
-          ctx.lineWidth = (3.4 - 2.4 * u) * sc * level;
+          ctx.strokeStyle = `rgba(${moodCol ?? "255,236,200"},${Math.min(1, 1.2 * spk * level * (1 - u))})`;
+          ctx.lineWidth = (6 - 4 * u) * sc * level;
           ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * squash, roll, front ? 0 : Math.PI, front ? Math.PI : TAU); ctx.stroke();
         }
       }
@@ -531,7 +531,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         if ((a < Math.PI) !== front) continue;
         for (let k = 6; k >= 0; k--) {
           const [tx, ty] = ringPoint(s, a - k * 0.035);
-          spr(k === 0 ? SW : SA, tx, ty, (k === 0 ? 30 : 16 - k * 1.5) * sc, (k === 0 ? 1 : 0.5 - k * 0.06) * ringReveal * (front ? 1 : 0.6));
+          spr(k === 0 ? SW : SA, tx, ty, (k === 0 ? 52 : 30 - k * 2.5) * sc, (k === 0 ? 1 : 0.5 - k * 0.06) * ringReveal * (front ? 1 : 0.6));
         }
       }
       // Signals running around the rings.
