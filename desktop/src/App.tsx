@@ -73,7 +73,7 @@ import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./components/overview/OverviewFrame";
 import { CalmView } from "./components/overview/CalmView";
-import { matchCalmPhrase, type CalmPhrase } from "./core/calmPhrases";
+import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { situationNow } from "./core/wakeSituation";
 import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
@@ -1036,7 +1036,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // ---- Microphone: tap-to-talk and always listening (while the app is open).
   // Names work anywhere in a sentence. Questions and directed replies continue
   // the current conversation, without admitting every nearby utterance.
-  function onTranscript(result: Transcript, clipMode: VoiceMode, barged: boolean) {
+  function onTranscript(result: Transcript, clipMode: VoiceMode, barged: boolean, intentChecked = false) {
     if (result.rejected) {
       // Not recognised as Grey's voice: drop it. Explain only when he was
       // clearly talking to the app (button press) or something needs fixing.
@@ -1048,6 +1048,18 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     // Reaching here means the turn was checked as Grey's voice, so wake-up calls are allowed.
     const phrase = matchCalmPhrase(result.text);
     if (phrase && (phrase.kind === "wake" ? true : !calmOpen)) { if (barged) speech.duck(false); void calmPhrase(phrase, true); return; }
+    // Wording is flexible (Grey: the voice is what counts): while calm, anything he says to ZAE wakes her; a sentence
+    // with a rest cue is checked for a sleep request. Otherwise the turn carries on as normal.
+    if (!intentChecked && result.text.trim() && (calmOpen || SLEEP_CUE.test(result.text))) {
+      const wasCalm = calmOpen;
+      void api<{ match: CalmPhrase | null }>("POST", "/api/assistant/calm-intent", { text: result.text.slice(0, 600), calm: wasCalm }, { timeoutMs: 8000 })
+        .then(reply => reply.match, () => null)
+        .then(found => {
+          if (found) { if (barged) speech.duck(false); void calmPhrase(found, true); }
+          else if (!wasCalm) onTranscript(result, clipMode, barged, true);
+        });
+      return;
+    }
     if (calmOpen) return;
     const words = (result.addressed ? result.command : result.text).trim();
     if (barged) {

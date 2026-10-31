@@ -47,3 +47,7 @@ export function matchCalmPhrase(text: string): CalmPhrase | null {
   }
   return null;
 }
+
+/** Words that may mean "rest now" (kept in step with SLEEP_CUE in core/voice_listener/calm_state.py); the server's
+ *  Talk model decides whether the sentence really is a sleep request. */
+export const SLEEP_CUE = /\b(?:sleep|bed|good ?night|nap|background|rest|calm|pin in|call it a (?:day|night)|that'?s (?:all|it) for (?:now|today|tonight)|take a break|signing off|done for (?:the day|today|tonight)|stand ?by|power down|shut ?down for)\b/i;

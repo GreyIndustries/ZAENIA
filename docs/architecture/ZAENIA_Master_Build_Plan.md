@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.38  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.39  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1195,3 +1195,13 @@ Grey: "mic is listening but calm says mic is off". When ZAE's PC voice service h
 ### 28.40 Darker dashboard cards, the core in its own panel — Claude, 2026-10-31 (v3.38)
 
 Grey asked for darker backgrounds on the panels around the core and the core in a panel of its own. Dashboard cards (`.ov .ov-card`) now lay a dark tint (rgba 4,8,15 at 74%) and a backdrop blur over the look's panel color, so they stay readable whatever the window-opacity setting. The core's stage on the dashboard is a rounded panel with a dark radial background, a faint accent glow behind the sphere, a border and a shadow; it turns transparent during the category zoom and in calm mode. CSS only (`OverviewFrame.css`), checked in the preview at 1920 × 1040.
+
+### 28.41 Wake-up calls and sleep phrases by meaning, not wording — Claude, 2026-10-31 (v3.39)
+
+Grey: "wake up calls and sleep calls will not be word for word but be more flexible. The only thing zae is actually looking for is my authentic voice."
+
+- `calm_state.intent(text, calm)` decides for a sentence that already passed Grey's voice check (app mic or PC voice). The exact phrase lists still match first.
+- **While calm:** any sentence wakes ZAE unless Talk (qwen3.5:4b) judges it is plainly said to another person ("hey mom…", "hold on babe"). Her name always wakes her; if Talk can't be asked, his voice is enough.
+- **While awake:** a sentence with a rest cue (`SLEEP_CUE`: bed, goodnight, call it a night, that's it for today, background, standby…) goes to Talk, which decides whether he is wrapping up ("I'm heading to bed") or just talking about rest ("how much sleep do I need"). Only a yes starts Calm view. "Go quiet" is left to the existing background command.
+- The app mic asks `POST /api/assistant/calm-intent` when Calm view is up or a rest cue is heard; otherwise the turn carries on as before. The PC voice uses the same function in `calm_turn`. Typed sleep phrases still need the listed wording.
+- Live check with Talk: 12 of 12 sample sentences decided correctly, about 0.1–0.5 s each. Tests: 874 Python OK (14 skipped); `SLEEP_CUE` and the phrase lists are checked against `calmPhrases.ts`.

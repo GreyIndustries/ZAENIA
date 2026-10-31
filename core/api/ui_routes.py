@@ -85,6 +85,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/news/tech/feedback", "memory.write"),
         ("POST", r"/api/assistant/wake", "chat.reply"),
+        ("POST", r"/api/assistant/calm-intent", "chat.reply"),
         ("POST", r"/api/screen/watch", "assistant.desktop.manage"),
         ("POST", r"/api/gaming/coach", "assistant.desktop.manage"),
         # Phone as a remote: the phone queues screen commands; only the paired desktop app collects them.
@@ -185,6 +186,11 @@ class WakeRequest(BaseModel):
     kind: str = Field(pattern=r"^(wake|sleep)$")
     phraseId: int = Field(ge=1, le=5)
     situation: dict[str, Any] = Field(default_factory=dict)
+
+
+class CalmIntent(BaseModel):
+    text: str = Field(min_length=1, max_length=600)
+    calm: bool
 
 
 class NewsFeedback(BaseModel):
@@ -752,6 +758,12 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
             run=lambda prompt: chat_local(prompt, model=TALK_MODEL, timeout=4),
             timeout=4.0,
         )
+
+    @router.post("/api/assistant/calm-intent")
+    def assistant_calm_intent(body: CalmIntent) -> dict[str, Any]:
+        """A spoken sentence (already checked as Grey's voice by the app mic): a wake-up call or sleep request, flexibly."""
+        from core.voice_listener.calm_state import intent
+        return {"match": intent(body.text, body.calm)}
 
     @router.post("/api/news/tech/feedback")
     def tech_news_feedback(body: NewsFeedback) -> dict[str, Any]:

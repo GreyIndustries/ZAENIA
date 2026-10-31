@@ -74,6 +74,64 @@ def match(text: str) -> dict[str, Any] | None:
     return None
 
 
+# Grey, 2026-10-31: "wake up calls and sleep calls will not be word for word but be more flexible. The only thing
+# zae is actually looking for is my authentic voice." Only turns already verified as his voice get here, so:
+# * while calm, any sentence he says to ZAE wakes her (her name, or Talk judges it's meant for her; if Talk can't
+#   be asked, his voice is enough);
+# * while awake, a sentence with a rest/sleep cue puts her into Calm view when Talk agrees that's what he means.
+SLEEP_CUE = re.compile(r"\b(?:sleep|bed|good ?night|nap|background|rest|calm|pin in|call it a (?:day|night)|that'?s (?:all|it) for (?:now|today|tonight)|take a break|signing off|done for (?:the day|today|tonight)|stand ?by|power down|shut ?down for)\b", re.I)
+
+
+def _ask_talk(system: str, text: str, timeout: float = 4.0) -> dict[str, Any] | None:
+    try:
+        import requests
+        from core.brain.conductor import TALK_KEEP_ALIVE, TALK_MODEL
+        from core.brain.local_llm import _game_keep_alive, get_brain_settings
+        settings = get_brain_settings()
+        reply = requests.post(settings["endpoint"], timeout=timeout, json={
+            "model": TALK_MODEL, "stream": False, "format": "json", "think": False, "keep_alive": _game_keep_alive(TALK_KEEP_ALIVE),
+            "options": {"temperature": 0, "num_predict": 16, "num_ctx": settings["context_window"]},
+            "messages": [{"role": "system", "content": system}, {"role": "user", "content": text[:400]}]})
+        reply.raise_for_status()
+        data = json.loads(reply.json().get("message", {}).get("content", "") or "{}")
+        return data if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def intent(text: str, calm: bool, *, ask=None) -> dict[str, Any] | None:
+    """{"kind": "wake"|"sleep", ...} for a verified sentence, flexibly; None when it's neither."""
+    ask = ask or _ask_talk
+    found = match(text)
+    if found:
+        return found if found["kind"] == ("wake" if calm else "sleep") else None
+    said = normalize(text)
+    if not said:
+        return None
+    if calm:
+        if _NAMES.search(said):
+            return {"kind": "wake", "id": 1, "phrase": "flexible"}
+        # His voice is the gate: wake unless the sentence is plainly for another person.
+        verdict = ask("Grey's assistant is resting and hears Grey say the sentence below. Decide only whether he is plainly "
+                      "speaking to ANOTHER PERSON (he names or addresses someone else, like 'hey mom', 'babe', 'hold on, "
+                      "I'm on a call', or answers someone in the room). Anything else, including greetings, 'let's get "
+                      "back to work', 'you awake?', questions or requests, is for the assistant.\n"
+                      "Reply only with JSON: {\"other_person\": true} or {\"other_person\": false}.", said)
+        if verdict is None or verdict.get("other_person") is not True:
+            return {"kind": "wake", "id": 1, "phrase": "flexible"}
+        return None
+    if not SLEEP_CUE.search(said):
+        return None
+    verdict = ask("Grey says the sentence below to his assistant. Is he wrapping up or saying goodnight, so the assistant "
+                  "should go quiet and rest until he's back? Yes for things like 'I'm heading to bed', 'let's call it a "
+                  "night', 'that's it for today', 'take everything to the background'. No for questions "
+                  "or requests about sleep or rest, like 'how much sleep do I need' or 'plan the rest of the week'.\n"
+                  "Reply only with JSON: {\"rest\": true} or {\"rest\": false}.", said)
+    if verdict and verdict.get("rest") is True:
+        return {"kind": "sleep", "id": 1, "phrase": "flexible"}
+    return None
+
+
 def _write(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".tmp")
@@ -108,8 +166,8 @@ def calm_turn(text: str, *, now: float | None = None) -> bool:
     speech while calm, which is ignored). False lets the turn go on as usual."""
     now = now if now is not None else time.time()
     calm = is_calm(now=now)
-    found = match(text)
-    if found and found["kind"] == ("wake" if calm else "sleep"):
+    found = intent(text, calm)
+    if found:
         _write(EVENT_FILE, {**found, "at": now})
         return True
     return calm
