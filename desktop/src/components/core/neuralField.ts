@@ -89,7 +89,10 @@ export function computeLayout(width: number, height: number, ringed = false): Fi
 
 /** What ZÆNIA is doing right now; the core reacts the way a live assistant does. */
 export type VoicePhase = "idle" | "listening" | "thinking" | "speaking";
-export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean };
+export type FieldState = { progress: number; motion: boolean; processing: boolean; phase?: VoicePhase; ringed?: boolean;
+  /** "saturn": tilted rings with a lensed halo. "gargantua": Grey's black-hole picture (2026-10-31): an edge-on disk,
+   *  a bright lensed arch over the top, a black centre and a glow pouring out below. */
+  look?: "saturn" | "gargantua" };
 
 /* ------------------------------------------------------------------ */
 /* Saturn rings: the nerves wrapped around the core                    */
@@ -467,10 +470,12 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
 
     // Saturn rings. The far half is drawn first so the sphere hides what passes behind it.
     const ringReveal = state.ringed ? smooth(clamp((pe - 0.35) / 0.65)) : 0;
-    const cR = Math.cos(RING_ROLL), sR = Math.sin(RING_ROLL);
+    const garg = state.look === "gargantua";
+    const roll = garg ? -0.05 : RING_ROLL, squash = garg ? 0.075 : RING_SQUASH, spreadX = garg ? 1.12 : 1;
+    const cR = Math.cos(roll), sR = Math.sin(roll);
     const ringPoint = (s: RingStrand, a: number): [number, number] => {
       const rad = s.radius * (1 + s.wobble * Math.sin(a * s.freq + s.phase + time * 0.4)) * r;
-      const x = Math.cos(a) * rad, y = Math.sin(a) * rad * RING_SQUASH;
+      const x = Math.cos(a) * rad * spreadX, y = Math.sin(a) * rad * squash;
       return [cx + x * cR - y * sR, cy + x * sR + y * cR];
     };
     const drawRings = (front: boolean) => {
@@ -484,9 +489,10 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         if (shown <= 0) continue;
         const span = Math.PI * shown;
         // Hotter (whiter) close in, redder further out; the side turning toward you is brighter (Doppler beaming).
-        const col = s.blue ? RGB[BLUE] : s.radius < 1.3 ? "255,226,170" : s.radius < 1.6 ? RGB[HOT] : s.radius < 1.9 ? RGB[AMBER] : "255,104,40";
+        const col = garg ? (s.blue ? "150,175,255" : s.radius < 1.3 ? "255,244,246" : s.radius < 1.6 ? "255,206,214" : s.radius < 1.9 ? "255,170,160" : "190,170,255")
+          : s.blue ? RGB[BLUE] : s.radius < 1.3 ? "255,226,170" : s.radius < 1.6 ? RGB[HOT] : s.radius < 1.9 ? RGB[AMBER] : "255,104,40";
         const depth = front ? 1 : 0.55;
-        const reach = s.radius * r;
+        const reach = s.radius * r * spreadX;
         const beam = (alpha: number) => {
           const g = ctx.createLinearGradient(cx - reach * cR, cy - reach * sR, cx + reach * cR, cy + reach * sR);
           g.addColorStop(0, `rgba(${col},${Math.min(1, alpha * 1.55)})`);
@@ -527,6 +533,48 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       if (ringReveal <= 0) return;
       ctx.globalCompositeOperation = "lighter";
       const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
+      if (garg) {
+        // The far disk, lifted by gravity into a bright arch over the top of the hole, and a thinner one beneath.
+        for (let i = 0; i < 12; i++) {
+          const rx = r * (1.1 + i * 0.055), ry = r * (0.98 + i * 0.05);
+          const a = (0.95 - i * 0.07) * glow;
+          const g = ctx.createLinearGradient(cx - rx, cy, cx + rx, cy);
+          g.addColorStop(0, `rgba(255,190,200,${a * 0.25})`);
+          g.addColorStop(0.35, `rgba(255,236,240,${a})`);
+          g.addColorStop(0.65, `rgba(255,236,240,${a * 0.9})`);
+          g.addColorStop(1, `rgba(255,190,200,${a * 0.2})`);
+          ctx.strokeStyle = g;
+          ctx.lineWidth = (i < 3 ? 3.2 : 1.8) * sc;
+          ctx.beginPath(); ctx.ellipse(cx, cy - r * 0.04, rx, ry, 0, Math.PI * 1.04, Math.PI * 1.96); ctx.stroke();
+        }
+        for (let i = 0; i < 5; i++) {
+          ctx.strokeStyle = `rgba(255,210,220,${(0.38 - i * 0.06) * glow})`;
+          ctx.lineWidth = 1.4 * sc;
+          ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.03, r * (1.05 + i * 0.04), r * (0.94 + i * 0.03), 0, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+        }
+        // Light pouring out beneath the hole.
+        ctx.save();
+        ctx.translate(cx, cy + r * 0.95); ctx.scale(0.42, 1.6);
+        const pour = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 0.9);
+        pour.addColorStop(0, `rgba(255,240,245,${0.55 * glow})`);
+        pour.addColorStop(0.35, `rgba(255,190,205,${0.22 * glow})`);
+        pour.addColorStop(1, "rgba(255,160,180,0)");
+        ctx.fillStyle = pour;
+        ctx.beginPath(); ctx.arc(0, 0, r * 0.9, 0, TAU); ctx.fill();
+        ctx.restore();
+        for (let i = 0; i < 9; i++) {
+          const x = cx + (i - 4) * r * 0.07, len = r * (0.5 + ((i * 37) % 9) / 9 * 0.9);
+          const g = ctx.createLinearGradient(x, cy + r * 0.7, x, cy + r * 0.7 + len);
+          g.addColorStop(0, `rgba(255,236,242,${0.5 * glow})`); g.addColorStop(1, "rgba(255,236,242,0)");
+          ctx.strokeStyle = g; ctx.lineWidth = (i % 3 === 0 ? 2.2 : 1) * sc;
+          ctx.beginPath(); ctx.moveTo(x, cy + r * 0.7); ctx.lineTo(x + (i - 4) * r * 0.02, cy + r * 0.7 + len); ctx.stroke();
+        }
+        ctx.strokeStyle = `rgba(255,246,250,${0.85 * glow})`;
+        ctx.lineWidth = 1.6 * sc;
+        ctx.beginPath(); ctx.arc(cx, cy, r * 1.01, 0, TAU); ctx.stroke();
+        ctx.globalCompositeOperation = "source-over";
+        return;
+      }
       for (let i = 0; i < 9; i++) {
         const rad = r * (1.04 + i * 0.035);
         const g = ctx.createLinearGradient(cx, cy - rad, cx, cy + rad);
@@ -772,13 +820,13 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     // Module nerves grow out of the core as each module wakes (not with the rings).
     if (state.ringed) {
       // The event horizon: the centre of the core falls dark, its nerves glowing around the edge.
-      const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.86);
-      hole.addColorStop(0, `rgba(0,0,0,${0.94 * pe})`);
+      const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * (garg ? 1.0 : 0.86));
+      hole.addColorStop(0, `rgba(0,0,0,${(garg ? 0.99 : 0.94) * pe})`);
       hole.addColorStop(0.6, `rgba(2,1,1,${0.7 * pe})`);
       hole.addColorStop(1, "rgba(0,0,0,0)");
       ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = hole;
-      ctx.beginPath(); ctx.arc(cx, cy, r * 0.86, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx, cy, r * (garg ? 1.0 : 0.86), 0, TAU); ctx.fill();
       drawLensing();
       drawRings(true);
     }

@@ -84,6 +84,12 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const [layout, setLayout] = useState<FieldLayout | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const reduced = usePrefersReducedMotion();
+  // Core look: "saturn" (default) or "gargantua" (Grey's black-hole picture); Settings can switch it.
+  const [look, setLook] = useState<"saturn" | "gargantua">(() => { try { return localStorage.getItem("zaenia.coreLook") === "gargantua" ? "gargantua" : "saturn"; } catch { return "saturn"; } });
+  useEffect(() => {
+    const change = (event: Event) => setLook((event as CustomEvent<string>).detail === "gargantua" ? "gargantua" : "saturn");
+    window.addEventListener("zae:core-look", change); return () => window.removeEventListener("zae:core-look", change);
+  }, []);
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
@@ -108,8 +114,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed });
-  }, [startup.progress, animate, paused, processing, phase, layout, ringed]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase, ringed, look });
+  }, [startup.progress, animate, paused, processing, phase, layout, ringed, look]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 
