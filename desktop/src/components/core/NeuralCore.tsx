@@ -27,6 +27,8 @@ type Props = {
   onCore?: () => void;
   /** The core by itself with its nerves as Saturn-like rings, and no module or category icons (Grey, 2026-10-31). */
   ringed?: boolean;
+  /** Background jobs running now: one bead each orbits the middle ring (Grey's upgrade 3, 2026-10-31). */
+  activeJobs?: number;
 };
 
 const phaseCopy: Record<VoicePhase, string> = { idle: "STANDING BY", listening: "LISTENING", thinking: "THINKING", speaking: "SPEAKING" };
@@ -77,7 +79,7 @@ function usePrefersReducedMotion() {
  * the branches belong to the organism. Module orbs and labels sit on top as
  * real buttons for keyboard and screen-reader access.
  */
-export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore, ringed = true }: Props) {
+export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore, ringed = true, activeJobs = 0 }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<NeuralField | null>(null);
@@ -86,6 +88,12 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const reduced = usePrefersReducedMotion();
   // Preview switches for the core upgrades (localStorage "zaenia.corePreview": {"mood":true,"phase":"listening",...}).
   const [preview] = useState<{ phase?: VoicePhase } & CoreExtras>(() => { try { return JSON.parse(localStorage.getItem("zaenia.corePreview") ?? "{}"); } catch { return {}; } });
+  // Night side after sunset (upgrade 5): from 7 pm to 6 am local time, checked every minute.
+  const nightNow = () => { const h = new Date().getHours(); return h >= 19 || h < 6; };
+  const [night, setNight] = useState(nightNow);
+  useEffect(() => { const id = window.setInterval(() => setNight(nightNow()), 60_000); return () => window.clearInterval(id); }, []);
+  // Live upgrades (Grey picked 1, 3 and 5): mood-coloured rings, a bead per running job, the night side.
+  const extras: CoreExtras = { ...preview, mood: preview.mood ?? true, beads: preview.beads ?? Math.min(6, activeJobs), night: preview.night ?? night };
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
@@ -110,8 +118,8 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   }, []);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase: preview.phase ?? phase, ringed, extras: preview });
-  }, [startup.progress, animate, paused, processing, phase, layout, ringed]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase: preview.phase ?? phase, ringed, extras });
+  }, [startup.progress, animate, paused, processing, phase, layout, ringed, extras.beads, extras.night]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 
