@@ -96,7 +96,7 @@ export type FieldState = { progress: number; motion: boolean; processing: boolea
 /* ------------------------------------------------------------------ */
 
 export const RING_OUTER = 2.15;
-const RING_SQUASH = 0.27;   // how open the rings look (0 = edge on)
+const RING_SQUASH = 0.2;    // how open the rings look (0 = edge on); flatter, like an accretion disk
 const RING_ROLL = -0.33;    // tilt of the ring plane on screen
 const RING_POINTS = 120;
 type RingStrand = { radius: number; wobble: number; phase: number; freq: number; blue: boolean; alpha: number; width: number; order: number };
@@ -105,8 +105,9 @@ type RingSignal = { strand: number; angle: number; speed: number; blue: boolean 
 function buildRings(): { strands: RingStrand[]; signals: RingSignal[] } {
   const rnd = seeded(4242);
   const strands: RingStrand[] = [];
-  // Three bands with Saturn-like gaps between them: inner (faint), main (bright), outer (thin).
-  const bands: [number, number, number, number][] = [[1.28, 1.42, 7, 0.32], [1.5, 1.86, 16, 0.72], [1.94, RING_OUTER, 6, 0.42]];
+  // Saturn's banded rings crossed with a black hole's accretion disk (Grey, 2026-10-31): a hot, dense inner disk
+  // close to the core, a gap, the main band, a gap and a thin outer band.
+  const bands: [number, number, number, number][] = [[1.12, 1.4, 12, 0.85], [1.5, 1.86, 16, 0.72], [1.94, RING_OUTER, 6, 0.42]];
   for (const [from, to, count, strength] of bands) {
     for (let i = 0; i < count; i++) {
       const u = (i + rnd() * 0.8) / count;
@@ -482,8 +483,17 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
         const span = Math.PI * shown;
-        const col = s.blue ? RGB[BLUE] : RGB[AMBER];
+        // Hotter (whiter) close in, redder further out; the side turning toward you is brighter (Doppler beaming).
+        const col = s.blue ? RGB[BLUE] : s.radius < 1.3 ? "255,226,170" : s.radius < 1.6 ? RGB[HOT] : s.radius < 1.9 ? RGB[AMBER] : "255,104,40";
         const depth = front ? 1 : 0.55;
+        const reach = s.radius * r;
+        const beam = (alpha: number) => {
+          const g = ctx.createLinearGradient(cx - reach * cR, cy - reach * sR, cx + reach * cR, cy + reach * sR);
+          g.addColorStop(0, `rgba(${col},${Math.min(1, alpha * 1.55)})`);
+          g.addColorStop(0.5, `rgba(${col},${alpha})`);
+          g.addColorStop(1, `rgba(${col},${alpha * 0.35})`);
+          return g;
+        };
         ctx.beginPath();
         const steps = Math.round(RING_POINTS / 2);
         for (let k = 0; k <= steps; k++) {
@@ -492,17 +502,17 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
           if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = `rgba(${col},${s.alpha * 0.16 * depth * glow})`;
+        ctx.strokeStyle = beam(s.alpha * 0.16 * depth * glow);
         ctx.lineWidth = s.width * 3.2 * sc;
         ctx.stroke();
-        ctx.strokeStyle = `rgba(${col},${Math.min(1, s.alpha * depth * glow)})`;
+        ctx.strokeStyle = beam(Math.min(1, s.alpha * depth * glow));
         ctx.lineWidth = s.width * sc;
         ctx.stroke();
       }
       // Signals running around the rings.
       for (const g of RINGS.signals) {
         const s = RINGS.strands[g.strand];
-        const a = ((g.angle + time * g.speed * rate + spin * 0.6) % TAU + TAU) % TAU;
+        const a = ((g.angle + time * g.speed * rate * Math.pow(1.5 / s.radius, 1.5) + spin * 0.6) % TAU + TAU) % TAU;
         const isFront = a < Math.PI;
         if (isFront !== front) continue;
         const [x, y] = ringPoint(s, a);
@@ -512,6 +522,29 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.globalCompositeOperation = "source-over";
     };
     drawRings(false);
+    // Black hole: the far side of the disk, bent by gravity into a halo over and under the core, and a thin photon ring.
+    const drawLensing = () => {
+      if (ringReveal <= 0) return;
+      ctx.globalCompositeOperation = "lighter";
+      const glow = (1 + lis * 0.25 + spk * 0.35) * ringReveal;
+      for (let i = 0; i < 7; i++) {
+        const rad = r * (1.05 + i * 0.03);
+        const g = ctx.createLinearGradient(cx, cy - rad, cx, cy + rad);
+        const a = (0.42 - i * 0.045) * glow;
+        g.addColorStop(0, `rgba(255,214,150,${a})`);
+        g.addColorStop(0.32, `rgba(255,150,60,${a * 0.18})`);
+        g.addColorStop(0.5, "rgba(255,150,60,0)");
+        g.addColorStop(0.68, `rgba(255,150,60,${a * 0.12})`);
+        g.addColorStop(1, `rgba(255,190,110,${a * 0.55})`);
+        ctx.strokeStyle = g;
+        ctx.lineWidth = (i === 0 ? 2.2 : 1.1) * sc;
+        ctx.beginPath(); ctx.ellipse(cx, cy, rad * 1.01, rad, RING_ROLL, 0, TAU); ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(255,240,210,${0.75 * glow})`;
+      ctx.lineWidth = 1.3 * sc;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 1.012, 0, TAU); ctx.stroke();
+      ctx.globalCompositeOperation = "source-over";
+    };
 
     // Dark, warm body blocks the backdrop so the network reads as a solid ball.
     const body = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
@@ -737,7 +770,18 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     }
 
     // Module nerves grow out of the core as each module wakes (not with the rings).
-    if (state.ringed) drawRings(true);
+    if (state.ringed) {
+      // The event horizon: the centre of the core falls dark, its nerves glowing around the edge.
+      const hole = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.72);
+      hole.addColorStop(0, `rgba(0,0,0,${0.82 * pe})`);
+      hole.addColorStop(0.55, `rgba(2,1,1,${0.55 * pe})`);
+      hole.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = hole;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.72, 0, TAU); ctx.fill();
+      drawLensing();
+      drawRings(true);
+    }
     if (!state.ringed) geo.forEach((b, bi) => {
       const wake = nodeWakeLevel(state.progress, bi);
       if (wake <= 0) return;
