@@ -127,7 +127,7 @@ const RING_POINTS = 120;
 type RingStrand = { radius: number; wobble: number; phase: number; freq: number; blue: boolean; alpha: number; width: number; order: number };
 type RingSignal = { strand: number; angle: number; speed: number; blue: boolean };
 
-function buildRings(): { strands: RingStrand[]; signals: RingSignal[]; dense: RingStrand[] } {
+function buildRings(): { strands: RingStrand[]; signals: RingSignal[]; dense: RingStrand[]; three: RingStrand[] } {
   const rnd = seeded(4242);
   const strands: RingStrand[] = [];
   // Three bands with Saturn-like gaps between them: inner (faint), main (bright), outer (thin).
@@ -150,7 +150,10 @@ function buildRings(): { strands: RingStrand[]; signals: RingSignal[]; dense: Ri
     dense.push({ radius: 1.04 + u * (DISK_OUTER - 1.04) + (rnd() - 0.5) * 0.01, wobble: 0.003 + rnd() * 0.02, phase: rnd() * TAU,
       freq: 2 + Math.floor(rnd() * 7), blue: false, alpha: (0.35 + rnd() * 0.65) * (1 - u * 0.55), width: 0.5 + rnd() * 2.2 * (1 - u * 0.5), order: rnd() * 0.6 });
   }
-  return { strands, signals, dense };
+  // "jarvis": exactly three crisp planet rings.
+  const three: RingStrand[] = [[1.34, 2.4, 0.95], [1.68, 1.7, 0.8], [2.02, 1.2, 0.65]].map(([radius, width, alpha], i) =>
+    ({ radius, wobble: 0.002, phase: i * 2.1, freq: 3, blue: false, alpha, width, order: i * 0.15 }));
+  return { strands, signals, dense, three };
 }
 
 export type NeuralField = {
@@ -505,6 +508,9 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     // Saturn rings. The far half is drawn first so the sphere hides what passes behind it.
     const ringReveal = state.ringed ? smooth(clamp((pe - 0.35) / 0.65)) : 0;
     const vl = state.ringed && state.look ? VOID_LOOKS[state.look] : undefined;
+    // "jarvis" (Grey, 2026-10-31): the JARVIS hologram crossed with a planet: a golden sphere of broken circuit
+    // shells around a bright nucleus, and three rings.
+    const jv = state.ringed && state.look === "jarvis";
     const roll = vl ? vl.roll : RING_ROLL, squash = vl ? vl.squash : RING_SQUASH;
     const cR = Math.cos(roll), sR = Math.sin(roll);
     // Dense black-hole strands are laid out between 1.04 and DISK_OUTER; a look can squeeze them into its own range.
@@ -545,11 +551,11 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         }
         ctx.globalAlpha = 1;
       }
-      for (const s of vl ? RINGS.dense : RINGS.strands) {
+      for (const s of vl ? RINGS.dense : jv ? RINGS.three : RINGS.strands) {
         const shown = smooth(clamp((ringReveal - s.order * 0.5) * 2));
         if (shown <= 0) continue;
         const span = Math.PI * shown;
-        const col = vl ? (s.radius < 1.4 ? vl.hot : s.radius < 1.9 ? vl.mid : vl.cool) : s.blue ? RGB[BLUE] : RGB[AMBER];
+        const col = vl ? (s.radius < 1.4 ? vl.hot : s.radius < 1.9 ? vl.mid : vl.cool) : jv ? (s.radius < 1.5 ? "255,214,120" : "255,176,64") : s.blue ? RGB[BLUE] : RGB[AMBER];
         const depth = front ? 1 : 0.55;
         ctx.beginPath();
         const steps = Math.round(RING_POINTS / 2);
@@ -568,7 +574,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       }
       // Signals running around the rings.
       for (const g of RINGS.signals) {
-        const s = RINGS.strands[g.strand];
+        const s = jv ? RINGS.three[g.strand % 3] : RINGS.strands[g.strand];
         const a = ((g.angle + time * g.speed * rate + spin * 0.6) % TAU + TAU) % TAU;
         const isFront = a < Math.PI;
         if (isFront !== front) continue;
@@ -579,6 +585,55 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
       ctx.globalCompositeOperation = "source-over";
     };
     drawRings(false);
+    // JARVIS-style hologram: concentric shells of broken golden arcs with circuit ticks, turning at different speeds
+    // and tilts, around a bright swirling nucleus.
+    const drawHologram = () => {
+      const reveal = smooth(clamp((pe - 0.2) / 0.8));
+      if (reveal <= 0) return;
+      const glow = (1 + lis * 0.3 + spk * 0.4 + thk * 0.2) * reveal;
+      const rate = (state.processing ? 1.8 : 1) + thk * 0.8;
+      ctx.globalCompositeOperation = "lighter";
+      for (let shell = 0; shell < 8; shell++) {
+        const rad = r * (0.26 + shell * 0.1);
+        const tilt = 0.55 + 0.45 * Math.cos(time * 0.12 * (shell % 2 ? 1 : -1) + shell * 0.9);   // 3D-ish turn
+        const turn = time * (0.08 + (shell % 3) * 0.05) * (shell % 2 ? 1 : -1) * rate + shell * 1.3;
+        const segments = 5 + (shell * 3) % 6;
+        for (let k = 0; k < segments; k++) {
+          const seed = shell * 31 + k * 7;
+          const start = turn + (k / segments) * TAU;
+          const len = (TAU / segments) * (0.35 + ((seed * 13) % 10) / 18);
+          const a = (0.35 + ((seed * 7) % 10) / 22) * glow * (1 - shell * 0.05);
+          ctx.strokeStyle = `rgba(255,${180 + (seed % 5) * 10},${70 + (seed % 3) * 25},${a})`;
+          ctx.lineWidth = (shell % 3 === 0 ? 2.2 : 1.2) * sc;
+          ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * tilt, shell * 0.35, start, start + len); ctx.stroke();
+          // Circuit ticks and little blocks along the arc.
+          const ticks = Math.max(2, Math.round(len * 6));
+          for (let j = 0; j <= ticks; j += 1 + (seed + j) % 2) {
+            const u = start + len * (j / ticks);
+            const ex = Math.cos(u) * rad, ey = Math.sin(u) * rad * tilt;
+            const c0 = Math.cos(shell * 0.35), s0 = Math.sin(shell * 0.35);
+            const px = cx + ex * c0 - ey * s0, py = cy + ex * s0 + ey * c0;
+            const out = (3 + (j * seed) % 7) * sc * ((seed + j) % 3 === 0 ? 1.8 : 1);
+            const nx = (px - cx) / rad, ny = (py - cy) / rad;
+            ctx.lineWidth = 1 * sc;
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + nx * out, py + ny * out); ctx.stroke();
+            if ((seed + j) % 5 === 0) { ctx.globalAlpha = a; ctx.fillStyle = "rgba(255,210,120,0.9)"; ctx.fillRect(px - 2 * sc, py - 2 * sc, 4 * sc, 3 * sc); ctx.globalAlpha = 1; }
+          }
+        }
+      }
+      // Nucleus: a bright core and a swirl around it.
+      const swirl = time * 0.6 * rate;
+      ctx.strokeStyle = `rgba(255,226,150,${0.8 * glow})`;
+      ctx.lineWidth = 2 * sc;
+      ctx.beginPath();
+      for (let k = 0; k <= 80; k++) { const u = k / 80, ang = swirl + u * TAU * 1.6, rr = r * (0.05 + u * 0.22); const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr * 0.8; if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(255,240,200,${0.9 * glow})`;
+      ctx.lineWidth = 1.6 * sc;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.07, 0, TAU); ctx.stroke();
+      spr(SW, cx, cy, r * 0.45, 0.55 * glow);
+      ctx.globalCompositeOperation = "source-over";
+    };
 
     // The neural sphere itself (skipped when the look is a black hole only).
     if (!vl?.clear) {
@@ -807,6 +862,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
 
     }
     // Module nerves grow out of the core as each module wakes (not with the rings).
+    if (jv) drawHologram();
     if (state.ringed && !vl) drawRings(true);
     if (!state.ringed) geo.forEach((b, bi) => {
       const wake = nodeWakeLevel(state.progress, bi);
