@@ -531,7 +531,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
         if ((a < Math.PI) !== front) continue;
         for (let k = 6; k >= 0; k--) {
           const [tx, ty] = ringPoint(s, a - k * 0.035);
-          spr(k === 0 ? SW : SA, tx, ty, (k === 0 ? 52 : 30 - k * 2.5) * sc, (k === 0 ? 1 : 0.5 - k * 0.06) * ringReveal * (front ? 1 : 0.6));
+          spr(k === 0 ? SW : SB, tx, ty, (k === 0 ? 80 : 44 - k * 4) * sc, (k === 0 ? 1 : 0.8 - k * 0.08) * ringReveal * (front ? 1 : 0.6));
         }
       }
       // Signals running around the rings.
