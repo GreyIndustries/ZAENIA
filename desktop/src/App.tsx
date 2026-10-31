@@ -79,6 +79,7 @@ import { situationNow } from "./core/wakeSituation";
 import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
+import { TopCategories } from "./components/TopCategories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
 import { ArenaHeadToHead, ControlCenter, SecurityShield } from "./components/studios/MoreViews";
@@ -1410,6 +1411,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       {/* Home sits in the top bar next to the ZÆNIA box (Grey, 2026-10-31), no longer in its menu. */}
       {!isPhone && <button type="button" className="identity-home" onClick={() => openSection("overview")} aria-current={onDashboard ? "page" : undefined}
         aria-label="Home: the dashboard" title="Home: the dashboard"><Icon name="home" size={19}/><span>Home</span></button>}
+      {!isPhone && <TopCategories current={section} onOpen={id => openSection(id as Section)}
+        tabs={nav.map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon} size={16}/> }))}/>}
       <div className="topbar"><div className="topbar__meta">
         <span className="preview-status"><span className="preview-status__dot"/>{headerStatus}</span>
         {weather && weather.temperature !== null && <span className="topbar__weather" title={`${weather.place}: high ${Math.round(weather.high ?? 0)}°, low ${Math.round(weather.low ?? 0)}°`}>{Math.round(weather.temperature)}° <small>{sentenceCase(weather.condition)}</small></span>}

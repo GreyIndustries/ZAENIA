@@ -1,0 +1,19 @@
+/* The six categories in the top bar, next to Home (2026-10-31). */
+.top-cats{flex:none;display:flex;height:100%;border-right:1px solid var(--hair,rgba(147,166,202,.19))}
+.top-cats__cat{position:relative;height:100%}
+.top-cats__btn{height:100%;width:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0;border:0;
+  background:transparent;color:#aabbd0;font:inherit;font-size:11px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;transition:color .2s ease,background .2s ease}
+.top-cats__btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.top-cats__btn:hover,.top-cats__btn:focus-visible,.top-cats__btn[aria-expanded=true]{color:#edf2ff;background:linear-gradient(180deg,rgba(50,44,49,.42),rgba(20,37,58,.44));outline:none}
+.top-cats__btn[aria-current=true]{color:var(--accent,#e0a353);box-shadow:inset 0 -2px 0 var(--accent,#e0a353)}
+.top-cats__drop{position:absolute;top:100%;left:0;z-index:40;min-width:220px;display:flex;flex-direction:column;gap:2px;padding:8px;
+  border:1px solid var(--zx-line-strong,#2b4366);border-radius:0 0 12px 12px;background:rgba(6,11,20,.96);backdrop-filter:blur(14px);
+  box-shadow:0 16px 40px rgba(0,0,0,.5);animation:top-cats-in .16s ease}
+.top-cats__drop small{padding:4px 10px 6px;font-size:11px;color:var(--zx-muted,#7f97b3);letter-spacing:.04em}
+.top-cats__item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:0;border-radius:8px;background:transparent;color:#dbe8f6;font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.top-cats__item svg{width:16px;height:16px}
+.top-cats__item:hover,.top-cats__item:focus-visible{background:rgba(255,255,255,.06);outline:none}
+.top-cats__item[aria-current=page]{color:var(--accent,#e0a353)}
+@keyframes top-cats-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (max-width:1280px){.top-cats__btn{width:62px;font-size:10px;letter-spacing:.06em}}
+@media (prefers-reduced-motion:reduce){.top-cats__drop{animation:none}}
