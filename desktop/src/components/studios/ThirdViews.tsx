@@ -96,7 +96,7 @@ export function LookStudio({ appearance, onChange }: { appearance: Appearance; o
 }
 
 // ---------------------------------------------------------------- Status A: readiness
-const READY_GROUPS = [{ name: "Brain and safety", ids: ["brain", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
+const READY_GROUPS = [{ name: "Brain and safety", ids: ["brain", "brain_talk", "brain_seek", "brain_study", "brain_keep", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
 const phaseOk = (phase: ModulePhase) => phase === "ready" || phase === "working";
 export function StatusReadiness({ telemetry, onStartVoice }: { telemetry: CoreTelemetry | null; onStartVoice?: () => void }) {
   const [extra, setExtra] = useState<{ id: string; name: string; now: boolean | null; percent: number | null }[]>([]);

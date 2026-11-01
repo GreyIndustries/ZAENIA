@@ -78,3 +78,8 @@ Grey picked from the five previews: Today = A, Training = C, Food = E.
 - **Exercises not in the plan:** Training › Program now has "Did a different exercise?" (name with suggestions from the program's other days, reps, lb). It logs sets under that name next to the plan's (also on rest days), with + set and Remove; the burn and muscle-group maths already accept any exercise name.
 - Saved tab: new key `zaenia.fitness.section`; the old `zaenia.fitness.tab` values open the view that now holds them. "Log food", "Open the workout", the setup questions, "review this meal" and barcode scan land on the new places.
 - Tests: personal_tools_test +1; full suite 924 OK (14 skipped).
+
+## The four brains in Settings and the bottom bar; more fonts (2026-11-01)
+- Settings › System & appearance › Module diagnostics now has one chip per brain (`brain_talk`, `brain_seek`, `brain_study`, `brain_keep`, from `roster.brain_modules`): name and model, ready when downloaded, and the detail says its job and whether it's loaded right now. The Ollama "Local Brain" chip stays. Readiness groups them under "Brain and safety".
+- The bottom bar showed "Model llama3.1:8b" (the old general model in `brain_config.yaml`, still used by some helper calls through `run_local`'s default). It now shows Talk, Seek, Study and Keep with their models, lit when loaded; hover for the job (`status_bar.brains`).
+- Fonts: 29 choices in five groups (Clean, Tech, Code, Serif, Character), all fonts installed on this PC (Windows, Office and Grey's Montserrat, Lora, Almendra), each with fallbacks for the phone. A live preview line under the menu. "Use the Montserrat font" works by name.

@@ -94,6 +94,21 @@ def _brain() -> dict[str, str]:
     return _module("brain", "Local Brain", "ready", f"Ollama running {model}" if model else "Ollama running")
 
 
+def _brains() -> list[dict[str, str]]:
+    """Her four brains (Talk, Seek, Study, Keep), each with its job, from Ollama's downloaded and loaded models."""
+    import requests
+    from core.brain.roster import FOUR, brain_modules
+    try:
+        installed = {str(m.get("name", "")) for m in requests.get(OLLAMA_TAGS, timeout=1.5).json().get("models") or []}
+        loaded = {str(m.get("name", "")) for m in requests.get(OLLAMA_TAGS.replace("/tags", "/ps"), timeout=1.5).json().get("models") or []}
+    except Exception:
+        installed, loaded = None, set()
+    try:
+        return brain_modules(installed, loaded)
+    except Exception:
+        return [_module(f"brain_{brain_id}", name, "error", "Couldn't read this brain's state") for brain_id, name, _ in FOUR]
+
+
 def _voice() -> dict[str, str]:
     # Kokoro is ZAE's voice; Piper is only the fallback when Kokoro can't run.
     from core.carplay_audio.carplay_audio import get_piper_settings
@@ -282,6 +297,7 @@ def build_status(mode: str) -> dict[str, Any]:
         modules = [
             _guard(lambda: _security(mode), "security", "Security"),
             _guard(_brain, "brain", "Local Brain"),
+            *_brains(),
             _guard(_voice, "voice", "Voice"),
             calendar,
             _guard(_traffic, "traffic", "Traffic"),

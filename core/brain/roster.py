@@ -19,6 +19,28 @@ OLLAMA = "http://127.0.0.1:11434"
 _VERSIONS: dict[str, tuple[float, str | None]] = {}
 
 
+# The four brains and what each is for, in a few words (Settings diagnostics and the bottom bar).
+FOUR = (("talk", "Talk", "Answers you"), ("seek", "Seek", "Web questions"), ("study", "Study", "Research and coding"),
+        ("keep", "Keep", "Small summaries"))
+
+
+def brain_modules(installed: set[str] | None, loaded: set[str]) -> list[dict[str, str]]:
+    """One diagnostics module per brain: ready when its model is downloaded; the detail says its job and if it's loaded."""
+    rows = {b["id"]: b for b in brains()}
+    out = []
+    for brain_id, name, job in FOUR:
+        brain = rows[brain_id]
+        model = brain["model"]
+        if installed is None:
+            phase, state = "error", "Ollama isn't running"
+        elif model not in installed:
+            phase, state = "working", f"{model} isn't downloaded (ollama pull {model})"
+        else:
+            phase, state = "ready", ("loaded on the " if model in loaded else "not loaded; it loads on the ") + brain["where"].lower() + (" when needed" if model not in loaded else "")
+        out.append({"id": f"brain_{brain_id}", "name": f"{name} · {model}", "phase": phase, "detail": f"{brain['role']} Right now: {state}."})
+    return out
+
+
 def brains() -> list[dict[str, Any]]:
     from core.brain.conductor import SEEK_MODEL, TALK_KEEP_ALIVE, TALK_MODEL
     return [
