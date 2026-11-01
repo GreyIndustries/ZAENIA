@@ -10,7 +10,8 @@ import "./CodeStudio.css";
 type Status = "draft" | "queued" | "working" | "ready" | "failed" | "approved" | "undone" | "rejected";
 type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null;
   status: Status; step: string; createdAt: string; updatedAt: string; summary?: string; diff?: string; changed?: string[];
-  checks?: { ok: boolean; text: string }; source?: string; needs?: { app: boolean; server: boolean } };
+  checks?: { ok: boolean; text: string }; review?: { status: "reviewed" | "unavailable"; model?: string; text: string; at: string; advisory?: boolean };
+  source?: string; needs?: { app: boolean; server: boolean } };
 type View = { requests: Request[]; tools: { claude: boolean; aider: boolean }; running: boolean };
 
 const LABEL: Record<Status, string> = { draft: "Check the brief", queued: "Waiting", working: "Working", ready: "Ready to review",
@@ -80,7 +81,7 @@ export function BuildRequests() {
       <div><span className="cs-kicker">Build requests</span><h2 className="zx-title">Ask ZAE to change her own app</h2></div>
       <span className="cs-muted">Claude Code {view?.tools.claude ? "ready" : "not installed"} · Aider (local) {view?.tools.aider ? "ready" : "not installed"}</span>
     </div>
-    <p className="cs-muted">She writes a brief, a coding tool makes the change in a separate copy, and her tests run there. Nothing goes live until you approve it here on the PC, and every approved change can be undone. Her security code is locked. You can also say "ZAE, build … on the Health tab".</p>
+    <p className="cs-muted">She writes a brief, a coding tool makes the change in a separate copy, and her tests run there. A separate local model can add advisory findings; only you can approve the change here on the PC, and every approved change can be undone. Her security code is locked. You can also say "ZAE, build … on the Health tab".</p>
     <form className="cs-row" onSubmit={event => { event.preventDefault(); if (ask.trim().length >= 4) void create(); }}>
       <input className="cs-grow" value={ask} onChange={event => setAsk(event.target.value)} maxLength={2000} placeholder="e.g. make the core rings blue when I'm tired" aria-label="What to change"/>
       <button type="submit" className="cs-primary" disabled={!!busy || ask.trim().length < 4}>Write the brief</button>
@@ -122,6 +123,11 @@ export function BuildRequests() {
           <button type="button" onClick={() => setShowChecks(open => !open)}>{current.checks.ok ? "✓ Tests passed" : "✗ Tests failed"} · {showChecks ? "hide" : "show"} details</button>
           {showChecks && <pre className="cs-diff" aria-label="Test results"><span>{current.checks.text}</span></pre>}
         </div>}
+        {current.review && <section className="zx-inset cs-explain" aria-label="Independent second-pass review">
+          <strong>Second-pass local review · {current.review.status === "reviewed" ? current.review.model : "unavailable"}</strong>
+          <p className="cs-muted">Advisory only. It cannot approve, reject, or change this request. You remain the reviewer.</p>
+          <pre className="cs-diff">{current.review.text}</pre>
+        </section>}
         {current.diff && ["ready", "failed", "approved"].includes(current.status) && <pre className="cs-diff" aria-label="The change">{current.diff.split("\n").map((line, i) =>
           <span key={i} className={line.startsWith("+") && !line.startsWith("+++") ? "cs-add" : line.startsWith("-") && !line.startsWith("---") ? "cs-del" : line.startsWith("@@") ? "cs-hunk" : ""}>{line}{"\n"}</span>)}</pre>}
         {current.status === "ready" && <div className="cs-row">

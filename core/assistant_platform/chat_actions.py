@@ -26,6 +26,7 @@ from typing import Any, Callable
 
 ACTIONS = {
     "food.log": "log food he ate: {\"name\": str, \"calories\": number or null, \"protein\": number or null, \"fiber\": number or null}",
+    "inventory.use": "record how many servings Grey says he used from pantry inventory: {\"name\": str, \"servings\": number}",
     "exercise.log": "log an exercise session (not running/walking distance): {\"name\": str, \"minutes\": number, \"calories\": number or null}",
     "body.log": "log body numbers for today: {\"weightLb\": number or null, \"bodyFat\": number or null, \"steps\": number or null}",
     "cardio.log": "log cardio: {\"type\": run|walk|hike|cycle|swim|row|elliptical|stairs|hiit|jump rope|sport|other, \"miles\": number or null, \"minutes\": number or null}",
@@ -48,18 +49,19 @@ ACTIONS = {
     "codedoctor.scan": "check ZAE's own code for problems: {}",
 }
 
-_VERBS = re.compile(r"\b(log|logged|add|track|record|mark|check off|finished|did|done|ate|eaten|had|drank|weigh|weighed|walked|ran|run|"
+_VERBS = re.compile(r"\b(log|logged|add|track|record|mark|check off|finished|did|done|ate|eaten|had|drank|use|used|consumed|weigh|weighed|walked|ran|run|"
                     r"biked|cycled|swam|rowed|hiked|complete|completed|change|move|set|make|start|create|new|cancel|delete|remove|"
                     r"translate|find|look for|improve|think of|suggest|scan|check)\b", re.I)
 _TOPIC = re.compile(r"\b(calorie|kcal|protein|fiber|meal|breakfast|lunch|dinner|snack|food|ate|eat|weigh|weight|body ?fat|steps?|"
                     r"miles?|mi\b|km|minutes?|mins?|run|ran|walk|bike|cycle|swim|row|hike|cardio|workout|exercise|sets?|reps?|"
                     r"bench|squat|deadlift|curl|press|pull-?ups?|push-?ups?|dips|plank|task|todo|to-do|reminder|project|workbench|"
                     r"song|track|beat|music|stage|translate|book|library|program|source|suggestion|idea|code doctor|my code|your code|"
-                    r"prototype|testing|mixing|mastering|recording|released|writing|lunge|row|raise|crunch|twist|burpee)(?:e?s)?\b", re.I)
+                    r"prototype|testing|mixing|mastering|recording|released|writing|lunge|row|raise|crunch|twist|burpee|servings?|pantry|inventory)(?:e?s)?\b", re.I)
 # Creating tasks, events, reminders and notes has its own handlers (they show a proposal first); never route it here.
 _CREATE_OWN = re.compile(r"^\s*(?:please\s+|can you\s+|could you\s+)?(?:add|create|make|new|set up|schedule|put)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:new\s+)?"
                          r"(?:task|todo|to-do|event|appointment|meeting|reminder|note)\b|^\s*remind me\b", re.I)
 _QUESTION = re.compile(r"^\s*(what|how|why|when|where|who|which|is|are|do|does|can|could|should|would|will)\b", re.I)
+_SPOKEN_NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "half": 0.5, "a": 1, "an": 1}
 
 
 _NUTRIENTS = {
@@ -156,6 +158,10 @@ def maybe(message: str) -> bool:
 
 
 def classify(message: str, ask: Callable[[str], str]) -> dict[str, Any] | None:
+    used = re.fullmatch(r"\s*(?:I\s+)?(?:used|have used|consumed)\s+(?P<count>\d+(?:\.\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|half|a|an)\s+servings?\s+(?:of\s+)?(?P<name>.+?)\s*[.!?]*\s*", message, re.I)
+    if used:
+        raw_count = used.group("count").lower()
+        return {"action": "inventory.use", "args": {"name": used.group("name").strip(), "servings": float(_SPOKEN_NUMBERS[raw_count]) if raw_count in _SPOKEN_NUMBERS else float(raw_count)}}
     catalogue = "\n".join(f"- {name}: {about}" for name, about in ACTIONS.items())
     reply = ask(
         "Task: turn Grey's message into ONE app action, as JSON. Pick only from this list; if the message isn't asking for "
@@ -202,9 +208,25 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
     """Do it. Returns {"reply": what was done, "tab": tab to open or ""}; ValueError with a plain reason otherwise."""
     name, args = action["action"], action.get("args") or {}
     today = date.today().isoformat()
-    if store is None and name.split(".")[0] in ("food", "exercise", "project", "music", "body", "cardio", "workout", "set", "program"):
+    if store is None and name.split(".")[0] in ("food", "inventory", "exercise", "project", "music", "body", "cardio", "workout", "set", "program"):
         from core.assistant_platform.service import platform
         store = platform().store
+
+    if name == "inventory.use":
+        count = _num(args.get("servings"))
+        wanted = str(args.get("name") or "").strip()
+        if not wanted or count is None or count <= 0:
+            raise ValueError("Say the food name and how many servings you used, like ‘I used 2 servings of Greek yogurt.’")
+        item = _best(wanted, [row for row in store.list("fitness_inventory") if not row.get("archived")])
+        if item is None:
+            raise ValueError(f"I couldn't find {wanted!r} in pantry inventory. Open Fitness & Health → Weekly meal planner to scan or add it.")
+        reserved = sum(float(slot.get("servings", 0)) for plan in store.list("fitness_meal_plan") if not plan.get("archived")
+                       for slot in plan.get("slots", []) if slot.get("itemType") == "inventory" and slot.get("itemId") == item["id"] and slot.get("status") == "scheduled")
+        available = max(0.0, float(item.get("servingsTotal", 0))-float(item.get("servingsUsed", 0))-reserved)
+        if count > available:
+            raise ValueError(f"{item['title']} has {available:g} unreserved serving(s) left; {reserved:g} are reserved in the meal plan.")
+        updated = store.put("fitness_inventory", {**item, "servingsUsed": float(item.get("servingsUsed", 0))+count}, item["id"], revision=item["revision"])
+        return {"reply": f"Recorded {count:g} serving(s) of {updated['title']}. {max(0.0, float(updated['servingsTotal'])-float(updated['servingsUsed'])-reserved):g} unreserved serving(s) remain.", "tab": "fitness"}
 
     if name == "food.log":
         from core.assistant_platform.personal_tools import PersonalTools

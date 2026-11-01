@@ -52,6 +52,29 @@ class PersonalToolsTests(unittest.TestCase):
         for body, collection in invalid:
             with self.subTest(collection=collection,body=body),self.assertRaises(ValueError): validate_record(collection,body)
 
+    def test_weekly_meal_plan_inventory_and_recipe_validation(self):
+        inventory = self.tools.save("inventory", {"title": "Greek yogurt", "servingsTotal": 8.0,
+            "servingsUsed": 1.0, "servingLabel": "170 g cup", "servingGrams": 170.0,
+            "nutrients": {"calories": 100.0, "protein": 17.0, "fiber": 0.0}, "source": "Verified label"})
+        recipe = self.tools.save("recipes", {"title": "Protein pancakes", "mealTypes": ["Breakfast", "Dinner"],
+            "servings": 2.0, "ingredients": [], "instructions": "", "source": "Owner recipe"})
+        plan = self.tools.save("meal-plans", {"title": "Meals · week of 2026-11-02", "weekStart": "2026-11-02",
+            "slots": [{"id": "slot-1", "date": "2026-11-03", "mealType": "Breakfast", "itemType": "inventory",
+                       "itemId": inventory["id"], "servings": 2.0, "checkInAt": "08:00", "status": "scheduled"},
+                      {"id": "slot-2", "date": "2026-11-04", "mealType": "Dinner", "itemType": "recipe",
+                       "itemId": recipe["id"], "servings": 1.0, "checkInAt": "18:00", "status": "scheduled"}]})
+        self.assertEqual(plan["slots"][0]["servings"], 2.0)
+        self.assertEqual(self.tools.listing("inventory")["items"][0]["servingsTotal"], 8.0)
+        with self.assertRaises(ValueError): validate_record("meal-plans", {"title":"Invalid", "weekStart":"2026-11-03", "slots":[]})
+        with self.assertRaises(ValueError): validate_record("meal-plans", {"title":"Invalid", "weekStart":"2026-11-02",
+            "slots":[{"id":"bad","date":"2026-11-09","mealType":"Breakfast","itemType":"recipe","itemId":recipe["id"],"servings":1.0}]})
+        with self.assertRaises(ValueError): validate_record("inventory", {"title":"Used too much","servingsTotal":1.0,"servingsUsed":2.0})
+        from core.api.platform_routes import PATTERNS
+        scopes = {(method, scope) for method, pattern, scope in PATTERNS if "meal-plans" in pattern or "inventory" in pattern}
+        self.assertIn(("GET", "memory.read"), scopes)
+        self.assertIn(("POST", "memory.write"), scopes)
+        self.assertIn(("PUT", "memory.write"), scopes)
+
     def test_song_statistics_are_manual_dated_and_survive_restart(self):
         row=self.tools.save('music',{'title':'Fixture song','stage':'Mixing','projectFile':'Reference only.band',
             'releases':[{'platform':'SoundCloud','url':'https://soundcloud.com/example/fixture'}],

@@ -48,6 +48,7 @@ const AssistantPanel = lazy(() => import("./components/assistant/AssistantPanel"
 const ProtocolsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.ProtocolsPanel })));
 const PcSpecsPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.PcSpecsPanel })));
 const SelfSustainPanel = lazy(() => import("./components/status/StatusExtras").then(module => ({ default: module.SelfSustainPanel })));
+const AutomationCenter = lazy(() => import("./components/status/AutomationCenter").then(module => ({ default: module.AutomationCenter })));
 const VaultPanel = lazy(() => import("./components/settings/VaultPanel").then(module => ({ default: module.VaultPanel })));
 const PhoneNotifications = lazy(() => import("./components/phone/PhoneNotifications").then(module => ({ default: module.PhoneNotifications })));
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
@@ -1406,6 +1407,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       ]}/>;
       case "status": return <PageTabs id="status" tabs={[
         { id: "live", label: "Live", render: () => <StatusGauges/> },
+        { id: "automations", label: "Automations", render: () => <AutomationCenter/> },
         { id: "readiness", label: "Readiness", render: () => <StatusReadiness telemetry={telemetry} onStartVoice={IN_TAURI ? () => void startPcVoice() : undefined}/> },
         { id: "uptime", label: "Uptime", render: () => <StatusUptime/> },
         { id: "overview", label: "Overview", render: () => <StatusPanel onFix={runFix} onOpenSecurity={() => openSection("security")} telemetry={telemetry} source={source} connection={connection} startupReady={startup.ready} voice={LIVE_API ? { play: (key: string, text: string) => void speech.speak(key, text), stop: speech.stop, playing: speech.playing, loading: speech.loading } : undefined}/> },

@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, FiniteFloat, field_validator
 from core.assistant_platform.store import Conflict, now_text
 
 CATEGORIES = ("Science", "Biology", "Tech", "Bio tech", "Bio chem", "Nuclear physics", "Nano technology", "AI")
-COLLECTIONS = {"workbench": "workbench", "experiments": "workbench_experiment", "music": "music", "food": "fitness_food", "recipes": "fitness_recipe", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings"}
+COLLECTIONS = {"workbench": "workbench", "experiments": "workbench_experiment", "music": "music", "food": "fitness_food", "recipes": "fitness_recipe", "exercise": "fitness_exercise", "plans": "fitness_plan", "fitness-settings": "fitness_settings", "inventory": "fitness_inventory", "meal-plans": "fitness_meal_plan"}
 
 
 class Record(BaseModel):
@@ -255,10 +255,84 @@ class Food(Dated):
 
 class Recipe(Record):
     category: str = Field(default="Meal", max_length=60)
+    mealTypes: list[Literal["Breakfast", "Lunch", "Dinner"]] = Field(default_factory=list, max_length=3)
     servings: FiniteFloat = Field(default=1, gt=0, le=100)
     ingredients: list[dict] = Field(default_factory=list, max_length=100)
     instructions: str = Field(default="", max_length=10000)
     source: str = Field(default="Owner recipe", max_length=300)
+
+
+class Inventory(Record):
+    """A package/food with owner-confirmed portion facts and tracked servings."""
+    barcode: str = Field(default="", max_length=32)
+    source: str = Field(default="Owner-verified label", max_length=300)
+    sourceUrl: str = Field(default="", max_length=2000)
+    sourceName: str = Field(default="", max_length=160)
+    servingLabel: str = Field(default="1 serving", max_length=100)
+    servingGrams: FiniteFloat = Field(default=0, ge=0, le=100000)
+    servingsTotal: FiniteFloat = Field(gt=0, le=10000)
+    servingsUsed: FiniteFloat = Field(default=0, ge=0, le=10000)
+    nutrients: dict[str, FiniteFloat | None] = Field(default_factory=dict)
+    checkedAt: str = Field(default="", max_length=40)
+    _url = field_validator("sourceUrl")(public_url)
+
+    @field_validator("nutrients")
+    @classmethod
+    def nutrient_fields(cls, value):
+        allowed = {"calories", "protein", "fiber", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg"}
+        if set(value) - allowed or any(number is not None and number < 0 for number in value.values()):
+            raise ValueError("Use non-negative nutrition facts with recognized nutrient names.")
+        return value
+
+    @field_validator("servingsUsed")
+    @classmethod
+    def used_within_total(cls, value, info):
+        total = info.data.get("servingsTotal")
+        if total is not None and value > total:
+            raise ValueError("Used servings cannot exceed the amount available.")
+        return value
+
+
+class MealSlot(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    id: str = Field(min_length=1, max_length=64)
+    date: str
+    mealType: Literal["Breakfast", "Lunch", "Dinner"]
+    itemType: Literal["inventory", "recipe"]
+    itemId: str = Field(min_length=1, max_length=32)
+    servings: FiniteFloat = Field(gt=0, le=1000)
+    checkInAt: str = Field(default="12:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    status: Literal["scheduled", "eaten", "skipped"] = "scheduled"
+    loggedFoodId: str = Field(default="", max_length=32)
+    reminderId: str = Field(default="", max_length=32)
+
+    @field_validator("date")
+    @classmethod
+    def slot_date(cls, value):
+        return date.fromisoformat(value).isoformat()
+
+
+class MealPlan(Record):
+    weekStart: str
+    slots: list[MealSlot] = Field(default_factory=list, max_length=300)
+
+    @field_validator("weekStart")
+    @classmethod
+    def monday_start(cls, value):
+        parsed = date.fromisoformat(value)
+        if parsed.weekday() != 0:
+            raise ValueError("Meal plan weeks start on Monday.")
+        return parsed.isoformat()
+
+    @field_validator("slots")
+    @classmethod
+    def slots_in_week(cls, value, info):
+        start = date.fromisoformat(info.data["weekStart"]) if info.data.get("weekStart") else None
+        if start and any((slot_day := date.fromisoformat(slot.date)).isocalendar()[:2] != start.isocalendar()[:2] for slot in value):
+            raise ValueError("Every meal must be inside the selected Monday–Sunday week.")
+        if len({slot.id for slot in value}) != len(value):
+            raise ValueError("Meal slot ids must be unique.")
+        return value
 
 
 class Exercise(Dated):
@@ -309,7 +383,7 @@ class FitnessSettings(Record):
     baselineCalories: FiniteFloat | None = Field(default=None, ge=0, le=20000)
 
 
-SCHEMAS = {"workbench": Project, "experiments": Experiment, "music": Music, "food": Food, "recipes": Recipe, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings}
+SCHEMAS = {"workbench": Project, "experiments": Experiment, "music": Music, "food": Food, "recipes": Recipe, "exercise": Exercise, "plans": Plan, "fitness-settings": FitnessSettings, "inventory": Inventory, "meal-plans": MealPlan}
 
 
 def validate_record(collection, body):
@@ -343,7 +417,7 @@ class PersonalTools:
             date.fromisoformat(day)
         rows = [row for row in self.store.list(COLLECTIONS[collection]) if row.get("archived", False) == archived and (not day or row.get("date") == day)]
         # Lists don't download every drawing, source document and history.
-        fields = {"id", "revision", "updatedAt", "createdAt", "title", "archived", "category", "tags", "color", "size", "status", "stage", "date", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories", "servings", "ingredients", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg", "items", "sourceDetails"}
+        fields = {"id", "revision", "updatedAt", "createdAt", "title", "archived", "category", "mealTypes", "tags", "color", "size", "status", "stage", "date", "weekStart", "slots", "barcode", "servingLabel", "servingGrams", "servingsTotal", "servingsUsed", "nutrients", "checkedAt", "sourceUrl", "sourceName", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories", "servings", "ingredients", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg", "items", "sourceDetails"}
         items = [{key: value for key, value in row.items() if key in fields} for row in rows[offset:offset+100]]
         return {"items": items, "total": len(rows), "nextOffset": offset+100 if offset+100 < len(rows) else None}
 
