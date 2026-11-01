@@ -108,6 +108,14 @@ class PersonalToolsTests(unittest.TestCase):
         self.assertEqual(self.store.get('fitness_recipe',recipe['id'])['ingredients'][0]['name'],'eggs')
         self.assertEqual(self.tools.listing('recipes')['items'][0]['servings'],2)
 
+    def test_recipes_carry_the_made_for_this_week_shelf(self):
+        self.tools.save('recipes',{'title':'Turkey chili','weekOf':'2026-10-26'})
+        self.tools.save('recipes',{'title':'Overnight oats'})
+        shelves={row['title']:row['weekOf'] for row in self.tools.listing('recipes')['items']}
+        self.assertEqual(shelves,{'Turkey chili':'2026-10-26','Overnight oats':''})
+        with self.assertRaises(Exception):
+            self.tools.save('recipes',{'title':'Bad','weekOf':'next week'})
+
     def test_api_updates_are_revision_checked_and_archive_is_reversible(self):
         client=self.client();path='/api/platform/personal/workbench'
         created=client.post(path,json={'record':{'title':'Fixture'}})

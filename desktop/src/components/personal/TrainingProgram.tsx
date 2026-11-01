@@ -55,6 +55,8 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
   const [cardio, setCardio] = useState<Cardio>({ type: "run", miles: 0, minutes: 0 });
   const [setDraft, setSetDraft] = useState<Record<string, { reps: string; weight: string }>>({});
   const [different, setDifferent] = useState("");
+  // An exercise that isn't in the plan (Grey, 2026-11-01): logged as sets under its own name, next to the plan's.
+  const [extra, setExtra] = useState({ name: "", reps: "", weight: "" });
   // ZAE's setup questions: open by themselves while she's missing what the calorie math needs, from the button,
   // or when she asks in chat ("set up my training").
   const [setup, setSetup] = useState(false);
@@ -176,6 +178,30 @@ export function TrainingProgram({ askSetup = 0 }: { askSetup?: number }) {
               <button type="button" disabled={!draft.reps} onClick={() => { void log({ sets: [...(entry.sets ?? []), { exercise: item.exercise, reps: Number(draft.reps), weightLb: Number(draft.weight || 0) }], done: { ...done, [item.exercise]: true } }); setSetDraft({ ...setDraft, [item.exercise]: { reps: "", weight: draft.weight } }); }}>+ set</button>
               {logged.length > 0 && <small>{logged.map(s => `${s.reps}${s.weightLb ? `×${s.weightLb}` : ""}`).join(", ")}</small>}</div>
           </li>; })}</ul> : <p className="tp-muted">Nothing planned. Recovery, steps or light cardio.</p>)}
+        {!view?.actual.length && (() => {
+          const planned = new Set((view?.workout.exercises ?? []).map(e => e.exercise.toLowerCase()));
+          const extras = [...new Set((entry.sets ?? []).map(s => s.exercise).filter(name => !planned.has(name.toLowerCase())))];
+          const known = [...new Set(info.days.flatMap(d => d.exercises.map(e => e.exercise)))].filter(name => !planned.has(name.toLowerCase()));
+          const addSet = (name: string, reps: string, weight: string) => void log({ sets: [...(entry.sets ?? []), { exercise: name.trim().slice(0, 300), reps: Number(reps), weightLb: Number(weight || 0) }], done: { ...done, [name.trim().slice(0, 300)]: true } });
+          return <div className="tp-extra">
+            {extras.length > 0 && <ul className="tp-exercises">{extras.map(name => { const draft = setDraft[name] ?? { reps: "", weight: "" }; const logged = (entry.sets ?? []).filter(s => s.exercise === name);
+              return <li key={name} className="tp-ex tp-ex--done">
+                <span><strong>{name}</strong><small>Not in the plan</small></span>
+                <div className="tp-set"><input inputMode="numeric" placeholder="reps" aria-label={`${name} reps`} value={draft.reps} onChange={event => setSetDraft({ ...setDraft, [name]: { ...draft, reps: event.target.value } })}/>
+                  <input inputMode="decimal" placeholder="lb" aria-label={`${name} weight`} value={draft.weight} onChange={event => setSetDraft({ ...setDraft, [name]: { ...draft, weight: event.target.value } })}/>
+                  <button type="button" disabled={!draft.reps} onClick={() => { addSet(name, draft.reps, draft.weight); setSetDraft({ ...setDraft, [name]: { reps: "", weight: draft.weight } }); }}>+ set</button>
+                  <small>{logged.map(s => `${s.reps}${s.weightLb ? `×${s.weightLb}` : ""}`).join(", ")}</small>
+                  <button type="button" className="tp-x" aria-label={`Remove ${name}`} onClick={() => void log({ sets: (entry.sets ?? []).filter(s => s.exercise !== name), done: Object.fromEntries(Object.entries(done).filter(([key]) => key !== name)) })}>Remove</button></div>
+              </li>; })}</ul>}
+            <form className="tp-set tp-extra__add" onSubmit={event => { event.preventDefault(); if (extra.name.trim() && extra.reps) { addSet(extra.name, extra.reps, extra.weight); setExtra({ name: "", reps: "", weight: extra.weight }); } }}>
+              <input list="tp-known-exercises" placeholder="Did a different exercise? e.g. Incline dumbbell press" aria-label="Exercise not in the plan" maxLength={300} value={extra.name} onChange={event => setExtra({ ...extra, name: event.target.value })}/>
+              <datalist id="tp-known-exercises">{known.map(name => <option key={name} value={name}/>)}</datalist>
+              <input inputMode="numeric" placeholder="reps" aria-label="Reps" value={extra.reps} onChange={event => setExtra({ ...extra, reps: event.target.value })}/>
+              <input inputMode="decimal" placeholder="lb" aria-label="Weight in pounds" value={extra.weight} onChange={event => setExtra({ ...extra, weight: event.target.value })}/>
+              <button type="submit" disabled={!extra.name.trim() || !extra.reps || busy === "log"}>Add exercise</button>
+            </form>
+          </div>;
+        })()}
         <details className="tp-different"><summary>{view?.actual.length ? "Change what you did" : "Did something different? Tell ZAE"}</summary>
           <textarea rows={4} value={different} maxLength={4000} placeholder="e.g. ACFT this morning: 3-rep max deadlift, hand-release push-ups for 2 min, sprint-drag-carry, plank, 2-mile run" onChange={event => setDifferent(event.target.value)}/>
           <button type="button" className="tp-primary" disabled={!different.trim() || busy === "actual"} onClick={() => void run("actual", async () => { await api("POST", `${PATH}/actual?day=${day}`, { text: different }, { timeoutMs: 180_000 }); setDifferent(""); }, "Updated with what you did, and the burn is recalculated.")}>{busy === "actual" ? "ZAE is working it out…" : "Use this for the day"}</button>

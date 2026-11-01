@@ -260,6 +260,8 @@ class Recipe(Record):
     ingredients: list[dict] = Field(default_factory=list, max_length=100)
     instructions: str = Field(default="", max_length=10000)
     source: str = Field(default="Owner recipe", max_length=300)
+    # "Made for this week" shelf: the Monday (YYYY-MM-DD) of the week it's for; empty = cookbook only.
+    weekOf: str = Field(default="", pattern=r"^(\d{4}-\d{2}-\d{2})?$")
 
 
 class Inventory(Record):
@@ -417,7 +419,7 @@ class PersonalTools:
             date.fromisoformat(day)
         rows = [row for row in self.store.list(COLLECTIONS[collection]) if row.get("archived", False) == archived and (not day or row.get("date") == day)]
         # Lists don't download every drawing, source document and history.
-        fields = {"id", "revision", "updatedAt", "createdAt", "title", "archived", "category", "mealTypes", "tags", "color", "size", "status", "stage", "date", "weekStart", "slots", "barcode", "servingLabel", "servingGrams", "servingsTotal", "servingsUsed", "nutrients", "checkedAt", "sourceUrl", "sourceName", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories", "servings", "ingredients", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg", "items", "sourceDetails"}
+        fields = {"id", "revision", "updatedAt", "createdAt", "title", "archived", "category", "mealTypes", "tags", "color", "size", "status", "stage", "date", "weekStart", "slots", "barcode", "servingLabel", "servingGrams", "servingsTotal", "servingsUsed", "nutrients", "checkedAt", "sourceUrl", "sourceName", "calories", "protein", "fiber", "minutes", "source", "proteinTarget", "fiberTarget", "baselineCalories", "servings", "ingredients", "weekOf", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg", "items", "sourceDetails"}
         items = [{key: value for key, value in row.items() if key in fields} for row in rows[offset:offset+100]]
         return {"items": items, "total": len(rows), "nextOffset": offset+100 if offset+100 < len(rows) else None}
 
