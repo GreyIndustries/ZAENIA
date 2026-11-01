@@ -34,3 +34,8 @@ Grey's day view showed "Not fully reported" for carbs, fat, sugars, sodium and c
 - Generic names ("fitness & health", "food log", "nutrition"…) are not food names; the same entry twice within two minutes is logged once.
 - `fitness_summary` adds `{nutrient}Known` and `coverage`; the Fitness day view shows the known sum with "from X of Y foods" instead of "Not fully reported".
 - Tests: `chat_actions_test` +2; full suite 904 OK (14 skipped).
+
+## Brain check (2026-11-01)
+Live test of all four brains through the app's own calls (RTX 4070 Ti SUPER, 16 GB): Talk qwen3.5:4b 6.1 s cold / 0.1 s warm, Seek qwen3.5:9b 5.8 s / 0.1 s, Study qwen3:14b 12.8 s / 0.1 s, Keep qwen3:1.7b on CPU 2.7 s / 0.5 s; every answer correct, no thinking text leaked. Chat path: greeting 0.1 s (quick_self), normal question on Talk, web question on Seek with sources. Fixes:
+- `core/brain/warmup.py`: the server loads Talk and the topic embedder at start (skipped while gaming), so the first reply after a restart isn't a cold start.
+- `seek.evidence_context` tells Seek it just searched the web; it had answered "I can't search the live web myself" while citing the sources it was given.

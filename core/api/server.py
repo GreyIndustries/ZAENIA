@@ -186,6 +186,8 @@ def create_app(
             training_reminders.start()  # uses the shared inbox, quiet hours, and opt-in browser delivery
             from core.assistant_platform.pc_specs import warm
             warm()  # reads the PC's parts once so she can answer about them
+            from core.brain.warmup import warm_talk
+            warm_talk()  # loads Talk and the topic embedder now, so the first reply after a restart isn't a cold start
             from core.research.agent import watch
             watch().start()  # watch-list topics checked about once a day (online; skipped while gaming)
             from core.api.security_check import security_checks
