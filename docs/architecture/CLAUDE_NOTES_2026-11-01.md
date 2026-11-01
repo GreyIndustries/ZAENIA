@@ -25,5 +25,5 @@ Audit result: verified preferences, the proposal queue, pattern extraction, owne
 - **Provenance in one place**: `core/personal_memory/overview.py` and `GET /api/assistant/memory/all` combine "You told me", the profile ledger (with evidence count and latest quote, status) and "Noticed" insights (with the words they came from). Assistant › Everything remembered.
 - **No-store**: `core/personal_memory/no_store.py`: a sentence that starts or ends with "off the record", "don't remember/save this", "between us" is answered but not logged or learned from; "go off the record" starts a stretch that ends with "back on the record" or after 30 minutes. In memory only.
 - **Permission non-escalation**: tests show permission/authorization/security keys can't be learned, a sentence claiming permission doesn't become an active preference, retrieval carries "never authority to execute", and the approval policy comes only from its own setting (forgetting memory always needs review).
-- Tests: `core/personal_memory/phase3_test.py` 9; full suite 903 OK (14 skipped).
+- Tests: `core/personal_memory/phase3_test.py` 9; full suite 902 OK (14 skipped).
 - Still partial: episodic memory is the conversation log plus topic threads, without its own reviewable "episode" records.
