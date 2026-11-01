@@ -427,6 +427,24 @@ class UserMemory:
                 self.db.execute("UPDATE memories SET status='superseded' WHERE id=?", (memory_id,))
         return result
 
+    def restore(self, memory_id: str, ctx: ObservationContext) -> dict[str, Any]:
+        """Owner rollback: bring back an earlier value (superseded or historical), or keep one side of a conflict.
+        Recorded as a new owner correction, so the current value is superseded, not deleted."""
+        ctx.validate()
+        row = self.db.execute("SELECT * FROM memories WHERE id=? AND status IN ('superseded','historical','conflicted')",
+                              (memory_id,)).fetchone()
+        if row is None:
+            raise ValueError("Only an earlier or conflicting value can be restored.")
+        if row["namespace"] != ctx.namespace:
+            raise PermissionError("Restore namespace mismatch.")
+        kind = row["kind"] if row["kind"] not in {"unknown", "inference"} else "preference"
+        result = self.observe(row["key"], json.loads(row["value_json"]), ctx, kind=kind, scope=row["scope"],
+                              sensitivity=row["sensitivity"], evidence_type="user_correction",
+                              quote="Owner restored this value in the review screen.", volatility=row["volatility"], note=row["note"])
+        with self.db:
+            self._audit("restored", result.get("id"))
+        return result
+
     def import_seed(self, seed: dict[str, Any], *, include_sensitive: bool = False) -> dict[str, Any]:
         if seed.get("schema_version") != 1:
             raise ValueError("Unsupported seed schema.")

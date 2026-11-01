@@ -768,6 +768,13 @@ class BrainService:
 
         This happens only after the response completes.
         """
+        # Off the record (Phase 3 no-store): the turn isn't logged or learned from at all.
+        try:
+            from core.personal_memory.no_store import check as off_the_record
+            if off_the_record(owner_words(question)):
+                return
+        except Exception:
+            pass
 
         MEMORY_PATH.parent.mkdir(
             parents=True,

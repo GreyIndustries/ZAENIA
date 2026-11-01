@@ -75,6 +75,7 @@ import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./comp
 import { CalmView } from "./components/overview/CalmView";
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { glowItem } from "./core/glow";
+import { EverythingRemembered } from "./components/assistant/EverythingRemembered";
 import { addFaceId, approveFaceIdKey, faceIdReady, faceIdSupported, listFaceIdKeys, removeFaceIdKey } from "./core/faceId";
 import type { FaceIdKey } from "./core/faceId";
 import { situationNow } from "./core/wakeSituation";
@@ -1410,6 +1411,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       // Assistant: the front page ("The ZAE Daily") first, then the existing assistant tools.
       case "assistant": return <PageTabs id="assistant" tabs={[
         { id: "front", label: "Today's edition", render: () => <AssistantFront onAsk={text => submit(text)} onOpen={next => openSection(next as Section)} notice={inbox.notice ? { title: inbox.notice.title, message: inbox.notice.message } : null} unread={inbox.unreadCount}/> },
+        { id: "remembered", label: "Everything remembered", render: () => <EverythingRemembered/> },
         { id: "memory", label: "Memory & rules", render: () => <AssistantMemoryRules toggles={[
           { id: "listen", name: "Listening", detail: listen.mode === "always" ? "App mic on" : "App mic off", on: listen.mode === "always", toggle: toggleListening, disabled: !listen.supported },
           { id: "speak", name: "Speak replies", detail: speakReplies ? "Out loud" : "Text only", on: speakReplies, toggle: toggleSpeak },

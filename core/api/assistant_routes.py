@@ -28,6 +28,12 @@ def operation_for(method: str, path: str) -> str | None:
         return {"GET": "memory.read", "DELETE": "memory.write"}.get(method)
     if re.fullmatch(r"/api/assistant/profile/[A-Za-z0-9_-]{1,100}/confirm", path) and method == "POST":
         return "memory.write"
+    if re.fullmatch(r"/api/assistant/profile/[A-Za-z0-9_-]{1,100}/history", path) and method == "GET":
+        return "memory.read"
+    if re.fullmatch(r"/api/assistant/profile/[A-Za-z0-9_-]{1,100}/restore", path) and method == "POST":
+        return "memory.write"
+    if path == "/api/assistant/memory/all" and method == "GET":
+        return "memory.read"
     if path == "/api/assistant/notifications" and method == "GET":
         return "notifications.read"
     if re.fullmatch(r"/api/assistant/notifications/[A-Za-z0-9_-]{1,100}/(?:ack|snooze|claim)", path) and method == "POST":
@@ -163,6 +169,30 @@ def create_assistant_router(require_auth: Callable[..., Any], followthrough: Cal
             raise HTTPException(422, str(error)) from error
         audit("assistant.memory_changed", operation="memory.write", reason_code="profile_confirmed")
         return result
+
+    @router.get("/api/assistant/profile/{memory_id}/history")
+    def profile_history(memory_id: str):
+        from core.personal_memory.owner_profile import owner_profile
+        try:
+            return {"history": owner_profile().history(memory_id)}
+        except KeyError as error:
+            raise HTTPException(404, "That memory no longer exists.") from error
+
+    @router.post("/api/assistant/profile/{memory_id}/restore")
+    def profile_restore(memory_id: str):
+        from core.personal_memory.owner_profile import owner_profile
+        try:
+            result = owner_profile().restore(memory_id)
+        except (ValueError, PermissionError) as error:
+            raise HTTPException(422, str(error)) from error
+        audit("assistant.memory_changed", operation="memory.write", reason_code="profile_restored")
+        return result
+
+    @router.get("/api/assistant/memory/all")
+    def memory_all():
+        """Everything ZAE remembers about Grey, from all three stores, each with where it came from."""
+        from core.personal_memory.overview import everything
+        return everything()
 
     @router.delete("/api/assistant/profile/{memory_id}")
     def profile_forget(memory_id: str):

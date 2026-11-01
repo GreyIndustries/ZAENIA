@@ -4,6 +4,8 @@ import { api, errorText } from "../../core/bridge";
 type ProfileRecord = { id: string; key: string; value: string; kind: string; scope: string; status: string; sensitivity: string; confidence: number; updatedAt: string; evidence: number };
 type Evidence = { type: string; at: string; quote: string; source: string };
 type Explained = ProfileRecord & { note: string; createdAt: string; evidence: Evidence[] };
+type HistoryRow = { id: string; value: string; status: string; updatedAt: string };
+const STATUS_WORD: Record<string, string> = { active: "current", superseded: "earlier", historical: "earlier", conflicted: "conflicting", candidate: "to confirm" };
 
 const VIEWS = [
   { id: "active", label: "Known" },
@@ -26,6 +28,7 @@ export function ProfileReview() {
   const [records, setRecords] = useState<ProfileRecord[] | null>(null);
   const [available, setAvailable] = useState(true);
   const [open, setOpen] = useState<Explained | null>(null);
+  const [history, setHistory] = useState<{ id: string; rows: HistoryRow[] } | null>(null);
   const [forgetAsked, setForgetAsked] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -70,7 +73,18 @@ export function ProfileReview() {
           <ul>{open.evidence.map((item, index) => <li key={index}>{evidenceLabel(item.type)} ({new Date(item.at).toLocaleDateString()}){item.quote ? `: “${item.quote}”` : ""}</li>)}</ul>
           {open.note && <small>{open.note}</small>}
         </div>}
+        {record.status === "conflicted" && <small className="assistant-panel__meta">You've said two different things here. Open History and keep the right one.</small>}
+        {history?.id === record.id && <div className="assistant-panel__note">
+          <strong>History</strong>
+          <ul>{history.rows.map(row => <li key={row.id}>{row.value} <small>({STATUS_WORD[row.status] ?? row.status}, {new Date(row.updatedAt).toLocaleDateString()})</small>
+            {["superseded", "historical", "conflicted"].includes(row.status) && <button type="button" disabled={busy} onClick={() => void act(
+              () => api("POST", `/api/assistant/profile/${encodeURIComponent(row.id)}/restore`), row.status === "conflicted" ? "Kept that one." : "Restored the earlier value.")}>
+              {row.status === "conflicted" ? "Keep this" : "Restore"}</button>}</li>)}</ul>
+        </div>}
         <div className="assistant-panel__actions">
+          <button type="button" disabled={busy} onClick={() => history?.id === record.id ? setHistory(null)
+            : void api<{ history: HistoryRow[] }>("GET", `/api/assistant/profile/${encodeURIComponent(record.id)}/history`).then(r => setHistory({ id: record.id, rows: r.history }), error => setMessage(errorText(error)))}>
+            {history?.id === record.id ? "Hide history" : "History"}</button>
           <button type="button" disabled={busy} onClick={() => open?.id === record.id ? setOpen(null)
             : void api<Explained>("GET", `/api/assistant/profile/${encodeURIComponent(record.id)}`).then(setOpen, error => setMessage(errorText(error)))}>
             {open?.id === record.id ? "Hide why" : "Why?"}</button>

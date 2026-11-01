@@ -242,6 +242,25 @@ class OwnerProfile:
         self._core = (-1.0, None)
         return {"id": result.get("id"), "key": result.get("key"), "status": result.get("status")}
 
+    def history(self, memory_id: str) -> list[dict[str, Any]]:
+        """Every value this memory has had (newest first), so Grey can roll one back."""
+        if not self.available():
+            raise KeyError(memory_id)
+        with self._memory() as memory:
+            row = memory.db.execute("SELECT key, scope, namespace FROM memories WHERE id=?", (memory_id,)).fetchone()
+            if row is None:
+                raise KeyError(memory_id)
+            rows = memory.db.execute("SELECT id, value_json, status, updated_at FROM memories WHERE key=? AND scope=? AND namespace=? "
+                                     "ORDER BY updated_at DESC", (row["key"], row["scope"], row["namespace"])).fetchall()
+        return [{"id": r["id"], "value": _value(json.loads(r["value_json"])), "status": r["status"], "updatedAt": r["updated_at"]} for r in rows]
+
+    def restore(self, memory_id: str) -> dict[str, Any]:
+        """Grey rolled back to an earlier value, or picked one side of a conflict."""
+        with self._memory() as memory:
+            result = memory.restore(memory_id, self._context("restore-" + uuid.uuid4().hex, "typed"))
+        self._core = (-1.0, None)
+        return {"id": result.get("id"), "key": result.get("key"), "status": result.get("status")}
+
     def forget(self, memory_id: str) -> int:
         """Grey asked to forget this: remove it and stop it being learned again."""
         with self._memory() as memory:
