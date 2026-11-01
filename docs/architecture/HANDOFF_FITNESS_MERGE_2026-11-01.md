@@ -3,7 +3,7 @@
 Grey asked (2026-11-01): merge Training program + Plans & targets + Food & exercise; merge Progress + Today + Day log; merge Recipes + Scan food + Weekly meal planner. Five layout previews were made for him to pick from:
 https://claude.ai/artifact/DqDeXbPpXFjiSsDGXq98Za (source: the Claude session scratchpad; the boards are A to E).
 
-**Status:** waiting for Grey's pick. Nothing in the app has changed yet. If you continue, ask Grey which letter he picked (he may mix them per tab, like "A for Today, D for Food"), or read his reply in the project thread.
+**Status: done (2026-11-01).** Grey picked Today = A, Training = C, Food = E, plus recipe shelves (Made for this week / Cookbook) and logging exercises that aren't in the plan. Built and installed; see CLAUDE_NOTES_2026-11-01.md. The rest of this file is kept for reference.
 
 ## The merge
 | New tab | Was | Components today (`desktop/src/components/personal/`) |
