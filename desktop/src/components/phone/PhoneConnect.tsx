@@ -4,6 +4,7 @@ import { CoreBackdrop } from "../core/CoreBackdrop";
 import { beginVoiceLogin, BridgeError, checkToken, completeVoiceLogin, errorText, saveToken } from "../../core/bridge";
 import type { VoiceChallenge } from "../../core/bridge";
 import { recordLoginVoice } from "../../core/voiceLogin";
+import { faceIdReady, signInWithFaceId } from "../../core/faceId";
 import type { VoiceRecording } from "../../core/voiceLogin";
 import "./PhoneConnect.css";
 
@@ -26,6 +27,15 @@ export function PhoneConnect({ notice, onConnected }: Props) {
   const mounted = useRef(true);
   const voiceBusy = phase !== "idle";
   const micSupported = Boolean(window.isSecureContext && navigator.mediaDevices?.getUserMedia);
+  const [faceId, setFaceId] = useState(false);
+  useEffect(() => { void faceIdReady().then(ready => { if (mounted.current) setFaceId(ready); }); }, []);
+  async function faceIdSignIn() {
+    if (busy || voiceBusy) return;
+    setError(null); setBusy(true);
+    try { await signInWithFaceId(); if (mounted.current) onConnected(); }
+    catch (failure) { if (mounted.current) setError(failure instanceof Error ? failure.message : "Face ID didn't work. Try again."); }
+    finally { if (mounted.current) setBusy(false); }
+  }
 
   function cancelVoice() {
     abort.current?.abort();
@@ -107,6 +117,12 @@ export function PhoneConnect({ notice, onConnected }: Props) {
       <div className="phone-connect__mark" aria-hidden="true"><span/></div>
       <h1 className="phone-connect__brand">ZÆNIA</h1>
       <p className="phone-connect__lede">Your briefing and Zae, wherever you are.</p>
+      {faceId && <section className="phone-connect__card" aria-label="Face ID sign-in">
+        <strong>Sign in with Face ID</strong>
+        <p className="phone-connect__help">Look at your iPhone. Your face stays on the phone; Zae only gets Apple's signed yes.</p>
+        <button className="phone-connect__submit" type="button" disabled={busy || voiceBusy} onClick={() => void faceIdSignIn()}>{busy ? "Checking…" : "Use Face ID"}</button>
+        {error && <p className="phone-connect__message phone-connect__message--error" role="alert">{error}</p>}
+      </section>}
       <section className="phone-connect__card" aria-label="Voice sign-in">
         <strong>Sign in with your voice</strong>
         <p className="phone-connect__help">No token needed. Read a fresh prompt so Zae can check your enrolled voice on your PC.</p>

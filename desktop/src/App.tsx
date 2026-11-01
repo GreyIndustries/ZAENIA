@@ -75,6 +75,8 @@ import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./comp
 import { CalmView } from "./components/overview/CalmView";
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { glowItem } from "./core/glow";
+import { addFaceId, approveFaceIdKey, faceIdReady, faceIdSupported, listFaceIdKeys, removeFaceIdKey } from "./core/faceId";
+import type { FaceIdKey } from "./core/faceId";
 import { situationNow } from "./core/wakeSituation";
 import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
@@ -233,6 +235,46 @@ const sentenceCase = (text: string) => text ? text.charAt(0).toUpperCase() + tex
 
 // Phone web app: ask for the token once, then show the full UI. The desktop app
 // and the browser preview go straight to the UI.
+/** PC: the phone Face ID keys, each removable. */
+function FaceIdKeys() {
+  const [keys, setKeys] = useState<FaceIdKey[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { void listFaceIdKeys().then(r => setKeys(r.keys), f => setError(errorText(f))); }, []);
+  return <div className="detail-panel__block faceid-keys">
+    <h2>Phone Face ID</h2>
+    <p>iPhones that can sign in to ZAE's phone app with Face ID. Remove one if you lose the phone or stop using it.</p>
+    {error && <p role="alert">{error}</p>}
+    {keys?.length === 0 && <p>None yet. On your iPhone, sign in with your voice and tap "Add Face ID".</p>}
+    {keys?.map(key => <div key={key.id} className="faceid-keys__row"><span><b>{key.label}</b><small>{key.approved ? "Approved" : "Waiting for approval"} · added {new Date(key.created * 1000).toLocaleDateString()}</small></span>
+      <button type="button" onClick={() => void removeFaceIdKey(key.id).then(r => setKeys(r.keys), f => setError(errorText(f)))}>Remove</button></div>)}
+  </div>;
+}
+
+/** Signed in on the phone without a Face ID key yet: offer to add one (approved on the PC). */
+function FaceIdOffer() {
+  const [state, setState] = useState<"hidden" | "offer" | "busy" | "sent" | "error">("hidden");
+  const [message, setMessage] = useState("");
+  useEffect(() => {
+    let live = true;
+    try { if (localStorage.getItem("zaenia.faceIdOffer") === "dismissed") return; } catch { /* optional */ }
+    void Promise.all([faceIdSupported(), faceIdReady()]).then(([supported, ready]) => { if (live && supported && !ready) setState("offer"); });
+    return () => { live = false; };
+  }, []);
+  if (state === "hidden") return null;
+  const dismiss = () => { try { localStorage.setItem("zaenia.faceIdOffer", "dismissed"); } catch { /* optional */ } setState("hidden"); };
+  const add = async () => {
+    setState("busy");
+    try { await addFaceId(); setState("sent"); setMessage("Almost there: approve it on your PC (a prompt is waiting there). Next time you can sign in with Face ID."); }
+    catch (failure) { setState("error"); setMessage(failure instanceof Error ? failure.message : "Face ID couldn't be added."); }
+  };
+  return <div className="faceid-offer" role="dialog" aria-label="Add Face ID sign-in">
+    <b>{state === "sent" ? "Face ID added" : "Sign in faster with Face ID?"}</b>
+    <span>{state === "sent" || state === "error" ? message : "Add this iPhone's Face ID. You'll approve it once on your PC."}</span>
+    <div>{state === "offer" || state === "error" ? <><button type="button" onClick={() => void add()}>Add Face ID</button><button type="button" onClick={dismiss}>Not now</button></>
+      : state === "busy" ? <em>Waiting for Face ID…</em> : <button type="button" onClick={() => setState("hidden")}>OK</button>}</div>
+  </div>;
+}
+
 // Grey (2026-11-01): "I want to sign in every time." The phone web app asks again on every open, and again
 // after it has been in the background for more than two minutes.
 const VISIT_KEY = "zaenia.signedInThisVisit";
@@ -279,7 +321,10 @@ export default function App() {
   }, [connected]);
   if (connected === null) return <div className="phone-connect"><main className="phone-connect__body"><p role="status">Reconnecting to ZÆNIA…</p></main></div>;
   if (!connected) return <PhoneConnect notice={notice} onConnected={onConnected}/>;
-  return <ZaeniaApp connectionNotice={notice} onForgetPhone={WEB_APP ? onForgetPhone : undefined} onAuthLost={WEB_APP ? onAuthLost : undefined}/>;
+  return <>
+    <ZaeniaApp connectionNotice={notice} onForgetPhone={WEB_APP ? onForgetPhone : undefined} onAuthLost={WEB_APP ? onAuthLost : undefined}/>
+    {WEB_APP && <FaceIdOffer/>}
+  </>;
 }
 
 function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPhone?: () => void; onAuthLost?: () => void; connectionNotice?: string | null }) {
@@ -788,6 +833,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // The code for "Phone confirms": shown here only while the phone asks for it (it changes every minute).
   type NearCode = { code: string; qr: string; secondsLeft: number; voice: boolean };
   const [nearCode, setNearCode] = useState<NearCode | null>(null);
+  const [faceIdPending, setFaceIdPending] = useState<FaceIdKey[]>([]);
   const remoteSnapshot = useRef("");
   // A wake-up call or sleep phrase the PC voice heard (it has the mic, so the app's own mic is off).
   const calmEventRef = useRef<(event: CalmPhrase) => void>(() => undefined);
@@ -806,11 +852,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       busy = true;
       void (async () => {
         try {
-          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null; calmEvent?: CalmPhrase | null; voiceTurns?: string[] }>("GET", "/api/remote/collect", undefined, { desktop: true });
+          const reply = await api<{ commands: { action: string; target: string }[]; nearCode?: NearCode | null; calmEvent?: CalmPhrase | null; voiceTurns?: string[]; passkeyPending?: FaceIdKey[] }>("GET", "/api/remote/collect", undefined, { desktop: true });
           for (const text of reply.voiceTurns ?? []) voiceTurnRef.current(text);
           for (const command of reply.commands) remoteRef.current(command);
           if (reply.calmEvent) calmEventRef.current(reply.calmEvent);
           setNearCode(reply.nearCode ?? null);
+          setFaceIdPending(reply.passkeyPending ?? []);
           const snapshot = remoteSnapshot.current;
           if (snapshot !== sent || Date.now() - sentAt > 8000) { await api("POST", "/api/remote/state", JSON.parse(snapshot), { desktop: true }); sent = snapshot; sentAt = Date.now(); }
         } catch { /* server off or not paired yet: try again next time */ }
@@ -1391,6 +1438,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "system", label: "System & appearance", render: () => <><div className="section-content"><div className="section-content__tag">MODULE DIAGNOSTICS <span>{source==="preview"?"PREVIEW ONLY":"LOCAL STATUS MODE"}</span></div><div className="system-list">{telemetry?.modules.map(m=><button type="button" key={m.id} className={`system-module ${selectedModule===m.id?"system-module--selected":""}`} onClick={()=>setSelectedModule(m.id)}><span className={`module-item__dot module-item__dot--${m.phase}`}/><strong>{m.name}</strong><small>{phaseLabels[m.phase]}</small></button>) ?? <div className="empty-state">No validated module data received.</div>}</div><div className="file-detail"><span>SELECTED MODULE</span><strong>{moduleInfo?.name ?? "No module selected"}</strong><p>{moduleInfo ? `Reported state: ${phaseLabels[moduleInfo.phase]}. ${source==="preview" ? "This is illustrative sample data, not a verified runtime check." : moduleInfo.detail ? moduleInfo.detail + "." : "Read-only status from the live feed."}` : "Choose a module to inspect its displayed status."}</p><small>{source==="local" ? connection : "No real module control or authentication changes from this panel."}</small></div></div><div className="core-settings" aria-label="Neural core settings">{coreSettings}</div></> },
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },
         { id: "notifications", label: "Notifications", render: () => <PhoneNotifications/> },
+        ...(IN_TAURI ? [{ id: "faceid", label: "Phone Face ID", render: () => <FaceIdKeys/> }] : []),
       ]}/>;
       }
       default: return null;
@@ -1400,6 +1448,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
+    {IN_TAURI && faceIdPending.length > 0 && <div className="faceid-approve" role="dialog" aria-label="Approve Face ID">
+      <b>Your phone wants to add Face ID sign-in</b>
+      <span>Only approve this if you just tapped "Add Face ID" on your iPhone. It lets that iPhone sign in to ZAE's phone app with Face ID. Your PC's passkey and security settings don't change.</span>
+      <div><button type="button" onClick={() => void approveFaceIdKey(faceIdPending[0].id).then(() => setFaceIdPending(rest => rest.slice(1)), () => setFaceIdPending([]))}>Approve</button>
+        <button type="button" onClick={() => void removeFaceIdKey(faceIdPending[0].id).then(() => setFaceIdPending(rest => rest.slice(1)), () => setFaceIdPending([]))}>That wasn't me</button></div>
+    </div>}
     {nearCode && <div className="near-code" role="dialog" aria-label="QR code for your phone">
       <p>Scan with your phone{nearCode.voice ? " to finish (voice checked)" : ", then do the voice check"}</p>
       <NearQr value={nearCode.qr}/>

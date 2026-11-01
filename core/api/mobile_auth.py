@@ -180,6 +180,17 @@ class MobileAuth:
         finally:
             self.verification_lock.release()
 
+    def issue_session(self) -> str:
+        """A phone session for a sign-in that was verified another way (Face ID, face_passkey.py)."""
+        token = secrets.token_urlsafe(32)
+        with self.lock:
+            self._purge()
+            if len(self.sessions) >= 64:
+                oldest = min(self.sessions, key=lambda k: self.sessions[k].created)
+                del self.sessions[oldest]
+            self.sessions[key(token)] = Session(self.clock(), self.clock(), self.generation())
+        return token
+
     def authenticated(self, token: str) -> bool:
         if not token or len(token) > 128:
             return False

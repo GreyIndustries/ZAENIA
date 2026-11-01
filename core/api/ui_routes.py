@@ -63,6 +63,9 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("GET", r"/api/status/bar", "status.read"),
         ("GET", r"/api/status/processes", "status.read"),
         ("GET", r"/api/status/uptime", "status.read"),
+        ("GET", r"/api/passkeys", "assistant.desktop.manage"),
+        ("POST", r"/api/passkeys/[A-Za-z0-9_-]{6,16}/approve", "assistant.desktop.manage"),
+        ("DELETE", r"/api/passkeys/[A-Za-z0-9_-]{6,16}", "assistant.desktop.manage"),
         ("GET", r"/api/voice/trial", "status.read"),
         ("POST", r"/api/voice/trial", "assistant.desktop.manage"),
         # Arena test set (arena_bench.py): your own questions, run on every model and graded against expected answers.
@@ -598,6 +601,27 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         except ValueError as error:
             raise HTTPException(400, str(error)) from error
 
+    # Phone Face ID keys: approved or removed only from the desktop app on the PC (face_passkey.py).
+    @router.get("/api/passkeys", dependencies=[Depends(require_desktop)])
+    def passkeys_list() -> dict[str, Any]:
+        from core.api.face_passkey import face_passkeys
+        return {"keys": face_passkeys().summary()}
+
+    @router.post("/api/passkeys/{short_id}/approve", dependencies=[Depends(require_desktop)])
+    def passkeys_approve(short_id: str) -> dict[str, Any]:
+        from core.api.face_passkey import face_passkeys
+        if not face_passkeys().approve(short_id):
+            raise HTTPException(404, "That Face ID request expired. Add it again from the phone.")
+        audit("auth.passkey", operation="assistant.desktop.manage", reason_code="approved_on_pc")
+        return {"keys": face_passkeys().summary()}
+
+    @router.delete("/api/passkeys/{short_id}", dependencies=[Depends(require_desktop)])
+    def passkeys_remove(short_id: str) -> dict[str, Any]:
+        from core.api.face_passkey import face_passkeys
+        face_passkeys().remove(short_id)
+        audit("auth.passkey", operation="assistant.desktop.manage", reason_code="removed_on_pc")
+        return {"keys": face_passkeys().summary()}
+
     @router.get("/api/status/uptime")
     def status_uptime() -> dict[str, Any]:
         from core.api.uptime import uptime
@@ -817,8 +841,9 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         from core.api import remote_control
         from core.api.near_pc import near_pc
         from core.voice_listener.calm_state import take_event, take_voice_turns
+        from core.api.face_passkey import face_passkeys
         return {"commands": remote_control.collect(), "nearCode": near_pc().code_for_pc(), "calmEvent": take_event(),
-                "voiceTurns": take_voice_turns()}
+                "voiceTurns": take_voice_turns(), "passkeyPending": [k for k in face_passkeys().summary() if not k["approved"]]}
 
     @router.post("/api/remote/state", dependencies=[Depends(require_desktop)])
     def remote_report(body: RemoteState) -> dict[str, Any]:
