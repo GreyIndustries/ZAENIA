@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, errorText, LIVE_API } from "../../core/bridge";
+import { api, errorText, LIVE_API, restartServer } from "../../core/bridge";
 import "./CodeStudio.css";
 
 /**
@@ -10,7 +10,7 @@ import "./CodeStudio.css";
 type Status = "draft" | "queued" | "working" | "ready" | "failed" | "approved" | "undone" | "rejected";
 type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null;
   status: Status; step: string; createdAt: string; updatedAt: string; summary?: string; diff?: string; changed?: string[];
-  checks?: { ok: boolean; text: string }; source?: string };
+  checks?: { ok: boolean; text: string }; source?: string; needs?: { app: boolean; server: boolean } };
 type View = { requests: Request[]; tools: { claude: boolean; aider: boolean }; running: boolean };
 
 const LABEL: Record<Status, string> = { draft: "Check the brief", queued: "Waiting", working: "Working", ready: "Ready to review",
@@ -52,7 +52,27 @@ export function BuildRequests() {
     const made = await api<Request>("POST", "/api/build", { request: ask.trim() }, { timeoutMs: 120_000 });
     setAsk(""); setPicked(made.id);
   });
-  const post = (path: string, body?: unknown, desktop = false) => api("POST", `/api/build/${current!.id}/${path}`, body ?? {}, { desktop, timeoutMs: 120_000 });
+  const post = (path: string, body?: unknown, desktop = false) => api<Request>("POST", `/api/build/${current!.id}/${path}`, body ?? {}, { desktop, timeoutMs: 120_000 });
+  // After Approve or Undo: restart the server if her code changed (from this app, outside the server), then rebuild the
+  // app if its screens changed (the app closes and reopens by itself).
+  const goLive = async (path: "approve" | "undo") => {
+    const id = current!.id;
+    const done = await post(path, {}, true);
+    if (done.needs?.server) {
+      setBusy("restarting her server");
+      await restartServer();
+      for (let i = 0; i < 40; i++) { try { await api("GET", "/api/build"); break; } catch { await new Promise(r => window.setTimeout(r, 1500)); } }
+    }
+    if (done.needs?.app) {
+      await api("POST", `/api/build/${id}/rebuild`, {}, { desktop: true, timeoutMs: 60_000 });
+      return "The app is rebuilding. It will close and reopen with the change in about three minutes.";
+    }
+    return path === "approve" ? "Approved and live." : "Undone.";
+  };
+  const live = (path: "approve" | "undo", label: string) => {
+    setBusy(label); setError(null); setNote(null);
+    void goLive(path).then(text => setNote(text), failure => setError(errorText(failure))).finally(() => { setBusy(null); void load(); });
+  };
 
   if (!LIVE_API) return <p className="cs-muted">Build requests need the ZÆNIA server: open them in the desktop app.</p>;
   return <div className="cs">
@@ -105,12 +125,11 @@ export function BuildRequests() {
         {current.diff && ["ready", "failed", "approved"].includes(current.status) && <pre className="cs-diff" aria-label="The change">{current.diff.split("\n").map((line, i) =>
           <span key={i} className={line.startsWith("+") && !line.startsWith("+++") ? "cs-add" : line.startsWith("-") && !line.startsWith("---") ? "cs-del" : line.startsWith("@@") ? "cs-hunk" : ""}>{line}{"\n"}</span>)}</pre>}
         {current.status === "ready" && <div className="cs-row">
-          <button type="button" className="cs-primary" disabled={!!busy} onClick={() => void act("adding it to the live app", () => post("approve", {}, true),
-            current.changed?.some(name => name.startsWith("desktop/")) ? "Approved. The app will close and reopen with the change in a few minutes." : "Approved and live.")}>Approve at this PC</button>
+          <button type="button" className="cs-primary" disabled={!!busy} onClick={() => live("approve", "adding it to the live app")}>Approve at this PC</button>
           <button type="button" disabled={!!busy} onClick={() => void act("throwing it away", () => post("reject"))}>Reject</button>
         </div>}
         {current.status === "approved" && <div className="cs-row">
-          <button type="button" disabled={!!busy} onClick={() => { if (window.confirm("Undo this change? It's reverted and the app rebuilds.")) void act("undoing it", () => post("undo", {}, true), "Undone."); }}>Undo this change</button>
+          <button type="button" disabled={!!busy} onClick={() => { if (window.confirm("Undo this change? It's reverted and the app rebuilds.")) live("undo", "undoing it"); }}>Undo this change</button>
         </div>}
       </div>}
     </div>}

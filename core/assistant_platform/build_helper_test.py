@@ -71,10 +71,10 @@ class FlowTest(RepoCase):
         item = self.draft(store)
         store._update(item["id"], status="queued")
         store.process(item["id"])
-        store.approve(item["id"], apply=self.applied.append)
+        approved = store.approve(item["id"])
         self.assertEqual((self.root / "core" / "colour.py").read_text(), "RING = 'blue'\n")
-        self.assertEqual(self.applied, [["core/colour.py"]])
-        store.undo(item["id"], apply=self.applied.append)
+        self.assertEqual(approved["needs"], {"app": False, "server": True})
+        store.undo(item["id"])
         self.assertEqual((self.root / "core" / "colour.py").read_text(), "RING = 'gold'\n")
         self.assertEqual(store.get(item["id"])["status"], "undone")
 
@@ -82,8 +82,7 @@ class FlowTest(RepoCase):
         store = self.requests()
         item = self.draft(store)
         with self.assertRaises(ValueError):
-            store.approve(item["id"], apply=self.applied.append)
-        self.assertEqual(self.applied, [])
+            store.approve(item["id"])
 
     def test_failed_tests_go_back_to_the_tool_then_stop(self):
         self.results = [(False, "FAIL: test_ring"), (False, "FAIL: test_ring"), (False, "FAIL: test_ring")]

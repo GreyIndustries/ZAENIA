@@ -123,6 +123,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/build/[0-9a-f]{32}/start", "files.desktop.apply"),
         ("POST", r"/api/build/[0-9a-f]{32}/approve", "files.desktop.apply"),
         ("POST", r"/api/build/[0-9a-f]{32}/undo", "files.desktop.apply"),
+        ("POST", r"/api/build/[0-9a-f]{32}/rebuild", "files.desktop.apply"),
         ("POST", r"/api/build/[0-9a-f]{32}/reject", "chat.reply"),
         ("POST", r"/api/build/ideas/think", "chat.reply"),
         ("POST", r"/api/build/ideas/[0-9a-f]{32}/never", "ui.tasks.write"),

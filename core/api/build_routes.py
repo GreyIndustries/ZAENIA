@@ -1,7 +1,8 @@
 """Build requests (build_helper.py) and ZAE's nightly improvement ideas (build_ideas.py). Operations are in ui_routes.ROUTES.
 
 Writing a brief or rejecting is allowed wherever chat is. Starting needs the desktop app or the phone's near-PC pass.
-Approving and undoing change the live app, so they need the paired desktop app on the PC.
+Approving, undoing and rebuilding change the live app, so they need the paired desktop app on the PC. A server
+restart after an approved change is done by the desktop app (restart_server), not from here.
 """
 from __future__ import annotations
 
@@ -88,6 +89,19 @@ def create_build_router(require_api_authentication: Callable[..., None]) -> APIR
             raise _bad(error) from error
         audit("build_request.undone", operation="assistant.desktop.manage", reason_code="owner_undo")
         return item
+
+    @router.post("/api/build/{request_id}/rebuild", dependencies=[Depends(require_desktop)])
+    def build_rebuild(request_id: str) -> dict[str, Any]:
+        """After an approved or undone change to the app's screens: rebuild and reinstall the desktop app."""
+        from core.assistant_platform.build_helper import build_requests, rebuild_app
+        try:
+            item = build_requests().get(request_id)
+            if item["status"] not in ("approved", "undone") or not (item.get("needs") or {}).get("app"):
+                raise ValueError("Nothing to rebuild for this request.")
+            rebuild_app()
+        except Exception as error:
+            raise _bad(error) from error
+        return {"ok": True}
 
     @router.post("/api/build/{request_id}/reject")
     def build_reject(request_id: str) -> dict[str, Any]:

@@ -41,6 +41,9 @@ TOOLS = ("claude", "aider")
 SIZES = ("small", "medium", "large")
 TOOL_LIMIT = {"claude": 30 * 60, "aider": 20 * 60}
 RETRIES = 2
+# Git-ignored files the security suites need. They're copied in only while the checks run (after the coding tool
+# finished) and removed before the tool runs again, so the tool never reads them.
+CHECK_ONLY_FILES = ("core/foundation/moral_code/charter.json", "data/scripture/corpus.sqlite3", "data/scripture/corpus_manifest.json")
 
 # Paths a build request may never change (compared lower-case, as path prefixes). Code Doctor's and the file
 # tools' own lists are added in locked().
@@ -215,7 +218,8 @@ def changed_paths(folder: Path, base: str) -> list[str]:
 # ---------------------------------------------------------------- checks
 def run_checks(folder: Path, changed: list[str], *, python: Path | None = None) -> tuple[bool, str]:
     """Her tests in the copy: the Python suite and security suites, and for app changes the UI checks and TypeScript."""
-    python = python or PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
+    import sys
+    python = python or Path(sys.executable)  # the server's own Python (the live .venv)
     env, flags = _clean_env(), getattr(subprocess, "CREATE_NO_WINDOW", 0)
     lines: list[str] = []
     modules = sorted(str(path.relative_to(folder).with_suffix("")).replace(os.sep, ".")
@@ -263,19 +267,27 @@ def brief_prompt(request: str, hints: list[str]) -> str:
             f"GREY'S WORDS: {request}\n\nFILES THAT MAY BE INVOLVED: {', '.join(hints) or 'unknown'}")
 
 
-def file_hints(request: str, *, root: Path = PROJECT_ROOT, limit: int = 10) -> list[str]:
-    """Files whose names match words in the request (her own code only)."""
-    words = {w for w in re.findall(r"[a-z]{4,}", request.lower())} - {"make", "when", "with", "that", "this", "have", "your",
-                                                                      "from", "into", "should", "would", "could", "build", "please"}
-    if not words:
+_COMMON = {"make", "when", "with", "that", "this", "have", "your", "from", "into", "should", "would", "could", "build", "please",
+           "change", "code", "screen", "page", "also", "says", "copy", "data", "want", "them", "they", "there", "then", "about",
+           "show", "shows", "personal", "just", "like", "more", "less", "some", "every", "only", "tab", "button", "text", "sentence"}
+
+
+def file_hints(request: str, *, root: Path = PROJECT_ROOT, limit: int = 8) -> list[str]:
+    """Files whose names match words in the request (her own code only). Two words together ("build requests")
+    matching a file name ("BuildRequests.tsx") count most."""
+    words = re.findall(r"[a-z]{3,}", request.lower())
+    pairs = {a + b for a, b in zip(words, words[1:])}
+    singles = {w for w in words if len(w) >= 4} - _COMMON
+    if not singles and not pairs:
         return []
-    scored: list[tuple[int, str]] = []
+    scored: list[tuple[float, str]] = []
     for top in ("core", "desktop/src"):
         for path in (root / top).rglob("*"):
-            if path.suffix not in (".py", ".ts", ".tsx", ".css") or "__pycache__" in path.parts or path.name.endswith("_test.py"):
+            if path.suffix not in (".py", ".ts", ".tsx", ".css") or "__pycache__" in path.parts or path.name.endswith(("_test.py", ".test.cjs")):
                 continue
+            stem = re.sub(r"[^a-z]", "", path.stem.lower())
+            score = 3 * any(pair in stem for pair in pairs) + sum(word in stem for word in singles)
             rel = path.relative_to(root).as_posix()
-            score = sum(word in rel.lower() for word in words)
             if score and not locked(rel):
                 scored.append((score, rel))
     return [rel for _, rel in sorted(scored, key=lambda item: (-item[0], len(item[1])))[:limit]]
@@ -374,7 +386,7 @@ class BuildRequests:
             git("branch", "-D", item["branch"], cwd=self.root, check=False)
         return self._update(request_id, status="rejected", step="Thrown away. Nothing changed.")
 
-    def approve(self, request_id: str, *, apply: Callable[[list[str]], None] | None = None) -> dict[str, Any]:
+    def approve(self, request_id: str) -> dict[str, Any]:
         item = self.get(request_id)
         if item["status"] != "ready":
             raise ValueError("Only a ready, tested change can be approved.")
@@ -389,12 +401,10 @@ class BuildRequests:
                 return self._update(request_id, step="Couldn't add it to the live code: " + (merged.stderr or merged.stdout).strip()[:400]
                                     + " Nothing changed.")
         post = git("rev-parse", "HEAD", cwd=self.root)
-        item = self._update(request_id, status="approved", merged={"pre": pre, "post": post, "fast": fast, "at": _now()},
-                            step="Approved and added to the live code. Rebuilding what changed.")
-        (apply or apply_live)(item.get("changed") or [])
-        return item
+        return self._update(request_id, status="approved", merged={"pre": pre, "post": post, "fast": fast, "at": _now()},
+                            step="Approved and added to the live code.", needs=needs(item.get("changed") or []))
 
-    def undo(self, request_id: str, *, apply: Callable[[list[str]], None] | None = None) -> dict[str, Any]:
+    def undo(self, request_id: str) -> dict[str, Any]:
         item = self.get(request_id)
         if item["status"] != "approved" or not item.get("merged"):
             raise ValueError("Only an approved change can be undone.")
@@ -408,9 +418,7 @@ class BuildRequests:
             git("revert", "--abort", cwd=self.root, check=False)
             raise ValueError("Couldn't undo it automatically (later changes touch the same lines): "
                              + (result.stderr or result.stdout).strip()[:300])
-        item = self._update(request_id, status="undone", step="Undone. The change was reverted and the app is rebuilding.")
-        (apply or apply_live)(item.get("changed") or [])
-        return item
+        return self._update(request_id, status="undone", step="Undone. The change was reverted.", needs=needs(item.get("changed") or []))
 
     # the worker
     def ensure_worker(self) -> None:
@@ -462,7 +470,15 @@ class BuildRequests:
                 if bad:
                     raise PermissionError("It tried to change locked files (" + ", ".join(bad[:5]) + "), so the work was thrown away.")
                 self._update(request_id, step="Testing the change in the copy.", changed=changed)
-                passed, report = self.checks(self.helper, changed)
+                lent = _lend_check_files(self.root, self.helper)
+                try:
+                    passed, report = self.checks(self.helper, changed)
+                finally:
+                    for target in lent:
+                        if target.is_dir():
+                            shutil.rmtree(target, ignore_errors=True)
+                        else:
+                            target.unlink(missing_ok=True)
                 if passed:
                     break
                 prompt = (f"TASK: {item['title']}\n{item['brief']}\n\nYour change is in place, but ZAE's checks failed. "
@@ -494,6 +510,20 @@ class BuildRequests:
         return final
 
 
+def _lend_check_files(root: Path, helper: Path) -> list[Path]:
+    """Copy CHECK_ONLY_FILES in; returns what to remove afterwards (the files, and any folder made for them)."""
+    lent: list[Path] = []
+    for rel in CHECK_ONLY_FILES:
+        source, target = root / rel, helper / rel
+        if not source.is_file() or target.exists():
+            continue
+        top = next((parent for parent in reversed(target.parents) if helper in parent.parents and not parent.exists()), None)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        lent.append(top if top is not None else target)
+    return lent
+
+
 def _gaming() -> bool:
     try:
         from core.assistant_platform.game_mode import active
@@ -518,29 +548,23 @@ def _bring_talk_back() -> None:
         pass
 
 
-def apply_live(changed: list[str], *, root: Path = PROJECT_ROOT) -> None:
-    """Rebuild the desktop app if app files changed, then restart the server if her code changed. Runs detached,
-    because the server restart ends this process; the log is data/ui/build_apply.log."""
-    app = any(name.startswith("desktop/") for name in changed)
-    server = any(name.startswith(("core/", "config")) or name.endswith(".py") for name in changed)
-    if not (app or server):
-        return
-    steps = []
-    if app:
-        steps.append(f"& '{root / 'scripts' / 'zae.ps1'}' build -Yes")
-    if server:
-        steps.append(f"& '{root / 'scripts' / 'restart_zaenia_server.ps1'}'")
-    script = "; ".join(steps)
+def needs(changed: list[str]) -> dict[str, bool]:
+    """What has to happen for a change to show: the desktop app rebuilt, the server restarted, or both."""
+    return {"app": any(name.startswith("desktop/") for name in changed),
+            "server": any(name.startswith(("core/", "config")) or name.endswith(".py") for name in changed)}
+
+
+def rebuild_app(*, root: Path = PROJECT_ROOT) -> None:
+    """Rebuild and reinstall the desktop app (scripts/zae.ps1 build: it closes and reopens the app). Runs in the
+    background; the log is data/ui/build_apply.log. The server restart is done by the desktop app itself (its
+    restart_server command), before this, because restarting from here would end this process too."""
     APPLY_LOG.parent.mkdir(parents=True, exist_ok=True)
     log = open(APPLY_LOG, "a", encoding="utf-8")
-    log.write(f"\n== {_now()} applying: app={app} server={server}\n")
+    log.write(f"\n== {_now()} rebuilding the desktop app\n")
     log.flush()
-    flags = 0x00000008 | 0x00000200 | 0x08000000  # detached, new process group, no window
-    command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script]
-    try:
-        subprocess.Popen(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, creationflags=flags | 0x01000000)  # break away from the server's job
-    except OSError:
-        subprocess.Popen(command, cwd=root, stdout=log, stderr=subprocess.STDOUT, creationflags=flags)
+    flags = 0x00000008 | 0x00000200 | getattr(subprocess, "CREATE_NO_WINDOW", 0)  # detached, own process group
+    subprocess.Popen(["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(root / "scripts" / "zae.ps1"), "build", "-Yes"],
+                     cwd=root, stdout=log, stderr=subprocess.STDOUT, creationflags=flags)
 
 
 def view(items: list[dict[str, Any]]) -> dict[str, Any]:
