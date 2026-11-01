@@ -58,3 +58,9 @@ Grey asked to fix `ZAENIA_DEVELOPMENT_ENVIRONMENT_AUDIT.md` and download the nee
 - Verified what the audit couldn't: AMD Ryzen 9 7900X (12 cores / 24 threads), 31 GB RAM; RTX 4070 Ti SUPER 16 GB; Ollama 0.40.11 listening on 127.0.0.1:11434 only, Talk 100% on the GPU; all four brains answer correctly (see Brain check above).
 - Gitleaks 8.30.1, redacted: all Git history (`--all`) 0 findings; tracked changes plus untracked, not-ignored files in the live checkout 0; ChatGPT worktree's 2 untracked files 0; Claude worktree has none. The earlier ~79 came from a full folder scan that includes ignored personal data and dependencies, which are not in Git.
 - Left for Grey: moving the main `.venv` to 3.11.9, OpenCode, the separate Windows account for a development controller, GitHub secret-scanning/branch-protection settings.
+
+## OpenCode with local Ollama (audit step 4, 2026-11-01)
+- OpenCode 1.19.5 installed in `C:\Projects\ZAENIA-Tools\opencode` (npm, local folder; its postinstall script was not run and isn't needed). Start it with `C:\Projects\ZAENIA-Tools\opencode\zae-opencode.cmd` from the folder to work in.
+- `opencode.json` there: only the `ollama` provider is enabled (OpenAI-compatible endpoint `http://127.0.0.1:11434/v1`), sharing and auto-update off. Models: `zae-code:14b` (an Ollama alias of qwen3:14b with a 16k context, from `Modelfile.zae-code`; no download) and `qwen3.5:9b` as the small model.
+- Verified: `opencode models` lists only the two local models; `opencode run` fixed a bug in a throwaway repo in about a minute using its read and edit tools. Code goes only to Ollama on this PC (OpenCode fetches its provider package from npm the first time).
+- Not wired into Build requests (Claude Code and Aider are). The 14B model at 16k needs about 12 GB of graphics memory, so Talk unloads while it runs.
