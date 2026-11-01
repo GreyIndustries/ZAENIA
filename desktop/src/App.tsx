@@ -53,6 +53,7 @@ const PhoneNotifications = lazy(() => import("./components/phone/PhoneNotificati
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
 const LabsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.LabsPanel })));
 const CodeDoctorPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.CodeDoctorPanel })));
+const BuildRequestsPanel = lazy(() => import("./components/tools/BuildRequests").then(module => ({ default: module.BuildRequests })));
 const SuggestionsPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SuggestionsPanel })));
 const ArenaPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.ArenaPanel })));
 const SourceSearch = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SourceSearch })));
@@ -1108,6 +1109,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       } else if (event.type === "protocol") {
         // A protocol ("goodnight") can open tabs as one of its steps.
         for (const tab of event.open) if (tab in sections) openSection(tab as Section);
+        if (event.subtab) {  // e.g. a build request opens Code Doctor on Build requests
+          const sub = event.subtab;
+          try { localStorage.setItem(`zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ }
+          window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub })), 200);
+        }
         window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:records-changed")), 300);
         if (event.focus) glowItem(event.focus);
       } else if (event.type === "done") {
@@ -1380,6 +1386,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case 'suggestions': return <CodeDoctorStudio extra={[
         { id: "playground", label: "Playground", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><PlaygroundPanel/></Suspense> },
         { id: "doctor", label: "Scanner", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><CodeDoctorPanel/></Suspense> },
+        { id: "build", label: "Build requests", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BuildRequestsPanel/></Suspense> },
         { id: "suggestions", label: "Suggestions", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SuggestionsPanel/></Suspense> },
         { id: "files", label: "Files", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><FilesPanel onPendingChange={setPendingFiles}/></Suspense> },
         { id: "source", label: "Source", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SourceSearch/></Suspense> },

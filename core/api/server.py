@@ -186,6 +186,10 @@ def create_app(
             training_reminders.start()  # uses the shared inbox, quiet hours, and opt-in browser delivery
             from core.assistant_platform.pc_specs import warm
             warm()  # reads the PC's parts once so she can answer about them
+            from core.assistant_platform.build_helper import build_requests
+            build_requests().recover()  # a build request cut off by a restart goes back in the queue
+            from core.assistant_platform.build_ideas import ideas
+            ideas().start()  # nightly improvement ideas from how Grey uses her (skipped while gaming)
             from core.brain.warmup import warm_talk
             warm_talk()  # loads Talk and the topic embedder now, so the first reply after a restart isn't a cold start
             from core.research.agent import watch
@@ -389,6 +393,8 @@ def create_app(
 
     from core.api.tools_routes import create_tools_router
     application.include_router(create_tools_router(require_api_authentication))
+    from core.api.build_routes import create_build_router
+    application.include_router(create_build_router(require_api_authentication))  # build requests and nightly ideas
     from core.api.selfcare_routes import create_selfcare_router
     application.include_router(create_selfcare_router(require_api_authentication))
     from core.api.research_routes import create_research_router

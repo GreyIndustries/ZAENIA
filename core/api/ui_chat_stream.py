@@ -121,6 +121,21 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
         if setup_missing():
             return "Here are my questions. Fill them in and I'll set your calories, calendar and reminders.", "training_setup", ["fitness"]
         return ("You're already set up, so no questions needed. Change anything under Your stats & goal in the Training program."), "tab_action", ["fitness"]
+    from core.assistant_platform.build_helper import parse_build
+    wanted = parse_build(message)
+    if wanted is not None:
+        # "ZAE, build ... on the X tab": she writes a brief for a build request; nothing runs until Grey taps Start.
+        try:
+            authorize("chat.reply")
+            from core.api.build_routes import _talk
+            from core.assistant_platform.build_helper import build_requests
+            item = build_requests().create(wanted, _talk, source="chat")
+            return (f"I wrote it up as a build request: {item['title']}. Check the brief in Code Doctor, under Build requests, "
+                    "and tap Start when it looks right. I'll test it in a copy, and nothing goes live until you approve it at the PC."),                 "build_request", ["suggestions"], item["title"], {"page": "codedoctor", "tab": "build"}
+        except PermissionError:
+            return "Build requests aren't available with the current permissions.", "tab_action", []
+        except ValueError as error:
+            return str(error), "tab_action", []
     from core.assistant_platform import tab_actions
     note_request = tab_actions.parse_note(message)
     if note_request is not None:
@@ -297,10 +312,12 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
         if quick is not None:
             answer, route, tabs = quick[:3]
             focus = quick[3] if len(quick) > 3 else None
+            subtab = quick[4] if len(quick) > 4 else None
             yield _line({"type": "route", "route": route})
             if tabs:
-                # The tab opens on what was done; "focus" is the item to light up (2026-10-31).
-                yield _line({"type": "protocol", "open": tabs, **({"focus": str(focus)[:160]} if focus else {})})
+                # The tab opens on what was done; "focus" is the item to light up (2026-10-31); "subtab" its sub-tab.
+                yield _line({"type": "protocol", "open": tabs, **({"focus": str(focus)[:160]} if focus else {}),
+                             **({"subtab": subtab} if subtab else {})})
             if route == "training_setup":
                 yield _line({"type": "form", "form": "training-setup"})
             elif route == "food_meal":

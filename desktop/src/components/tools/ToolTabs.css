@@ -11,6 +11,7 @@
 .ar-model{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:9px;border:1px solid rgba(143,202,255,.2)}
 .sg-tags{display:flex;flex-wrap:wrap;gap:6px}
 .sg-tag--feature{color:#dcd5ff;background:rgba(157,140,255,.22)}
+.sg-tag--fix{color:#c9f5d6;background:rgba(79,227,154,.18)}
 .sg-tag--upgrade{color:#ffe0b0;background:rgba(255,170,70,.2)}
 .sg-tag--effort{color:#c5d6e8;background:rgba(143,202,255,.12)}
 /* Playground */

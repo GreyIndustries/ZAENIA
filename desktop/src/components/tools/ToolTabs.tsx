@@ -80,9 +80,9 @@ export function CodeDoctorPanel() {
 }
 
 // ---------------------------------------------------------------- Suggestions
-type Kind = "day" | "upgrade" | "feature";
-type Suggestion = { id: string; for: Kind | "zae"; title: string; why: string; how?: string; effort?: string; remind: string; status: "new" | "approved" | "dismissed"; outcome?: string; created: string };
-const KIND_LABEL: Record<Kind, string> = { day: "Your day", upgrade: "Upgrade", feature: "New feature" };
+type Kind = "day" | "upgrade" | "feature" | "fix";
+type Suggestion = { id: string; for: Kind | "zae"; title: string; why: string; how?: string; effort?: string; remind: string; status: "new" | "approved" | "dismissed" | "never"; outcome?: string; created: string };
+const KIND_LABEL: Record<Kind, string> = { day: "Your day", upgrade: "Upgrade", feature: "New feature", fix: "Fix (from last night)" };
 const kindOf = (item: Suggestion): Kind => item.for === "zae" ? "feature" : item.for;
 
 export function SuggestionsPanel() {
@@ -103,11 +103,25 @@ export function SuggestionsPanel() {
   const decide = async (id: string, approve: boolean) => {
     try { await api("POST", `/api/suggestions/${id}`, { approve }); await load(); } catch (failure) { setError(errorText(failure)); }
   };
+  // Upgrades, features and nightly fixes can go straight to a build request (Code Doctor > Build requests).
+  const buildIt = async (item: Suggestion) => {
+    setBusy("writing a build request"); setError(null); setNote(null);
+    try {
+      await api("POST", "/api/build", { request: `${item.title}. ${item.how || item.why}`.slice(0, 2000), idea: item.id }, { timeoutMs: 120_000 });
+      setNote("Sent to Build requests. Check the brief there and tap Start.");
+      try { localStorage.setItem("zaenia.pageTab.codedoctor", "build"); } catch { /* optional */ }
+      window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "codedoctor", tab: "build" } }));
+      await load();
+    } catch (failure) { setError(errorText(failure)); } finally { setBusy(null); }
+  };
+  const never = async (id: string) => {
+    try { await api("POST", `/api/build/ideas/${id}/never`, {}); await load(); } catch (failure) { setError(errorText(failure)); }
+  };
   const copyPlan = async () => {
     try { await navigator.clipboard.writeText(plan); setNote("Upgrade plan copied. Paste it to Claude or Codex to have it built."); } catch { setError("Couldn't copy the plan."); }
   };
   if (!LIVE_API) return needServer;
-  const inView = items.filter(item => item.status === show);
+  const inView = items.filter(item => item.status === show || (show === "dismissed" && item.status === "never"));
   const shown = inView.filter(item => kind === "all" || kindOf(item) === kind);
   return <div className="research">
     <p className="research__note">ZAE's own ideas: for your day (from your calendar, tasks and reminders), upgrades to her system (from the versions of Python, her packages, Ollama and her models against the latest releases, and your PC's RAM, GPU and disk) and new features she could have. Nothing happens unless you approve it. Approving a day idea with a time sets the reminder; approved upgrades and features go on her upgrade plan.</p>
@@ -120,7 +134,7 @@ export function SuggestionsPanel() {
       {(["new", "approved", "dismissed"] as const).map(item => <button type="button" key={item} aria-pressed={show === item} className={show === item ? "research__primary" : ""} onClick={() => setShow(item)}>
         {item === "new" ? "New" : item === "approved" ? "Approved" : "Dismissed"} ({items.filter(entry => entry.status === item).length})</button>)}
       <span className="research__meta" style={{ margin: "0 4px" }}>Show</span>
-      {(["all", "day", "upgrade", "feature"] as const).map(item => <button type="button" key={item} aria-pressed={kind === item} className={kind === item ? "research__primary" : ""} onClick={() => setKind(item)}>
+      {(["all", "day", "upgrade", "feature", "fix"] as const).map(item => <button type="button" key={item} aria-pressed={kind === item} className={kind === item ? "research__primary" : ""} onClick={() => setKind(item)}>
         {item === "all" ? "All" : KIND_LABEL[item]} ({item === "all" ? inView.length : inView.filter(entry => kindOf(entry) === item).length})</button>)}
       {show === "approved" && plan && <button type="button" onClick={() => void copyPlan()}>Copy upgrade plan</button>}
     </div>
@@ -136,8 +150,11 @@ export function SuggestionsPanel() {
         {item.how && <p className="research__meta"><strong>How:</strong> {item.how}</p>}
         {item.remind && <p className="research__meta">Reminder if approved: {item.remind.replace("|", " · ")}</p>}
         {item.outcome && <p className="research__meta">✓ {item.outcome}</p>}
-        {item.status === "new" && <div className="research__actions"><button type="button" className="research__primary" onClick={() => void decide(item.id, true)}>Approve</button>
-          <button type="button" onClick={() => void decide(item.id, false)}>Dismiss</button></div>}
+        {item.status === "new" && <div className="research__actions">
+          {k !== "day" && <button type="button" className="research__primary" disabled={!!busy} onClick={() => void buildIt(item)}>Build it</button>}
+          <button type="button" className={k === "day" ? "research__primary" : ""} onClick={() => void decide(item.id, true)}>{k === "day" ? "Approve" : "Add to plan"}</button>
+          <button type="button" onClick={() => void decide(item.id, false)}>Not now</button>
+          {k === "fix" && <button type="button" onClick={() => void never(item.id)}>Never</button>}</div>}
       </div>; })}</div>
   </div>;
 }

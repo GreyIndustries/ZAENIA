@@ -31,7 +31,7 @@ from typing import Any, Callable
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SUGGESTIONS_FILE = PROJECT_ROOT / "data" / "suggestions.json"
 CHECK_FILE = PROJECT_ROOT / "data" / "ui" / "upgrade_check.json"
-KINDS = ("day", "upgrade", "feature")
+KINDS = ("day", "upgrade", "feature", "fix")  # "fix": a nightly idea from how Grey uses her (build_ideas.py)
 PACKAGES = ("fastapi", "uvicorn", "pydantic", "requests", "cryptography", "torch", "speechbrain", "kokoro-onnx",
             "onnxruntime", "vosk", "sounddevice", "numpy", "pypdf", "argon2-cffi")
 FEATURES = ("Overview with the glowing core; Status (health, protocols, self-sustain, reminders); Security tab with passkey "
@@ -291,6 +291,39 @@ class Suggestions:
                               "remind": remind[:120] if "|" in remind else "", "status": "new", "created": _now()})
             self._save(items + fresh)
         return fresh
+
+    def add(self, ideas: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Ideas made elsewhere (the nightly improvement ideas), skipping titles already listed."""
+        fresh = []
+        with _LOCK:
+            items = self.list()
+            seen = {item["title"].casefold() for item in items}
+            for idea in ideas:
+                title = " ".join(str(idea.get("title", "")).split())[:140]
+                if not title or title.casefold() in seen:
+                    continue
+                seen.add(title.casefold())
+                effort = str(idea.get("effort") or "").lower().strip()
+                fresh.append({"id": uuid.uuid4().hex, "for": "fix", "title": title,
+                              "why": " ".join(str(idea.get("why", "")).split())[:400],
+                              "how": " ".join(str(idea.get("how") or "").split())[:500],
+                              "effort": effort if effort in ("small", "medium", "large") else "",
+                              "remind": "", "status": "new", "created": _now()})
+            self._save(items + fresh)
+        return fresh
+
+    def mark(self, suggestion_id: str, status: str, outcome: str) -> dict[str, Any]:
+        """"approved" (sent to Build requests) or "never" (Grey doesn't want this kind of change suggested again)."""
+        if status not in ("approved", "never"):
+            raise ValueError("Unknown status.")
+        with _LOCK:
+            items = self.list()
+            item = next((entry for entry in items if entry["id"] == suggestion_id), None)
+            if item is None:
+                raise KeyError("That suggestion no longer exists.")
+            item.update(status=status, decided=_now(), outcome=outcome)
+            self._save(items)
+        return item
 
     def decide(self, suggestion_id: str, approve: bool, set_reminder: Callable[[str, str], str] | None = None) -> dict[str, Any]:
         with _LOCK:
