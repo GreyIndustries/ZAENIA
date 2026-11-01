@@ -31,13 +31,14 @@ def brain_modules(installed: set[str] | None, loaded: set[str]) -> list[dict[str
     for brain_id, name, job in FOUR:
         brain = rows[brain_id]
         model = brain["model"]
+        # The app accepts at most 100 characters per detail, so it's the job and the state only (the role is in Arena).
         if installed is None:
             phase, state = "error", "Ollama isn't running"
         elif model not in installed:
-            phase, state = "working", f"{model} isn't downloaded (ollama pull {model})"
+            phase, state = "working", f"not downloaded (ollama pull {model})"
         else:
-            phase, state = "ready", ("loaded on the " if model in loaded else "not loaded; it loads on the ") + brain["where"].lower() + (" when needed" if model not in loaded else "")
-        out.append({"id": f"brain_{brain_id}", "name": f"{name} · {model}", "phase": phase, "detail": f"{brain['role']} Right now: {state}."})
+            phase, state = "ready", ("loaded now on the " if model in loaded else "loads when needed, on the ") + brain["where"].lower()
+        out.append({"id": f"brain_{brain_id}", "name": f"{name} · {model}", "phase": phase, "detail": f"{job}. {state[0].upper() + state[1:]}."})
     return out
 
 
@@ -49,7 +50,7 @@ def brains() -> list[dict[str, Any]]:
         {"id": "seek", "name": "Seek", "model": SEEK_MODEL, "where": "Graphics card",
          "role": "Web questions with sources, and takes over if Talk goes quiet.", "keepAlive": "as needed"},
         {"id": "study", "name": "Study", "model": "qwen3:14b", "where": "Graphics card",
-         "role": "Research jobs, nightly fix ideas and Aider's local coding. Unloaded after each job.", "keepAlive": "unloads after each job"},
+         "role": "Research jobs, Code Doctor (explain, fix, Playground), nightly fix ideas and Aider's local coding. Unloaded after each research job.", "keepAlive": "10m after Code Doctor; unloads after research"},
         {"id": "keep", "name": "Keep", "model": "qwen3:1.7b", "where": "Processor",
          "role": "Small watch-list summaries, on the processor so the graphics card stays free.", "keepAlive": "30m"},
         {"id": "topics", "name": "Topic tracker", "model": "nomic-embed-text", "where": "Graphics card",

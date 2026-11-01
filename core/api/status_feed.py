@@ -104,7 +104,7 @@ def _brains() -> list[dict[str, str]]:
     except Exception:
         installed, loaded = None, set()
     try:
-        return brain_modules(installed, loaded)
+        return [_module(m["id"], m["name"], m["phase"], m["detail"]) for m in brain_modules(installed, loaded)]
     except Exception:
         return [_module(f"brain_{brain_id}", name, "error", "Couldn't read this brain's state") for brain_id, name, _ in FOUR]
 
