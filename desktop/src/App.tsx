@@ -233,11 +233,36 @@ const sentenceCase = (text: string) => text ? text.charAt(0).toUpperCase() + tex
 
 // Phone web app: ask for the token once, then show the full UI. The desktop app
 // and the browser preview go straight to the UI.
+// Grey (2026-11-01): "I want to sign in every time." The phone web app asks again on every open, and again
+// after it has been in the background for more than two minutes.
+const VISIT_KEY = "zaenia.signedInThisVisit";
+const AWAY_LIMIT_MS = 2 * 60_000;
+const signedInThisVisit = () => { try { return sessionStorage.getItem(VISIT_KEY) === "1"; } catch { return false; } };
+const markVisit = (on: boolean) => { try { if (on) sessionStorage.setItem(VISIT_KEY, "1"); else sessionStorage.removeItem(VISIT_KEY); } catch { /* optional */ } };
+
 export default function App() {
-  const [connected, setConnected] = useState<boolean | null>(() => !WEB_APP || savedToken() !== null ? true : null);
+  const [connected, setConnected] = useState<boolean | null>(() => !WEB_APP ? true : !signedInThisVisit() ? false : savedToken() !== null ? true : null);
   const [notice, setNotice] = useState<string | null>(null);
-  const onConnected = useCallback(() => { setNotice(null); setConnected(true); }, []);
+  const onConnected = useCallback(() => { markVisit(true); setNotice(null); setConnected(true); }, []);
+  useEffect(() => {
+    if (!WEB_APP) return;
+    // A fresh open: end any earlier sign-in so the sign-in screen is a real check.
+    if (!signedInThisVisit()) { forgetToken(); void disconnectPhone().catch(() => undefined); }
+    let hiddenAt = 0;
+    const visibility = () => {
+      if (document.hidden) { hiddenAt = Date.now(); return; }
+      if (hiddenAt && Date.now() - hiddenAt > AWAY_LIMIT_MS && signedInThisVisit()) {
+        markVisit(false); forgetToken(); void disconnectPhone().catch(() => undefined);
+        setNotice("You were away for a bit, so ZAE signed you out. Sign in again.");
+        setConnected(false);
+      }
+      hiddenAt = 0;
+    };
+    document.addEventListener("visibilitychange", visibility);
+    return () => document.removeEventListener("visibilitychange", visibility);
+  }, []);
   const onForgetPhone = useCallback(() => {
+    markVisit(false);
     void disconnectPhone().then(() => { setNotice(null); setConnected(false); })
       .catch(error => setNotice(errorText(error)));
   }, []);
