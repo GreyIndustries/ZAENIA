@@ -263,6 +263,12 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         except Exception as error:
             raise _bad(error) from error
 
+    # ---- Her brains and coding tools (Arena > Brains & tools), checked live
+    @router.get("/api/brains")
+    def brain_roster() -> dict[str, Any]:
+        from core.brain.roster import roster
+        return roster()
+
     # ---- Arena
     @router.get("/api/arena")
     def arena_state() -> dict[str, Any]:

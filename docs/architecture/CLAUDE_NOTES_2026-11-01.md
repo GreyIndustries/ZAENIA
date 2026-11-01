@@ -64,3 +64,8 @@ Grey asked to fix `ZAENIA_DEVELOPMENT_ENVIRONMENT_AUDIT.md` and download the nee
 - `opencode.json` there: only the `ollama` provider is enabled (OpenAI-compatible endpoint `http://127.0.0.1:11434/v1`), sharing and auto-update off. Models: `zae-code:14b` (an Ollama alias of qwen3:14b with a 16k context, from `Modelfile.zae-code`; no download) and `qwen3.5:9b` as the small model.
 - Verified: `opencode models` lists only the two local models; `opencode run` fixed a bug in a throwaway repo in about a minute using its read and edit tools. Code goes only to Ollama on this PC (OpenCode fetches its provider package from npm the first time).
 - Not wired into Build requests (Claude Code and Aider are). The 14B model at 16k needs about 12 GB of graphics memory, so Talk unloads while it runs.
+
+## Brains and tools shown in the app (2026-11-01)
+- `core/brain/roster.py` + `GET /api/brains` (status.read): the five brain roles (Talk, Seek, Study, Keep, topic tracker) with model, where it runs, keep-alive and whether it's loaded (graphics memory), Ollama version and address, the coding tools (Claude Code, Aider, OpenCode with versions and models), and every local model with what uses it. Versions are cached 10 minutes.
+- Arena › Brains & tools (`BrainsPanel.tsx`) shows it, refreshed every 15 s. Settings search finds it and Build requests.
+- Her own feature list (Suggestions) and the component registry (grounded "what are your brains" answers) now name the brains, Build requests, nightly ideas, OpenCode, gestures, Face ID, off the record and nutrients.

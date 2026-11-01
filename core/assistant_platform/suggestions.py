@@ -38,10 +38,13 @@ FEATURES = ("Overview with the glowing core; Status (health, protocols, self-sus
             "unlock; Tasks & Calendar (Google two-way sync, reminders); Notes; Workbench (projects, science tools, chemistry "
             "and physics labs); Music; Fitness & Health; News (16 feeds, world search, reader); Research (historical "
             "connections, notebook, library, scripture with Hebrew/Greek and Jewish texts and the Quran, translation); Code "
-            "Doctor; Suggestions; Arena (compare local models); Assistant (memory, learning library, what she has learned, "
+            "Doctor with Build requests (ZAE changes her own code through Claude Code or Aider in a tested copy, Grey approves at "
+            "the PC, nightly Fix ideas from what went wrong); Suggestions; Arena (compare local models, Brains & tools: Talk "
+            "qwen3.5:4b, Seek qwen3.5:9b, Study qwen3:14b, Keep qwen3:1.7b on the CPU, OpenCode on local Ollama); Assistant (memory, learning library, what she has learned, "
             "follow-through); Files with source search; Settings (35 accent colours, per-tab looks, Vault). Voice: Kokoro voice, "
             "Vosk listening, speaker verification, barge-in, adaptive speaking style. Game mode and game coach, screen watch, "
-            "web lookups, phone line (Twilio), Gmail summaries, nightly backups, watchdog, self-service maintenance script "
+            "hand gestures through the camera, phone web app with Face ID sign-in, off-the-record mode, full nutrient tracking "
+            "with barcode photos, web lookups, phone line (Twilio), Gmail summaries, nightly backups, watchdog, self-service maintenance script "
             "(status, test, update, build, restart, rollback).")
 KEEP = 300
 _LOCK = threading.Lock()

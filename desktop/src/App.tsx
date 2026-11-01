@@ -53,6 +53,7 @@ const PhoneNotifications = lazy(() => import("./components/phone/PhoneNotificati
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
 const LabsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.LabsPanel })));
 const CodeDoctorPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.CodeDoctorPanel })));
+const BrainsPanel = lazy(() => import("./components/tools/BrainsPanel").then(module => ({ default: module.BrainsPanel })));
 const BuildRequestsPanel = lazy(() => import("./components/tools/BuildRequests").then(module => ({ default: module.BuildRequests })));
 const SuggestionsPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SuggestionsPanel })));
 const ArenaPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.ArenaPanel })));
@@ -1397,6 +1398,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
         { id: "bench", label: "Test set", render: () => <ArenaBench/> },
         { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
+        { id: "brains", label: "Brains & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
