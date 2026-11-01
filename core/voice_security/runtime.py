@@ -208,6 +208,23 @@ class SecureRuntime:
             # snapshots, notification content, or credential data are logged.
             return False
         return False
+    def _note_trial(self,audio):
+        # Owner / other-speaker trial (voice_trial.py): record this check's result and lowest window score.
+        # Observation only, and only while a round is open in Status > Readiness.
+        try:
+            from core.voice_security.voice_trial import voice_trial
+            trial=voice_trial()
+            if trial.round is None:return
+            verified=self.pipeline.last_verified
+            score=None
+            if len(audio)>=32000:
+                size,hop=48000,24000
+                windows=[audio[i:i+size] for i in range(0,max(1,len(audio)-size+1),hop)]
+                if len(audio)>size:windows.append(audio[-size:])
+                score=min(float(self.identity.gate.scorer(w)) for w in windows)
+            reason='recognised' if verified else ('too_short' if len(audio)<32000 else 'not_recognised')
+            trial.note(bool(verified),reason,score)
+        except Exception:pass
     def state(self):
         # For the UI heartbeat only; never used for authorization.
         response=self.response
@@ -240,6 +257,7 @@ class SecureRuntime:
                 except Exception:pass
             self._turn_audio=audio
             self.pipeline.process(audio,microphone_identity())
+            self._note_trial(audio)
             # Track whether the owner's voice is being recognised, so the app
             # can keep its own mic on when PC Voice keeps rejecting him.
             verified=self.pipeline.last_verified

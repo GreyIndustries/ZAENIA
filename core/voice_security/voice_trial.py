@@ -29,22 +29,36 @@ MAX_ATTEMPTS = 400
 
 
 class VoiceTrial:
+    """The round lives in the file too (2026-11-01), so the PC voice service, a separate process that has the mic
+    whenever it runs, records its checks into the same round as the app mic."""
+
     def __init__(self, path: Path = TRIAL_FILE, clock=time.time):
         self.path, self.clock = Path(path), clock
         self.lock = threading.Lock()
-        self.round: dict[str, Any] | None = None
 
-    def _load(self) -> list[dict[str, Any]]:
+    def _data(self) -> dict[str, Any]:
         try:
             data = json.loads(self.path.read_text(encoding="utf-8"))
-            return [a for a in data.get("attempts", []) if isinstance(a, dict)]
-        except (OSError, ValueError, AttributeError):
-            return []
+            return data if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
 
-    def _save(self, attempts: list[dict[str, Any]]) -> None:
+    def _load(self) -> list[dict[str, Any]]:
+        return [a for a in self._data().get("attempts", []) if isinstance(a, dict)]
+
+    @property
+    def round(self) -> dict[str, Any] | None:
+        current = self._data().get("round")
+        # A round left open for more than 30 minutes is over.
+        if isinstance(current, dict) and self.clock() - float(current.get("started", 0)) <= 1800:
+            return current
+        return None
+
+    def _save(self, attempts: list[dict[str, Any]], round_: dict[str, Any] | None | bool = False) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        current = self._data().get("round") if round_ is False else round_
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"attempts": attempts[-MAX_ATTEMPTS:]}, indent=1), encoding="utf-8")
+        tmp.write_text(json.dumps({"attempts": attempts[-MAX_ATTEMPTS:], "round": current}, indent=1), encoding="utf-8")
         tmp.replace(self.path)
 
     def start(self, who: str, target: int = 10) -> dict[str, Any]:
@@ -52,7 +66,7 @@ class VoiceTrial:
             raise ValueError("Pick who is speaking: owner or other.")
         target = max(1, min(int(target), 50))
         with self.lock:
-            self.round = {"who": who, "target": target, "count": 0, "started": self.clock()}
+            self._save(self._load(), {"who": who, "target": target, "count": 0, "started": self.clock()})
         try:
             from core.voice_security.app_mic import app_mic_gate
             app_mic_gate().last_verified = -1e9
@@ -62,27 +76,25 @@ class VoiceTrial:
 
     def stop(self) -> dict[str, Any]:
         with self.lock:
-            self.round = None
+            self._save(self._load(), None)
         return self.view()
 
     def clear(self) -> dict[str, Any]:
         with self.lock:
-            self.round = None
-            self._save([])
+            self._save([], None)
         return self.view()
 
     def note(self, accepted: bool, reason: str, score: float | None) -> None:
-        """Called for every app-mic voice check; does nothing outside a round."""
+        """Called for every voice check (app mic or PC voice); does nothing outside a round."""
         with self.lock:
-            if self.round is None:
+            current = self.round
+            if current is None:
                 return
             attempts = self._load()
-            attempts.append({"who": self.round["who"], "accepted": bool(accepted), "reason": str(reason)[:40],
+            attempts.append({"who": current["who"], "accepted": bool(accepted), "reason": str(reason)[:40],
                              "score": None if score is None else round(float(score), 4), "at": round(self.clock(), 1)})
-            self._save(attempts)
-            self.round["count"] += 1
-            if self.round["count"] >= self.round["target"]:
-                self.round = None
+            current["count"] = int(current.get("count", 0)) + 1
+            self._save(attempts, None if current["count"] >= int(current.get("target", 10)) else current)
 
     def view(self) -> dict[str, Any]:
         with self.lock:

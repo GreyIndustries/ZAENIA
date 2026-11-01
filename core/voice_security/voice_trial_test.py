@@ -56,6 +56,17 @@ class VoiceTrialTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.trial.start("nobody")
 
+    def test_the_pc_voice_process_records_into_the_same_round(self):
+        pc_voice = VoiceTrial(self.trial.path)          # another process, same file
+        self.trial.start("owner", 3)
+        pc_voice.note(True, "recognised", .7)
+        pc_voice.note(False, "not_recognised", .1)
+        view = self.trial.view()
+        self.assertEqual((view["summary"]["owner"]["checked"], view["round"]["count"]), (2, 2))
+        self.trial.stop()
+        pc_voice.note(True, "recognised", .7)            # no round: ignored
+        self.assertEqual(self.trial.view()["summary"]["owner"]["tries"], 2)
+
     def test_starting_a_round_needs_the_desktop(self):
         self.assertEqual(operation_for("POST", "/api/voice/trial"), "assistant.desktop.manage")
         self.assertEqual(operation_for("GET", "/api/voice/trial"), "status.read")
