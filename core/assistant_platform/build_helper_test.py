@@ -26,6 +26,7 @@ class RepoCase(unittest.TestCase):
         sh("add", "-A", cwd=self.root)
         sh("commit", "-qm", "start", cwd=self.root)
         self.applied, self.notices, self.tool_calls = [], [], []
+        self.review_calls = []
         self.edit = lambda folder: (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8")
         self.results = [(True, "Python tests: OK")]
 
@@ -41,9 +42,13 @@ class RepoCase(unittest.TestCase):
     def checks(self, folder, changed):
         return self.results.pop(0) if len(self.results) > 1 else self.results[0]
 
+    def review(self, title, brief, diff):
+        self.review_calls.append((title, brief, diff))
+        return {"status": "reviewed", "model": "test-reviewer", "text": "No findings", "at": "now", "advisory": True}
+
     def requests(self):
         return bh.BuildRequests(Path(self.temp.name) / "state.json", root=self.root, helper=self.helper,
-                                tool_runner=self.tool, checks=self.checks, choose=lambda size, wanted=None: "claude",
+                                tool_runner=self.tool, checks=self.checks, reviewer=self.review, choose=lambda size, wanted=None: "claude",
                                 gaming=lambda: False, notify=lambda *a: self.notices.append(a[1]))
 
     def draft(self, store):
@@ -65,6 +70,8 @@ class FlowTest(RepoCase):
         self.assertEqual((self.root / "core" / "colour.py").read_text(), "RING = 'gold'\n")   # live code unchanged
         self.assertFalse(self.helper.exists())                                                 # the copy is cleaned up
         self.assertTrue(any("Ready to review" in n for n in self.notices))
+        self.assertEqual(done["review"]["status"], "reviewed")
+        self.assertIn("+RING = 'blue'", self.review_calls[0][2])
 
     def test_approve_merges_and_undo_reverts(self):
         store = self.requests()
@@ -126,6 +133,26 @@ class FlowTest(RepoCase):
 
 
 class RulesTest(unittest.TestCase):
+    def test_second_pass_review_is_local_bounded_and_redacts_secrets(self):
+        from unittest.mock import patch
+        with patch("core.brain.local_llm.get_brain_settings", return_value={"endpoint": "http://127.0.0.1:11434/api/chat"}), \
+             patch("core.brain.local_llm.chat_local", return_value="No findings") as chat:
+            result = bh.review_change_locally("Title", "Brief", "API_KEY='super-secret-value'\n" + "x" * 31_000)
+        self.assertEqual(result["status"], "reviewed")
+        self.assertEqual(result["model"], "qwen3.5:9b")
+        prompt = chat.call_args.args[0]
+        self.assertIn("[REDACTED]", prompt)
+        self.assertNotIn("super-secret-value", prompt)
+        self.assertLess(len(prompt), 32_000)
+
+    def test_second_pass_review_refuses_remote_model_endpoint(self):
+        from unittest.mock import patch
+        with patch("core.brain.local_llm.get_brain_settings", return_value={"endpoint": "https://example.com/api/chat"}), \
+             patch("core.brain.local_llm.chat_local") as chat:
+            with self.assertRaises(PermissionError):
+                bh.review_change_locally("Title", "Brief", "diff")
+        chat.assert_not_called()
+
     def test_locked_paths(self):
         for path in ("core/foundation/x.py", "core/voice_security/runtime.py", "core/api/auth.py", "scripts/zae.ps1",
                      ".github/workflows/ci.yml", ".claude/settings.json", "core/assistant_platform/build_helper.py",

@@ -62,6 +62,23 @@ class ChatActionsTest(unittest.TestCase):
         reply = self.run_action("food.log", {"name": "shake", "text": "shake with 40g protein, 10g carbs and 5g fat"})
         self.assertIn("worked out from your macros", reply["reply"])
 
+    def test_inventory_used_amount_respects_scheduled_reservations(self):
+        inventory = PersonalTools(self.store).save("inventory", {"title":"Greek yogurt","servingsTotal":8.0,
+            "servingsUsed":1.0,"servingLabel":"170 g cup","servingGrams":170.0,
+            "nutrients":{"calories":100.0,"protein":17.0,"fiber":0.0},"source":"Verified label"})
+        PersonalTools(self.store).save("meal-plans", {"title":"Meals","weekStart":"2026-11-02",
+            "slots":[{"id":"reserved","date":"2026-11-03","mealType":"Breakfast","itemType":"inventory",
+                      "itemId":inventory["id"],"servings":2.0,"checkInAt":"08:00","status":"scheduled"}]})
+        self.assertTrue(chat_actions.maybe("I used 2 servings of Greek yogurt"))
+        self.assertEqual(chat_actions.classify("I used two servings of Greek yogurt", lambda _: self.fail("inventory servings should be parsed deterministically")),
+                         {"action":"inventory.use","args":{"name":"Greek yogurt","servings":2.0}})
+        with self.assertRaisesRegex(ValueError,"unreserved"):
+            self.run_action("inventory.use", {"name":"Greek yogurt","servings":6.0})
+        result = self.run_action("inventory.use", {"name":"Greek yogurt","servings":3.0})
+        self.assertIn("Recorded 3 serving(s)", result["reply"])
+        updated = self.store.get("fitness_inventory",inventory["id"])
+        self.assertEqual(updated["servingsUsed"],4.0)
+
     def test_named_food_gets_every_nutrient_and_the_day_total_adds_what_is_known(self):
         self.assertEqual(chat_actions.stated_nutrition("chicken bowl 600 cal, cholesterol 95mg"), {"calories": 600, "cholesterolMg": 95})
         usda = {"matches": [{"title": "Chicken burrito bowl", "nutrients": {"calories": 150, "protein": 9, "fiber": 2, "carbs": 18, "fat": 5,

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { FitnessPanel, type PersonalDraftCache } from "./PersonalPanels";
+import { MealPlanner } from "./MealPlanner";
 import { TrainingProgram } from "./TrainingProgram";
 import "./FitnessStudio.css";
 
@@ -20,7 +21,7 @@ type Overview = { profile: Profile; targets: Targets; weights: { date: string; w
 type DayView = { date: string; workout: { label: string; exercises: { exercise: string; prescription: string }[] }; actual: { name: string; detail: string }[];
   entry: Entry; burned: { total: number; actual: { name: string; kcal: number; stats: string }[] }; eaten: { calories: number; protein: number; burned: number } | null; targets: Targets };
 type Food = { id: string; title: string; calories: number; protein: number; createdAt?: string; updatedAt?: string };
-type Tab = "progress" | "today" | "log" | "food" | "recipes" | "scan" | "program" | "plans";
+type Tab = "progress" | "today" | "log" | "food" | "recipes" | "scan" | "meal-planner" | "program" | "plans";
 // The old "Logs & plans" sub-tabs are F&H tabs now (Grey, 2026-10-30); this maps each to the page it shows.
 const PANEL_PAGE: Partial<Record<Tab, string>> = { food: "Log", recipes: "Recipes", scan: "Scan food", plans: "Plans & targets" };
 type Range = 28 | 84 | 365;
@@ -68,7 +69,7 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
 
   // "Scan barcode": open Logs & plans › Scan food with the camera already on.
   const scanFood = () => { choose("scan"); window.dispatchEvent(new Event("zae:food-scan")); };
-  const tabs: [Tab, string][] = [["progress", "Progress"], ["today", "Today"], ["log", "Day log"], ["food", "Food & exercise"], ["recipes", "Recipes"], ["scan", "Scan food"], ["program", "Training program"], ["plans", "Plans & targets"]];
+  const tabs: [Tab, string][] = [["progress", "Progress"], ["today", "Today"], ["log", "Day log"], ["food", "Food & exercise"], ["recipes", "Recipes"], ["scan", "Scan food"], ["meal-planner", "Weekly meal planner"], ["program", "Training program"], ["plans", "Plans & targets"]];
   return <div className="fs">
     <nav className="research-page__tabs" role="tablist" aria-label="Fitness sections">
       {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id}
@@ -81,6 +82,7 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
     {info && tab === "progress" && <Progress info={info} week={week}/>}
     {info && tab === "today" && week.length > 0 && <Today info={info} view={week[6]} food={food} busy={busy} onLog={logDay} onGo={choose} onScan={scanFood}/>}
     {info && tab === "log" && week.length > 0 && <DayLog info={info} view={week[6]} food={food} busy={busy} onQuick={quickLog} onScan={scanFood}/>}
+    {tab === "meal-planner" && <MealPlanner/>}
     {/* Kept mounted so ZAE's "open the setup questions" and "review this meal" still reach them. */}
     <div hidden={tab !== "program"}><TrainingProgram/></div>
     <div hidden={!PANEL_PAGE[tab]}><FitnessPanel drafts={drafts} embedded page={PANEL_PAGE[tab] ?? "Log"}/></div>

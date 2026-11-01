@@ -16,6 +16,8 @@ Read docs/architecture/ZAENIA\_Master\_Build\_Plan.md
 
 before proposing architectural changes.
 
+Read `docs/architecture/ZAENIA_Identity_and_Product_Charter.md` for ZÆNIA's canonical identity, Zack's interaction preferences, and product direction. The charter supplements the build plan; runtime security and authorization code remains authoritative for actions.
+
 
 
 Inspect actual project files before modifying code.

@@ -6,9 +6,9 @@
 .fs-row{display:flex;align-items:center;gap:8px}.fs-row--between{justify-content:space-between;flex-wrap:wrap;gap:10px}
 .fs-stack{display:flex;flex-direction:column;gap:var(--zx-gap,12px);min-width:0}
 .fs .zx-card{display:flex;flex-direction:column;gap:8px;min-width:0}
-.fs button,.fs input{font:inherit;font-size:13px;color:var(--zx-text,#dbe8f6);background:var(--zx-inset,#08111f);border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px)}
+.fs button,.fs input,.fs select,.fs textarea{font:inherit;font-size:13px;color:var(--zx-text,#dbe8f6);background:var(--zx-inset,#08111f);border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px)}
 .fs button{padding:7px 12px;cursor:pointer;text-transform:var(--zx-btn-case,none);letter-spacing:var(--zx-btn-spacing,0)}.fs button:disabled{opacity:.5;cursor:default}
-.fs input{padding:7px 10px}.fs button:focus-visible,.fs input:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:1px}
+.fs input,.fs select,.fs textarea{padding:7px 10px}.fs button:focus-visible,.fs input:focus-visible,.fs select:focus-visible,.fs textarea:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:1px}
 .fs .fs-primary{background:var(--accent,#e0a353);color:#1a1206;border-color:transparent;font-weight:700}
 .fs-seg{display:inline-flex;gap:4px;padding:4px;background:var(--zx-panel,#0c1524);border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius,10px)}
 .fs .fs-seg button{border:0;background:transparent;color:var(--zx-muted,#9fb6cf)}.fs .fs-seg button[aria-pressed=true]{background:color-mix(in srgb,var(--accent,#e0a353) 22%,transparent);color:var(--zx-text,#dbe8f6);font-weight:600}
@@ -49,6 +49,7 @@
 .fs-tick{width:20px;height:20px;border-radius:6px;background:#4fe39a;color:#06120c;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
 .fs-meals{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
 .fs-meals>span{display:flex;flex-direction:column;gap:2px;padding:10px 12px;font-size:12px}.fs-meals b{font-size:15px}
+.fs-kpis--meal{grid-template-columns:repeat(3,minmax(0,1fr))}.fs-kpis--meal>.zx-inset{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px}.fs-meal-slot{display:flex;flex-direction:column;gap:6px;padding:9px 0;border-top:1px solid var(--zx-line,#1f3149);font-size:12px}.fs-meal-slot .fs-row{flex-wrap:wrap}.fs input[type=file]{max-width:240px}
 
 /* Day log */
 .fs-chips{display:flex;gap:8px;flex-wrap:wrap}

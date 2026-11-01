@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.45  |  Date: 2026-10-30 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.47  |  Date: 2026-11-01 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1259,3 +1259,22 @@ Grey renamed the acronym: **ZÆNIA = Zack's Ædaptive Neural Intelligence Assyst
 - The reading lasts 45 s and reaches the brain as one context paragraph next to "how Zack talks" (`brain_service`), telling it not to name or diagnose his mood unless asked, never to claim feelings itself, and to let his words win.
 - Only the four numbers and the turn count are stored (`data/personal_memory/voice_tone.json`); no audio, no words. The last reading is shared between the app server and the PC voice through `data/ui/voice_tone_now.json`.
 - Tests: 885 Python OK (14 skipped), `voice_tone_test` 5 (synthetic voices: pitch and loudness found, nothing judged before the baseline, a rushed turn and a tired turn, numbers only). Needs a PC voice restart.
+
+### 28.48 ZÆNIA identity and product charter — Codex
+
+Created `docs/architecture/ZAENIA_Identity_and_Product_Charter.md` as the durable, shared explanation of Zack's intended identity, the meaning of “Ædaptive” and “Assystem,” conversation and privacy rules, the three-engine/four-brain architecture, and the collected product brainstorm. It separates capabilities described as implemented in the current history from roadmap requests and runtime validations still pending. This is a documentation/source-of-truth addition; it does not change model prompts, code behavior, permissions, or the installed app. The runtime implementation remains in the files listed by the charter, with this document serving as the product reference for future Codex and Claude work.
+### 28.49 Automation Center, weekly rollup and independent code review — Codex, 2026-11-01 (v3.46)
+
+The Status page now has an **Automations** subtab that consolidates ten existing assistant workflows: project checkpoints, change review, readiness/preflight, phrase routines, event follow-through, background work, quiet notifications, weekly review, health/recovery, and reviewable workflow learning. Each card links to its existing control surface. Status is read from local Core endpoints; the weekly summary is a read-only view over recent task history, deadlines, project next steps, and background jobs. It writes no state.
+
+The isolated build-request pipeline runs a bounded second pass on the local Seek model after checks pass. It redacts common credential patterns and refuses non-loopback Ollama endpoints. Findings are advisory and cannot change, accept, reject, or authorize a patch. If the local reviewer is unavailable, the build remains ready for owner review with that limitation shown. Engine 3 authorization and owner approval remain authoritative.
+
+Files: `desktop/src/components/status/AutomationCenter.tsx`, `desktop/src/App.tsx`, `core/assistant_platform/build_helper.py`, `core/assistant_platform/build_helper_test.py`, `desktop/src/components/tools/BuildRequests.tsx`. Verification: 13 focused Python tests passed; TypeScript and all 17 desktop Node test scripts passed; desktop Vite, browser Vite, and native Tauri builds passed. The native installer saved the previous executable, installed and reopened the new build; executable SHA-256 matches. The local Core was restarted; `/health` reported success with protected routes still requiring authentication, and `/app/` returned HTTP 200. Vite reported the existing ineffective dynamic import and large-chunk warnings.
+
+### 28.50 Weekly meal planner, pantry portions and scheduled check-ins — Codex, 2026-11-01 (v3.47)
+
+Fitness & Health now has a Monday–Sunday meal planner. Each recipe can be tagged for any combination of breakfast, lunch, and dinner. Foods added by barcode or nutrition-label photo can be stored in pantry inventory or assigned to a selected meal. Owner-confirmed serving size and nutrition facts are stored with the pantry item. Weekly assignments reserve servings; the planner calculates remaining stock after consumption and reservations, and the owner can record other consumed amounts by voice (for example, “I used two servings of Greek yogurt”) or from the inventory UI.
+
+The planner schedules a screen-and-speech reminder for each future meal. The reminder asks whether the meal was eaten; only an explicit “I ate this” confirmation logs its nutrition and consumes its pantry servings. “Skip” records the skipped slot without nutrition. Facts must include calories, protein, and fiber before a meal can be logged; recipe nutrition is computed from its saved ingredient sources. Existing personal-memory read/write authorization applies to the two new local record collections, `fitness_inventory` and `fitness_meal_plan`.
+
+Files: `desktop/src/components/personal/MealPlanner.tsx`, `FitnessStudio.tsx`, `PersonalPanels.tsx`, `FitnessStudio.css`, `core/assistant_platform/personal_tools.py`, `chat_actions.py`, `personal_tools_test.py`, `chat_actions_test.py`, and `core/api/platform_routes.py`. The focused Python tests (24 total, including the existing build-helper, meal-plan validation and full chat-action suites), all 17 desktop Node test scripts, TypeScript, desktop/browser Vite production builds, and native Tauri build pass. Gitleaks reports no leaks in the staged change. `desktop/dist-web` was rebuilt and its Fitness bundle returned HTTP 200 with the planner and fact-review UI. The native executable was installed and reopened through the repository updater; its SHA-256 matches the built executable. The existing authenticated/token-mode Core scheduled task was started without changing authentication; `/health` and `/app/` both returned HTTP 200. Commit `4fa18ea` fast-forwarded GitHub `main`; no merge commit or history rewrite was used. Existing Vite warnings remain for the ineffective dynamic import and large JavaScript chunk.
