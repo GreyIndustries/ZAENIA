@@ -71,7 +71,45 @@ _NUTRIENTS = {
     "fat": r"fats?",
     "sugars": r"sugars?",
     "sodiumMg": r"sodium|salt",
+    "cholesterolMg": r"cholesterol|chol",
 }
+# Every nutrient a food record can carry (Grey, 2026-11-01: carbs, fat, sugars and cholesterol supported fully).
+_FULL = ("protein", "fiber", "carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg")
+_GENERIC_FOOD = re.compile(r"^(?:food|foods|meal|meals|today|unknown|none|n/?a|snack|fitness|health|fitness\s*(?:&|and)\s*health|nutrition|"
+                           r"food\s*log|log|logged\s+in\s+chat|my\s+food|calories|macros)$", re.I)
+
+
+def fill_from_catalog(food: str, record: dict[str, Any], stated: dict[str, float], *, search=None) -> str | None:
+    """A named food logged with only some numbers: the nutrients Grey didn't give come from the closest USDA FoodData
+    Central match, scaled so its calories (or protein) equal his. Returns the match's name, or None when nothing fits.
+    His own numbers are never changed."""
+    if not food or _GENERIC_FOOD.match(food.strip()):
+        return None
+    missing = [k for k in _FULL if k not in stated]
+    if not missing:
+        return None
+    try:
+        if search is None:
+            from core.assistant_platform.nutrition import search_food as search
+        matches = (search(food) or {}).get("matches") or []
+    except Exception:
+        return None
+    for match in matches:
+        n = match.get("nutrients") or {}
+        for ref in ("calories", "protein", "carbs"):
+            mine, theirs = (record.get(ref) if ref == "calories" else stated.get(ref)), n.get(ref)
+            if mine and theirs:
+                factor = float(mine) / float(theirs)
+                break
+        else:
+            continue
+        if not 0.05 <= factor <= 20:          # a match this far off isn't the same food
+            continue
+        for key in missing:
+            if n.get(key) is not None:
+                record[key] = round(float(n[key]) * factor, 1)
+        return str(match.get("title") or "USDA match")
+    return None
 
 
 def stated_nutrition(text: str) -> dict[str, float]:
@@ -175,7 +213,7 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
         stated = stated_nutrition(str(args.get("text") or ""))
         if stated:
             # Numbers Grey gives are logged as said: no lookup, no estimate.
-            if not food or re.search(r"\b(" + "|".join(_NUTRIENTS.values()) + r")\b", food, re.I) or food.lower() in ("food", "meal", "today", "unknown", "none", "n/a"):
+            if not food or re.search(r"\b(" + "|".join(_NUTRIENTS.values()) + r")\b", food, re.I) or _GENERIC_FOOD.match(food):
                 food = "Logged in chat"
             calories = stated.get("calories")
             from_macros = calories is None and all(k in stated for k in ("protein", "carbs", "fat"))
@@ -183,12 +221,29 @@ def run(action: dict[str, Any], *, store: Any = None, ask: Callable[[str], str] 
                 calories = round(4 * stated["protein"] + 4 * stated["carbs"] + 9 * stated["fat"])
             record = {"title": food, "date": today, "calories": calories or 0, "protein": stated.get("protein", 0), "fiber": stated.get("fiber", 0),
                       "source": "Told ZAE in chat" + (" (calories from protein, carbs and fat)" if from_macros else "")}
-            record.update({k: v for k, v in stated.items() if k in ("carbs", "fat", "saturatedFat", "sugars", "sodiumMg")})
+            record.update({k: v for k, v in stated.items() if k in ("carbs", "fat", "saturatedFat", "sugars", "sodiumMg", "cholesterolMg")})
+            matched = fill_from_catalog(food, record, stated)
+            if matched:
+                record["source"] += f"; the rest from USDA FoodData Central ({matched[:80]}), scaled to your numbers"
+            # The same entry twice within two minutes (two mics, a repeat) is logged once.
+            from datetime import datetime, timezone
+            for item in store.list("fitness_food"):
+                try:
+                    recent = (datetime.now(timezone.utc) - datetime.fromisoformat(str(item.get("createdAt")))).total_seconds() < 120
+                except (TypeError, ValueError):
+                    recent = False
+                if recent and item.get("date") == today and item.get("title") == food and not item.get("archived") \
+                        and all(item.get(k) == record.get(k) for k in ("calories", "protein", "carbs", "fat")):
+                    return {"reply": f"That's already logged{'' if food == 'Logged in chat' else ' for ' + food}.", "tab": "fitness"}
             PersonalTools(store).save("food", record)
-            labels = {"protein": "g protein", "fiber": "g fiber", "carbs": "g carbs", "fat": "g fat", "saturatedFat": "g saturated fat", "sugars": "g sugar", "sodiumMg": "mg sodium"}
+            labels = {"protein": "g protein", "fiber": "g fiber", "carbs": "g carbs", "fat": "g fat", "saturatedFat": "g saturated fat", "sugars": "g sugar", "sodiumMg": "mg sodium", "cholesterolMg": "mg cholesterol"}
             said = [f"{calories:g} kcal" + (" (worked out from your macros)" if from_macros else "")] if calories is not None else []
             said += [f"{stated[k]:g} {label}" for k, label in labels.items() if k in stated]
             note = "" if calories is not None else " You didn't give calories, so none are counted for this entry."
+            if matched:
+                note += f" I filled in the rest from USDA ({matched[:60]})."
+            elif food == "Logged in chat":
+                note += " Name the food next time and I'll fill in carbs, fat, sugar and cholesterol too."
             return {"reply": f"Logged {', '.join(said)}{'' if food == 'Logged in chat' else ' for ' + food}.{note}", "tab": "fitness"}
         if not food or calories is None:
             raise ValueError("I need sourced values before saving this meal. Use the Fitness & Health meal review and check the food matches and portions first.")

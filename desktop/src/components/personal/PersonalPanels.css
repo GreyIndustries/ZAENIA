@@ -64,3 +64,4 @@
 .live-transcript small{font-size:11px;color:#9fb6cf}
 
 .nutrition-note{display:block;color:#b7c8db;margin:4px 0 6px}
+.metric-partial{display:block;margin-top:4px;font-size:11px;font-weight:400;color:var(--zx-muted,#9fb6cf)}

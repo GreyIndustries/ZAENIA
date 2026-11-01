@@ -352,7 +352,11 @@ class PersonalTools:
         food = [item for item in self.store.list('fitness_food') if item.get('date') == day and not item.get('archived')]
         exercise = [item for item in self.store.list('fitness_exercise') if item.get('date') == day and not item.get('archived')]
         settings = next((item for item in self.store.list('fitness_settings') if not item.get('archived')), {})
-        return {'calories':sum(item['calories'] for item in food),'protein':sum(item['protein'] for item in food),
+        known = lambda key: [item[key] for item in food if item.get(key) is not None]
+        coverage = {key: {'known': len(known(key)), 'of': len(food)} for key in ('carbs', 'fat', 'saturatedFat', 'sugars', 'sodiumMg', 'cholesterolMg')}
+        return {'coverage': coverage,
+                **{f'{key}Known': (round(sum(known(key)), 1) if known(key) else None) for key in coverage},
+                'calories':sum(item['calories'] for item in food),'protein':sum(item['protein'] for item in food),
                 'fiber':sum(item['fiber'] for item in food),'carbs':sum(item['carbs'] for item in food) if all(item.get('carbs') is not None for item in food) else None,
                 'fat':sum(item['fat'] for item in food) if all(item.get('fat') is not None for item in food) else None,
                 'saturatedFat':sum(item['saturatedFat'] for item in food) if all(item.get('saturatedFat') is not None for item in food) else None,

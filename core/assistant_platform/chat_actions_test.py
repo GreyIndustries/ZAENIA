@@ -19,7 +19,8 @@ class ChatActionsTest(unittest.TestCase):
         self.tracker = training_module.Training(self.path)
         real_day_view = training_module.day_view
         self.patches = [mock.patch.object(training_module, "training", lambda: self.tracker),
-                        mock.patch.object(training_module, "day_view", lambda day, store: real_day_view(day, store, self.path))]
+                        mock.patch.object(training_module, "day_view", lambda day, store: real_day_view(day, store, self.path)),
+                        mock.patch("core.assistant_platform.nutrition.search_food", return_value={"matches": []})]  # no network in tests
         for patch in self.patches:
             patch.start()
 
@@ -60,6 +61,31 @@ class ChatActionsTest(unittest.TestCase):
         self.assertEqual((food["title"], food["calories"], food["protein"], food["fiber"], food["carbs"]), ("Logged in chat", 2100, 150, 30, 220))
         reply = self.run_action("food.log", {"name": "shake", "text": "shake with 40g protein, 10g carbs and 5g fat"})
         self.assertIn("worked out from your macros", reply["reply"])
+
+    def test_named_food_gets_every_nutrient_and_the_day_total_adds_what_is_known(self):
+        self.assertEqual(chat_actions.stated_nutrition("chicken bowl 600 cal, cholesterol 95mg"), {"calories": 600, "cholesterolMg": 95})
+        usda = {"matches": [{"title": "Chicken burrito bowl", "nutrients": {"calories": 150, "protein": 9, "fiber": 2, "carbs": 18, "fat": 5,
+                                                                           "saturatedFat": 1.5, "sugars": 1, "sodiumMg": 300, "cholesterolMg": 25}}]}
+        with mock.patch("core.assistant_platform.nutrition.search_food", return_value=usda):
+            reply = self.run_action("food.log", {"name": "chicken burrito bowl", "text": "chicken burrito bowl, 600 calories and 40g protein"})
+        self.assertIn("filled in the rest from USDA", reply["reply"])
+        food = next(i for i in PersonalTools(self.store).listing("food", day=date.today().isoformat())["items"] if i["title"] == "chicken burrito bowl")
+        self.assertEqual((food["calories"], food["protein"]), (600, 40))                    # his numbers stay as said
+        self.assertEqual((food["carbs"], food["fat"], food["sugars"], food["cholesterolMg"]), (72.0, 20.0, 4.0, 100.0))   # USDA x 4
+        # A plain total can't be filled; the day total still adds up what's known and says how much it covers.
+        self.run_action("food.log", {"name": "fitness & health", "text": "750 calories"})
+        titles = sorted(item["title"] for item in PersonalTools(self.store).listing("food", day=date.today().isoformat())["items"])
+        self.assertEqual(titles, ["Logged in chat", "chicken burrito bowl"])          # "fitness & health" isn't a food name
+        summary = PersonalTools(self.store).fitness_summary(date.today().isoformat())
+        self.assertIsNone(summary["carbs"])
+        self.assertEqual((summary["carbsKnown"], summary["coverage"]["carbs"]), (72.0, {"known": 1, "of": 2}))
+        self.assertEqual(summary["cholesterolMgKnown"], 100.0)
+
+    def test_the_same_entry_twice_in_two_minutes_is_logged_once(self):
+        self.run_action("food.log", {"name": "protein shake", "text": "protein shake 40g protein 200 cal"})
+        again = self.run_action("food.log", {"name": "protein shake", "text": "protein shake 40g protein 200 cal"})
+        self.assertIn("already logged", again["reply"])
+        self.assertEqual(len(PersonalTools(self.store).listing("food", day=date.today().isoformat())["items"]), 1)
 
     def test_fitness_quick_log_only_runs_fitness_actions(self):
         from unittest import mock

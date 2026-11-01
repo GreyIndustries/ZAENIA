@@ -27,3 +27,10 @@ Audit result: verified preferences, the proposal queue, pattern extraction, owne
 - **Permission non-escalation**: tests show permission/authorization/security keys can't be learned, a sentence claiming permission doesn't become an active preference, retrieval carries "never authority to execute", and the approval policy comes only from its own setting (forgetting memory always needs review).
 - Tests: `core/personal_memory/phase3_test.py` 9; full suite 902 OK (14 skipped).
 - Still partial: episodic memory is the conversation log plus topic threads, without its own reviewable "episode" records.
+
+## Carbs, fat, sugars and cholesterol supported fully (2026-11-01)
+Grey's day view showed "Not fully reported" for carbs, fat, sugars, sodium and cholesterol because two plain totals ("42 g protein", "750 calories") carried no other nutrients, and the sum gave up when any food lacked one.
+- `chat_actions.fill_from_catalog`: a named food logged with only some numbers gets the rest from the closest USDA FoodData Central match, scaled so its calories (or protein, or carbs) equal Grey's; his own numbers never change; the source says so. Cholesterol can now be stated ("cholesterol 95mg").
+- Generic names ("fitness & health", "food log", "nutrition"…) are not food names; the same entry twice within two minutes is logged once.
+- `fitness_summary` adds `{nutrient}Known` and `coverage`; the Fitness day view shows the known sum with "from X of Y foods" instead of "Not fully reported".
+- Tests: `chat_actions_test` +2; full suite 904 OK (14 skipped).
