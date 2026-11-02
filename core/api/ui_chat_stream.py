@@ -16,6 +16,7 @@ routes. This stream never executes an action or grants permission for one.
 """
 from __future__ import annotations
 
+from fastapi import HTTPException
 import json
 import re
 import threading
@@ -311,7 +312,11 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return
-        quick = _protocol_or_reminder(message, authorize)
+        try:
+            quick = _protocol_or_reminder(message, authorize)
+        except HTTPException as locked:
+            # Token mode or a limited client: say so plainly instead of failing the turn (and never let the brain claim it was done).
+            quick = (str(locked.detail), "locked", [])
         if quick is not None:
             answer, route, tabs = quick[:3]
             focus = quick[3] if len(quick) > 3 else None

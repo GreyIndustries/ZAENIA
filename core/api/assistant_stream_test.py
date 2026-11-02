@@ -160,6 +160,19 @@ class ChatActionTests(unittest.TestCase):
         self.assertIn("GitHub 2FA", result[0])
         self.assertIn("ui.tasks.write", gate.seen)
 
+    def test_token_mode_says_so_instead_of_the_brain_claiming_the_reminder_was_set(self):
+        from fastapi import HTTPException
+        def locked(operation):
+            raise HTTPException(503, "ZÆNIA is running in token mode. Unlock it with the passkey at the PC to use this.")
+        reminder_store = Mock()
+        with patch("core.assistant_platform.reminders.reminders", return_value=reminder_store):
+            events = [json.loads(chunk) for chunk in ui_chat_stream.stream("Put a reminder on November 8 at 9am for GitHub 2FA", "req0123456789abcd", authorize=locked)]
+        done = events[-1]
+        self.assertEqual((done["type"], done["route"]), ("done", "locked"))
+        self.assertIn("token mode", done["reply"])
+        self.assertFalse(reminder_store.add.called)
+        self.assertFalse(self.brain.questions)
+
     def test_incomplete_reminder_asks_for_details_instead_of_claiming_success(self):
         gate = Gate("ui.tasks.write")
         reminder_store = Mock()

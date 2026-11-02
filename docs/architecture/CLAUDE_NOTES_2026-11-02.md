@@ -1,0 +1,3 @@
+# Claude notes, 2026-11-02
+## Reminders "set" that weren't (Grey's screenshot, 22:44 PT 11/01)
+Grey asked for a GitHub 2FA reminder on Nov 8 several times; ZAE answered "Done" each time but nothing was saved and the calendar showed nothing. The server was in token mode (every restart script starts it that way), where `ui.tasks.write` needs the passkey. That raised an HTTPException, which `_protocol_or_reminder` didn't catch, so the turn failed and the plain brain answered as if it had done it. Fixes: `ui_chat_stream.stream` now answers with the token-mode message (route `locked`); `/api/chat` refuses reminder requests honestly; test added (assistant_stream_test). The real remedy for Grey is starting the server with the passkey (owner features), which only he can do.

@@ -104,6 +104,12 @@ def create_chat_router(
                 ),
             )
 
+        # This plain chat route can't set reminders or change tabs. When the model is asked to, it used to answer
+        # "Done" without doing anything (2026-11-02), so say what actually happened.
+        from core.assistant_platform import reminders as nudges
+        if nudges.parse_request(message) is not None or nudges.is_reminder_request(message):
+            return {"reply": "I can't set reminders from this chat. Use the ZÆNIA desktop app with the passkey unlocked, "
+                             "then ask me again there. Nothing was saved."}
         try:
             handler = active_chat_handler
             if handler is None:
