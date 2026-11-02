@@ -39,6 +39,7 @@ import './styles/look-styles.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
+import { NotificationCenter } from "./components/shell/NotificationCenter";
 // Module windows load when first opened, so the core appears sooner.
 const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
@@ -54,6 +55,7 @@ const PhoneNotifications = lazy(() => import("./components/phone/PhoneNotificati
 const ToolsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.ToolsPanel })));
 const LabsPanel = lazy(() => import("./components/personal/WorkbenchTools").then(module => ({ default: module.LabsPanel })));
 const CodeDoctorPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.CodeDoctorPanel })));
+const BrainsPanel = lazy(() => import("./components/tools/BrainsPanel").then(module => ({ default: module.BrainsPanel })));
 const BuildRequestsPanel = lazy(() => import("./components/tools/BuildRequests").then(module => ({ default: module.BuildRequests })));
 const SuggestionsPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.SuggestionsPanel })));
 const ArenaPanel = lazy(() => import("./components/tools/ToolTabs").then(module => ({ default: module.ArenaPanel })));
@@ -992,7 +994,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       return;
     }
     // What you talk about comes forward: "my calendar" opens Calendar, and so on.
-    if (windowed && !photoQuestion) { const target = windowForText(message); if (target) shell.open(target); }
+    if (windowed && !photoQuestion) {
+      const target = windowForText(message);
+      if (target) {
+        const reminderRequest = /\b(remind(?:er|ers)?|nudge|alarm)\b/i.test(message);
+        if (reminderRequest) {
+          try { localStorage.setItem("zaenia.plan.tab", "reminders"); } catch { /* optional */ }
+        }
+        shell.open(target);
+        if (reminderRequest) window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:plan-tab", { detail: "reminders" })), 60);
+      }
+    }
     setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, photos: photoQuestion ? sharedPhotos : undefined, files: fileQuestion ? attachedFiles.map(file => file.name) : undefined, at: new Date().toISOString() }]);
     if (speakReplies) speech.prime();
     // Public identity information is safe to answer before authentication.
@@ -1398,6 +1410,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
         { id: "bench", label: "Test set", render: () => <ArenaBench/> },
         { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
+        { id: "brains", label: "Brains & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
@@ -1515,6 +1528,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       {!isPhone && <TopCategories current={section} onOpen={id => openSection(id as Section)}
         tabs={nav.map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon} size={16}/> }))}/>}
       <div className="topbar"><div className="topbar__meta">
+        <NotificationCenter pendingFiles={pendingFiles} onOpen={(target, sub) => {
+          if (sub) { try { localStorage.setItem(`zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ } window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub })), 200); }
+          openSection(target as Section); }}/>
         <span className="preview-status"><span className="preview-status__dot"/>{headerStatus}</span>
         {weather && weather.temperature !== null && <span className="topbar__weather" title={`${weather.place}: high ${Math.round(weather.high ?? 0)}°, low ${Math.round(weather.low ?? 0)}°`}>{Math.round(weather.temperature)}° <small>{sentenceCase(weather.condition)}</small></span>}
         <BackgroundWorkBadge jobs={platformRuntime.summary?.jobs ?? []} onOpen={() => { openSection("assistant"); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:assistant-tab", { detail: "Work" })), 60); }}/>

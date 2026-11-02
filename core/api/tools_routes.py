@@ -97,6 +97,13 @@ def _ask_brain(prompt: str) -> str:
     return run_local(prompt)
 
 
+def _ask_study(prompt: str) -> str:
+    """Code Doctor (explain, fix, Playground) uses Study, her 14B brain (Grey, 2026-11-01). It stays loaded for
+    Ollama's keep-alive, so a few questions in a row don't each wait for it to load; Talk fits beside it."""
+    from core.research.analyze import run_local
+    return run_local(prompt, model="qwen3:14b")
+
+
 def require_desktop(x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY")) -> None:
     """Changing files or her brain only from the paired desktop app on the PC."""
     from core.api.desktop_key import is_paired, verify
@@ -121,7 +128,7 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         from core.assistant_platform import code_doctor as doctor
         try:
             target, text = doctor.read_file(body.project, body.file)
-            return {"review": _ask_brain(doctor.review_prompt(body.file, text, body.findings, fix=False))}
+            return {"review": _ask_study(doctor.review_prompt(body.file, text, body.findings, fix=False))}
         except Exception as error:
             raise _bad(error) from error
 
@@ -130,7 +137,7 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         from core.assistant_platform import code_doctor as doctor
         try:
             target, text = doctor.read_file(body.project, body.file)
-            fixed = doctor.extract_code(_ask_brain(doctor.review_prompt(body.file, text, body.findings, fix=True)))
+            fixed = doctor.extract_code(_ask_study(doctor.review_prompt(body.file, text, body.findings, fix=True)))
             if not fixed or fixed.strip() == text.strip():
                 return {"changed": False, "message": "ZAE didn't find a change worth making."}
             return {"changed": True, "diff": doctor.unified(text, fixed, body.file), "text": fixed,
@@ -167,7 +174,7 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         from core.assistant_platform import code_doctor as doctor
         from core.assistant_platform.playground import ask_prompt
         try:
-            answer = _ask_brain(ask_prompt(body.language, body.code, body.tests, body.result, body.question))
+            answer = _ask_study(ask_prompt(body.language, body.code, body.tests, body.result, body.question))
             return {"answer": answer, "code": doctor.extract_code(answer)}
         except Exception as error:
             raise _bad(error) from error
@@ -262,6 +269,12 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
             return suggestions().decide(suggestion_id, body.approve, set_reminder)
         except Exception as error:
             raise _bad(error) from error
+
+    # ---- Her brains and coding tools (Arena > Brains & tools), checked live
+    @router.get("/api/brains")
+    def brain_roster() -> dict[str, Any]:
+        from core.brain.roster import roster
+        return roster()
 
     # ---- Arena
     @router.get("/api/arena")

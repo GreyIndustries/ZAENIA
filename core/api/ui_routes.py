@@ -128,6 +128,7 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/build/ideas/think", "chat.reply"),
         ("POST", r"/api/build/ideas/[0-9a-f]{32}/never", "ui.tasks.write"),
         ("GET", r"/api/arena", "status.read"),
+        ("GET", r"/api/brains", "status.read"),
         ("POST", r"/api/arena/round", "chat.reply"),
         ("POST", r"/api/arena/vote", "status.read"),
         ("POST", r"/api/arena/brain", "assistant.desktop.manage"),

@@ -1,4 +1,4 @@
-import { ACCENTS, CORNERS, DEFAULT_APPEARANCE, DENSITIES, FONTS, LOOKS, TABS } from "../../core/appearance";
+import { ACCENTS, CORNERS, DEFAULT_APPEARANCE, DENSITIES, FONT_GROUPS, FONTS, LOOKS, TABS } from "../../core/appearance";
 import type { AccentChoice, Appearance, LookChoice, TabId, TabStyle } from "../../core/appearance";
 import "./AppearanceSettings.css";
 
@@ -61,8 +61,10 @@ export function AppearanceSettings({ value, onChange }: { value: Appearance; onC
     {customised > 0 && <button type="button" className="choice appearance-settings__reset" onClick={() => onChange({ ...value, tabs: {} })}>Reset every tab to follow the app</button>}
     <label className="appearance-settings__label" htmlFor="appearance-font">FONT</label>
     <select id="appearance-font" className="appearance-settings__select" value={value.font} onChange={event => onChange({ ...value, font: event.target.value as Appearance["font"] })}>
-      {FONTS.map(font => <option key={font.id} value={font.id} style={{ fontFamily: font.stack }}>{font.label}</option>)}
+      {FONT_GROUPS.map(group => <optgroup key={group} label={group}>{FONTS.filter(font => font.group === group).map(font =>
+        <option key={font.id} value={font.id} style={{ fontFamily: font.stack }}>{font.label}</option>)}</optgroup>)}
     </select>
+    <p className="appearance-settings__preview" style={{ fontFamily: (FONTS.find(font => font.id === value.font) ?? FONTS[0]).stack }}>ZÆNIA · Zack's Ædaptive Neural Intelligence Assystem · 0123456789</p>
     <label className="appearance-settings__label" htmlFor="appearance-size">TEXT SIZE <strong>{value.size}%</strong></label>
     <input id="appearance-size" type="range" min={85} max={125} step={5} value={value.size} onChange={event => onChange({ ...value, size: Number(event.target.value) })}/>
     <label className="appearance-settings__label" htmlFor="appearance-glow">COLOUR INTENSITY <strong>{value.glow}%</strong></label>

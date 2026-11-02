@@ -3,7 +3,9 @@
  * re-tint the whole interface (core included) from its amber design, so every
  * theme keeps the same look in a different colour. Saved on this device only.
  */
-export type FontChoice = "default" | "segoe" | "bahnschrift" | "mono" | "serif";
+export type FontChoice = "default" | "segoe" | "bahnschrift" | "mono" | "serif" | "montserrat" | "calibri" | "candara" | "corbel"
+  | "trebuchet" | "verdana" | "century" | "agency" | "twcen" | "eras" | "franklin" | "ocr" | "cascadia-code" | "consolas" | "lora"
+  | "cambria" | "constantia" | "palatino" | "sitka" | "rockwell" | "perpetua" | "almendra" | "inkfree" | "comic";
 export type AccentChoice = "amber" | "gold" | "crimson" | "violet" | "blue" | "cyan" | "emerald" | "ice"
   | "tangerine" | "sunset" | "coral" | "scarlet" | "ruby" | "rose" | "pink" | "magenta" | "orchid" | "plum" | "lavender" | "indigo"
   | "sapphire" | "ocean" | "sky" | "aqua" | "teal" | "mint" | "forest" | "lime" | "chartreuse" | "lemon" | "copper" | "bronze"
@@ -42,13 +44,39 @@ export const LOOKS: { id: LookChoice; label: string; note: string }[] = [
   { id: "neon", label: "Neon bento", note: "Bold colour tiles with neon edges" },
 ];
 
-export const FONTS: { id: FontChoice; label: string; stack: string }[] = [
-  { id: "default", label: "Inter (default)", stack: 'Inter, "Segoe UI", system-ui, sans-serif' },
-  { id: "segoe", label: "Segoe UI", stack: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif' },
-  { id: "bahnschrift", label: "Bahnschrift (tech)", stack: 'Bahnschrift, "DIN Alternate", "Segoe UI", sans-serif' },
-  { id: "mono", label: "Cascadia Mono", stack: '"Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace' },
-  { id: "serif", label: "Georgia (serif)", stack: 'Georgia, Cambria, "Times New Roman", serif' },
+export const FONTS: { id: FontChoice; label: string; stack: string; group: string }[] = [
+  { id: "default", label: "Inter (default)", stack: 'Inter, "Segoe UI", system-ui, sans-serif', group: "Clean" },
+  { id: "segoe", label: "Segoe UI", stack: '"Segoe UI Variable", "Segoe UI", system-ui, sans-serif', group: "Clean" },
+  { id: "montserrat", label: "Montserrat", stack: 'Montserrat, "Segoe UI", system-ui, sans-serif', group: "Clean" },
+  { id: "calibri", label: "Calibri", stack: 'Calibri, Carlito, "Segoe UI", sans-serif', group: "Clean" },
+  { id: "candara", label: "Candara", stack: 'Candara, Calibri, "Segoe UI", sans-serif', group: "Clean" },
+  { id: "corbel", label: "Corbel", stack: 'Corbel, "Segoe UI", sans-serif', group: "Clean" },
+  { id: "trebuchet", label: "Trebuchet MS", stack: '"Trebuchet MS", "Segoe UI", sans-serif', group: "Clean" },
+  { id: "verdana", label: "Verdana (wide, easy to read)", stack: 'Verdana, Tahoma, "Segoe UI", sans-serif', group: "Clean" },
+  { id: "century", label: "Century Gothic (round)", stack: '"Century Gothic", Futura, "Segoe UI", sans-serif', group: "Clean" },
+  { id: "bahnschrift", label: "Bahnschrift (tech)", stack: 'Bahnschrift, "DIN Alternate", "Segoe UI", sans-serif', group: "Tech" },
+  { id: "agency", label: "Agency FB (HUD)", stack: '"Agency FB", Bahnschrift, "Segoe UI", sans-serif', group: "Tech" },
+  { id: "twcen", label: "Tw Cen MT (sleek)", stack: '"Tw Cen MT", "Century Gothic", "Segoe UI", sans-serif', group: "Tech" },
+  { id: "eras", label: "Eras ITC (rounded tech)", stack: '"Eras Medium ITC", "Eras Demi ITC", "Segoe UI", sans-serif', group: "Tech" },
+  { id: "franklin", label: "Franklin Gothic (condensed)", stack: '"Franklin Gothic Medium Cond", "Franklin Gothic Medium", "Arial Narrow", sans-serif', group: "Tech" },
+  { id: "ocr", label: "OCR A (terminal)", stack: '"OCR A Extended", "OCR A Std", "Cascadia Mono", monospace', group: "Tech" },
+  { id: "mono", label: "Cascadia Mono", stack: '"Cascadia Mono", "Cascadia Code", Consolas, ui-monospace, monospace', group: "Code" },
+  { id: "cascadia-code", label: "Cascadia Code", stack: '"Cascadia Code", "Cascadia Mono", Consolas, monospace', group: "Code" },
+  { id: "consolas", label: "Consolas", stack: 'Consolas, "Cascadia Mono", ui-monospace, monospace', group: "Code" },
+  { id: "serif", label: "Georgia (serif)", stack: 'Georgia, Cambria, "Times New Roman", serif', group: "Serif" },
+  { id: "lora", label: "Lora", stack: 'Lora, Georgia, serif', group: "Serif" },
+  { id: "cambria", label: "Cambria", stack: 'Cambria, Georgia, serif', group: "Serif" },
+  { id: "constantia", label: "Constantia", stack: 'Constantia, Georgia, serif', group: "Serif" },
+  { id: "palatino", label: "Palatino", stack: '"Palatino Linotype", "Book Antiqua", Palatino, serif', group: "Serif" },
+  { id: "sitka", label: "Sitka (bookish)", stack: '"Sitka Text", Sitka, Georgia, serif', group: "Serif" },
+  { id: "rockwell", label: "Rockwell (slab)", stack: 'Rockwell, "Roboto Slab", Georgia, serif', group: "Serif" },
+  { id: "perpetua", label: "Perpetua (classic)", stack: 'Perpetua, "Palatino Linotype", serif', group: "Serif" },
+  { id: "almendra", label: "Almendra (fantasy)", stack: 'Almendra, "Palatino Linotype", serif', group: "Character" },
+  { id: "inkfree", label: "Ink Free (handwritten)", stack: '"Ink Free", "Segoe Print", cursive', group: "Character" },
+  { id: "comic", label: "Comic Sans (casual)", stack: '"Comic Sans MS", "Segoe Print", cursive', group: "Character" },
 ];
+/** Fonts that live on this PC (Windows and the fonts you installed); the phone app falls back to the next font in each list. */
+export const FONT_GROUPS = ["Clean", "Tech", "Code", "Serif", "Character"];
 
 /** Hue shift from the amber original, plus saturation for the near-white theme. */
 export const ACCENTS: { id: AccentChoice; label: string; swatch: string; shift: number; saturate: number }[] = [
@@ -173,7 +201,9 @@ export function parseAppearanceCommand(input: string, current: Appearance): Appe
     }
   }
   if (/\bfont\b/.test(text)) {
-    const font = /\bmono|code|terminal\b/.test(text) ? "mono" : /\bserif|georgia\b/.test(text) ? "serif" : /\bbahnschrift|tech\b/.test(text) ? "bahnschrift"
+    // A font named by its label ("use the Montserrat font", "Agency font") wins; then the older keywords.
+    const named = FONTS.find(item => item.id !== "default" && new RegExp(`\\b${item.label.split(" (")[0].toLowerCase()}\\b`).test(text));
+    const font = named ? named.id : /\bmono|code|terminal\b/.test(text) ? "mono" : /\bserif|georgia\b/.test(text) ? "serif" : /\bbahnschrift|tech\b/.test(text) ? "bahnschrift"
       : /\bsegoe|windows\b/.test(text) ? "segoe" : /\b(?:default|normal|inter)\b/.test(text) ? "default" : null;
     if (font) { next.font = font; changed = true; }
   }

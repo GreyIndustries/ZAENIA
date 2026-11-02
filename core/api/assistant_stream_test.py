@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -147,6 +147,28 @@ class ChatActionTests(unittest.TestCase):
         self.assertEqual(event["start"], "2099-10-20T09:30:00-07:00")
         self.assertEqual(event["channels"], ["console"])
         self.assertEqual(ui_calendar._store().events()[0]["id"], event["id"])
+
+    def test_natural_reminder_is_saved_and_opens_tasks(self):
+        gate = Gate("ui.tasks.write")
+        reminder_store = Mock()
+        with patch("core.assistant_platform.reminders.reminders", return_value=reminder_store):
+            result = ui_chat_stream._protocol_or_reminder("Put a reminder on the 8th for GitHub 2FA", gate.authorize)
+        self.assertEqual(result[1:], ("reminder", ["tasks"]))
+        reminder_store.add.assert_called_once()
+        _, due = reminder_store.add.call_args.args
+        self.assertEqual(due.day, 8)
+        self.assertIn("GitHub 2FA", result[0])
+        self.assertIn("ui.tasks.write", gate.seen)
+
+    def test_incomplete_reminder_asks_for_details_instead_of_claiming_success(self):
+        gate = Gate("ui.tasks.write")
+        reminder_store = Mock()
+        with patch("core.assistant_platform.reminders.reminders", return_value=reminder_store):
+            result = ui_chat_stream._protocol_or_reminder("Put a reminder on the 8th", gate.authorize)
+        self.assertEqual(result[1:], ("reminder", ["tasks"]))
+        self.assertIn("What should I remind you about", result[0])
+        self.assertFalse(reminder_store.add.called)
+        self.assertFalse(self.brain.questions)
 
     def test_stream_requires_token_and_chat_permission(self):
         gate = Gate("chat.reply")

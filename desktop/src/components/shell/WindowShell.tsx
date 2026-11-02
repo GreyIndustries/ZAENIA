@@ -187,8 +187,9 @@ export function windowForText(text: string): string | null {
   if (/\b(tech news|headlines)\b/.test(words)) return 'news';
   if (/\b(calendar|schedule|meeting|appointment|event|tomorrow at|next week|agenda)\b/.test(words)) return "calendar";
   if (/\b(task|tasks|to-?do|todo|checklist|deadline)\b/.test(words)) return "tasks";
+  if (/\b(remind(?:er|ers)?|nudge|alarm)\b/.test(words)) return "tasks";
   if (/\b(file|files|folder|code|config|source|script)\b/.test(words)) return "files";
-  if (/\b(remember|memory|memories|learned|reminder|reminders|follow.?through)\b/.test(words)) return "assistant";
+  if (/\b(remember|memory|memories|learned|follow.?through)\b/.test(words)) return "assistant";
   if (/\b(status|health|cpu|memory usage|modules?|diagnostic|system check|server)\b/.test(words)) return "status";
   return null;
 }

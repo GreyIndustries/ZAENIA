@@ -65,6 +65,15 @@ def _loaded_models() -> list[str]:
     return [str(item.get("name") or item.get("model")) for item in models]
 
 
+def _brain_chips(loaded: list[str]) -> list[dict[str, Any]]:
+    try:
+        from core.brain.roster import FOUR, brains
+        rows = {b["id"]: b for b in brains()}
+        return [{"name": name, "model": rows[i]["model"], "job": job, "loaded": rows[i]["model"] in loaded} for i, name, job in FOUR]
+    except Exception:
+        return []
+
+
 def status_bar(mode: str = "") -> dict[str, Any]:
     import psutil
     from core.api.status_feed import _configured_model
@@ -86,6 +95,8 @@ def status_bar(mode: str = "") -> dict[str, Any]:
         phone = "off"
     return {
         "model": _configured_model(),
+        # The four brains for the bottom bar: name, model, job and whether it's in memory now.
+        "brains": _brain_chips(_cached("loaded", 10, _loaded_models) or []),
         "loaded": _cached("loaded", 10, _loaded_models) or [],
         "voice": voice_name,
         "pcVoice": voice.get("state", "off") if _fresh(voice.get("updatedAt"), 15) else "off",

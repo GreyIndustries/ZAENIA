@@ -21,9 +21,20 @@ type Overview = { profile: Profile; targets: Targets; weights: { date: string; w
 type DayView = { date: string; workout: { label: string; exercises: { exercise: string; prescription: string }[] }; actual: { name: string; detail: string }[];
   entry: Entry; burned: { total: number; actual: { name: string; kcal: number; stats: string }[] }; eaten: { calories: number; protein: number; burned: number } | null; targets: Targets };
 type Food = { id: string; title: string; calories: number; protein: number; createdAt?: string; updatedAt?: string };
-type Tab = "progress" | "today" | "log" | "food" | "recipes" | "scan" | "meal-planner" | "program" | "plans";
-// The old "Logs & plans" sub-tabs are F&H tabs now (Grey, 2026-10-30); this maps each to the page it shows.
-const PANEL_PAGE: Partial<Record<Tab, string>> = { food: "Log", recipes: "Recipes", scan: "Scan food", plans: "Plans & targets" };
+// Grey's merge (2026-11-01): nine sub-tabs became three. Today = Progress + Today + Day log as one page (layout A);
+// Training = program, plans & targets, food & exercise behind a switch under a summary strip (C); Food = a side rail
+// with the meal planner, this week's recipes, the cookbook and scanning (E).
+type Tab = "today" | "training" | "food";
+type TrainingView = "program" | "plans" | "log";
+type FoodView = "planner" | "week" | "cookbook" | "scan";
+const TRAINING_VIEWS: [TrainingView, string][] = [["program", "Program"], ["plans", "Plans & targets"], ["log", "Food & exercise"]];
+const FOOD_VIEWS: [FoodView, string][] = [["planner", "Weekly meal planner"], ["week", "Made for this week"], ["cookbook", "Cookbook"], ["scan", "Scan food"]];
+// Saved values from before the merge open the tab that now holds them.
+const OLD_TAB: Record<string, [Tab, TrainingView?, FoodView?]> = { progress: ["today"], today: ["today"], log: ["today"], logs: ["training", "log"],
+  food: ["training", "log"], program: ["training", "program"], plans: ["training", "plans"], recipes: ["food", undefined, "week"],
+  scan: ["food", undefined, "scan"], "meal-planner": ["food", undefined, "planner"], training: ["training"] };
+const saved = (key: string) => { try { return localStorage.getItem(key) ?? ""; } catch { return ""; } };
+const keep = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* optional */ } };
 type Range = 28 | 84 | 365;
 
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -32,7 +43,11 @@ const fmt = (n: number | null | undefined, digits = 0) => n === null || n === un
 const time = (text?: string) => text ? new Date(text).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
 
 export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
-  const [tab, setTab] = useState<Tab>(() => { try { const saved = localStorage.getItem("zaenia.fitness.tab"); return saved === "logs" ? "food" : (saved as Tab) || "progress"; } catch { return "progress"; } });
+  const start = OLD_TAB[saved("zaenia.fitness.tab")];
+  // A new key for the three tabs ("food" meant Food & exercise before); the old key is read once to land in the right place.
+  const [tab, setTab] = useState<Tab>(() => (saved("zaenia.fitness.section") as Tab) || start?.[0] || "today");
+  const [trainingView, setTrainingView] = useState<TrainingView>(() => (saved("zaenia.fitness.training") as TrainingView) || start?.[1] || "program");
+  const [foodView, setFoodView] = useState<FoodView>(() => (saved("zaenia.fitness.food") as FoodView) || start?.[2] || "planner");
   const [info, setInfo] = useState<Overview | null>(null);
   const [week, setWeek] = useState<DayView[]>([]);
   const [food, setFood] = useState<Food[]>([]);
@@ -40,7 +55,11 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const today = iso(new Date());
-  const choose = (next: Tab) => { setTab(next); try { localStorage.setItem("zaenia.fitness.tab", next); } catch { /* optional */ } };
+  const choose = (next: Tab) => { setTab(next); keep("zaenia.fitness.section", next); };
+  const openTraining = (view: TrainingView) => { choose("training"); setTrainingView(view); keep("zaenia.fitness.training", view); };
+  const openFood = (view: FoodView) => { choose("food"); setFoodView(view); keep("zaenia.fitness.food", view); };
+  // The old jumps ("Log food", "Open the workout", setup questions) land on the view that now holds them.
+  const go = (old: string) => { const [next, training, food] = OLD_TAB[old] ?? ["today"]; if (training) openTraining(training); else if (food) openFood(food); else choose(next); };
 
   const load = useCallback(async () => {
     try {
@@ -55,7 +74,7 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
   useEffect(() => { if (LIVE_API) void load(); }, [load]);
   useEffect(() => { const changed = () => void load(); window.addEventListener("zae:records-changed", changed); return () => window.removeEventListener("zae:records-changed", changed); }, [load]);
   useEffect(() => {
-    const setup = () => choose("program"); const meal = () => choose("food");
+    const setup = () => openTraining("program"); const meal = () => openTraining("log");
     window.addEventListener("zae:training-setup", setup); window.addEventListener("zae:food-meal", meal);
     return () => { window.removeEventListener("zae:training-setup", setup); window.removeEventListener("zae:food-meal", meal); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -67,9 +86,15 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
   const quickLog = (text: string) => act(async () => (await api<{ reply: string }>("POST", `${PATH}/training/quick-log`, { text }, { timeoutMs: 180_000 })).reply);
   const logDay = (changes: Partial<Entry>, done?: string) => act(async () => { await api("POST", `${PATH}/training/day?day=${today}`, { changes }); return done; });
 
-  // "Scan barcode": open Logs & plans › Scan food with the camera already on.
-  const scanFood = () => { choose("scan"); window.dispatchEvent(new Event("zae:food-scan")); };
-  const tabs: [Tab, string][] = [["progress", "Progress"], ["today", "Today"], ["log", "Day log"], ["food", "Food & exercise"], ["recipes", "Recipes"], ["scan", "Scan food"], ["meal-planner", "Weekly meal planner"], ["program", "Training program"], ["plans", "Plans & targets"]];
+  // "Scan barcode": open Food › Scan food with the camera already on.
+  const scanFood = () => { openFood("scan"); window.dispatchEvent(new Event("zae:food-scan")); };
+  const tabs: [Tab, string][] = [["today", "Today"], ["training", "Training"], ["food", "Food"]];
+  const day = week[6];
+  // One FitnessPanel stays mounted so ZAE's "review this meal" and "scan" still reach it; it shows the page asked for.
+  const panelPage = tab === "training" ? (trainingView === "plans" ? "Plans & targets" : trainingView === "log" ? "Log" : null)
+    : tab === "food" ? (foodView === "week" || foodView === "cookbook" ? "Recipes" : foodView === "scan" ? "Scan food" : null) : null;
+  const waiting = !LIVE_API ? <p className="fs-muted">This view needs the ZÆNIA server: open it in the desktop or phone app.</p>
+    : !info || !day ? <p className="fs-muted">{error ? "" : "Loading…"}</p> : null;
   return <div className="fs">
     <nav className="research-page__tabs" role="tablist" aria-label="Fitness sections">
       {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id}
@@ -77,15 +102,34 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
     </nav>
     {error && <p className="fs-error" role="alert">{error}</p>}
     {note && <p className="fs-note" role="status">✓ {note}</p>}
-    {!LIVE_API && (tab === "progress" || tab === "today" || tab === "log") && <p className="fs-muted">These views need the ZÆNIA server: open them in the desktop or phone app.</p>}
-    {LIVE_API && !info && (tab === "progress" || tab === "today" || tab === "log") && <p className="fs-muted">{error ? "" : "Loading…"}</p>}
-    {info && tab === "progress" && <Progress info={info} week={week}/>}
-    {info && tab === "today" && week.length > 0 && <Today info={info} view={week[6]} food={food} busy={busy} onLog={logDay} onGo={choose} onScan={scanFood}/>}
-    {info && tab === "log" && week.length > 0 && <DayLog info={info} view={week[6]} food={food} busy={busy} onQuick={quickLog} onScan={scanFood}/>}
-    {tab === "meal-planner" && <MealPlanner/>}
-    {/* Kept mounted so ZAE's "open the setup questions" and "review this meal" still reach them. */}
-    <div hidden={tab !== "program"}><TrainingProgram/></div>
-    <div hidden={!PANEL_PAGE[tab]}><FitnessPanel drafts={drafts} embedded page={PANEL_PAGE[tab] ?? "Log"}/></div>
+
+    {tab === "today" && (waiting ?? (info && day && <div className="fs-stack">
+      <section className="fs-section" aria-label="Progress"><span className="fs-kicker">Progress</span><Progress info={info} week={week}/></section>
+      <section className="fs-section" aria-label="Today"><span className="fs-kicker">Today</span><Today info={info} view={day} food={food} busy={busy} onLog={logDay} onGo={go} onScan={scanFood}/></section>
+      <section className="fs-section" aria-label="Day log"><span className="fs-kicker">Day log</span><DayLog info={info} view={day} food={food} busy={busy} onQuick={quickLog} onScan={scanFood}/></section>
+    </div>))}
+
+    {tab === "training" && <>
+      {info && day && <div className="zx-inset fs-strip" aria-label="Today at a glance">
+        <span><small>Weight</small><b>{fmt(info.profile.weightLb, 1)} lb</b></span>
+        <span><small>Eaten</small><b>{fmt(day.eaten?.calories ?? 0)}{info.targets.eat ? ` / ${fmt(info.targets.eat)}` : ""} kcal</b></span>
+        <span><small>Protein</small><b>{fmt(day.eaten?.protein ?? 0)}{info.targets.protein ? ` / ${fmt(info.targets.protein)}` : ""} g</b></span>
+        <span><small>Today</small><b>{day.workout.label || "Rest day"}{day.workout.exercises.length ? ` · ${day.workout.exercises.filter(e => day.entry.done?.[e.exercise]).length} of ${day.workout.exercises.length} done` : ""}</b></span>
+      </div>}
+      <div className="fs-seg" role="group" aria-label="Training views">{TRAINING_VIEWS.map(([id, label]) =>
+        <button key={id} type="button" aria-pressed={trainingView === id} onClick={() => openTraining(id)}>{label}</button>)}</div>
+    </>}
+    {/* Kept mounted so ZAE's "open the setup questions" still reaches it. */}
+    <div hidden={!(tab === "training" && trainingView === "program")}><TrainingProgram/></div>
+
+    <div className={tab === "food" ? "fs-rail-layout" : undefined}>
+      {tab === "food" && <nav className="fs-rail" aria-label="Food views">{FOOD_VIEWS.map(([id, label]) =>
+        <button key={id} type="button" aria-pressed={foodView === id} onClick={() => openFood(id)}>{label}</button>)}</nav>}
+      <div className={tab === "food" ? "fs-rail-main" : undefined}>
+        {tab === "food" && foodView === "planner" && <MealPlanner/>}
+        <div hidden={!panelPage}><FitnessPanel drafts={drafts} embedded page={panelPage ?? "Log"} recipeShelf={foodView === "week" ? "week" : "cookbook"}/></div>
+      </div>
+    </div>
   </div>;
 }
 
@@ -162,7 +206,7 @@ function Ring({ r, value, target, tone }: { r: number; value: number; target: nu
   return <><circle cx="130" cy="130" r={r} className="fs-ring-bg"/><circle cx="130" cy="130" r={r} fill="none" stroke={tone} strokeWidth="18" strokeLinecap="round"
     strokeDasharray={`${(c * pct).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 130 130)"/></>;
 }
-function Today({ info, view, food, busy, onLog, onGo, onScan }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onLog: (c: Partial<Entry>, done?: string) => void; onGo: (t: Tab) => void; onScan: () => void }) {
+function Today({ info, view, food, busy, onLog, onGo, onScan }: { info: Overview; view: DayView; food: Food[]; busy: boolean; onLog: (c: Partial<Entry>, done?: string) => void; onGo: (old: string) => void; onScan: () => void }) {
   const [weight, setWeight] = useState("");
   const [steps, setSteps] = useState("");
   const t = view.targets; const eaten = view.eaten?.calories ?? 0; const burned = view.burned.total + (view.eaten?.burned ?? 0); const protein = view.eaten?.protein ?? 0;

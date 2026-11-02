@@ -90,3 +90,7 @@
 .tp-different{margin-top:8px}.tp-different summary{cursor:pointer;font-size:12px;color:#9fb6cf}
 .tp-different textarea{width:100%;box-sizing:border-box;margin:6px 0;resize:vertical}
 .tp-actual__stats{font-style:normal;font-size:12px;color:var(--accent,#e0a353);font-variant-numeric:tabular-nums}
+
+/* Exercises that aren't in the plan (2026-11-01) */
+.tp-extra{display:flex;flex-direction:column;gap:8px}
+.tp-extra__add{flex-wrap:wrap}.tp-extra__add input[list]{flex:1 1 220px;min-width:0}

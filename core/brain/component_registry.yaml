@@ -215,7 +215,7 @@ registry:
 
     local_brain:
       name: "Local Brain"
-      description: "Provides ZÆNIA's local language reasoning and brain routing."
+      description: "Provides ZÆNIA's local language reasoning and brain routing: Talk (qwen3.5:4b) answers, Seek (qwen3.5:9b) handles web questions, Study (qwen3:14b) does research, Keep (qwen3:1.7b, on the CPU) writes small summaries, and nomic-embed-text tracks topics."
       role: "reasoning"
       scope: "core"
       local_first: true
@@ -227,6 +227,12 @@ registry:
         - "reasoning"
         - "local llm"
         - "language model"
+        - "brains"
+        - "talk"
+        - "seek"
+        - "study"
+        - "coding tools"
+        - "build requests"
 
       provides:
         - "local_reasoning"
@@ -242,6 +248,9 @@ registry:
         - "core/brain/local_llm.py"
         - "core/brain/brain_router.py"
         - "core/brain/grounded_answer.py"
+        - "core/brain/conductor.py"
+        - "core/brain/roster.py"
+        - "core/assistant_platform/build_helper.py"
 
       state:
         strategy: "evidence_only"

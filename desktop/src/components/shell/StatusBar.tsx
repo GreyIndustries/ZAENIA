@@ -4,7 +4,7 @@ import { skipWhileAway } from "../../core/appBackground";
 import "./StatusBar.css";
 
 type Bar = {
-  model: string; loaded: string[]; voice: string; pcVoice: string; mode: string; cpu: number; ramUsedGb: number; ramTotalGb: number;
+  model: string; loaded: string[]; brains?: { name: string; model: string; job: string; loaded: boolean }[]; voice: string; pcVoice: string; mode: string; cpu: number; ramUsedGb: number; ramTotalGb: number;
   gpu: { use: number; memoryUsedGb: number; memoryTotalGb: number; temperature: number } | null; diskFreeGb: number;
   gameMode: string | null; phone: string; backup: string | null;
 };
@@ -39,7 +39,10 @@ export function StatusBar({ micListening }: { micListening: boolean }) {
   const ram = bar.ramUsedGb / Math.max(1, bar.ramTotalGb);
   const backupAge = bar.backup ? (Date.now() - Date.parse(bar.backup)) / 3_600_000 : Infinity;
   return <div className="zae-status" role="status" aria-label="ZAE status">
-    <span title={bar.loaded.length ? `Loaded now: ${bar.loaded.join(", ")}` : "Brain unloaded (loads when you talk to her)"}>{dot(bar.loaded.length ? "good" : "off")}Model {bar.model}</span>
+    {/* Her four brains: a lit dot means it's in memory now; hover for its model and job. */}
+    {bar.brains?.length ? bar.brains.map(brain => <span key={brain.name} title={`${brain.name}: ${brain.model}. ${brain.job}. ${brain.loaded ? "Loaded now." : "Not loaded; it loads when needed."}`}>
+      {dot(brain.loaded ? "good" : "off")}{brain.name} <small className="zae-status__model">{brain.model}</small></span>)
+      : <span title={bar.loaded.length ? `Loaded now: ${bar.loaded.join(", ")}` : "Brain unloaded (loads when you talk to her)"}>{dot(bar.loaded.length ? "good" : "off")}Model {bar.model}</span>}
     <span>{dot("good")}Voice {bar.voice}</span>
     <span>{dot(micListening ? "good" : "off")}Mic {micListening ? "listening" : "off"}</span>
     <span>{dot(bar.pcVoice !== "off" ? "good" : "off")}PC voice {bar.pcVoice}</span>

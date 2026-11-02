@@ -64,3 +64,31 @@ Grey asked to fix `ZAENIA_DEVELOPMENT_ENVIRONMENT_AUDIT.md` and download the nee
 - `opencode.json` there: only the `ollama` provider is enabled (OpenAI-compatible endpoint `http://127.0.0.1:11434/v1`), sharing and auto-update off. Models: `zae-code:14b` (an Ollama alias of qwen3:14b with a 16k context, from `Modelfile.zae-code`; no download) and `qwen3.5:9b` as the small model.
 - Verified: `opencode models` lists only the two local models; `opencode run` fixed a bug in a throwaway repo in about a minute using its read and edit tools. Code goes only to Ollama on this PC (OpenCode fetches its provider package from npm the first time).
 - Not wired into Build requests (Claude Code and Aider are). The 14B model at 16k needs about 12 GB of graphics memory, so Talk unloads while it runs.
+
+## Brains and tools shown in the app (2026-11-01)
+- `core/brain/roster.py` + `GET /api/brains` (status.read): the five brain roles (Talk, Seek, Study, Keep, topic tracker) with model, where it runs, keep-alive and whether it's loaded (graphics memory), Ollama version and address, the coding tools (Claude Code, Aider, OpenCode with versions and models), and every local model with what uses it. Versions are cached 10 minutes.
+- Arena › Brains & tools (`BrainsPanel.tsx`) shows it, refreshed every 15 s. Settings search finds it and Build requests.
+- Her own feature list (Suggestions) and the component registry (grounded "what are your brains" answers) now name the brains, Build requests, nightly ideas, OpenCode, gestures, Face ID, off the record and nutrients.
+
+## Fitness & Health: nine sub-tabs merged into three (2026-11-01)
+Grey picked from the five previews: Today = A, Training = C, Food = E.
+- **Today** (stacked sections): Progress, Today and Day log on one page, each under its own label.
+- **Training** (summary strip + switch): weight, eaten/target kcal, protein and today's workout with done count on top; a switch between Program (TrainingProgram), Plans & targets and Food & exercise (FitnessPanel pages).
+- **Food** (side rail): Weekly meal planner, Made for this week, Cookbook, Scan food. Recipes carry `weekOf` (the Monday of the week, or empty): "Made for this week" lists this week's, the Cookbook lists all of them (this week's labelled). A recipe made from the week shelf is marked for the week; the editor has a "Made for this week" checkbox. Backend: `Recipe.weekOf` (validated date or empty) and in the listing fields.
+- **Exercises not in the plan:** Training › Program now has "Did a different exercise?" (name with suggestions from the program's other days, reps, lb). It logs sets under that name next to the plan's (also on rest days), with + set and Remove; the burn and muscle-group maths already accept any exercise name.
+- Saved tab: new key `zaenia.fitness.section`; the old `zaenia.fitness.tab` values open the view that now holds them. "Log food", "Open the workout", the setup questions, "review this meal" and barcode scan land on the new places.
+- Tests: personal_tools_test +1; full suite 924 OK (14 skipped).
+
+## The four brains in Settings and the bottom bar; more fonts (2026-11-01)
+- Settings › System & appearance › Module diagnostics now has one chip per brain (`brain_talk`, `brain_seek`, `brain_study`, `brain_keep`, from `roster.brain_modules`): name and model, ready when downloaded, and the detail says its job and whether it's loaded right now. The Ollama "Local Brain" chip stays. Readiness groups them under "Brain and safety".
+- The bottom bar showed "Model llama3.1:8b" (the old general model in `brain_config.yaml`, still used by some helper calls through `run_local`'s default). It now shows Talk, Seek, Study and Keep with their models, lit when loaded; hover for the job (`status_bar.brains`).
+- Fonts: 29 choices in five groups (Clean, Tech, Code, Serif, Character), all fonts installed on this PC (Windows, Office and Grey's Montserrat, Lora, Almendra), each with fallbacks for the phone. A live preview line under the menu. "Use the Montserrat font" works by name.
+- Fix (same day): the brain chips' details were longer than the 100 characters the app's status parser accepts, so the whole feed was rejected ("invalid status schema", the server-offline prompt and "Checking ZAE…"). Details are now short ("Answers you. Loaded now on the graphics card.") and go through `_module`'s clip; `core/brain/roster_test.py` (3) checks the limits.
+- Code Doctor's explain, fix and Playground questions use Study (qwen3:14b) instead of the old general model (`tools_routes._ask_study`). Suggestions still use the general model.
+
+## Notification bell and center (2026-11-01)
+`components/shell/NotificationCenter.tsx`: a bell left of the system status in the top bar, with a count (new notices plus things waiting on Grey). It opens a panel (drawn on the page through a portal, so module windows can't cover it) with:
+- **Needs you:** build requests to check (draft) or approve (ready), file changes waiting, new suggestions, overdue tasks. Each opens its tab.
+- **New:** the follow-through inbox (reminders, important emails, research done, builds ready, nightly ideas, training nudges) with Read and Later (snoozed an hour), and Mark all read.
+- **Done today:** ZAE's action receipts (things she did for him), tasks completed today, builds that went live, and notices read today.
+All from existing routes (`/api/assistant/notifications?includeRead=true`, `/api/build`, `/api/suggestions`, `/api/tasks`, `/api/platform/actions`); refreshes every 30 s (15 s while open) and on record changes. Nothing in it approves anything.
