@@ -39,6 +39,7 @@ import './styles/look-styles.css';
 import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
+import { NotificationCenter } from "./components/shell/NotificationCenter";
 // Module windows load when first opened, so the core appears sooner.
 const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
@@ -1517,6 +1518,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       {!isPhone && <TopCategories current={section} onOpen={id => openSection(id as Section)}
         tabs={nav.map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon} size={16}/> }))}/>}
       <div className="topbar"><div className="topbar__meta">
+        <NotificationCenter pendingFiles={pendingFiles} onOpen={(target, sub) => {
+          if (sub) { try { localStorage.setItem(`zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ } window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub })), 200); }
+          openSection(target as Section); }}/>
         <span className="preview-status"><span className="preview-status__dot"/>{headerStatus}</span>
         {weather && weather.temperature !== null && <span className="topbar__weather" title={`${weather.place}: high ${Math.round(weather.high ?? 0)}°, low ${Math.round(weather.low ?? 0)}°`}>{Math.round(weather.temperature)}° <small>{sentenceCase(weather.condition)}</small></span>}
         <BackgroundWorkBadge jobs={platformRuntime.summary?.jobs ?? []} onOpen={() => { openSection("assistant"); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:assistant-tab", { detail: "Work" })), 60); }}/>

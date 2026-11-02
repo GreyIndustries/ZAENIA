@@ -85,3 +85,10 @@ Grey picked from the five previews: Today = A, Training = C, Food = E.
 - Fonts: 29 choices in five groups (Clean, Tech, Code, Serif, Character), all fonts installed on this PC (Windows, Office and Grey's Montserrat, Lora, Almendra), each with fallbacks for the phone. A live preview line under the menu. "Use the Montserrat font" works by name.
 - Fix (same day): the brain chips' details were longer than the 100 characters the app's status parser accepts, so the whole feed was rejected ("invalid status schema", the server-offline prompt and "Checking ZAE…"). Details are now short ("Answers you. Loaded now on the graphics card.") and go through `_module`'s clip; `core/brain/roster_test.py` (3) checks the limits.
 - Code Doctor's explain, fix and Playground questions use Study (qwen3:14b) instead of the old general model (`tools_routes._ask_study`). Suggestions still use the general model.
+
+## Notification bell and center (2026-11-01)
+`components/shell/NotificationCenter.tsx`: a bell left of the system status in the top bar, with a count (new notices plus things waiting on Grey). It opens a panel (drawn on the page through a portal, so module windows can't cover it) with:
+- **Needs you:** build requests to check (draft) or approve (ready), file changes waiting, new suggestions, overdue tasks. Each opens its tab.
+- **New:** the follow-through inbox (reminders, important emails, research done, builds ready, nightly ideas, training nudges) with Read and Later (snoozed an hour), and Mark all read.
+- **Done today:** ZAE's action receipts (things she did for him), tasks completed today, builds that went live, and notices read today.
+All from existing routes (`/api/assistant/notifications?includeRead=true`, `/api/build`, `/api/suggestions`, `/api/tasks`, `/api/platform/actions`); refreshes every 30 s (15 s while open) and on record changes. Nothing in it approves anything.
