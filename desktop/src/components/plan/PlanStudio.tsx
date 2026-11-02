@@ -43,6 +43,16 @@ export function PlanStudio({ tasksVersion = 0, calendarVersion = 0 }: { tasksVer
   const [busy, setBusy] = useState(false);
   const choose = (next: Tab) => { setTab(next); try { localStorage.setItem("zaenia.plan.tab", next); } catch { /* optional */ } };
 
+  // A reminder request opens its dedicated view, including when this window is already mounted.
+  useEffect(() => {
+    const openPlanTab = (event: Event) => {
+      const next = (event as CustomEvent<Tab>).detail;
+      if (next === "month" || next === "reminders") choose(next);
+    };
+    window.addEventListener("zae:plan-tab", openPlanTab);
+    return () => window.removeEventListener("zae:plan-tab", openPlanTab);
+  });
+
   const loadTasks = useCallback(() => api<{ tasks: TaskRecord[] }>("GET", "/api/tasks").then(r => setTasks(r.tasks), f => setError(errorText(f))), []);
   const loadRange = useCallback(async () => {
     const dayDate = new Date(`${day}T12:00:00`);

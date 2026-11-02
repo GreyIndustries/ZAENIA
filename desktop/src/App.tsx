@@ -994,7 +994,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       return;
     }
     // What you talk about comes forward: "my calendar" opens Calendar, and so on.
-    if (windowed && !photoQuestion) { const target = windowForText(message); if (target) shell.open(target); }
+    if (windowed && !photoQuestion) {
+      const target = windowForText(message);
+      if (target) {
+        const reminderRequest = /\b(remind(?:er|ers)?|nudge|alarm)\b/i.test(message);
+        if (reminderRequest) {
+          try { localStorage.setItem("zaenia.plan.tab", "reminders"); } catch { /* optional */ }
+        }
+        shell.open(target);
+        if (reminderRequest) window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:plan-tab", { detail: "reminders" })), 60);
+      }
+    }
     setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, photos: photoQuestion ? sharedPhotos : undefined, files: fileQuestion ? attachedFiles.map(file => file.name) : undefined, at: new Date().toISOString() }]);
     if (speakReplies) speech.prime();
     // Public identity information is safe to answer before authentication.

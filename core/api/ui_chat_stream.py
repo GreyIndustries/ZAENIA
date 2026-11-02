@@ -204,11 +204,14 @@ def _protocol_or_reminder(message: str, authorize: Callable[[str], Any] | None) 
             authorize("ui.tasks.write")
             when, what = request
             nudges.reminders().add(what, when)
-            return f"I'll remind you at {nudges.spoken_time(when)}: {what}.", "reminder", []
+            return f"I'll remind you at {nudges.spoken_time(when)}: {what}.", "reminder", ["tasks"]
         except PermissionError:
-            return "Reminders aren't available with the current permissions.", "reminder", []
+            return "Reminders aren't available with the current permissions.", "reminder", ["tasks"]
         except ValueError as error:
-            return str(error), "reminder", []
+            return str(error), "reminder", ["tasks"]
+    if nudges.is_reminder_request(message):
+        return ("What should I remind you about, and when? For example, “put a reminder on the 8th at 9 am for GitHub 2FA.”",
+                "reminder", ["tasks"])
     from core.assistant_platform.protocols import protocols, run
     found = protocols().match(message)
     if found is None:

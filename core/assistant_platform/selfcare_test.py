@@ -24,6 +24,21 @@ class ReminderTest(unittest.TestCase):
         self.assertEqual(when.hour, 20)
         self.assertIsNone(parse_request("what should I do tonight", self.NOW))
 
+    def test_natural_reminder_verbs_and_month_day_dates(self):
+        when, what = parse_request("put a reminder on the 8th for GitHub 2FA", self.NOW)
+        self.assertEqual((when.year, when.month, when.day, when.hour, what), (2026, 11, 8, 9, "GitHub 2FA"))
+        when, what = parse_request("Can you set a reminder for GitHub 2FA on November 8 at 3 pm?", self.NOW)
+        self.assertEqual((when.year, when.month, when.day, when.hour, what), (2026, 11, 8, 15, "GitHub 2FA"))
+        when, what = parse_request("Zae, remind me to call the dentist on the 8th of November", self.NOW)
+        self.assertEqual((when.year, when.month, when.day, when.hour, what), (2026, 11, 8, 9, "call the dentist"))
+
+    def test_incomplete_reminder_intent_is_detected_without_claiming_success(self):
+        self.assertTrue(reminder_module.is_reminder_request("put a reminder on the 8th"))
+        self.assertTrue(reminder_module.is_reminder_request("remind me to call home"))
+        self.assertIsNone(parse_request("put a reminder on the 8th", self.NOW))
+        self.assertIsNone(parse_request("put a reminder on the 8th at 27 pm for GitHub 2FA", self.NOW))
+        self.assertFalse(reminder_module.is_reminder_request("what reminders are on my calendar"))
+
     def test_fire_once_and_repeat(self):
         now = [datetime(2026, 10, 25, 12, 0, tzinfo=timezone.utc)]
         with tempfile.TemporaryDirectory() as folder:
