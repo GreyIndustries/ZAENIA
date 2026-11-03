@@ -33,7 +33,10 @@ _REMINDER_PREFIX = re.compile(
     r"(?:please\s+)?(?:remind\s+me|(?:set|add|put|create|make)\s+(?:me\s+)?(?:a\s+)?reminder)(?:\s+|$)", re.I)
 _MONTH = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
 _DAY = r"\d{1,2}(?:st|nd|rd|th)?"
-_DATE_TEXT = rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|{_MONTH}\s+{_DAY}(?:,?\s+\d{{4}})?|(?:the\s+)?{_DAY}(?:\s+of\s+{_MONTH})?(?:,?\s+\d{{4}})?)"
+_MONTH_REF = rf"(?:{_MONTH}\.?|this\s+month|next\s+month)"
+_DATE_TEXT = (rf"(?:\d{{4}}-\d{{1,2}}-\d{{1,2}}|{_MONTH}\.?\s+(?:the\s+)?{_DAY}(?:,?\s+\d{{4}})?"
+              rf"|(?:the\s+)?{_DAY}(?:\s+(?:of\s+)?{_MONTH_REF})?(?:,?\s+\d{{4}})?)")
+_DATE_ONLY = re.compile(rf"(?:on\s+)?{_DATE_TEXT}", re.I)
 _CLOCK_TEXT = r"(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)?|noon|midnight)"
 _DATE_FIRST = re.compile(
     rf"^(?:on|for)\s+(?P<date>{_DATE_TEXT})(?:\s+at\s+(?P<clock>{_CLOCK_TEXT}))?\s+(?:to|about|for|that)\s+(?P<what>.+?)[.!?]*$", re.I)
@@ -69,8 +72,11 @@ def _clock_time(text: str) -> tuple[int, int]:
 
 
 def _reminder_date(text: str, today: date) -> tuple[date, str, bool] | None:
-    """Return (date, roll-forward unit, explicit year) for a month/day expression."""
-    value = text.strip().lower().replace(",", " ")
+    """Return (date, roll-forward unit, pinned) for a month/day expression.
+
+    Pinned dates (an explicit year, "this month" or "next month") never roll forward.
+    """
+    value = " ".join(text.strip().lower().replace(",", " ").split())
     iso = re.fullmatch(r"(\d{4})-(\d{1,2})-(\d{1,2})", value)
     if iso:
         try:
@@ -86,7 +92,15 @@ def _reminder_date(text: str, today: date) -> tuple[date, str, bool] | None:
     if day_match is None:
         return None
     day = int(re.match(r"\d+", day_match[1])[0])
-    if month is None:
+    anchor = re.search(r"\b(this|next) month\b", value)
+    if anchor:
+        month = today.month
+        if anchor[1] == "next":
+            month += 1
+            if month > 12:
+                month, year = 1, year + 1
+        roll = ""
+    elif month is None:
         month = today.month
         roll = "month"
     else:
@@ -95,7 +109,7 @@ def _reminder_date(text: str, today: date) -> tuple[date, str, bool] | None:
         target = date(year, month, day)
     except ValueError:
         return None
-    explicit_year = year_match is not None
+    explicit_year = year_match is not None or anchor is not None
     if not explicit_year and target < today:
         if roll == "month":
             month += 1
@@ -122,6 +136,15 @@ def _reminder_date(text: str, today: date) -> tuple[date, str, bool] | None:
             except ValueError:
                 return None
     return target, roll, explicit_year
+
+
+def parse_date(text: str, today: date | None = None) -> date | None:
+    """Resolve a spoken date like "November 8", "8 Nov" or "the 8th of this month"."""
+    value = " ".join(str(text).split())
+    if not _DATE_ONLY.fullmatch(value):
+        return None
+    resolved = _reminder_date(re.sub(r"^on\s+", "", value, flags=re.I), today or date.today())
+    return resolved[0] if resolved else None
 
 
 def parse_request(text: str, now: datetime | None = None) -> tuple[datetime, str] | None:

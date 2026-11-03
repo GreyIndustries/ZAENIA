@@ -60,9 +60,19 @@ def save_config(config: dict[str, Any]) -> None:
         engine.close()
 
 
-def validate_date(value: str) -> str:
-    date.fromisoformat(value)
-    return value
+def validate_date(value: str, today: date | None = None) -> str:
+    """Accept YYYY-MM-DD or a spoken date like "November 8" / "the 8th of this month"."""
+    from core.assistant_platform.reminders import parse_date
+    try:
+        return date.fromisoformat(value.strip()).isoformat()
+    except ValueError:
+        pass
+    parsed = parse_date(value, today)
+    if parsed is None:
+        raise typer.BadParameter(
+            f"Couldn't read the date '{value}'. Try YYYY-MM-DD, 'November 8' or 'the 8th of this month'."
+        )
+    return parsed.isoformat()
 
 
 def validate_status(status: str) -> str:
@@ -110,7 +120,7 @@ def main():
 @app.command("set-status")
 @owner_command('calendar.read')
 def set_status_command(
-    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+    target_date: str = typer.Argument(..., help="YYYY-MM-DD, 'November 8' or 'the 8th of this month'"),
     status: str = typer.Argument(..., help="on_duty, off_duty, leave, appointment, field, recovery"),
     note: str = typer.Option("", "--note", help="Optional note for that date."),
 ):
@@ -138,7 +148,7 @@ def set_status_command(
 @app.command("add-event")
 @owner_command('calendar.read')
 def add_event_command(
-    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+    target_date: str = typer.Argument(..., help="YYYY-MM-DD, 'November 8' or 'the 8th of this month'"),
     event_time: str = typer.Argument(..., help="Time format: HH:MM"),
     title: str = typer.Argument(..., help="Event title."),
     reminder: str = typer.Option("", "--reminder", help="Optional reminder ZÆNIA should mention."),
@@ -208,7 +218,7 @@ def add_recurring_command(
 @app.command("show")
 @owner_command('calendar.read')
 def show_command(
-    target_date: str = typer.Argument(..., help="Date format: YYYY-MM-DD"),
+    target_date: str = typer.Argument(..., help="YYYY-MM-DD, 'November 8' or 'the 8th of this month'"),
 ):
     """
     Show ZÆNIA calendar context for a specific date.
