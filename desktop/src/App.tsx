@@ -334,6 +334,8 @@ export default function App() {
 
 function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPhone?: () => void; onAuthLost?: () => void; connectionNotice?: string | null }) {
   const [section, setSection] = useState<Section>("overview");
+  const sectionRef = useRef<Section>("overview");
+  const pageHistory = useRef<{ back: Section[]; forward: Section[] }>({ back: [], forward: [] });
   const notesDraft = useRef<NotesDraft>(EMPTY_NOTES_DRAFT);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (notesDraft.current.dirty) { event.preventDefault(); event.returnValue = ''; } };
@@ -500,10 +502,41 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub }));
     }
     const next = (WINDOW_ALIASES[requested] ?? requested) as Section;
+    const current = sectionRef.current;
+    if (next !== current) {
+      pageHistory.current.back.push(current);
+      if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
+      pageHistory.current.forward = [];
+      sectionRef.current = next;
+    }
     setSection(next);
     if (!windowed) return;
     if (next === "overview") shell.showDesktop(); else shell.open(next);
   };
+  const movePageHistory = (direction: "back" | "forward") => {
+    const from = direction === "back" ? pageHistory.current.back : pageHistory.current.forward;
+    const to = direction === "back" ? pageHistory.current.forward : pageHistory.current.back;
+    const target = from.pop();
+    if (!target) return;
+    to.push(sectionRef.current);
+    sectionRef.current = target;
+    setSection(target);
+    if (windowed) {
+      if (target === "overview") shell.showDesktop(); else shell.open(target);
+    }
+  };
+  // Standard side-button mice send button 4 for Back and button 5 for Forward.
+  // Capture the press before WebView/browser defaults can navigate away from ZÆNIA.
+  useEffect(() => {
+    const onMouseDown = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      movePageHistory(event.button === 3 ? "back" : "forward");
+    };
+    window.addEventListener("mousedown", onMouseDown, true);
+    return () => window.removeEventListener("mousedown", onMouseDown, true);
+  }, [windowed]);
   useEffect(() => {
     const go = (event: globalThis.Event) => { const page = (event as CustomEvent<string>).detail; if (nav.some(item => item.id === page)) openSection(page as Section); };
     window.addEventListener("zae:open-section", go); return () => window.removeEventListener("zae:open-section", go);
@@ -550,7 +583,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, []);
   // The title and sidebar follow the window in front.
-  useEffect(() => { if (windowed) setSection((shell.active ?? "overview") as Section); }, [windowed, shell.active]);
+  useEffect(() => {
+    if (!windowed) return;
+    const active = (shell.active ?? "overview") as Section;
+    if (active !== sectionRef.current) {
+      pageHistory.current.back.push(sectionRef.current);
+      if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
+      pageHistory.current.forward = [];
+      sectionRef.current = active;
+    }
+    setSection(active);
+  }, [windowed, shell.active]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetTouch = useRef<number | null>(null);
   // The sheet closes whenever you move to another screen or leave phone width.
