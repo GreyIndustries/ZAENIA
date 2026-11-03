@@ -39,8 +39,8 @@ PATTERNS = [
     ("POST",rf"jobs|jobs/{ID}/cancel|projects|projects/plan|workspaces|workspaces/{ID}/restore", "assistant.platform.write"),
     ("PATCH",rf"projects/{ID}|workspaces/{ID}", "assistant.platform.write"),
     ("DELETE",rf"projects/{ID}|workspaces/{ID}", "assistant.platform.write"),
-    ("GET",r"documents|documents/search", "assistant.documents.read"),
-    ("POST",rf"apps|documents|documents/{ID}/index|documents/open|actions/{ID}/undo|health/recover|profile/requests|snapshots", "assistant.desktop.manage"),
+    ("GET",r"documents|documents/search|documents/onedrive-candidates|documents/images", "assistant.documents.read"),
+    ("POST",rf"apps|documents|documents/{ID}/index|documents/open|documents/read-image|actions/{ID}/undo|health/recover|profile/requests|snapshots", "assistant.desktop.manage"),
     ("PUT",r"approvals", "assistant.desktop.manage"),
     ("DELETE",rf"apps/{ID}|documents/{ID}", "assistant.desktop.manage"),
     ("POST",rf"apps/{ID}/launch", "assistant.apps.launch"),
@@ -62,6 +62,7 @@ class Body(BaseModel):
 class AnalysisBody(Body):
     question: str = Field(min_length=1,max_length=6000)
     priority: bool = False
+    detailed: bool = False
 
 
 class KnowledgeBody(Body):
@@ -181,7 +182,7 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
     @router.post("/api/platform/jobs")
     def submit(body:AnalysisBody):
         authorize("chat.reply")
-        return call(lambda:get().analyze(body.question,priority=body.priority,authorize=authorize))
+        return call(lambda:get().analyze(body.question,priority=body.priority,detailed=body.detailed,authorize=authorize))
 
     @router.post("/api/platform/jobs/{identifier}/cancel")
     def cancel(identifier:str): return call(lambda:get().jobs.cancel(identifier))
@@ -260,6 +261,42 @@ def create_platform_router(require_auth:Callable[...,Any],authorize:Callable[[st
     def documents():
         authorize("files.read")
         return {"folders":get().store.list("document_root")}
+
+    @router.get("/api/platform/documents/onedrive-candidates")
+    def onedrive_candidates():
+        authorize("files.read")
+        from core.assistant_platform.documents import onedrive_candidates as find_local
+        return {"folders":find_local()}
+
+    @router.get("/api/platform/documents/images")
+    def document_images():
+        authorize("files.read"); authorize("assistant.documents.read")
+        return {"images":get().documents.list_images()}
+
+    @router.post("/api/platform/documents/read-image",dependencies=[Depends(desktop)])
+    def read_document_image(body:dict[str,str]):
+        authorize("files.read"); authorize("assistant.documents.read"); authorize("memory.read")
+        from core.assistant_platform.documents import IMAGE_SUFFIXES, selected_file
+        root=get().store.get("document_root",body.get("rootId"))
+        if root is None: raise HTTPException(404,"That folder permission no longer exists.")
+        def read_selected():
+            path=selected_file(root,body.get("path"))
+            if path.suffix.casefold() not in IMAGE_SUFFIXES: raise ValueError("Choose an indexed JPG, PNG or WebP image.")
+            import hashlib
+            with get().store.connection() as db:
+                indexed=db.execute("SELECT mtime,size,sha FROM document_files WHERE root_id=? AND path=?",(root["id"],body.get("path"))).fetchone()
+            if indexed is None: raise ValueError("Index this image first so ZAE can use the approved reference.")
+            metadata=path.stat()
+            if (metadata.st_mtime_ns,metadata.st_size)!=(indexed["mtime"],indexed["size"]): raise ValueError("This photo changed; refresh the folder index first.")
+            if metadata.st_size>8*1024*1024: raise ValueError("Choose an image under 8 MiB for local nutrition reading.")
+            raw=path.read_bytes()
+            if hashlib.sha256(raw).hexdigest()!=indexed["sha"]: raise ValueError("This photo changed; refresh the folder index first.")
+            from core.assistant_platform.nutrition import read_label
+            parsed=read_label(raw)
+            from datetime import datetime,timezone
+            return {**parsed,"title":path.stem,"sourceName":f"Owner-selected photo · {root['name']}","source":f"{root['name']} / {body.get('path')}",
+                    "servingSize":"","fromLabel":True,"checkedAt":datetime.now(timezone.utc).isoformat(timespec="seconds")}
+        return call(read_selected)
 
     @router.post("/api/platform/documents",dependencies=[Depends(desktop)])
     def add_documents(body:TargetBody):

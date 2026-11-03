@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.47  |  Date: 2026-11-01 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.51  |  Date: 2026-11-02 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1290,3 +1290,17 @@ Files: `desktop/src/App.tsx`, `desktop/src/components/shell/WindowShell.tsx`, an
 The reminder parser now accepts direct commands such as “put a reminder on the 8th for GitHub 2FA,” “set a reminder for GitHub 2FA on November 8 at 3 pm,” and “remind me to call the dentist on the 8th of November.” An omitted time defaults to 9:00 am local time; a day-of-month without a month resolves to its next upcoming occurrence. Requests that omit the reminder text or a usable date/time are intercepted before normal model conversation and ask for the missing information. ZÆNIA confirms a reminder only after the authorized reminder store call succeeds, and opens Tasks & Calendar.
 
 Files: `core/assistant_platform/reminders.py`, `core/api/ui_chat_stream.py`, `core/assistant_platform/selfcare_test.py`, and `core/api/assistant_stream_test.py`. Verification: 6 focused reminder/parser/routing tests passed. Existing website output already includes the UI navigation fix; the backend change requires the Core process to load the updated Python module. The native app process remains open and has not been force-terminated.
+
+### 28.53 OneDrive photo references and Study deep analysis — Codex, 2026-11-02 (v3.51)
+
+The Assistant › Documents panel can discover local OneDrive subfolders and let the owner approve a specific folder. The document index now accepts JPG, JPEG, PNG and WebP; the local vision model extracts searchable text from approved photos. Images are not copied to the index, and extracted content is explicitly treated as untrusted reference data. Existing document retrieval already supplies selected-folder excerpts to chat. Fitness & Health can list unchanged indexed photos and read a selected label image locally into the existing owner-review nutrition form, where the user confirms serving values before saving to pantry or a meal. This is intended for package/barcode/nutrition-label photos and other owner-chosen references. OneDrive files must be made available offline before indexing; a barcode UPC can still be scanned live using the existing barcode scanner.
+
+Assistant › Work adds a default-on **Extensive analysis** option. It runs the local Study model (`qwen3:14b`) as a background task, gathers up to eight excerpts from approved local folders when document permissions allow, and requests a structured report covering findings, analysis, counterpoints, assumptions, uncertainty, conclusions and citations. Study output remains analysis only; it cannot grant actions or alter permissions. No selected-folder source means the report labels its conclusions as unverified general knowledge.
+
+Limits: images must be JPG/JPEG/PNG/WebP and at most 8 MiB each for local vision reading; indexing keeps text only. The OneDrive discovery lists immediate subfolders (not the full OneDrive root); the owner should choose a dedicated, small reference folder. The OneDrive path on Grey's PC has not yet been selected or indexed. Python syntax compilation, TypeScript, desktop/browser production builds and the Tauri release build succeeded. Native executable installed and reopened; its SHA-256 matches the build. The existing Core task was restarted after owner approval, with unattended token mode preserved; `/health` and `/app/` returned 200, while the new photo endpoints returned 401 without credentials, confirming their routes are loaded and protected. Runtime tests were not run. Next owner step: approve the desired OneDrive child folder, index it, and review a saved label photo through Fitness & Health.
+
+### 28.54 Mouse side-button page navigation — Codex, 2026-11-02 (v3.50)
+
+The standard mouse Back side button (mouse button 4) returns to the previous ZÆNIA workspace page; Forward (button 5) reopens the next page. Navigation history is in-memory, capped at 100 pages, and resets on app restart. The app captures the mouse press so the desktop webview does not navigate away from ZÆNIA. This covers workspace pages, including opening and focusing desktop windows; sub-tabs within a workspace are not separate history entries. No appearance or authorization behavior changes.
+
+Verification and deployment: TypeScript, desktop/web Vite, and Tauri builds succeeded. Commit `bf4013e` was pushed to the feature branch; the remote `main` branch was not changed. The installed executable hash matches the release build. The existing Core task is running; `/health` and `/app/` returned HTTP 200, and the served bundle contains the handler. Health remains in unattended mode with protected routes authenticated. A local passkey console was left untouched.

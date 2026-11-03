@@ -15,6 +15,7 @@ type Step = { id: string; title: string; milestone: string; status: "pending" | 
 type Project = { id: string; revision: number; title: string; goal: string; steps: Step[]; progress: number; nextStep: Step | null };
 type Receipt = { id: string; label: string; kind: string; status: string; undoable: boolean; updatedAt: string };
 type SearchResult = { rootId: string; folder: string; path: string; page: number | null; excerpt: string };
+type LocalFolder = { name: string; path: string };
 type Health = { checkedAt: string; components: { id: string; state: string; detail: string }[] };
 type Readiness = { ready: boolean; checks: { id: string; ok: boolean; detail: string }[]; scope: string; manualChecks: string[]; portableExclusions: string[] };
 const TABS = ["Work", "Operate", "Apps", "Workspaces", "Projects", "Documents", "Approvals", "Health", "Portable", "Hands"] as const;
@@ -49,7 +50,7 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
   const [tab, setTab] = useState<Tab>("Work");
   const [busy, setBusy] = useState(false); const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null); const [note, setNote] = useState<string | null>(null);
-  const [analysis, setAnalysis] = useState(""); const [priority, setPriority] = useState(false);
+  const [analysis, setAnalysis] = useState(""); const [priority, setPriority] = useState(false); const [detailed, setDetailed] = useState(true);
   const [apps, setApps] = useState<Item[]>([]); const [suggestions, setSuggestions] = useState<{ name: string; path: string }[]>([]);
   const [targetName, setTargetName] = useState(""); const [targetPath, setTargetPath] = useState("");
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]); const [workspaceName, setWorkspaceName] = useState(""); const [workspaceNote, setWorkspaceNote] = useState(""); const [workspaceApps, setWorkspaceApps] = useState<string[]>([]); const [workspaceProject, setWorkspaceProject] = useState("");
@@ -57,7 +58,7 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
   const [projectTitle, setProjectTitle] = useState(""); const [projectGoal, setProjectGoal] = useState(""); const [stepLines, setStepLines] = useState("");
   const [generatedDraft, setGeneratedDraft] = useState<Plan | null>(null);
   const [stepTitle, setStepTitle] = useState(""); const [milestone, setMilestone] = useState(""); const [deadline, setDeadline] = useState(""); const [dependsOn, setDependsOn] = useState<string[]>([]);
-  const [folders, setFolders] = useState<Item[]>([]); const [folderName, setFolderName] = useState(""); const [folderPath, setFolderPath] = useState(""); const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]);
+  const [folders, setFolders] = useState<Item[]>([]); const [onedriveFolders, setOnedriveFolders] = useState<LocalFolder[]>([]); const [folderName, setFolderName] = useState(""); const [folderPath, setFolderPath] = useState(""); const [query, setQuery] = useState(""); const [results, setResults] = useState<SearchResult[]>([]);
   const [policy, setPolicy] = useState<PlatformPolicy>({ voiceAutomatic: [], chatAutomatic: [] });
   const [receipts, setReceipts] = useState<Receipt[]>([]); const [undoAsked, setUndoAsked] = useState<string | null>(null);
   const [health, setHealth] = useState<Health | null>(null); const [readiness, setReadiness] = useState<Readiness | null>(null);
@@ -73,7 +74,7 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
     if (next === "Apps") { const [registered, proposed] = await Promise.all([api<{ apps: Item[] }>("GET", pathFor("apps")), api<{ suggestions: { name: string; path: string }[] }>("GET", pathFor("apps/suggestions"))]); setApps(registered.apps); setSuggestions(proposed.suggestions); }
     if (next === "Workspaces") { const [saved, registered, plans] = await Promise.all([api<{ workspaces: Workspace[]; importedDisplay: typeof importedDisplay }>("GET", pathFor("workspaces")), api<{ apps: Item[] }>("GET", pathFor("apps")), api<{ projects: Project[] }>("GET", pathFor("projects"))]); setWorkspaces(saved.workspaces); setImportedDisplay(saved.importedDisplay); setApps(registered.apps); setProjects(plans.projects); }
     if (next === "Projects") { const reply = await api<{ projects: Project[] }>("GET", pathFor("projects")); setProjects(reply.projects); }
-    if (next === "Documents") { const reply = await api<{ folders: Item[] }>("GET", pathFor("documents")); setFolders(reply.folders); }
+    if (next === "Documents") { const [reply, drives] = await Promise.all([api<{ folders: Item[] }>("GET", pathFor("documents")), api<{ folders: LocalFolder[] }>("GET", pathFor("documents/onedrive-candidates"))]); setFolders(reply.folders); setOnedriveFolders(drives.folders); }
     if (next === "Approvals") { const [settings, actions] = await Promise.all([api<PlatformPolicy>("GET", pathFor("approvals")), api<{ actions: Receipt[] }>("GET", pathFor("actions"))]); setPolicy(settings); setReceipts(actions.actions); }
     if (next === "Health") setHealth(await api<Health>("GET", pathFor("health")));
     if (next === "Portable") { const [checks, requests] = await Promise.all([api<Readiness>("GET", pathFor("readiness")), api<{ requests: typeof profileRequests }>("GET", pathFor("profile/requests"))]); setReadiness(checks); setProfileRequests(requests.requests); }
@@ -104,8 +105,9 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
     {tab === "Operate" && <OperatorPanel/>}
     {tab === "Work" && <>
       <p>Ask ZAE normally while analysis runs. Mark work as priority when you want it kept alongside the conversation.</p>
-      <form onSubmit={event => { event.preventDefault(); void perform(async () => { await api("POST", pathFor("jobs"), { question: analysis, priority }); setAnalysis(""); }, "Background analysis queued; its actual stages and results appear below."); }}>
+      <form onSubmit={event => { event.preventDefault(); void perform(async () => { await api("POST", pathFor("jobs"), { question: analysis, priority, detailed }); setAnalysis(""); }, `${detailed ? "Study deep analysis" : "Background analysis"} queued; progress and results appear below.`); }}>
         <label>Analysis to do<textarea value={analysis} onChange={event => setAnalysis(event.target.value)} maxLength={6000} required placeholder="Compare the next steps for my project…"/></label>
+        <label className="platform-check"><input type="checkbox" checked={detailed} onChange={event => setDetailed(event.target.checked)}/>Extensive analysis: use local Study, compare evidence and assumptions, and cite selected files</label>
         <label className="platform-check"><input type="checkbox" checked={priority} onChange={event => setPriority(event.target.checked)}/>Priority: keep running while we talk</label>
         <button type="submit" disabled={disabled || !analysis.trim()}>Start background analysis</button>
       </form>
@@ -157,7 +159,8 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
       </article>}
     </>}
     {tab === "Documents" && <>
-      <p>Only explicitly selected folders are indexed. PDF results cite actual pages; Word/text results cite the file. Changed files are withheld until reindexed.</p>
+      <p>Only folders you explicitly select are indexed. PDF results cite actual pages; text and image results cite the file. JPG, PNG and WebP photos are read by the local vision model; only extracted text is indexed, and ZAE treats it as untrusted reference data. Changed files are withheld until reindexed.</p>
+      {onedriveFolders.length > 0 && <section className="platform-card"><strong>OneDrive subfolders on this PC</strong><p>Choose a small folder for ZAE references; this list does not offer the entire OneDrive root. Make files available offline in OneDrive first so photos can be read locally.</p><div className="platform-inline">{onedriveFolders.map(folder => <button type="button" key={folder.path} onClick={() => { setFolderName(`OneDrive · ${folder.name}`); setFolderPath(folder.path); }}>{folder.name} · use this path</button>)}</div></section>}
       <form onSubmit={event => { event.preventDefault(); void perform(async () => { await api("POST", pathFor("documents"), { name: folderName, path: folderPath }, { desktop: true }); setFolderName(""); setFolderPath(""); }, "Folder selected. Choose Index to read its supported documents locally."); }}><label>Folder label<input value={folderName} onChange={event => setFolderName(event.target.value)} maxLength={100} required/></label><label>Local folder<input value={folderPath} onChange={event => setFolderPath(event.target.value)} maxLength={1000} required placeholder="C:\Users\…\Documents\Project notes"/></label><button type="submit" disabled={desktopDisabled}>Approve this folder</button></form>
       {folders.map(folder => <article className="platform-card" key={folder.id}><strong>{folder.name}</strong><small>{folder.path}</small><div className="platform-inline"><button type="button" disabled={desktopDisabled} onClick={() => void perform(() => api("POST", pathFor(`documents/${folder.id}/index`), undefined, { desktop: true }), "Indexing started; progress appears in Work.")}>Index / refresh</button><button type="button" disabled={desktopDisabled} onClick={() => void perform(() => api("DELETE", pathFor(`documents/${folder.id}`), undefined, { desktop: true }), "Folder permission and its index removed. Original documents were left in place.")}>Remove permission and index</button></div></article>)}
       <form onSubmit={event => { event.preventDefault(); void perform(async () => { const reply = await api<{ results: SearchResult[] }>("GET", pathFor(`documents/search?q=${encodeURIComponent(query)}`)); setResults(reply.results); }); }}><label>Search selected documents<input value={query} onChange={event => setQuery(event.target.value)} maxLength={500} required/></label><button type="submit" disabled={disabled}>Search</button></form>
