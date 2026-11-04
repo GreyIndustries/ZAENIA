@@ -306,6 +306,7 @@ export type StreamEvent =
   | { type: "proposal"; proposal: AssistantProposal }
   | { type: "protocol"; open: string[]; focus?: string; subtab?: { page: string; tab: string } }
   | { type: "say"; text: string }
+  | { type: "narrate"; stage: string; text: string }
   | { type: "form"; form: string; description?: string }
   | { type: "clarify"; questions: { question: string; options: string[] }[]; original: string }
   | { type: "done"; reply: string; interrupted: boolean; route?: string; sources?: { id?: string; title?: string; url?: string; path?: string; source_type?: string; excerpt?: string }[] }

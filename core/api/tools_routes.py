@@ -250,7 +250,7 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
     def suggestion_think(body: ThinkBody | None = None) -> dict[str, Any]:
         from core.assistant_platform.suggestions import suggestions
         try:
-            return {"new": suggestions().think(_ask_brain, focus=(body.focus if body else "all"))}
+            return {"new": suggestions().think(_ask_study, focus=(body.focus if body else "all"))}
         except Exception as error:
             raise _bad(error) from error
 

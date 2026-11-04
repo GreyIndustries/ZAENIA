@@ -72,17 +72,19 @@ def _decode_text(raw: bytes) -> str | None:
     return None
 
 
-def extract_text(name: str, raw: bytes) -> tuple[str, str]:
-    """Return (kind, text) for a shared file. Unknown binaries get a short note instead."""
+def extract_text(name: str, raw: bytes, limit: int | None = None) -> tuple[str, str]:
+    """Return (kind, text) for a shared file. Unknown binaries get a short note instead. `limit` is how many characters
+    of a PDF or spreadsheet to read (the narrated reader asks for far more than the 12,000 the other routes keep)."""
+    cap = limit or MAX_CHARS_PER_FILE
     suffix = Path(name).suffix.lower()
     if suffix == ".pdf":
         from pypdf import PdfReader
         try:
             reader = PdfReader(io.BytesIO(raw))
             pages = []
-            for number, page in enumerate(reader.pages[:60], 1):
+            for number, page in enumerate(reader.pages[:max(60, cap // 1500)], 1):
                 pages.append(f"[page {number}]\n{(page.extract_text() or '').strip()}")
-                if sum(len(p) for p in pages) > MAX_CHARS_PER_FILE:
+                if sum(len(p) for p in pages) > cap:
                     break
             text = "\n\n".join(pages).strip()
             return "PDF", text if text.replace("[page", "").strip(" \n0123456789]") else "(This PDF has no readable text; it may be scanned images.)"
@@ -112,7 +114,7 @@ def extract_text(name: str, raw: bytes) -> tuple[str, str]:
                     if any(cell is not None for cell in row):
                         writer.writerow(["" if cell is None else cell for cell in row])
                 out.append(buffer.getvalue())
-                if sum(len(p) for p in out) > MAX_CHARS_PER_FILE:
+                if sum(len(p) for p in out) > cap:
                     break
             return "spreadsheet", "\n".join(out)
         except Exception:
@@ -166,27 +168,8 @@ def files_block(files: list[tuple[str, bytes]], *, save: bool = True) -> tuple[s
 
 
 def stream_with_files(brain: Any, message: str, files: list[tuple[str, bytes]], stop: threading.Event,
-                      *, save: bool = True) -> Iterator[dict[str, Any]]:
-    """Stream ZAE's answer about shared files. Yields {"type": "text"} then {"type": "final"}."""
-    from core.brain.local_llm import stream_chat_local
-    block, names = files_block(files, save=save)
-    turn = brain.prepare_turn(message)
-    behavior = brain.load_behavior_context(message)
-    context = brain.model_context(message, turn)
-    conversation = block + ("\n\n" + context if context else "")
-    chunks: list[str] = []
-    for chunk in stream_chat_local(message, recent_messages=turn.messages, behavior_context=behavior,
-                                   conversation_context=conversation):
-        if stop.is_set():
-            return
-        if chunk:
-            chunks.append(str(chunk))
-            yield {"type": "text", "text": str(chunk)}
-    answer = "".join(chunks).strip()
-    if answer:
-        try:
-            # Only his own words are saved (and learned from), with a note of what he shared.
-            brain.remember_exchange(question=f"{message} (shared: {', '.join(names)})", answer=answer, route="files")
-        except Exception:
-            pass
-    yield {"type": "final", "answer": answer}
+                      *, save: bool = True, document: Any = None) -> Iterator[dict[str, Any]]:
+    """ZAE's answer about shared files, narrated while she reads (core/api/file_narration.py): {"type": "narrate"} lines,
+    then {"type": "text"} chunks, then {"type": "final", "answer", "sources"} with where in the file each fact came from."""
+    from core.api.file_narration import narrate_and_answer
+    yield from narrate_and_answer(brain, message, files, stop, document=document, save=save)

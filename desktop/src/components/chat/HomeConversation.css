@@ -211,3 +211,9 @@
   background:transparent;border:0;outline:none;color:#f4f7ff;font:inherit;font-size:13px;line-height:1.45;scrollbar-width:thin}
 .chat-dock textarea::placeholder{color:#83b5da}
 .zaenia-app--phone .home-chat__composer textarea{font-size:16px}
+
+/* What ZAE says while she works, and where in a file an answer came from (2026-11-03) */
+.message__progress{display:grid;gap:3px;margin:2px 0 6px;padding-left:9px;border-left:2px solid rgba(209,160,75,.45)}
+.message__progress p{margin:0;font-size:12px;font-style:italic;color:#9bb4ce}
+.message__source-gist{font-style:normal;color:#9bb4ce}
+.message__source-quote{margin:3px 0 4px;padding:3px 0 3px 8px;border-left:2px solid rgba(143,202,255,.35);color:#c9d8ea;font-size:11px;line-height:1.45;font-style:italic}

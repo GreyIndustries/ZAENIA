@@ -9,7 +9,7 @@ import { fileSize, MAX_SHARED_FILES, readSharedFile } from "../../core/sharedFil
 import type { ChatFile } from "../../core/sharedFiles";
 
 export type ChatSource = { id?: string; title?: string; url?: string; path?: string; source_type?: string; excerpt?: string };
-export type ChatMessage = { id: number; role: "user" | "assistant" | "error"; text: string; photos?: ChatPhoto[]; files?: string[]; sources?: ChatSource[]; at?: string; history?: boolean; streaming?: boolean; interrupted?: boolean; proposal?: AssistantProposal; action?: AssistantActionState };
+export type ChatMessage = { id: number; role: "user" | "assistant" | "error"; text: string; photos?: ChatPhoto[]; files?: string[]; sources?: ChatSource[]; progress?: string[]; at?: string; history?: boolean; streaming?: boolean; interrupted?: boolean; proposal?: AssistantProposal; action?: AssistantActionState };
 export type HistoryState = "preview" | "loading" | "ready" | "unavailable";
 export type ListenProps = {
   supported: boolean;
@@ -307,9 +307,12 @@ export function HomeConversation({ photos, onPhotos, files, onFiles, messages, s
         if (alpha <= 0) return null;
         return <div key={message.id} className={`message message--${message.role}${message.streaming ? " message--streaming" : ""}`} style={{ opacity: alpha }}>
           <span>{label(message.role)}{message.at && <time dateTime={message.at}>{clock(message.at)}</time>}{message.interrupted && <em className="message__cut">STOPPED</em>}</span>
-          <p>{message.text}{message.streaming && <i className="message__caret" aria-hidden="true"/>}</p>
-          {!!message.sources?.length && <div className="message__sources"><small>Sources</small>{message.sources.map((source, index) => <div key={`${source.id ?? index}-${source.url ?? source.path ?? ""}`}>
+          {!!message.progress?.length && <div className="message__progress" aria-label="What ZAE did while she worked">{message.progress.map((line, index) => <p key={index}>{line}</p>)}</div>}
+          {(message.text || !message.progress?.length || message.streaming) && <p>{message.text}{message.streaming && <i className="message__caret" aria-hidden="true"/>}</p>}
+          {!!message.sources?.length && <div className="message__sources"><small>{message.sources.some(source => source.source_type === "file") ? "Where in the file" : "Sources"}</small>{message.sources.map((source, index) => <div key={`${source.id ?? index}-${source.url ?? source.path ?? ""}-${index}`}>
             {source.url?.startsWith("https://") ? <a href={source.url} target="_blank" rel="noreferrer">[{source.id ?? index + 1}] {source.title || source.url}</a> : <span>[{source.id ?? index + 1}] {source.title || source.path || "Local evidence"}</span>}
+            {source.source_type === "file" && <>{(source as ChatSource & { gist?: string }).gist ? <em className="message__source-gist"> · {(source as ChatSource & { gist?: string }).gist}</em> : null}
+              {source.excerpt ? <blockquote className="message__source-quote">{source.excerpt}</blockquote> : null}</>}
           </div>)}</div>}
           {message.files && <div className="message__files">{message.files.map((name, index) => <span key={index} className="message__file"><FileIcon/>{name}</span>)}</div>}
           {message.photos && <div className="message__photos">{message.photos.map((photo, index) => <img key={index} src={photo.data} alt={photo.name}/>)}</div>}

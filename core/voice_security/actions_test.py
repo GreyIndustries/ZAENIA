@@ -420,7 +420,8 @@ class RuntimeDispatchTest(unittest.TestCase):
             'core.brain.dialogue_manager': SimpleNamespace(return_to_background=Mock()),
             'core.conversation_runtime.fluid_runtime_test': SimpleNamespace(StreamingResponse=response_factory),
         }
-        with patch.dict(sys.modules, modules), patch('builtins.print'):
+        # The app being open must not matter (and must never queue this test sentence into the live app's chat).
+        with patch.dict(sys.modules, modules), patch('builtins.print'), patch('core.voice_listener.calm_state.hand_to_app', return_value=False):
             runtime.deliver('Zae, schedule inspection on 2026-10-20 at 15:30')
         runtime.actions.handle.assert_called_once_with('schedule inspection on 2026-10-20 at 15:30')
         response.start.assert_called_once()

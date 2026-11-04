@@ -17,6 +17,31 @@ from typing import Any, Iterator
 
 TALK_MODEL = "qwen3.5:4b"
 SEEK_MODEL = "qwen3.5:9b"
+STUDY_MODEL = "qwen3:14b"
+KEEP_MODEL = "qwen3:1.7b"
+
+# Which brain does which kind of work (Grey, 2026-11-03). Talk is the only brain that speaks or writes to him:
+# every other brain thinks and hands its findings to the transcript (core/brain/transcript.py), and Talk puts them in
+# words. Seek reads and searches; Study does the long, careful jobs; Keep does small background summaries on the CPU.
+WORKLOADS: dict[str, str] = {
+    "speak": TALK_MODEL,            # every sentence he hears or reads as ZAE's own words, including progress notes
+    "chat": TALK_MODEL,             # ordinary conversation
+    "read_file": SEEK_MODEL,        # reading a shared file or link section by section, and finding facts in it
+    "find_in_file": SEEK_MODEL,
+    "web": SEEK_MODEL,              # web questions with sources
+    "research": STUDY_MODEL,        # research agent jobs
+    "code": STUDY_MODEL,            # Code Doctor, Playground, Build briefs' hard parts
+    "ideas": STUDY_MODEL,           # Suggestions and the nightly fix ideas
+    "summarize_small": KEEP_MODEL,  # watch-list summaries (CPU)
+}
+THINKING_WORKLOADS = frozenset(name for name, model in WORKLOADS.items() if model != TALK_MODEL)
+
+
+def model_for(workload: str) -> str:
+    """The model that does this kind of work. Unknown work goes to Talk, the only brain allowed to answer him."""
+    return WORKLOADS.get(workload, TALK_MODEL)
+
+
 TALK_FIRST_TEXT_BUDGET = 2.0
 TALK_COLD_START_BUDGET = 8.0
 TALK_COLD_START_TIMEOUT = 15
@@ -162,8 +187,9 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
     # sent to the web. Page text remains untrusted context for the local model.
     from core.brain.seek import needs_web_evidence, gather_web_evidence, evidence_context
     if needs_web_evidence(question):
-        yield {"type": "say", "text": "I’m checking current sources."}
-        yield {"type": "route", "route": "conductor_seek_web", "brain": "seek", "level": 2, "model": SEEK_MODEL}
+        # Seek finds what the web says; Talk is the only one that writes and speaks the answer (Grey, 2026-11-03).
+        yield {"type": "narrate", "stage": "start", "text": "Let me check current sources."}
+        yield {"type": "route", "route": "conductor_seek_web", "brain": "talk", "level": 2, "model": TALK_MODEL}
         try:
             evidence = gather_web_evidence(question)
         except Exception:
@@ -185,11 +211,15 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
                 "execution_authorized": False,
             }
             return
+        count = len(evidence)
+        yield {"type": "narrate", "stage": "plan", "text": f"I found {count} source{'s' if count != 1 else ''} and I'm reading {'them' if count != 1 else 'it'}."}
+        from core.brain.seek import seek_findings
+        findings = seek_findings(question, evidence)
         prior = _WORKING_MEMORY.context(session_id)
-        seek_context = "\n\n".join(part for part in (prior, evidence_context(evidence)) if part)
+        seek_context = "\n\n".join(part for part in (prior, evidence_context(evidence), findings) if part)
         events, worker, attempt_stop = _start_attempt(
-            brain, question, model=SEEK_MODEL, context=seek_context, timeout=120,
-            parent_stop=stop,
+            brain, question, model=TALK_MODEL, context=seek_context, timeout=120,
+            parent_stop=stop, keep_alive=TALK_KEEP_ALIVE,
         )
         deadline = time.monotonic() + 120
         final_event: dict[str, Any] | None = None
@@ -221,18 +251,19 @@ def stream_turn(brain: Any, question: str, *, session_id: str, stop: threading.E
             return
         if final_event is None:
             attempt_stop.set()
-            raise TimeoutError("The local Seek evidence answer did not finish in time.")
+            raise TimeoutError("The local web answer did not finish in time.")
         answer = str(final_event.get("answer") or "".join(parts)).strip()
         final_event["route"] = "conductor_seek_web"
         final_event["evidence"] = evidence
-        final_event["brain"] = SEEK_MODEL
+        final_event["brain"] = TALK_MODEL
+        final_event["found_by"] = SEEK_MODEL if findings else None
         final_event["level"] = 2
         final_event["execution_authorized"] = False
         if remember:
             _remember(brain, question, answer, "conductor_seek_web")
         if commit_working_memory:
             _WORKING_MEMORY.record_turn(
-                session_id, question, answer, route="conductor_seek_web", brain=SEEK_MODEL,
+                session_id, question, answer, route="conductor_seek_web", brain=TALK_MODEL,
                 evidence=evidence,
             )
         yield final_event

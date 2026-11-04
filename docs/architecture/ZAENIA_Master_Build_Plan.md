@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.53  |  Date: 2026-11-03 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.55  |  Date: 2026-11-04 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -11,6 +11,8 @@ Version: 3.53  |  Date: 2026-11-03 (v1.0: 2026-10-20)  |  Status: working propos
 This is the living architecture and development plan for ZÆNIA (ZAENIA in filesystem paths). It is intended to be readable and maintainable by Grey, ChatGPT, and Claude. It records desired architecture, verified observations, unresolved questions, approved design decisions, priorities, and acceptance criteria. It does NOT claim to replace a direct inspection of the live codebase.
 Status: Proposed v1.0 integration guidance, drafted 2026-10-20. Existing code has not been modified by this document. The 2026-10-16 filesystem audit is the most recent cited codebase audit; its results may have changed.
 Repository placement recommendation: C:\Projects\ZAENIA\docs\architecture\ZAENIA_Master_Build_Plan.md. Keep a corresponding .docx export for reading. Commit the canonical Markdown alongside the code and review changes by diff.
+
+Current completion roadmap: section 29 integrates the owner's Complete Feature Blueprint, maps its twelve capability areas onto the existing architecture, and defines remaining work and acceptance evidence. Earlier dated entries remain historical records; use the latest relevant entry and actual code when assessing current status.
 
 ## 2. Non-negotiable architectural principles
 
@@ -106,6 +108,8 @@ Each phase must publish actual evidence, not claims about model intelligence fro
 Maintain baseline tasks spanning: reasoning accuracy; reading actual ZÆNIA project files; source citation fidelity; multi-turn continuity; retrieval freshness; memory confirmation; contradiction correction; sensitive request refusal; allowed task execution; action authorization; voice speaker identity; real reminder delivery; offline endurance; recovery after crash; model swap; latency; RAM/VRAM and power.
 Record testcase ID, setup, input, expected output/side effect, observed output, pass/fail, severity, test type (unit/integration/live), code commit, model/version, date, and reviewer. Do not promote experiments to stable solely because they sound plausible or pass one demo.
 
+Section 29 adds integrated completion scenarios and measurable requirements for decision continuity, usefulness feedback, simulation, new integrations, device reconciliation and independent local operation. Record results against those scenarios alongside this scorecard.
+
 ## 13. Collaboration contract for ChatGPT and Claude
 
 CANONICAL SOURCE: Markdown file in the ZAENIA repository, version-controlled. DOCX is a reading snapshot. Each assistant must read current plan, newest audit, and relevant actual files before recommending edits; do not infer current implementation from prior chats.
@@ -113,6 +117,8 @@ CHANGE PROCEDURE: (1) describe objective and changed sections; (2) cite actual c
 COLLABORATION RULE: Never silently replace another assistant's confirmed decision. Conflicts produce an ADR (architecture decision record) explaining options, evidence, and final user-approved choice. User approval overrides model preferences. No merge-by-memory: re-open the canonical file on every new work session.
 HANDOFF TEMPLATE: Date; author (Grey/ChatGPT/Claude); repository commit; baseline version; task objective; exact files examined; verified findings; hypotheses; proposed actions; files changed; security effect; tests performed/results; rollback; next actions; unresolved questions.
 VERSIONING: MAJOR for architecture/security contract changes; MINOR for new modules or accepted designs; PATCH for clarifications/corrections. Include timestamp and digest where possible. Future updates are manual/triggered by a session or repository workflow; this document does not self-update.
+
+PROPOSED SUPPLEMENT — [Claude Code/Codex efficiency and local independence draft](ZAENIA_Claude_Codex_Efficiency_Draft.md). Prepared for owner review on 2026-11-02. It proposes Codex-led delivery, bounded Claude assignments, explicit development-tool dispatch, shared task packets, usage tracking and evidence gates for operation without OpenAI/Anthropic. This is a draft, not an adopted dispatch or authorization policy; no runtime configuration was changed.
 
 ## 14. Architecture decision log
 
@@ -1305,6 +1311,11 @@ The standard mouse Back side button (mouse button 4) returns to the previous ZÆ
 
 Verification and deployment: TypeScript, desktop/web Vite, and Tauri builds succeeded. Commit `bf4013e` was pushed to the feature branch; the remote `main` branch was not changed. The installed executable hash matches the release build. The existing Core task is running; `/health` and `/app/` returned HTTP 200, and the served bundle contains the handler. Health remains in unattended mode with protected routes authenticated. A local passkey console was left untouched.
 
+### 28.55 Draft: efficient Claude/Codex development and provider independence — Codex, 2026-11-02 (v3.52)
+
+Added `ZAENIA_Claude_Codex_Efficiency_Draft.md` for owner and Claude review. It allocates ordinary implementation and verification to Codex/local tools, reserves Claude for bounded difficult work and independent review, and defines separate runtime-independence and local-maintenance gates. The draft records that `build_helper.choose_tool` can automatically select Claude today and proposes explicit, budgeted dispatch as the first implementation task. Existing local brain paths and the optional OpenAI adapter are recorded as inspected code, not proof that all runtime traffic is already local.
+
+Status: documentation-only proposal. No coding-agent settings, provider credentials, authentication, production processes or app binaries were changed for this draft. It is linked from section 13 without adopting its proposed policies.
 
 ### 28.56 Calm-view password return when the microphone is off — Codex, 2026-11-02 (v3.53)
 
@@ -1314,4 +1325,89 @@ Before enrollment, Calm view stays disabled with the mic off, keeping the dashbo
 
 Verification: eight isolated backend tests passed (owner proof, hashing, cancellation, reset, throttling, route dependency registration and no password echo); full ASGI transport stalled in this environment, so these are not live authenticated-HTTP enrollment tests. TypeScript and selected existing Calm/voice/layout/tab/browser regression checks pass. Desktop/web Vite and Tauri release builds passed; the app is installed and reopened with its SHA-256 matching the build. Core reloaded through its existing unattended scheduled task. `/health` and `/app/` return HTTP 200, both new password endpoints return 401 without credentials, and the served bundle contains the new form and no old Hold Wake message. At deployment, owner password enrollment and live password entry were pending. On 2026-11-03 the owner reported password setup complete; this is owner-reported completion, with no additional independent live unlock test recorded.
 
-Publication review: microphone error/blocked states now expose password recovery, and entry supports the same 128 Unicode code points as enrollment. Nine isolated backend tests include a maximum-length emoji password. Verification of this isolated publish tree is recorded in the handoff below.
+Publication validation, 2026-11-03: microphone error/blocked states now expose password entry and recovery, and entry accepts the same maximum 128 Unicode code points as enrollment. Nine isolated backend tests include a maximum-length emoji password. The isolated `codex/calm-password-feature` publish branch excludes Claude's narration WIP and unrelated planning drafts; TypeScript, selected UI regression scripts, desktop/browser Vite and native Tauri release builds pass. The source-only staged Gitleaks scan found no leaks. The publication build is retained under ignored `.tmp`; the running app, served website and Core were not replaced by this GitHub task.
+
+### 28.57 Complete Feature Blueprint merged into the roadmap — Codex, 2026-11-03 (v3.54)
+
+At the owner's request, section 29 incorporates the additive requirements from the supplied **ZÆNIA — Complete Feature Blueprint**. Existing capabilities are mapped to their current modules and plan entries rather than scheduled for a second implementation. Additions cover linked decision rationale, optional personal finance, outcome-based feedback, explicit simulation and plugin acceptance contracts, disconnected-device reconciliation, and an integrated definition of completion. Existing three-engine authority, four brain roles, conversation preferences and owner-controlled release procedures are preserved.
+
+Status: documentation integration only. Roadmap inclusion is authorized; the added capabilities and acceptance scenarios remain PLANNED until separately implemented and evidenced. Source inspection establishes existing foundations, not a new live verification. No application code, dependencies, authentication, runtime data or installations changed in this update. The Claude/Codex efficiency supplement remains a draft under section 28.55.
+
+### 28.58 Calm password setup completed by owner — 2026-11-03 (v3.54)
+
+OWNER-REPORTED: password setup is complete. The enrollment task is closed on that basis. This update records no password, hash or other authentication material and makes no security-policy change. Independent live dashboard-unlock verification has not been performed as part of this documentation task. The previously saved setup reminder has not been changed; dismiss or complete it through ZÆNIA if it is still scheduled.
+
+### 28.59 Narrated file reading and Seek-to-Talk web answers — Claude/Codex, 2026-11-04 (v3.55)
+
+Owner requested publication through `CLAUDE_TO_CODEX_COMMIT_REQUEST_2026-11-04.md`. Claude's listed source files were compared with `claude/brain-validation` and matched before publication fixes. This section folds the file-reading/web notes from `CLAUDE_NOTES_2026-11-02.md`; its earlier reminder-lock explanation remains a historical observation, not a new change to current permissions.
+
+- **Workload routing and transcript:** `conductor.model_for` assigns conversation/speech to Talk, file reading and web findings to Seek, research/code/ideas to Study, and small summaries to Keep on CPU. A staged transcript accepts user-facing narration from Talk and orders start, plan, impression, progress, summary and answer; progress/answer may repeat. Existing Talk failure handoff to Seek remains, so the normal Talk presentation path is not a claim that every fallback or application report is rewritten by Talk.
+- **Shared-file reading:** `file_narration.py` labels pages, sheets or approximate line ranges; Seek and Talk share section reading, with CPU Keep joining long documents. Limits are 100,000 extracted characters per file, 140,000 total and 40 sections per file. The reader samples first/last/middle and skims unread parts when its reading budget expires. A recent-document cache supports relevant follow-ups for 30 minutes, bounded to 12 documents; existing attachment-copy behavior remains separate. Coverage limits and skimming must be disclosed. File text and model notes remain reference data, never permission.
+- **Web answers:** Seek extracts a bounded set of findings tied to actual source IDs, then Talk writes the normal answer from the source excerpts and findings. Missing/malformed findings fall back to the excerpts; empty source retrieval retains the deterministic cannot-verify response. Sources reach chat, and `execution_authorized` remains false.
+- **Interface:** narration appears before the answer and speech is queued in order. File answers display a “Where in the file” list with section labels, gist and excerpt. Suggestions use Study; the brain roster explains the roles. The voice action test now isolates app-open detection.
+- **Publication review fixes:** reject malformed Seek JSON shapes, reject extracted facts with changed numeric values, disclose section-cap clipping, bound the reading caller's deadline/cancellation and prevent late workers from mutating its returned sections. Progress-only chat rows close correctly on Stop, failure or empty completion. In-flight model requests have bounded timeouts but cannot be forcibly killed by a Python thread; final answer generation has its own latency beyond the reading budget. Passage matches and numeric checks remain heuristics, not a proof that every generated claim is true.
+
+Verification: Claude reported 961 Python tests, all desktop Node scripts, TypeScript and a prior native build/install. Codex independently ran 90 focused Python tests before the review fixes and reproduced the failure cases above. Final post-fix tests/build results are recorded in the latest handoff. Publication uses `codex/claude-file-web`, based on published password commit `bbf3857`, preserving that feature's history. Existing startup authentication, owner data and permission boundaries remain unchanged. This task publishes source; it does not by itself install the post-review changes or restart Core.
+
+## 29. Integrated completion roadmap — Complete Feature Blueprint
+
+Source: owner-supplied **ZÆNIA — Complete Feature Blueprint**, incorporated on 2026-11-03. Its twelve systems describe product capabilities served by Engines 1–3, the Conductor and Talk/Seek/Keep/Study. The interfaces, local services and optional cloud adapters retain their existing boundaries. Illustrative external image links are not implementation evidence and are omitted.
+
+### 29.1 Capability coverage and existing foundations
+
+The foundations below were identified in current source or the cited build history. Their presence does not certify each complete user workflow. New work in the last column is PLANNED; previously recorded test results retain their original scope and date.
+
+| Blueprint capability | Existing foundation to extend | Remaining requirement or validation |
+|---|---|---|
+| 1. Cognitive core | `core/brain/conductor.py`, reasoning/context modules; sections 28.26–28.29 and the Multi-Brain Plan | Validate goal interpretation, evidence selection, resource use and uncertainty across complete workflows; retain explicit choice for optional cloud use. |
+| 2. Long-term memory and knowledge | `core/personal_memory/ledger/user_learning.py`, insights, approved document retrieval and operator continuity records | Link decisions to rationale and supporting knowledge; verify correction, forgetting and restart continuity across those links. |
+| 3. Goal-based execution | `core/assistant_operator/service.py`, planner and controlled tool catalog | Demonstrate reviewed multistep work, verified effects, cancellation and recovery without duplicate actions. |
+| 4. Natural voice and conversation | Conversation continuity, flexible attention/wake intent, voice turn handling and charter sections 2–3 | Complete live owner/other-speaker trials, interruption handling and contextual follow-ups; keep answers free of generic follow-up invitations. |
+| 5. Visual and environmental awareness | `core/assistant_operator/screen.py`, opt-in screen watch, photo references; sections 17.2 and 28.53 | Verify selected-window scope, revocation and uncertain visual interpretation in real use; each additional camera/app observation adapter needs an explicit scope. |
+| 6. Active learning and patterns | Reviewable insights, memory provenance and existing feedback controls | Measure whether suggestions helped and whether corrections reduce recurring failures, without changing permissions. |
+| 7. Security, identity and permissions | Engine 3, existing owner authentication, device scopes, protected paths and audit | Carry authorization/revocation checks through every workflow and adapter; voice or learned confidence never substitutes for required approval. |
+| 8. Executive assistant | Calendar, reminders, completion checks, tasks, priorities and proactive suggestions | Coordinate conflicts, dependencies, urgency and owner-set priorities; verify completed occurrences stop generating follow-up. |
+| 9. Personal finance and wellness | Fitness & Health, recipes, meal planning and training; sections 25, 28.4 and 28.50 | Add optional private finance tracking and projections with separate data access; connect supported health devices only through reviewed adapters. |
+| 10. Multi-device intelligence | Phone remote, operator handoff, CarPlay/watch plans and encrypted profile portability | Define and test disconnected state, synchronization conflicts and reconnect behavior; Raspberry Pi voice hardware remains an optional later client. |
+| 11. Diagnostics and development | Health/recovery services, Code Doctor, isolated build requests and local review | Verify recoverable failures and restore; add reviewed integration proposals through the controlled development path. |
+| 12. Adaptive personality and interaction | Identity charter, voice-tone hints and existing dynamic workspace/core | Check consistent identity, task-state indicators and response detail under load; treat emotional cues as tentative and preserve the established UI design. |
+
+### 29.2 Additive requirements
+
+**A. Linked knowledge and decision rationale.** Extend the existing owner-reviewable continuity records before introducing another memory store. Connect goals, projects, people, documents, events and decisions using stable references. A decision should carry a concise reason, relevant constraints, considered alternatives, assumptions, evidence/source references, dates and review status. Explain why a record was retrieved. Corrections and forgetting must update or invalidate dependent summaries and links; expired or disputed information must remain clearly labeled. A graph database is an implementation option to evaluate, not a new dependency required by this plan. These records provide context and never authorization.
+
+**B. Optional personal finance workspace.** Plan manual entry and explicitly approved imports for balances, budgets, spending categories and debt-repayment projections. Separate observed amounts from estimates and record source/date/currency. Keep financial access separately scoped and opt-in. Banking connections, transfers and payments are not established by this roadmap; any future transaction capability needs its own reviewed adapter and explicit action approval. Wellness continues through the existing Fitness & Health modules, with estimates and device limitations visible.
+
+**C. Outcome-based self-evaluation.** Evaluate requested outcomes using saved receipts, observable state, tests and owner feedback. Track useful/dismissed suggestions, corrections, repeat failures, completion limits and recovery success alongside latency and resource use. Compare changes against fixed regression tasks. A model's self-rating is advisory and cannot certify success, promote its own changes or alter security rules. Use relevant supported feedback rather than unrestricted activity collection.
+
+**D. Simulation and new tools/plugins.** Extend Engine 3's existing preview and dry-run requirement with an explicit contract: show proposed effects and permission requirements, use isolated fixtures/copies where supported, and label predicted effects separately from observed results. A passed simulation does not guarantee a live outcome; unsupported previews must say so. Generated tools remain proposals until their versioned schemas, declared file/network access, dependencies and tests are reviewed. Activation goes through the existing controlled development/release path and Engine 3 tool registration, with failure isolation, audit and rollback where supported. Neither generated code nor a plugin manifest can grant itself capabilities.
+
+**E. Disconnected-device continuity.** Extend existing encrypted sync and handoff goals with versioned records, source device, freshness indicators, reviewable conflicts and deletion/revocation behavior. Define which data and actions each client supports offline. Reconnection must recheck permissions and reconcile state without replaying a side effect twice; ambiguous results require inspection. Core remains authoritative for canonical state and policy. Pairing, a device label or an existing handoff record alone does not establish secure synchronization or local inference on that device. Validate each iPhone, CarPlay, watch or optional Raspberry Pi adapter on its actual supported platform.
+
+### 29.3 Definition of complete and acceptance scenarios
+
+Completion means ZÆNIA reliably **understands a goal, retrieves relevant knowledge, plans supported work, obtains the required authorization, performs the actions, verifies their effects, preserves justified context and continues core operation locally**. Optional finance, additional devices and other later extensions do not block completion of the agreed core scope. Existing local models remain replaceable dependencies; custom foundation-model training is not a prerequisite.
+
+Use synthetic fixtures first and owner-assisted live trials where needed. No scenario is marked passed by this documentation update. For each result, record the build/commit, model versions, setup, expected effects, actual receipt/state, timing, limitation and test type under section 12.
+
+| Scenario | Required evidence |
+|---|---|
+| Natural reminder and calendar follow-through | Interpret date/time/timezone correctly, save the intended record once, show it in the correct view and verify the requested delivery. A completed calendar occurrence stops its completion follow-up while later recurrences stay independent. |
+| Food reference to weekly meal | Read an approved label/photo or recipe, resolve material serving ambiguities, distribute portions correctly and preserve inventory totals. A scheduled check-in logs intake only after explicit eaten confirmation; retries do not double-log. |
+| Project goal to saved result | Retrieve permitted evidence, draft supported steps, bind review to the exact plan, perform authorized work and verify the saved artifact. Clearly separate successful file creation from any model-written claims that remain unverified. |
+| Continuity after restart or device handoff | Resume the same goal with current constraints, decision reasons, source references and next step. Keep temporary chat context, durable memory and action receipts distinct; do not repeat an already completed action. |
+| Cancellation, failure or revoked access | Stop or suspend appropriately; preserve useful progress; label ambiguous side effects for review. Recheck authorization before resuming and show partial completion honestly. |
+| Local independence and recovery | In a reversible isolated setup, make cloud-provider credentials unavailable and verify no provider calls/fallback during local startup, conversation, approved-document use and supported tasks. Separately test internet loss, unavailable sources and recovery from a known-good backup without overwriting the live profile. |
+
+Core acceptance also includes the outstanding live voice trial, source fidelity, foreground/background priority and the existing Multi-Brain Plan latency/resource scorecard. Distinguish unit tests, integration tests and owner/device trials; preserve failed or unmeasured results. “No internet” does not imply access to fresh web facts or remote devices. Runtime independence and local development independence remain separate gates as described in the efficiency draft; its usage allocations are still proposals.
+
+### 29.4 Development order within the existing phases
+
+1. **Foundation — phases 0–1:** update capability evidence from actual code, finish outstanding security/voice checks, establish reproducible local/offline and recovery results. Preserve the known-good baseline.
+2. **Interaction — phase 2:** verify contextual voice/text turns, interruption, bounded observation and accurate visual task state through the existing UI.
+3. **Execution — phase 4:** validate the reminder, meal and project scenarios end to end, including duplicate prevention, failure and exact-plan approval.
+4. **Learning — phase 3:** extend decision links and usefulness feedback using existing stores; prove correction, expiry, forgetting and permission non-escalation.
+5. **Expansion — phase 5:** add optional finance, approved integrations and disconnected-device reconciliation after their core prerequisites pass.
+6. **Maturity — across all phases:** repeat outcome/performance checks when changes warrant them, document dependencies and prove a separate restore before SSD/OS packaging.
+
+These are delivery priorities mapped onto section 11, not a second phase-numbering scheme. Start with a bounded capability/evidence update and one complete project workflow using existing modules. Keep optional extensions separate from the core completion gate. Architectural implementation choices, dependency changes and production promotion retain the existing review and authorization requirements.

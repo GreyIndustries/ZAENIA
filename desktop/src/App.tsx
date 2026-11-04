@@ -412,7 +412,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // The reply being written: each turn has a number, so a stopped reply can't touch the chat later.
   const turnRef = useRef(0);
   const streamRef = useRef<ChatStream | null>(null);
-  const replyRef = useRef<{ id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal } | null>(null);
+  const replyRef = useRef<{ id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; progress: string[] } | null>(null);
   // Synchronous guard as well as React state: a second click cannot duplicate a write.
   const actionStates = useRef(new Map<number, AssistantActionState["status"]>());
   const [actionRefresh, setActionRefresh] = useState({ tasks: 0, calendar: 0 });
@@ -830,8 +830,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     stream?.cancel();
     const reply = replyRef.current;
     replyRef.current = null;
-    if (reply && reply.text.trim()) {
-      const stopped: ChatMessage = { id: reply.id, role: "assistant", text: reply.text.trim(), at: reply.at, streaming: false, interrupted: true };
+    if (reply && (reply.text.trim() || reply.progress.length)) {
+      const stopped: ChatMessage = { id: reply.id, role: "assistant", text: reply.text.trim(), at: reply.at, streaming: false, interrupted: true, progress: reply.progress.length ? [...reply.progress] : undefined };
       const shown = reply.added;
       setChat(prev => shown ? prev.map(item => item.id === reply.id ? stopped : item) : [...prev, stopped]);
     }
@@ -1086,7 +1086,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const live = () => turn === turnRef.current;
     const id = ++messageCounter.current;
     const key = `m${id}`;
-    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; sources?: ChatSource[] } = { id, text: "", added: false, at: new Date().toISOString() };
+    // progress: what ZAE says while she works ("I'm looking at the file now."), in the order the conductor decided.
+    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; sources?: ChatSource[]; progress: string[] } = { id, text: "", added: false, at: new Date().toISOString(), progress: [] };
     replyRef.current = reply;
     sendingRef.current = true;
     setSending(true);
@@ -1114,13 +1115,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
     const draw = () => {
       timer = null;
-      if (!live() || !reply.text) return;
+      if (!live() || (!reply.text && !reply.progress.length)) return;
       const text = reply.text;
+      const progress = [...reply.progress];
       if (!reply.added) {
         reply.added = true;
         setStreamingId(id);
-        setChat(prev => [...prev, { id, role: "assistant", text, at: reply.at, streaming: true, proposal: reply.proposal }]);
-      } else setChat(prev => prev.map(item => item.id === id ? { ...item, text, proposal: reply.proposal } : item));
+        setChat(prev => [...prev, { id, role: "assistant", text, at: reply.at, streaming: true, proposal: reply.proposal, progress }]);
+      } else setChat(prev => prev.map(item => item.id === id ? { ...item, text, proposal: reply.proposal, progress } : item));
     };
     const end = () => {
       if (timer !== null) { window.clearTimeout(timer); timer = null; }
@@ -1140,8 +1142,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (photoQuestion && text && !interrupted && photosRef.current === sharedPhotos) {
         photoTurns.current = [...photoHistory, { role: "user", content: message.slice(0, 4000) }, { role: "assistant", content: text.slice(0, 4000) }].slice(-6) as typeof photoHistory;
       }
-      if (text) {
-        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal, sources: reply.sources };
+      if (text || reply.progress.length) {
+        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal, sources: reply.sources, progress: reply.progress.length ? [...reply.progress] : undefined };
         if (reply.proposal && !interrupted && policyRef.current?.chatAutomatic.includes(reply.proposal.kind) && (IN_TAURI || !["app.launch", "workspace.restore"].includes(reply.proposal.kind))) automaticCandidates.current.add(id);
         const shown = reply.added;
         reply.added = true;
@@ -1158,7 +1160,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const fail = (failure: unknown) => {
       if (!live()) return;
       const text = failure instanceof BridgeError ? failure.message : `Local ZÆNIA bridge: ${errorText(failure)}`;
-      if (reply.text.trim()) complete(reply.text, true);
+      if (reply.text.trim() || reply.progress.length) complete(reply.text, true);
       else { if (speakIt) speech.stop(); end(); }
       setChat(prev => [...prev, { id: ++messageCounter.current, role: "error", text }]);
     };
@@ -1181,6 +1183,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         // ZAE's question pop-ups live in their tabs (training setup in Fitness & Health).
         if (event.form === "training-setup") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:training-setup")), 700); }
         if (event.form === "food-meal") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:food-meal", { detail: { description: event.description } })), 700); }
+      } else if (event.type === "narrate") {
+        // Progress said by Talk, one line at a time: shown above the answer and spoken at once, before the answer is.
+        reply.progress.push(event.text);
+        voice.filler = true;
+        if (speakIt && !voice.cut) speech.feed(key, `${event.text} `);
+        if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
       } else if (event.type === "say") {
         // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
         if (speakIt && !voice.said && !voice.filler) { voice.filler = true; speech.feed(key, `${event.text} `); }
