@@ -248,7 +248,7 @@ export async function openProfileTool(mode: "export" | "restore" | "rollback" | 
 }
 
 export type SecurityTool = "unlock_passkey" | "unlock_voice" | "token_rotate" | "token_revoke" | "pair_desktop"
-  | "phrase_setup" | "phrase_reset" | "mic_change" | "mic_reset" | "phone_voice_on" | "phone_voice_off";
+  | "phrase_setup" | "phrase_reset" | "mic_change" | "mic_reset" | "phone_voice_on" | "phone_voice_off" | "calm_password_setup" | "calm_password_reset";
 /** Desktop only: the Security tab's owner console. The passkey or phrase is entered there, never this page. */
 export async function openSecurityTool(mode: SecurityTool, request?: string): Promise<void> {
   if (!IN_TAURI) throw new BridgeError("The Security tab opens only in the ZÆNIA desktop app on the PC.", "forbidden");

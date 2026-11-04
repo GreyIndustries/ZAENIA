@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.51  |  Date: 2026-11-02 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.53  |  Date: 2026-11-03 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1304,3 +1304,14 @@ Limits: images must be JPG/JPEG/PNG/WebP and at most 8 MiB each for local vision
 The standard mouse Back side button (mouse button 4) returns to the previous ZÆNIA workspace page; Forward (button 5) reopens the next page. Navigation history is in-memory, capped at 100 pages, and resets on app restart. The app captures the mouse press so the desktop webview does not navigate away from ZÆNIA. This covers workspace pages, including opening and focusing desktop windows; sub-tabs within a workspace are not separate history entries. No appearance or authorization behavior changes.
 
 Verification and deployment: TypeScript, desktop/web Vite, and Tauri builds succeeded. Commit `bf4013e` was pushed to the feature branch; the remote `main` branch was not changed. The installed executable hash matches the release build. The existing Core task is running; `/health` and `/app/` returned HTTP 200, and the served bundle contains the handler. Health remains in unattended mode with protected routes authenticated. A local passkey console was left untouched.
+
+
+### 28.56 Calm-view password return when the microphone is off — Codex, 2026-11-02 (v3.53)
+
+Replaces the hold-to-Wake button with a password form while the microphone is off. Security › Calm password opens a fixed local console for creation, change or reset; the console requires fresh existing owner-passkey authentication and hidden entry of a separate 12–128-character dashboard password. The primary passkey is never sent to the page. Calm-password verification grants no owner session or execution authority. Salted Argon2id hashes and persistent failed-attempt state use the existing protected atomic storage under ignored `data/secure`; five failures trigger a 30-second throttle. Browser password entry requires a secure context.
+
+Before enrollment, Calm view stays disabled with the mic off, keeping the dashboard accessible while the owner defers creating a password. After enrollment, the view's active flag persists on the device; verified wake-up voice or successful password verification returns to the dashboard. Ordinary remote wake/open and mouse-history actions do not dismiss an active Calm view. A session-bound callback rejects stale password responses; keyboard focus stays inside the view. Calm still displays its summary slides: this is a UI return gate, while Windows locking and existing API authorization remain separate controls.
+
+Verification: eight isolated backend tests passed (owner proof, hashing, cancellation, reset, throttling, route dependency registration and no password echo); full ASGI transport stalled in this environment, so these are not live authenticated-HTTP enrollment tests. TypeScript and selected existing Calm/voice/layout/tab/browser regression checks pass. Desktop/web Vite and Tauri release builds passed; the app is installed and reopened with its SHA-256 matching the build. Core reloaded through its existing unattended scheduled task. `/health` and `/app/` return HTTP 200, both new password endpoints return 401 without credentials, and the served bundle contains the new form and no old Hold Wake message. At deployment, owner password enrollment and live password entry were pending. On 2026-11-03 the owner reported password setup complete; this is owner-reported completion, with no additional independent live unlock test recorded.
+
+Publication review: microphone error/blocked states now expose password recovery, and entry supports the same 128 Unicode code points as enrollment. Nine isolated backend tests include a maximum-length emoji password. Verification of this isolated publish tree is recorded in the handoff below.

@@ -77,6 +77,7 @@ import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./components/overview/OverviewFrame";
 import { CalmView } from "./components/overview/CalmView";
+import { CALM_PASSWORD_STATUS, CalmPasswordSettings } from "./components/security/CalmPassword";
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { glowItem } from "./core/glow";
 import { EverythingRemembered } from "./components/assistant/EverythingRemembered";
@@ -348,14 +349,33 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const chooseCalm = (calm: boolean) => { setOverviewCalm(false); try { localStorage.setItem("zaenia.overview.calm", "0"); } catch { /* optional */ } if (calm) goCalm(); };
   // Calm view (Grey, 2026-10-30): a full-screen layer over any screen, started after the idle time in Settings, by the
   // Calm view button, or by a sleep phrase. Only Grey's wake-up calls (his voice) end it, and it always ends on the dashboard.
-  const [calmOpen, setCalmOpen] = useState(false);
+  const [calmOpen, setCalmOpen] = useState(() => { try { return localStorage.getItem("zaenia.calm.active") === "1"; } catch { return false; } });
   const [calmNote, setCalmNote] = useState<string | null>(null);
-  const calmSince = useRef(0);
+  const [calmSetupNotice, setCalmSetupNotice] = useState<string | null>(null);
+  const calmSince = useRef(Date.now());
+  const calmSession = useRef(0);
+  const renderedCalmSession = calmSession.current;
   const [idleAfter, setIdleAfter] = useState(idleMinutes);
   useEffect(() => { const update = () => setIdleAfter(idleMinutes()); window.addEventListener("zae:overview-idle", update); return () => window.removeEventListener("zae:overview-idle", update); }, []);
   const idleNow = useIdle(calmOpen ? 0 : idleAfter);
   useEffect(() => { if (idleNow && !calmOpen) goCalm(); }, [idleNow]); // eslint-disable-line react-hooks/exhaustive-deps
-  function goCalm(note: string | null = null) { calmSince.current = Date.now(); setCalmNote(note); setCalmOpen(true); }
+  async function goCalm(note: string | null = null) {
+    if (!calmListening) {
+      if (!IN_TAURI && !window.isSecureContext) { setCalmSetupNotice("Use the desktop app or ZÆNIA’s secure HTTPS website for Calm view with the mic off."); return; }
+      try {
+        const status = await api<{ configured: boolean }>("GET", CALM_PASSWORD_STATUS);
+        if (!status.configured) { setCalmSetupNotice("Create your dashboard password before using Calm view with the mic off."); return; }
+      } catch (failure) { setCalmSetupNotice(`Calm view needs a password check while the mic is off. ${errorText(failure)}`); return; }
+    }
+    calmSince.current = Date.now(); calmSession.current += 1; setCalmSetupNotice(null); setCalmNote(note); setCalmOpen(true);
+    try { localStorage.setItem("zaenia.calm.active", "1"); } catch { /* view persistence is optional */ }
+  }
+  function returnFromCalm() {
+    calmSession.current += 1;
+    setCalmOpen(false); setCalmNote(null);
+    try { localStorage.removeItem("zaenia.calm.active"); } catch { /* optional */ }
+    openSection("overview");
+  }
   const [motion, setMotion] = useState(true);
   // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
@@ -532,11 +552,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (event.button !== 3 && event.button !== 4) return;
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (calmOpen) return;
       movePageHistory(event.button === 3 ? "back" : "forward");
     };
     window.addEventListener("mousedown", onMouseDown, true);
     return () => window.removeEventListener("mousedown", onMouseDown, true);
-  }, [windowed]);
+  }, [windowed, calmOpen]);
   useEffect(() => {
     const go = (event: globalThis.Event) => { const page = (event as CustomEvent<string>).detail; if (nav.some(item => item.id === page)) openSection(page as Section); };
     window.addEventListener("zae:open-section", go); return () => window.removeEventListener("zae:open-section", go);
@@ -869,14 +890,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // commands. Saving files, launching apps and approvals are not on the list; they stay behind the desktop key.
   const remoteRef = useRef<(command: { action: string; target: string }) => void>(() => undefined);
   remoteRef.current = ({ action, target }) => {
+    if (calmOpen && (action === "open" || action === "wake" || action === "show_desktop")) {
+      setCalmNote("Use your verified wake-up call or enter the dashboard password on this screen."); return;
+    }
     const tab = WINDOW_IDS.includes(target) ? target as Section : null;
-    if (action === "open" && tab) { setCalmOpen(false); setCalmNote(null); openSection(tab); }
+    if (action === "open" && tab) openSection(tab);
     else if (action === "close" && tab) { shell.close(tab); if (!windowed && section === tab) openSection("overview"); }
     else if (action === "minimize" && tab) shell.minimize(tab);
     else if (action === "show_desktop") openSection("overview");
     else if (action === "restore_all") shell.restoreAll();
     else if (action === "calm") goCalm("Calm view from your phone.");
-    else if (action === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+    else if (action === "wake") returnFromCalm();
   };
   // The code for "Phone confirms": shown here only while the phone asks for it (it changes every minute).
   type NearCode = { code: string; qr: string; secondsLeft: number; voice: boolean };
@@ -986,7 +1010,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const running = jobs.filter(job => !/done|complete|fail|cancel/i.test(job.status)).map(job => job.title);
     const calmMinutes = calmOpen ? Math.round((Date.now() - calmSince.current) / 60000) : 0;
     const finished = calmOpen ? jobs.filter(job => /done|complete/i.test(job.status)).map(job => job.title).slice(0, 3) : [];
-    if (match.kind === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+    if (match.kind === "wake") returnFromCalm();
     try {
       const situation = await situationNow({ calmMinutes, running, finished, section: sections[section]?.title ?? section });
       const reply = await api<{ line: string; focus: string }>("POST", "/api/assistant/wake", { kind: match.kind, phraseId: match.id, situation }, { timeoutMs: 15000 });
@@ -1324,6 +1348,18 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // PC Voice only takes over while it recognises the owner's voice; when it
   // keeps rejecting him, the app keeps listening with its own mic.
   const pcTakesOver = IN_TAURI && pcVoice?.running === true && pcVoice.recognising !== false;
+  const calmListening = (listen.mode === "always" && !["off", "starting", "blocked", "error"].includes(listen.status)) || pcTakesOver;
+  useEffect(() => {
+    if (!calmOpen || calmListening) return;
+    let cancelled = false;
+    const check = () => api<{ configured: boolean }>("GET", CALM_PASSWORD_STATUS).then(status => {
+      if (cancelled || status.configured) return;
+      returnFromCalm(); setCalmSetupNotice("Create your dashboard password before using Calm view with the mic off.");
+    }).catch(() => { /* Keep the password screen if Core cannot verify its state. */ });
+    void check();
+    window.addEventListener("focus", check);
+    return () => { cancelled = true; window.removeEventListener("focus", check); };
+  }, [calmOpen, calmListening]);
   const spokenNotices = useRef(new Set<string>());
   const allowNoticeSpeech = useRef(false);
   allowNoticeSpeech.current = !busy && !pcTakesOver && listen.status !== "hearing" && listen.status !== "transcribing";
@@ -1457,6 +1493,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
+        { id: "calm-password", label: "Calm password", render: () => <CalmPasswordSettings/> },
         { id: "activity", label: "Activity", render: () => <SecurityActivity/> },
         { id: "plan", label: "Plan", render: () => <SecurityPlan/> },
         { id: "details", label: "Details", render: () => <SecurityPanel/> },
@@ -1491,7 +1528,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             { id: "hands", name: "Hand controls", detail: handsSupported ? (hands ? "Camera on" : "Camera off") : "Desktop only", on: hands, toggle: () => { setHands(v => !v); setHandNote(null); }, disabled: !handsSupported },
             { id: "sidebar", name: "Sidebar in tabs", detail: sidebarHidden ? "Hidden" : "Shown", on: !sidebarHidden, toggle: () => setSidebarHidden(v => !v) },
             { id: "calm", name: "Calm view when idle", detail: idleAfter ? `After ${idleAfter} min` : "Off", on: idleAfter > 0, toggle: () => { const next = idleAfter ? 0 : 5; try { localStorage.setItem("zaenia.overview.idleMinutes", String(next)); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:overview-idle", { detail: next })); } },
-            { id: "calmnow", name: "Calm view now", detail: "Wake with your voice", on: calmOpen, toggle: () => goCalm() },
+            { id: "calmnow", name: "Calm view now", detail: "Return by verified voice or dashboard password", on: calmOpen, toggle: () => { void goCalm(); } },
             { id: "voicepc", name: "PC voice", detail: pcVoice?.running ? "Listening on this PC" : "Off", on: Boolean(pcVoice?.running), toggle: () => { if (!pcVoice?.running) void startPcVoice(); }, disabled: !IN_TAURI || pcVoice === null || Boolean(pcVoice?.running) },
         ];
         return <PageTabs id="settings" tabs={[
@@ -1527,8 +1564,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       <p>Changes in {nearCode.secondsLeft} s · backup code <span className="near-code__digits">{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</span></p>
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
     </div>}
-    {calmOpen && <CalmView listening={listen.mode === "always" || pcTakesOver} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
+    {calmOpen && <CalmView key={renderedCalmSession} listening={calmListening} note={calmNote} onPasswordReturn={() => { if (calmSession.current === renderedCalmSession) returnFromCalm(); }}
       core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES} activeJobs={activeJobs}/>}/>}
+    {calmSetupNotice && !calmOpen && <div className="faceid-offer" role="status"><span>{calmSetupNotice}</span><div>
+      <button type="button" onClick={() => { try { localStorage.setItem("zaenia.pageTab.security", "calm-password"); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "calm-password" } })); openSection("security"); setCalmSetupNotice(null); }}>Password setup</button>
+      <button type="button" onClick={() => setCalmSetupNotice(null)}>Later</button>
+    </div></div>}
     <HandControls enabled={hands} speaking={speech.playing !== null} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">

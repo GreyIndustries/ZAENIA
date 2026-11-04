@@ -50,6 +50,7 @@ from core.api.ui_routes import create_ui_router, operation_for as ui_operation_f
 from core.api.assistant_routes import create_assistant_router, operation_for as assistant_operation_for
 from core.api.desktop_key import KEY_HEADER as DESKTOP_KEY_HEADER, verify as verify_desktop_key
 from core.api.platform_routes import create_platform_router, operation_for as platform_operation_for
+from core.api.calm_password_routes import create_calm_password_router, operation_for as calm_password_operation_for
 
 
 TokenVerifier = Callable[
@@ -269,7 +270,7 @@ def create_app(
             ("POST","/api/briefing/played"):"carplay.session.update",
             ("GET","/api/briefing/audio"):"carplay.audio.read",
             ("GET","/api/status"):"status.read",
-        }.get((request.method,request.url.path)) or ui_operation_for(request.method, request.url.path) or assistant_operation_for(request.method, request.url.path) or platform_operation_for(request.method,request.url.path)
+        }.get((request.method,request.url.path)) or ui_operation_for(request.method, request.url.path) or assistant_operation_for(request.method, request.url.path) or platform_operation_for(request.method,request.url.path) or calm_password_operation_for(request.method,request.url.path)
         authorize_operation(operation)
 
     @application.get(
@@ -390,6 +391,7 @@ def create_app(
 
     application.include_router(create_assistant_router(require_api_authentication, followthrough, authorize_sources=authorize_operation))
     application.include_router(create_platform_router(require_api_authentication,authorize_operation,provider=platform_provider))
+    application.include_router(create_calm_password_router(require_api_authentication))
 
     from core.api.tools_routes import create_tools_router
     application.include_router(create_tools_router(require_api_authentication))
