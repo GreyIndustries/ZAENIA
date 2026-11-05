@@ -1,0 +1,15 @@
+/* The 3D SE pictures (2026-11-04): a dark stage like the core's, on the look-styles tokens for the frame and text. */
+.se3d{display:flex;flex-direction:column;gap:6px;min-width:0}
+.se3d__stage{position:relative;border:1px solid var(--zx-line,#1f3149);border-radius:12px;overflow:hidden;aspect-ratio:16/10;min-height:240px;
+  background:radial-gradient(circle at 50% 42%,#0f1c35 0%,#080e1b 60%,#04080f 100%)}
+.se3d--wide .se3d__stage{aspect-ratio:21/9;min-height:300px}
+.se3d__stage canvas{width:100%;height:100%;display:block;touch-action:pan-y;cursor:grab}
+.se3d__stage canvas:active{cursor:grabbing}
+.se3d__tip{position:absolute;z-index:2;pointer-events:none;max-width:250px;background:rgba(5,10,20,.95);border:1px solid var(--zx-line,#1f3149);border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.45;color:#e4edf8}
+.se3d__tip[hidden]{display:none}
+.se3d__tip b{font-size:13px}
+.se3d__tip span{color:#8fa7c2}
+.se3d__tip p{margin:2px 0}
+.se3d__tip em{display:block;margin-top:3px;color:var(--accent,#ffb347);font-style:normal}
+.se3d__hint{font-size:12px;color:var(--zx-muted,#6f86a3)}
+@media (max-width:640px){.se3d__stage{aspect-ratio:1/1;min-height:220px}.se3d--wide .se3d__stage{aspect-ratio:16/10}}

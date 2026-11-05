@@ -120,15 +120,24 @@ class ConductorTests(unittest.TestCase):
         brain = FakeBrain()
         evidence = [{"id": "1", "title": "Official result", "url": "https://example.org/page",
                      "excerpt": "A verified public fact.", "source_type": "web"}]
-        with patch("core.brain.seek.gather_web_evidence", return_value=evidence) as gather:
+        found = "SEEK FOUND THIS IN THE PAGES (the brain that reads the web)\n- A verified public fact. [1]"
+        with patch("core.brain.seek.gather_web_evidence", return_value=evidence) as gather, \
+                patch("core.brain.seek.seek_findings", return_value=found) as seek:
             events = list(conductor.stream_turn(
                 brain, "Look online for the latest release", session_id="web-seek", stop=threading.Event(),
             ))
 
         gather.assert_called_once()
-        self.assertEqual([call[0] for call in brain.calls], [conductor.SEEK_MODEL])
+        seek.assert_called_once()
+        # Seek finds what the pages say; Talk is the one that writes the answer.
+        self.assertEqual([call[0] for call in brain.calls], [conductor.TALK_MODEL])
+        self.assertEqual(brain.calls[0][3], conductor.TALK_KEEP_ALIVE)
+        self.assertEqual(events[-1]["brain"], conductor.TALK_MODEL)
+        self.assertEqual([(e["stage"], e["text"]) for e in events if e["type"] == "narrate"],
+                         [("start", "Let me check current sources."), ("plan", "I found 1 source and I'm reading it.")])
         self.assertIn("UNTRUSTED DATA", brain.calls[0][1])
         self.assertIn("cite them inline", brain.calls[0][1])
+        self.assertIn("SEEK FOUND THIS", brain.calls[0][1])
         self.assertEqual(events[-1]["route"], "conductor_seek_web")
         self.assertEqual(events[-1]["evidence"], evidence)
         self.assertFalse(events[-1]["execution_authorized"])

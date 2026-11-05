@@ -68,7 +68,9 @@ class ChatFilesTest(unittest.TestCase):
         with mock.patch("core.brain.local_llm.stream_chat_local", fake_stream):
             events = list(chat_files.stream_with_files(brain, "When is formation?", [("plan.txt", b"Formation 0600")],
                                                        threading.Event(), save=False))
-        self.assertEqual(events[-1], {"type": "final", "answer": "It says 0600."})
+        self.assertEqual(events[-1]["type"], "final")
+        self.assertEqual(events[-1]["answer"], "It says 0600.")
+        self.assertEqual(events[0], {"type": "narrate", "stage": "start", "text": "I'm looking at plan.txt now."})
         self.assertIn("Formation 0600", seen["conversation_context"])
         self.assertEqual(seen["message"], "When is formation?")
         question = brain.remember_exchange.call_args.kwargs["question"]

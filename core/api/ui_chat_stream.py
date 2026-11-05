@@ -16,6 +16,7 @@ routes. This stream never executes an action or grants permission for one.
 """
 from __future__ import annotations
 
+from fastapi import HTTPException
 import json
 import re
 import threading
@@ -311,7 +312,11 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
             yield _line({"type": "delta", "text": answer})
             yield _line({"type": "done", "reply": answer, "interrupted": False, "route": route})
             return
-        quick = _protocol_or_reminder(message, authorize)
+        try:
+            quick = _protocol_or_reminder(message, authorize)
+        except HTTPException as locked:
+            # Token mode or a limited client: say so plainly instead of failing the turn (and never let the brain claim it was done).
+            quick = (str(locked.detail), "locked", [])
         if quick is not None:
             answer, route, tabs = quick[:3]
             focus = quick[3] if len(quick) > 3 else None
@@ -398,16 +403,25 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                 raise ValueError("The local photo model returned no answer. Please try again.")
             yield _line({"type": "done", "reply": final_answer, "interrupted": not finished, "route": route})
             return
-        if files:
+        remembered = None
+        if not files and not images and authorize is not None:
+            # A follow-up about the file he shared a moment ago ("what are the key stats?"): answer from what ZAE already read.
+            from core.api.file_narration import recent_document
+            remembered = recent_document(message)
+        if files or remembered is not None:
             # Shared files: answer from their contents; never an action or command path.
             from core.api.chat_files import stream_with_files
             route = "files"
             yield _line({"type": "route", "route": route})
-            generator = stream_with_files(_brain(authorize), message, files, stop)
+            generator = stream_with_files(_brain(authorize), message, files or [], stop, document=remembered)
+            file_sources: list[dict[str, Any]] = []
             for event in generator:
                 if stop.is_set():
                     break
-                if event["type"] == "text":
+                if event["type"] == "narrate":
+                    # Progress, said by Talk in the order the conductor decided (core/brain/transcript.py).
+                    yield _line({"type": "narrate", "stage": event["stage"], "text": event["text"]})
+                elif event["type"] == "text":
                     text = think.feed(event["text"])
                     if text:
                         parts.append(text)
@@ -415,9 +429,11 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                 elif event["type"] == "final":
                     finished = True
                     final_answer = "".join(parts).strip()
+                    file_sources = event.get("sources") or []
             if finished:
                 _conversation_hooks("record_reply")
-                yield _line({"type": "done", "reply": final_answer, "interrupted": False, "route": route})
+                yield _line({"type": "done", "reply": final_answer, "interrupted": False, "route": route,
+                             **({"sources": file_sources} if file_sources else {})})
                 return
             final_answer = "".join(parts).strip()
             yield _line({"type": "done", "reply": final_answer, "interrupted": True, "route": route})
@@ -478,6 +494,8 @@ def stream(message: str, request_id: str, *, authorize: Callable[[str], Any] | N
                     yield _line({"type": "delta", "text": text})
             elif kind == "say":
                 yield _line({"type": "say", "text": str(event.get("text") or "")})
+            elif kind == "narrate":
+                yield _line({"type": "narrate", "stage": str(event.get("stage") or "progress"), "text": str(event.get("text") or "")})
             elif kind == "final":
                 finished = True
                 final_answer = "".join(parts).strip() or think.feed(str(event.get("answer") or "")).strip()

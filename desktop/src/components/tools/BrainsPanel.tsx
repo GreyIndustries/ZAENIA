@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
+import { SEBrainMap } from "./SEBrainMap";
 import "./CodeStudio.css";
 
 /** Arena > Brains & tools: her brains (Talk, Seek, Study, Keep, topic tracker), the coding tools and every local
@@ -28,6 +29,7 @@ export function BrainsPanel() {
     </div>
     {error && <p className="cs-error" role="alert">{error}</p>}
     {!roster && !error && <p className="cs-muted">Checking…</p>}
+    <SEBrainMap/>
     {roster && <>
       <div className="wb-cards">{roster.brains.map(brain => <div className="zx-card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 6 }} key={brain.id}>
         <div className="cs-row cs-row--between"><b style={{ fontSize: 16 }}>{brain.name}</b>

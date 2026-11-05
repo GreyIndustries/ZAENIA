@@ -10,6 +10,8 @@ import { usePlatformRuntime } from "./core/usePlatformRuntime";
 import { PlatformPanel, BackgroundWorkBadge } from "./components/assistant/PlatformPanel";
 import { HandControls } from "./components/shell/HandControls";
 import type { GestureAction } from "./core/gestureActions";
+import { HAND_ACTIVITY_EVENT, type VisualHandMotion } from "./core/handTargets";
+import { handWindowRect, type WindowRect } from "./core/windowLayout";
 import type { ShellWindow } from "./components/shell/WindowShell";
 import { parseCoreTelemetry, PREVIEW_TELEMETRY } from "./core/coreTelemetry";
 import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, openVoiceTraining, restartServer, startServer } from "./core/bridge";
@@ -77,6 +79,7 @@ import { GameCoachSettings } from "./components/settings/GameCoachSettings";
 import { SidebarCheck, StatusBar } from "./components/shell/StatusBar";
 import { OverviewFrame, OverviewIdleSetting, idleMinutes, useIdle } from "./components/overview/OverviewFrame";
 import { CalmView } from "./components/overview/CalmView";
+import { CALM_PASSWORD_STATUS, CalmPasswordSettings } from "./components/security/CalmPassword";
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { glowItem } from "./core/glow";
 import { EverythingRemembered } from "./components/assistant/EverythingRemembered";
@@ -141,7 +144,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
   codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS · PLAYGROUND', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
-  arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
+  arena: { title: 'Arena', label: 'PICK THE BEST SE MODEL', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose the model the SE (Synergized Encephalon) uses.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
@@ -334,6 +337,8 @@ export default function App() {
 
 function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPhone?: () => void; onAuthLost?: () => void; connectionNotice?: string | null }) {
   const [section, setSection] = useState<Section>("overview");
+  const sectionRef = useRef<Section>("overview");
+  const pageHistory = useRef<{ back: Section[]; forward: Section[] }>({ back: [], forward: [] });
   const notesDraft = useRef<NotesDraft>(EMPTY_NOTES_DRAFT);
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => { if (notesDraft.current.dirty) { event.preventDefault(); event.returnValue = ''; } };
@@ -346,14 +351,33 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const chooseCalm = (calm: boolean) => { setOverviewCalm(false); try { localStorage.setItem("zaenia.overview.calm", "0"); } catch { /* optional */ } if (calm) goCalm(); };
   // Calm view (Grey, 2026-10-30): a full-screen layer over any screen, started after the idle time in Settings, by the
   // Calm view button, or by a sleep phrase. Only Grey's wake-up calls (his voice) end it, and it always ends on the dashboard.
-  const [calmOpen, setCalmOpen] = useState(false);
+  const [calmOpen, setCalmOpen] = useState(() => { try { return localStorage.getItem("zaenia.calm.active") === "1"; } catch { return false; } });
   const [calmNote, setCalmNote] = useState<string | null>(null);
-  const calmSince = useRef(0);
+  const [calmSetupNotice, setCalmSetupNotice] = useState<string | null>(null);
+  const calmSince = useRef(Date.now());
+  const calmSession = useRef(0);
+  const renderedCalmSession = calmSession.current;
   const [idleAfter, setIdleAfter] = useState(idleMinutes);
   useEffect(() => { const update = () => setIdleAfter(idleMinutes()); window.addEventListener("zae:overview-idle", update); return () => window.removeEventListener("zae:overview-idle", update); }, []);
   const idleNow = useIdle(calmOpen ? 0 : idleAfter);
   useEffect(() => { if (idleNow && !calmOpen) goCalm(); }, [idleNow]); // eslint-disable-line react-hooks/exhaustive-deps
-  function goCalm(note: string | null = null) { calmSince.current = Date.now(); setCalmNote(note); setCalmOpen(true); }
+  async function goCalm(note: string | null = null) {
+    if (!calmListening) {
+      if (!IN_TAURI && !window.isSecureContext) { setCalmSetupNotice("Use the desktop app or ZÆNIA’s secure HTTPS website for Calm view with the mic off."); return; }
+      try {
+        const status = await api<{ configured: boolean }>("GET", CALM_PASSWORD_STATUS);
+        if (!status.configured) { setCalmSetupNotice("Create your dashboard password before using Calm view with the mic off."); return; }
+      } catch (failure) { setCalmSetupNotice(`Calm view needs a password check while the mic is off. ${errorText(failure)}`); return; }
+    }
+    calmSince.current = Date.now(); calmSession.current += 1; setCalmSetupNotice(null); setCalmNote(note); setCalmOpen(true);
+    try { localStorage.setItem("zaenia.calm.active", "1"); } catch { /* view persistence is optional */ }
+  }
+  function returnFromCalm() {
+    calmSession.current += 1;
+    setCalmOpen(false); setCalmNote(null);
+    try { localStorage.removeItem("zaenia.calm.active"); } catch { /* optional */ }
+    openSection("overview");
+  }
   const [motion, setMotion] = useState(true);
   // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
@@ -390,7 +414,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // The reply being written: each turn has a number, so a stopped reply can't touch the chat later.
   const turnRef = useRef(0);
   const streamRef = useRef<ChatStream | null>(null);
-  const replyRef = useRef<{ id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal } | null>(null);
+  const replyRef = useRef<{ id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; progress: string[] } | null>(null);
   // Synchronous guard as well as React state: a second click cannot duplicate a write.
   const actionStates = useRef(new Map<number, AssistantActionState["status"]>());
   const [actionRefresh, setActionRefresh] = useState({ tasks: 0, calendar: 0 });
@@ -420,6 +444,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const layerRef = useRef<HTMLDivElement | null>(null);
   const platformRuntime = usePlatformRuntime();
   const [hands, setHands] = useState(false);
+  const handWindow = useRef<{ id: string; rect: WindowRect } | null>(null);
   const [handNote, setHandNote] = useState<string | null>(null);
   const handsSupported = !isPhone && typeof Worker !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
   const restoredRequest = useRef<string | null>(null);
@@ -452,6 +477,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }, [platformRuntime.summary]);
   // Hand gestures for actions (Grey, 2026-10-31; core/gestureActions.ts). Returns what to show on screen.
   function handleHandAction(action: GestureAction): string | void {
+    if (calmOpen || background || document.hidden || nearCode || faceIdPending.length) return "Hand controls paused";
     if (action.kind === "stop") { interrupt(); return "Stopped"; }
     if (action.kind === "home") { openSection("overview"); return "Home"; }
     if (action.kind === "calm") { goCalm(); return "Calm view"; }
@@ -491,6 +517,21 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     void applyProposal(waiting.id);
     return "Confirmed";
   }
+  function handleHandWindow(id: string, event: VisualHandMotion): boolean {
+    if (event.kind === "end") { handWindow.current = null; return true; }
+    if (calmOpen || background || document.hidden || !document.hasFocus() || nearCode || faceIdPending.length) { handWindow.current = null; return false; }
+    const win = shell.windows.find(item => item.id === id && !item.minimized);
+    const box = layerRef.current?.getBoundingClientRect();
+    if (!win || !box || box.width <= 0 || box.height <= 0) return false;
+    if (event.kind === "begin") {
+      handWindow.current = { id, rect: { x: win.x, y: win.y, w: win.w, h: win.h } };
+      attendedTab.current = id; shell.open(id); return true;
+    }
+    const grip = handWindow.current;
+    if (!grip || grip.id !== id) return false;
+    grip.rect = handWindowRect(grip.rect, event, { width: window.innerWidth, height: window.innerHeight }, box);
+    shell.update(id, grip.rect); return true;
+  }
   const stageSection: Section = windowed ? "overview" : section;
   const activeJobs = (platformRuntime.summary?.jobs ?? []).filter(job => !/done|complete|fail|cancel/i.test(job.status)).length;
   const openSection = (requested: Section) => {
@@ -500,10 +541,42 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub }));
     }
     const next = (WINDOW_ALIASES[requested] ?? requested) as Section;
+    const current = sectionRef.current;
+    if (next !== current) {
+      pageHistory.current.back.push(current);
+      if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
+      pageHistory.current.forward = [];
+      sectionRef.current = next;
+    }
     setSection(next);
     if (!windowed) return;
     if (next === "overview") shell.showDesktop(); else shell.open(next);
   };
+  const movePageHistory = (direction: "back" | "forward") => {
+    const from = direction === "back" ? pageHistory.current.back : pageHistory.current.forward;
+    const to = direction === "back" ? pageHistory.current.forward : pageHistory.current.back;
+    const target = from.pop();
+    if (!target) return;
+    to.push(sectionRef.current);
+    sectionRef.current = target;
+    setSection(target);
+    if (windowed) {
+      if (target === "overview") shell.showDesktop(); else shell.open(target);
+    }
+  };
+  // Standard side-button mice send button 4 for Back and button 5 for Forward.
+  // Capture the press before WebView/browser defaults can navigate away from ZÆNIA.
+  useEffect(() => {
+    const onMouseDown = (event: MouseEvent) => {
+      if (event.button !== 3 && event.button !== 4) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (calmOpen) return;
+      movePageHistory(event.button === 3 ? "back" : "forward");
+    };
+    window.addEventListener("mousedown", onMouseDown, true);
+    return () => window.removeEventListener("mousedown", onMouseDown, true);
+  }, [windowed, calmOpen]);
   useEffect(() => {
     const go = (event: globalThis.Event) => { const page = (event as CustomEvent<string>).detail; if (nav.some(item => item.id === page)) openSection(page as Section); };
     window.addEventListener("zae:open-section", go); return () => window.removeEventListener("zae:open-section", go);
@@ -550,7 +623,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     return () => { cancelled = true; window.clearTimeout(timer); };
   }, []);
   // The title and sidebar follow the window in front.
-  useEffect(() => { if (windowed) setSection((shell.active ?? "overview") as Section); }, [windowed, shell.active]);
+  useEffect(() => {
+    if (!windowed) return;
+    const active = (shell.active ?? "overview") as Section;
+    if (active !== sectionRef.current) {
+      pageHistory.current.back.push(sectionRef.current);
+      if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
+      pageHistory.current.forward = [];
+      sectionRef.current = active;
+    }
+    setSection(active);
+  }, [windowed, shell.active]);
   const [sheetOpen, setSheetOpen] = useState(false);
   const sheetTouch = useRef<number | null>(null);
   // The sheet closes whenever you move to another screen or leave phone width.
@@ -766,8 +849,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     stream?.cancel();
     const reply = replyRef.current;
     replyRef.current = null;
-    if (reply && reply.text.trim()) {
-      const stopped: ChatMessage = { id: reply.id, role: "assistant", text: reply.text.trim(), at: reply.at, streaming: false, interrupted: true };
+    if (reply && (reply.text.trim() || reply.progress.length)) {
+      const stopped: ChatMessage = { id: reply.id, role: "assistant", text: reply.text.trim(), at: reply.at, streaming: false, interrupted: true, progress: reply.progress.length ? [...reply.progress] : undefined };
       const shown = reply.added;
       setChat(prev => shown ? prev.map(item => item.id === reply.id ? stopped : item) : [...prev, stopped]);
     }
@@ -826,14 +909,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // commands. Saving files, launching apps and approvals are not on the list; they stay behind the desktop key.
   const remoteRef = useRef<(command: { action: string; target: string }) => void>(() => undefined);
   remoteRef.current = ({ action, target }) => {
+    if (calmOpen && (action === "open" || action === "wake" || action === "show_desktop")) {
+      setCalmNote("Use your verified wake-up call or enter the dashboard password on this screen."); return;
+    }
     const tab = WINDOW_IDS.includes(target) ? target as Section : null;
-    if (action === "open" && tab) { setCalmOpen(false); setCalmNote(null); openSection(tab); }
+    if (action === "open" && tab) openSection(tab);
     else if (action === "close" && tab) { shell.close(tab); if (!windowed && section === tab) openSection("overview"); }
     else if (action === "minimize" && tab) shell.minimize(tab);
     else if (action === "show_desktop") openSection("overview");
     else if (action === "restore_all") shell.restoreAll();
     else if (action === "calm") goCalm("Calm view from your phone.");
-    else if (action === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+    else if (action === "wake") returnFromCalm();
   };
   // The code for "Phone confirms": shown here only while the phone asks for it (it changes every minute).
   type NearCode = { code: string; qr: string; secondsLeft: number; voice: boolean };
@@ -943,7 +1029,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const running = jobs.filter(job => !/done|complete|fail|cancel/i.test(job.status)).map(job => job.title);
     const calmMinutes = calmOpen ? Math.round((Date.now() - calmSince.current) / 60000) : 0;
     const finished = calmOpen ? jobs.filter(job => /done|complete/i.test(job.status)).map(job => job.title).slice(0, 3) : [];
-    if (match.kind === "wake") { setCalmOpen(false); setCalmNote(null); openSection("overview"); }
+    if (match.kind === "wake") returnFromCalm();
     try {
       const situation = await situationNow({ calmMinutes, running, finished, section: sections[section]?.title ?? section });
       const reply = await api<{ line: string; focus: string }>("POST", "/api/assistant/wake", { kind: match.kind, phraseId: match.id, situation }, { timeoutMs: 15000 });
@@ -1019,7 +1105,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const live = () => turn === turnRef.current;
     const id = ++messageCounter.current;
     const key = `m${id}`;
-    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; sources?: ChatSource[] } = { id, text: "", added: false, at: new Date().toISOString() };
+    // progress: what ZAE says while she works ("I'm looking at the file now."), in the order the conductor decided.
+    const reply: { id: number; text: string; added: boolean; at: string; proposal?: AssistantProposal; sources?: ChatSource[]; progress: string[] } = { id, text: "", added: false, at: new Date().toISOString(), progress: [] };
     replyRef.current = reply;
     sendingRef.current = true;
     setSending(true);
@@ -1047,13 +1134,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
 
     const draw = () => {
       timer = null;
-      if (!live() || !reply.text) return;
+      if (!live() || (!reply.text && !reply.progress.length)) return;
       const text = reply.text;
+      const progress = [...reply.progress];
       if (!reply.added) {
         reply.added = true;
         setStreamingId(id);
-        setChat(prev => [...prev, { id, role: "assistant", text, at: reply.at, streaming: true, proposal: reply.proposal }]);
-      } else setChat(prev => prev.map(item => item.id === id ? { ...item, text, proposal: reply.proposal } : item));
+        setChat(prev => [...prev, { id, role: "assistant", text, at: reply.at, streaming: true, proposal: reply.proposal, progress }]);
+      } else setChat(prev => prev.map(item => item.id === id ? { ...item, text, proposal: reply.proposal, progress } : item));
     };
     const end = () => {
       if (timer !== null) { window.clearTimeout(timer); timer = null; }
@@ -1073,8 +1161,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (photoQuestion && text && !interrupted && photosRef.current === sharedPhotos) {
         photoTurns.current = [...photoHistory, { role: "user", content: message.slice(0, 4000) }, { role: "assistant", content: text.slice(0, 4000) }].slice(-6) as typeof photoHistory;
       }
-      if (text) {
-        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal, sources: reply.sources };
+      if (text || reply.progress.length) {
+        const done: ChatMessage = { id, role: "assistant", text, at: reply.at, streaming: false, interrupted, proposal: interrupted ? undefined : reply.proposal, sources: reply.sources, progress: reply.progress.length ? [...reply.progress] : undefined };
         if (reply.proposal && !interrupted && policyRef.current?.chatAutomatic.includes(reply.proposal.kind) && (IN_TAURI || !["app.launch", "workspace.restore"].includes(reply.proposal.kind))) automaticCandidates.current.add(id);
         const shown = reply.added;
         reply.added = true;
@@ -1091,7 +1179,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const fail = (failure: unknown) => {
       if (!live()) return;
       const text = failure instanceof BridgeError ? failure.message : `Local ZÆNIA bridge: ${errorText(failure)}`;
-      if (reply.text.trim()) complete(reply.text, true);
+      if (reply.text.trim() || reply.progress.length) complete(reply.text, true);
       else { if (speakIt) speech.stop(); end(); }
       setChat(prev => [...prev, { id: ++messageCounter.current, role: "error", text }]);
     };
@@ -1114,6 +1202,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         // ZAE's question pop-ups live in their tabs (training setup in Fitness & Health).
         if (event.form === "training-setup") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:training-setup")), 700); }
         if (event.form === "food-meal") { openSection("fitness" as Section); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:food-meal", { detail: { description: event.description } })), 700); }
+      } else if (event.type === "narrate") {
+        // Progress said by Talk, one line at a time: shown above the answer and spoken at once, before the answer is.
+        reply.progress.push(event.text);
+        voice.filler = true;
+        if (speakIt && !voice.cut) speech.feed(key, `${event.text} `);
+        if (timer === null) timer = window.setTimeout(draw, DRAW_MS);
       } else if (event.type === "say") {
         // A short spoken status while she works ("One sec, reading that link."); not part of the written reply.
         if (speakIt && !voice.said && !voice.filler) { voice.filler = true; speech.feed(key, `${event.text} `); }
@@ -1281,6 +1375,18 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // PC Voice only takes over while it recognises the owner's voice; when it
   // keeps rejecting him, the app keeps listening with its own mic.
   const pcTakesOver = IN_TAURI && pcVoice?.running === true && pcVoice.recognising !== false;
+  const calmListening = (listen.mode === "always" && !["off", "starting", "blocked", "error"].includes(listen.status)) || pcTakesOver;
+  useEffect(() => {
+    if (!calmOpen || calmListening) return;
+    let cancelled = false;
+    const check = () => api<{ configured: boolean }>("GET", CALM_PASSWORD_STATUS).then(status => {
+      if (cancelled || status.configured) return;
+      returnFromCalm(); setCalmSetupNotice("Create your dashboard password before using Calm view with the mic off.");
+    }).catch(() => { /* Keep the password screen if Core cannot verify its state. */ });
+    void check();
+    window.addEventListener("focus", check);
+    return () => { cancelled = true; window.removeEventListener("focus", check); };
+  }, [calmOpen, calmListening]);
   const spokenNotices = useRef(new Set<string>());
   const allowNoticeSpeech = useRef(false);
   allowNoticeSpeech.current = !busy && !pcTakesOver && listen.status !== "hearing" && listen.status !== "transcribing";
@@ -1338,6 +1444,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [resting, setResting] = useState(false);
   const lastActive = useRef(Date.now());
   const wake = useCallback(() => { lastActive.current = Date.now(); setResting(false); }, []);
+  useEffect(() => { window.addEventListener(HAND_ACTIVITY_EVENT, wake); return () => window.removeEventListener(HAND_ACTIVITY_EVENT, wake); }, [wake]);
   useEffect(() => { if (voicePhase !== "idle") wake(); }, [voicePhase, wake]);
   useEffect(() => { wake(); }, [chat.length, section, wake]);
   useEffect(() => {
@@ -1409,11 +1516,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
         { id: "bench", label: "Test set", render: () => <ArenaBench/> },
-        { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
-        { id: "brains", label: "Brains & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
+        { id: "board", label: "Rounds & SE model", render: () => <ArenaPanel/> },
+        { id: "brains", label: "SE & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
+        { id: "calm-password", label: "Calm password", render: () => <CalmPasswordSettings/> },
         { id: "activity", label: "Activity", render: () => <SecurityActivity/> },
         { id: "plan", label: "Plan", render: () => <SecurityPlan/> },
         { id: "details", label: "Details", render: () => <SecurityPanel/> },
@@ -1448,7 +1556,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             { id: "hands", name: "Hand controls", detail: handsSupported ? (hands ? "Camera on" : "Camera off") : "Desktop only", on: hands, toggle: () => { setHands(v => !v); setHandNote(null); }, disabled: !handsSupported },
             { id: "sidebar", name: "Sidebar in tabs", detail: sidebarHidden ? "Hidden" : "Shown", on: !sidebarHidden, toggle: () => setSidebarHidden(v => !v) },
             { id: "calm", name: "Calm view when idle", detail: idleAfter ? `After ${idleAfter} min` : "Off", on: idleAfter > 0, toggle: () => { const next = idleAfter ? 0 : 5; try { localStorage.setItem("zaenia.overview.idleMinutes", String(next)); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:overview-idle", { detail: next })); } },
-            { id: "calmnow", name: "Calm view now", detail: "Wake with your voice", on: calmOpen, toggle: () => goCalm() },
+            { id: "calmnow", name: "Calm view now", detail: "Return by verified voice or dashboard password", on: calmOpen, toggle: () => { void goCalm(); } },
             { id: "voicepc", name: "PC voice", detail: pcVoice?.running ? "Listening on this PC" : "Off", on: Boolean(pcVoice?.running), toggle: () => { if (!pcVoice?.running) void startPcVoice(); }, disabled: !IN_TAURI || pcVoice === null || Boolean(pcVoice?.running) },
         ];
         return <PageTabs id="settings" tabs={[
@@ -1469,7 +1577,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
+  return <div className={`zaenia-app zaenia-app--dynamic${hands && !calmOpen ? " zaenia-app--hands" : ""}${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
     {IN_TAURI && faceIdPending.length > 0 && <div className="faceid-approve" role="dialog" aria-label="Approve Face ID">
@@ -1484,9 +1592,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       <p>Changes in {nearCode.secondsLeft} s · backup code <span className="near-code__digits">{nearCode.code.slice(0, 3)} {nearCode.code.slice(3)}</span></p>
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
     </div>}
-    {calmOpen && <CalmView listening={listen.mode === "always" || pcTakesOver} note={calmNote} onHoldWake={() => { setCalmOpen(false); setCalmNote(null); openSection("overview"); }}
+    {calmOpen && <CalmView key={renderedCalmSession} listening={calmListening} note={calmNote} onPasswordReturn={() => { if (calmSession.current === renderedCalmSession) returnFromCalm(); }}
       core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES} activeJobs={activeJobs}/>}/>}
-    <HandControls enabled={hands} speaking={speech.playing !== null} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction}/>
+    {calmSetupNotice && !calmOpen && <div className="faceid-offer" role="status"><span>{calmSetupNotice}</span><div>
+      <button type="button" onClick={() => { try { localStorage.setItem("zaenia.pageTab.security", "calm-password"); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "calm-password" } })); openSection("security"); setCalmSetupNotice(null); }}>Password setup</button>
+      <button type="button" onClick={() => setCalmSetupNotice(null)}>Later</button>
+    </div></div>}
+    <HandControls enabled={hands} suspended={calmOpen || background || Boolean(nearCode) || faceIdPending.length > 0} speaking={speech.playing !== null}
+      onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction} onWindowMotion={handleHandWindow}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">
       <div className="brand-menu" onMouseEnter={() => { setBrandOpen(true); setIdentityHovered(true); }} onMouseLeave={() => { setBrandOpen(false); setIdentityHovered(false); }}>

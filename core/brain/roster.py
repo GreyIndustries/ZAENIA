@@ -46,11 +46,11 @@ def brains() -> list[dict[str, Any]]:
     from core.brain.conductor import SEEK_MODEL, TALK_KEEP_ALIVE, TALK_MODEL
     return [
         {"id": "talk", "name": "Talk", "model": TALK_MODEL, "where": "Graphics card",
-         "role": "Answers you. Kept loaded all day so replies start fast; freed while you game.", "keepAlive": TALK_KEEP_ALIVE},
+         "role": "The only brain that speaks or writes to you, including progress notes while others work. Kept loaded all day; freed while you game.", "keepAlive": TALK_KEEP_ALIVE},
         {"id": "seek", "name": "Seek", "model": SEEK_MODEL, "where": "Graphics card",
-         "role": "Web questions with sources, and takes over if Talk goes quiet.", "keepAlive": "as needed"},
+         "role": "Thinks, never speaks: reads shared files part by part, finds facts in them, and answers web questions with sources.", "keepAlive": "as needed"},
         {"id": "study", "name": "Study", "model": "qwen3:14b", "where": "Graphics card",
-         "role": "Research jobs, Code Doctor (explain, fix, Playground), nightly fix ideas and Aider's local coding. Unloaded after each research job.", "keepAlive": "10m after Code Doctor; unloads after research"},
+         "role": "Thinks, never speaks: research jobs, Code Doctor, Suggestions, nightly fix ideas and Aider's local coding. Unloaded after each research job.", "keepAlive": "10m after Code Doctor; unloads after research"},
         {"id": "keep", "name": "Keep", "model": "qwen3:1.7b", "where": "Processor",
          "role": "Small watch-list summaries, on the processor so the graphics card stays free.", "keepAlive": "30m"},
         {"id": "topics", "name": "Topic tracker", "model": "nomic-embed-text", "where": "Graphics card",

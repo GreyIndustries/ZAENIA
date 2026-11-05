@@ -1,7 +1,7 @@
 import tempfile
 import unittest
 import zipfile
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from unittest import mock
 
@@ -31,6 +31,40 @@ class ReminderTest(unittest.TestCase):
         self.assertEqual((when.year, when.month, when.day, when.hour, what), (2026, 11, 8, 15, "GitHub 2FA"))
         when, what = parse_request("Zae, remind me to call the dentist on the 8th of November", self.NOW)
         self.assertEqual((when.year, when.month, when.day, when.hour, what), (2026, 11, 8, 9, "call the dentist"))
+
+    def test_relative_month_and_day_first_dates(self):
+        when, what = parse_request("remind me to pay rent on the 28th of this month", self.NOW)
+        self.assertEqual((when.month, when.day, what), (10, 28, "pay rent"))
+        when, _ = parse_request("remind me to renew on the 3rd of next month", self.NOW)
+        self.assertEqual((when.year, when.month, when.day), (2026, 11, 3))
+        when, what = parse_request("set a reminder on 8 November at 3 pm to call home", self.NOW)
+        self.assertEqual((when.month, when.day, when.hour, what), (11, 8, 15, "call home"))
+        # "this month" is pinned: a day already gone doesn't silently move to next month.
+        self.assertIsNone(parse_request("remind me to pay rent on the 8th of this month", self.NOW))
+
+    def test_parse_date_varied_formats(self):
+        today = date(2026, 11, 2)
+        cases = {
+            "November 8": date(2026, 11, 8),
+            "Nov. 8th": date(2026, 11, 8),
+            "november the 8th": date(2026, 11, 8),
+            "8 November": date(2026, 11, 8),
+            "the 8th of November": date(2026, 11, 8),
+            "the 8th of this month": date(2026, 11, 8),
+            "on the 8th": date(2026, 11, 8),
+            "the 1st": date(2026, 12, 1),
+            "the 1st of next month": date(2026, 12, 1),
+            "October 30": date(2027, 10, 30),
+            "November 8, 2027": date(2027, 11, 8),
+            "2026-11-08": date(2026, 11, 8),
+        }
+        for text, expected in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(reminder_module.parse_date(text, today), expected)
+        self.assertEqual(reminder_module.parse_date("the 5th of next month", date(2026, 12, 10)), date(2027, 1, 5))
+        for text in ("the 31st of this month", "February 30", "banana", "next week"):
+            with self.subTest(text=text):
+                self.assertIsNone(reminder_module.parse_date(text, today))
 
     def test_incomplete_reminder_intent_is_detected_without_claiming_success(self):
         self.assertTrue(reminder_module.is_reminder_request("put a reminder on the 8th"))

@@ -456,8 +456,8 @@ fn restart_server() -> Result<(), String> {
 /// for unlocking, the server's opaque request ID; secrets are typed there, never here.
 #[tauri::command]
 fn run_security_tool(mode: String, request: Option<String>) -> Result<(), String> {
-    const MODES: [&str; 11] = ["unlock_passkey", "unlock_voice", "token_rotate", "token_revoke", "pair_desktop",
-        "phrase_setup", "phrase_reset", "mic_change", "mic_reset", "phone_voice_on", "phone_voice_off"];
+    const MODES: [&str; 13] = ["unlock_passkey", "unlock_voice", "token_rotate", "token_revoke", "pair_desktop",
+        "phrase_setup", "phrase_reset", "mic_change", "mic_reset", "phone_voice_on", "phone_voice_off", "calm_password_setup", "calm_password_reset"];
     let request = request.unwrap_or_default();
     if !MODES.contains(&mode.as_str())
         || (mode.starts_with("unlock_") && (request.len() != 32 || !request.chars().all(|c| c.is_ascii_hexdigit())))

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { SEBrainMap } from "../tools/SEBrainMap";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import type { CoreTelemetry, ModulePhase } from "../../core/coreTelemetry";
 import { ACCENTS, CORNERS, DENSITIES, FONTS, LOOKS } from "../../core/appearance";
@@ -108,6 +109,7 @@ export function StatusReadiness({ telemetry, onStartVoice }: { telemetry: CoreTe
   const groups = READY_GROUPS.map(g => ({ name: g.name, parts: parts.filter(p => g.ids.includes(p.id) || (g.name === "Connections" && !READY_GROUPS.some(x => x.ids.includes(p.id)))) }));
   return <div className="mv">
     <div className="mv-head"><div><span className="mv-kicker">Readiness</span><h2 className="zx-title">{parts.length ? `${ready} of ${parts.length} parts ready` : "Checking…"}</h2></div></div>
+    <SEBrainMap/>
     <div className="sv-cols">{groups.map(g => <section key={g.name} className="zx-card sv-stack">
       <h3 className="mv-muted">{g.name.toUpperCase()}</h3>
       {g.parts.map(p => <div key={p.id} className={`zx-inset sv-part ${p.ok ? "" : "sv-part--bad"}`}>

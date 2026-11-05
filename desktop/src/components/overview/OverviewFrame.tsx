@@ -93,7 +93,7 @@ export function useIdle(minutes: number) {
     if (!minutes) { setIdle(false); return; }
     let timer = window.setTimeout(() => setIdle(true), minutes * 60_000);
     const active = () => { setIdle(false); window.clearTimeout(timer); timer = window.setTimeout(() => setIdle(true), minutes * 60_000); };
-    const events = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"] as const;
+    const events = ["pointermove", "pointerdown", "keydown", "wheel", "touchstart", "zae:hand-activity"] as const;
     events.forEach(name => window.addEventListener(name, active, { passive: true }));
     return () => { window.clearTimeout(timer); events.forEach(name => window.removeEventListener(name, active)); };
   }, [minutes]);

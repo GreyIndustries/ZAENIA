@@ -10,6 +10,16 @@ export function boundedWindow(rect: WindowRect): WindowRect {
   return { x: clamp(finite(rect.x, 0), 0, 1 - w), y: clamp(finite(rect.y, 0), 0, 1 - h), w, h };
 }
 
+/** Incremental hand movement uses viewport coordinates; window geometry stays in stage fractions. */
+export function handWindowRect(rect: WindowRect, motion: { dx: number; dy: number; scale: number }, viewport: { width: number; height: number }, stage: { width: number; height: number }): WindowRect {
+  const r = boundedWindow(rect);
+  if (![motion.dx, motion.dy, motion.scale, viewport.width, viewport.height, stage.width, stage.height].every(Number.isFinite) || stage.width <= 0 || stage.height <= 0) return r;
+  const scale = clamp(motion.scale, .8, 1.25);
+  const w = clamp(r.w * scale, MIN_WINDOW_WIDTH, 1), h = clamp(r.h * scale, MIN_WINDOW_HEIGHT, 1);
+  return boundedWindow({ x: r.x + clamp(motion.dx, -.15, .15) * viewport.width / stage.width + (r.w - w) / 2,
+    y: r.y + clamp(motion.dy, -.15, .15) * viewport.height / stage.height + (r.h - h) / 2, w, h });
+}
+
 /** Resizing a leading edge preserves the opposite edge. Deltas are stage fractions. */
 export function resizeWindow(rect: WindowRect, edge: ResizeEdge, dx: number, dy: number): WindowRect {
   const r = boundedWindow(rect);

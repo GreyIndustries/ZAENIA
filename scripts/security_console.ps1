@@ -1,5 +1,5 @@
 param(
-  [Parameter(Mandatory=$true)][ValidateSet('unlock_passkey','unlock_voice','token_rotate','token_revoke','pair_desktop','phrase_setup','phrase_reset','mic_change','mic_reset','phone_voice_on','phone_voice_off')][string]$Mode,
+  [Parameter(Mandatory=$true)][ValidateSet('unlock_passkey','unlock_voice','token_rotate','token_revoke','pair_desktop','phrase_setup','phrase_reset','mic_change','mic_reset','phone_voice_on','phone_voice_off','calm_password_setup','calm_password_reset')][string]$Mode,
   [ValidatePattern('^([0-9a-f]{32})?$')][string]$Request = ''
 )
 # Owner console for the Security tab. The passkey and the spoken phrase are only
@@ -63,6 +63,14 @@ switch ($Mode) {
   'phone_voice_off' {
     Write-Host 'Turn off phone voice sign-in. Phones signed in by voice are signed out.'
     & $projectPython @('-m','core.api.mobile_voice_profile','disable')
+  }
+  'calm_password_setup' {
+    Write-Host 'Create or change the separate Calm-view dashboard password. Your owner passkey approves this change.'
+    & $projectPython @('-m','core.api.calm_password','setup')
+  }
+  'calm_password_reset' {
+    Write-Host 'Reset only the Calm-view dashboard password. Your owner passkey approves this change.'
+    & $projectPython @('-m','core.api.calm_password','reset')
   }
 }
 Read-Host 'Press Enter to close this window'

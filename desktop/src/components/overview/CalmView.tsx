@@ -1,25 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { useOverviewData } from "./OverviewFrame";
+import { CalmPasswordUnlock } from "../security/CalmPassword";
 import "./CalmView.css";
 
 /**
  * Calm view (Grey's pick A, "Split", 2026-10-30): the core and background dimmed, a clock and three rings on the left
  * (how much of the day, the calories and today's tasks are done), and most of the screen cycling one important thing at
  * a time on the right, with the next four queued below. It covers every screen; waking always returns to the dashboard.
- * It wakes on Grey's wake-up calls (his voice only); holding "Wake" for two seconds is the fallback when the mic is off.
+ * It returns on the owner's verified voice or the separate dashboard password when the mic is off.
  */
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const clock = (time: string) => { const [h, m] = time.split(":").map(Number); return Number.isFinite(h) ? new Date(2000, 0, 1, h, m || 0).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : time; };
 const fmt = (n: number | null | undefined) => n === null || n === undefined ? "—" : Math.round(n).toLocaleString();
 type Slide = { kicker: string; head: string; detail: string; facts: [string, string][]; tone: string };
 
-export function CalmView({ listening, note, onHoldWake, core }: { listening: boolean; note: string | null; onHoldWake: () => void; core?: ReactNode }) {
+export function CalmView({ listening, note, onPasswordReturn, core }: { listening: boolean; note: string | null; onPasswordReturn: () => void; core?: ReactNode }) {
   const data = useOverviewData();
   const [now, setNow] = useState(() => new Date());
   const [spot, setSpot] = useState(0);
-  const hold = useRef<number | null>(null);
-  const [holding, setHolding] = useState(false);
+  const dialog = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const host = dialog.current;
+    (host?.querySelector<HTMLElement>("input") ?? host)?.focus();
+  }, [listening]);
   useEffect(() => { const timer = window.setInterval(() => setNow(new Date()), 15_000); return () => window.clearInterval(timer); }, []);
   useEffect(() => { const timer = window.setInterval(() => setSpot(i => i + 1), 9000); return () => window.clearInterval(timer); }, []);
 
@@ -66,10 +70,16 @@ export function CalmView({ listening, note, onHoldWake, core }: { listening: boo
   const queue = [1, 2, 3, 4].map(k => slides[(index + k) % slides.length]).filter((_, k) => k < slides.length - 1);
   const ring = (r: number, share: number) => ({ strokeDasharray: `${2 * Math.PI * r * share} ${2 * Math.PI * r}` });
 
-  const startHold = () => { setHolding(true); hold.current = window.setTimeout(() => { setHolding(false); onHoldWake(); }, 2000); };
-  const stopHold = () => { setHolding(false); if (hold.current) window.clearTimeout(hold.current); hold.current = null; };
-
-  return <div className="calm" role="dialog" aria-modal="true" aria-label="Calm view">
+  return <div ref={dialog} tabIndex={-1} className="calm" role="dialog" aria-modal="true" aria-label="Calm view"
+    onKeyDown={event => {
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); }
+      if (event.key !== "Tab") return;
+      const items = [...(dialog.current?.querySelectorAll<HTMLElement>('input:not(:disabled),button:not(:disabled),[tabindex="0"]') ?? [])];
+      const first = items[0], last = items[items.length - 1];
+      if (!first) { event.preventDefault(); return; }
+      if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog.current)) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog.current)) { event.preventDefault(); first.focus(); }
+    }}>
     <aside className="calm__side">
       {/* The same core as the dashboard (Grey, 2026-10-30), only dimmer; the three rings sit under it. */}
       <div className="calm__core" aria-hidden="true">{core ?? <span className="calm__sphere"/>}</div>
@@ -81,9 +91,8 @@ export function CalmView({ listening, note, onHoldWake, core }: { listening: boo
       <div className="calm__clock"><b>{now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }).replace(/\s?[AP]M$/i, "")}</b>
         <span>{now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}{data.weather?.temperature != null ? ` · ${Math.round(data.weather.temperature)}° ${data.weather.condition}` : ""}</span></div>
       <div className="calm__wake">
-        <span>{note ?? (listening ? "Say a wake-up call to come back" : "The mic is off. Hold Wake to come back")}</span>
-        <button type="button" className={holding ? "calm__hold calm__hold--on" : "calm__hold"} onPointerDown={startHold} onPointerUp={stopHold} onPointerLeave={stopHold}
-          onKeyDown={event => { if ((event.key === "Enter" || event.key === " ") && !holding) startHold(); }} onKeyUp={stopHold} aria-label="Hold for two seconds to wake">Wake</button>
+        {note && <span role="status">{note}</span>}
+        {listening ? <span>Say your wake-up call to return to the dashboard.</span> : <CalmPasswordUnlock onUnlocked={onPasswordReturn}/>}
       </div>
     </aside>
     <main className="calm__main" style={{ "--calm-tone": slide.tone } as CSSProperties}>
