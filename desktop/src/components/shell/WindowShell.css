@@ -33,6 +33,11 @@
 .os-layer--speaking .os-window--active{box-shadow:0 26px 70px rgba(0,0,0,.5),0 0 38px rgba(255,170,60,.22)}
 .os-layer--resting .os-window:not(.os-window--active){opacity:.4;transform:scale(.92)}
 .os-layer .os-window:hover,.os-layer .os-window:focus-within{opacity:1;transform:none}
+.os-layer .os-window.hand-target,.os-layer .os-window.hand-grabbed{opacity:1;transform:none;animation:none}
+.hand-target{outline:2px solid var(--accent,#e0a353);outline-offset:3px}
+.hand-grabbed{outline-color:#6de6ce}
+.os-layer .os-window.hand-grabbed{transition:none}
+.zaenia-app--hands .os-layer .os-window{opacity:1;transform:none;animation:none;transition:box-shadow .3s ease,border-color .3s ease}
 
 /* Dock: open windows, like a taskbar. */
 .os-dock{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:7;display:flex;gap:6px;padding:5px;border-radius:14px;

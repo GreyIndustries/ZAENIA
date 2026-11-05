@@ -1,0 +1,26 @@
+/* The SE map (2026-11-04): the 3D Neural Constellation and a plain-words key, on the look-styles tokens */
+.se-map{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:var(--zx-radius,12px);border:1px solid var(--zx-line,#1f3149);background:var(--zx-panel,#0c1524);color:var(--zx-text,#dbe8f6)}
+.se-map__head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.se-kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:600;color:var(--accent,#e0a353)}
+.se-map h3{margin:2px 0 0;font-size:16px}
+.se-map__views{display:flex;flex-wrap:wrap;gap:6px}
+.se-map__views button{font:inherit;font-size:12px;padding:6px 10px;border:1px solid var(--zx-line,#1f3149);border-radius:7px;background:var(--zx-inset,#08111e);color:var(--zx-muted,#9fb6cf);cursor:pointer}
+.se-map__views button[aria-pressed=true]{color:var(--zx-text,#e5edf7);border-color:var(--accent,#e0a353);background:var(--zx-panel-2,#13233a)}
+.se-map__views button:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:2px}
+.se-map__body{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(230px,1fr);gap:14px;align-items:start}
+.se-legend{display:flex;flex-direction:column;gap:10px;font-size:13px;min-width:0}
+.se-legend p{margin:4px 0;color:var(--zx-muted,#9fb6cf);line-height:1.5}.se-legend small{color:var(--zx-muted,#9fb6cf)}
+.se-legend ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.se-legend li button{font:inherit;color:inherit;width:100%;text-align:left;display:grid;grid-template-columns:12px 72px minmax(0,1fr);grid-template-areas:"dot name model" ". state state";gap:1px 8px;align-items:center;
+  padding:6px 8px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;font-size:12px}
+.se-legend li button:hover{background:var(--zx-inset,#08111e)}
+.se-legend li button[aria-pressed=true]{background:var(--zx-panel-2,#13233a);border-color:var(--zx-line,#1f3149)}
+.se-legend li button:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:2px}
+.se-legend li i{grid-area:dot;width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor}
+.se-legend li b{grid-area:name}
+.se-legend li span{grid-area:model;color:var(--zx-muted,#9fb6cf);font-family:ui-monospace,Consolas,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.se-legend li em{grid-area:state;font-style:normal;color:var(--zx-muted,#9fb6cf)}
+@media (max-width:760px){.se-map__body{grid-template-columns:minmax(0,1fr)}}
+
+.se-map .se3d__stage{aspect-ratio:4/3}
+@media (max-width:640px){.se-map .se3d__stage{aspect-ratio:1/1}}

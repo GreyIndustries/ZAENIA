@@ -4,8 +4,8 @@
  *
  *  swipe left / right (open hand) → previous / next tab     swipe up → Home        swipe down → minimise tab
  *  hold 1–5 fingers ~1 s → category 1 Plan, 2 Health, 3 Know, 4 Create, 5 Build     rock sign → System
- *  open palm held → stop ZAE talking (only while she talks; otherwise it is "5", Build)
- *  fist held → Calm view     peace sign (V, fingers spread) → mic on/off     pinch held → close the tab
+ *  Explicit shortcut mode only. Open palm always means Stop; pinch is reserved for manipulation.
+ *  fist held → Calm view     peace sign (V, fingers spread) → mic on/off
  *  thumbs up → confirm the card ZAE is showing     thumbs down → dismiss it
  */
 export type Point = { x: number; y: number; z?: number };
@@ -48,14 +48,14 @@ export function shapeOf(points: readonly Point[]): HandShape | null {
 
 const HOLDS: Partial<Record<HandShape, { ms: number; label: string }>> = {
   one: { ms: 900, label: "1 · Plan" }, two: { ms: 900, label: "2 · Health" }, three: { ms: 900, label: "3 · Know" },
-  four: { ms: 900, label: "4 · Create" }, five: { ms: 900, label: "5 · Build" }, rock: { ms: 800, label: "System" },
-  fist: { ms: 900, label: "Calm view" }, peace: { ms: 700, label: "Mic on/off" }, pinch: { ms: 600, label: "Close tab" },
+  four: { ms: 900, label: "4 · Create" }, rock: { ms: 800, label: "System" },
+  fist: { ms: 900, label: "Calm view" }, peace: { ms: 700, label: "Mic on/off" },
   thumbsUp: { ms: 600, label: "Confirm" }, thumbsDown: { ms: 600, label: "Dismiss" },
 };
 const ACTION_OF: Partial<Record<HandShape, GestureAction>> = {
   one: { kind: "category", index: 0 }, two: { kind: "category", index: 1 }, three: { kind: "category", index: 2 },
-  four: { kind: "category", index: 3 }, five: { kind: "category", index: 4 }, rock: { kind: "system" }, fist: { kind: "calm" },
-  peace: { kind: "mic" }, pinch: { kind: "close" }, thumbsUp: { kind: "confirm" }, thumbsDown: { kind: "dismiss" },
+  four: { kind: "category", index: 3 }, rock: { kind: "system" }, fist: { kind: "calm" },
+  peace: { kind: "mic" }, thumbsUp: { kind: "confirm" }, thumbsDown: { kind: "dismiss" },
 };
 
 export class GestureActions {
@@ -68,15 +68,20 @@ export class GestureActions {
 
   reset() { this.shape = null; this.fired = false; this.track = []; }
 
-  /** `speaking`: ZAE is talking right now, so a held open palm means "stop". */
-  update(points: readonly Point[] | null, at: number, speaking = false): GestureFrame {
+  update(points: readonly Point[] | null, at: number, _speaking = false): GestureFrame {
     const shape = points ? shapeOf(points) : null;
     if (!points || !shape) { this.reset(); return { shape: null, holding: null, action: null }; }
     const cool = at - this.lastAction >= GestureActions.COOLDOWN;
     if (shape !== this.shape) { this.shape = shape; this.since = at; this.fired = false; }
+    if (shape === "five") {
+      if (this.fired || !cool) return { shape, holding: null, action: null };
+      const progress = Math.min(1, (at - this.since) / GestureActions.STOP_MS);
+      if (progress >= 1) { this.fired = true; this.lastAction = at; return { shape, holding: null, action: { kind: "stop" } }; }
+      return { shape, holding: { label: "Stop talking", progress }, action: null };
+    }
     // Swipes: an open hand (4 or 5 fingers) moving fast. The palm centre is steadier than a fingertip.
     const palm = { x: 1 - (points[0].x + points[9].x) / 2, y: (points[0].y + points[9].y) / 2 };
-    if (shape === "four" || shape === "five") {
+    if (shape === "four") {
       this.track.push({ ...palm, at });
       this.track = this.track.filter(p => at - p.at <= GestureActions.SWIPE_MS);
       const first = this.track[0];
@@ -90,11 +95,6 @@ export class GestureActions {
       if (this.track.length > 1 && Math.hypot(dx, dy) > 0.05) { this.since = at; return { shape, holding: null, action: null }; }
     } else this.track = [];
     if (this.fired || !cool) return { shape, holding: null, action: null };
-    if (shape === "five" && speaking) {
-      const progress = Math.min(1, (at - this.since) / GestureActions.STOP_MS);
-      if (progress >= 1) { this.fired = true; this.lastAction = at; return { shape, holding: null, action: { kind: "stop" } }; }
-      return { shape, holding: { label: "Stop talking", progress }, action: null };
-    }
     const hold = HOLDS[shape];
     if (!hold) return { shape, holding: null, action: null };
     const progress = Math.min(1, (at - this.since) / hold.ms);

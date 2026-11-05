@@ -10,6 +10,8 @@ import { usePlatformRuntime } from "./core/usePlatformRuntime";
 import { PlatformPanel, BackgroundWorkBadge } from "./components/assistant/PlatformPanel";
 import { HandControls } from "./components/shell/HandControls";
 import type { GestureAction } from "./core/gestureActions";
+import { HAND_ACTIVITY_EVENT, type VisualHandMotion } from "./core/handTargets";
+import { handWindowRect, type WindowRect } from "./core/windowLayout";
 import type { ShellWindow } from "./components/shell/WindowShell";
 import { parseCoreTelemetry, PREVIEW_TELEMETRY } from "./core/coreTelemetry";
 import { checkPhoneConnection, connectGmail, connectGoogleCalendar, disconnectPhone, openVoiceTraining, restartServer, startServer } from "./core/bridge";
@@ -142,7 +144,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
   codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS · PLAYGROUND', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
-  arena: { title: 'Arena', label: 'PICK THE BEST BRAIN', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose her brain.' },
+  arena: { title: 'Arena', label: 'PICK THE BEST SE MODEL', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose the model the SE (Synergized Encephalon) uses.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
@@ -442,6 +444,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const layerRef = useRef<HTMLDivElement | null>(null);
   const platformRuntime = usePlatformRuntime();
   const [hands, setHands] = useState(false);
+  const handWindow = useRef<{ id: string; rect: WindowRect } | null>(null);
   const [handNote, setHandNote] = useState<string | null>(null);
   const handsSupported = !isPhone && typeof Worker !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
   const restoredRequest = useRef<string | null>(null);
@@ -474,6 +477,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }, [platformRuntime.summary]);
   // Hand gestures for actions (Grey, 2026-10-31; core/gestureActions.ts). Returns what to show on screen.
   function handleHandAction(action: GestureAction): string | void {
+    if (calmOpen || background || document.hidden || nearCode || faceIdPending.length) return "Hand controls paused";
     if (action.kind === "stop") { interrupt(); return "Stopped"; }
     if (action.kind === "home") { openSection("overview"); return "Home"; }
     if (action.kind === "calm") { goCalm(); return "Calm view"; }
@@ -512,6 +516,21 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (["memory.forget", "app.launch", "workspace.restore"].includes(waiting.proposal.kind)) return "Say or click to confirm this one";
     void applyProposal(waiting.id);
     return "Confirmed";
+  }
+  function handleHandWindow(id: string, event: VisualHandMotion): boolean {
+    if (event.kind === "end") { handWindow.current = null; return true; }
+    if (calmOpen || background || document.hidden || !document.hasFocus() || nearCode || faceIdPending.length) { handWindow.current = null; return false; }
+    const win = shell.windows.find(item => item.id === id && !item.minimized);
+    const box = layerRef.current?.getBoundingClientRect();
+    if (!win || !box || box.width <= 0 || box.height <= 0) return false;
+    if (event.kind === "begin") {
+      handWindow.current = { id, rect: { x: win.x, y: win.y, w: win.w, h: win.h } };
+      attendedTab.current = id; shell.open(id); return true;
+    }
+    const grip = handWindow.current;
+    if (!grip || grip.id !== id) return false;
+    grip.rect = handWindowRect(grip.rect, event, { width: window.innerWidth, height: window.innerHeight }, box);
+    shell.update(id, grip.rect); return true;
   }
   const stageSection: Section = windowed ? "overview" : section;
   const activeJobs = (platformRuntime.summary?.jobs ?? []).filter(job => !/done|complete|fail|cancel/i.test(job.status)).length;
@@ -1425,6 +1444,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [resting, setResting] = useState(false);
   const lastActive = useRef(Date.now());
   const wake = useCallback(() => { lastActive.current = Date.now(); setResting(false); }, []);
+  useEffect(() => { window.addEventListener(HAND_ACTIVITY_EVENT, wake); return () => window.removeEventListener(HAND_ACTIVITY_EVENT, wake); }, [wake]);
   useEffect(() => { if (voicePhase !== "idle") wake(); }, [voicePhase, wake]);
   useEffect(() => { wake(); }, [chat.length, section, wake]);
   useEffect(() => {
@@ -1496,8 +1516,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
         { id: "bench", label: "Test set", render: () => <ArenaBench/> },
-        { id: "board", label: "Rounds & brain", render: () => <ArenaPanel/> },
-        { id: "brains", label: "Brains & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
+        { id: "board", label: "Rounds & SE model", render: () => <ArenaPanel/> },
+        { id: "brains", label: "SE & tools", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><BrainsPanel/></Suspense> },
       ]}/>;
       case "security": return <PageTabs id="security" tabs={[
         { id: "shield", label: "Shield", render: () => <SecurityShield onDetails={() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "details" } }))}/> },
@@ -1557,7 +1577,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
+  return <div className={`zaenia-app zaenia-app--dynamic${hands && !calmOpen ? " zaenia-app--hands" : ""}${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
     {IN_TAURI && faceIdPending.length > 0 && <div className="faceid-approve" role="dialog" aria-label="Approve Face ID">
@@ -1578,7 +1598,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       <button type="button" onClick={() => { try { localStorage.setItem("zaenia.pageTab.security", "calm-password"); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "calm-password" } })); openSection("security"); setCalmSetupNotice(null); }}>Password setup</button>
       <button type="button" onClick={() => setCalmSetupNotice(null)}>Later</button>
     </div></div>}
-    <HandControls enabled={hands} speaking={speech.playing !== null} onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction}/>
+    <HandControls enabled={hands} suspended={calmOpen || background || Boolean(nearCode) || faceIdPending.length > 0} speaking={speech.playing !== null}
+      onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction} onWindowMotion={handleHandWindow}/>
     {isPhone && sheetOpen && <div className="sheet-scrim" aria-hidden="true" onClick={()=>setSheetOpen(false)}/>}
     <header className="identity-header" aria-label="ZÆNIA identity and desktop status">
       <div className="brand-menu" onMouseEnter={() => { setBrandOpen(true); setIdentityHovered(true); }} onMouseLeave={() => { setBrandOpen(false); setIdentityHovered(false); }}>

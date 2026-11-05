@@ -55,10 +55,10 @@ check(() => assert.deepEqual(run(hold(hand(), 1100)).actions, [{ kind: "calm" }]
 check(() => assert.deepEqual(run(hold(hand({ fingers: [true, true, false, false], spread: true }), 900)).actions, [{ kind: "mic" }]));
 check(() => assert.deepEqual(run(hold(hand({ thumb: "up" }), 800)).actions, [{ kind: "confirm" }]));
 check(() => assert.deepEqual(run(hold(hand({ thumb: "down" }), 800)).actions, [{ kind: "dismiss" }]));
-check(() => assert.deepEqual(run(hold(hand({ fingers: [true, false, false, false], thumb: "pinch" }), 800)).actions, [{ kind: "close" }]));
-// Open palm: stop while she talks; otherwise it is "5", Build.
+check(() => assert.deepEqual(run(hold(hand({ fingers: [true, false, false, false], thumb: "pinch" }), 800)).actions, []));
+// Open palm always stops; pinch can never close a tab.
 check(() => assert.deepEqual(run(hold(hand({ fingers: up4, thumb: "out" }), 700), true).actions, [{ kind: "stop" }]));
-check(() => assert.deepEqual(run(hold(hand({ fingers: up4, thumb: "out" }), 1200)).actions, [{ kind: "category", index: 4 }]));
+check(() => assert.deepEqual(run(hold(hand({ fingers: up4, thumb: "out" }), 1200)).actions, [{ kind: "stop" }]));
 // Swipes with an open hand. The camera is mirrored: moving the hand to the camera's left is "right" on screen.
 const swipe = (dx, dy) => Array.from({ length: 9 }, (_, i) => [hand({ fingers: up4, at: { x: 0.5 - dx * i / 8, y: 0.75 + dy * i / 8 } }), 1000 + i * 40]);
 check(() => assert.deepEqual(run(swipe(0.3, 0)).actions, [{ kind: "next" }]));

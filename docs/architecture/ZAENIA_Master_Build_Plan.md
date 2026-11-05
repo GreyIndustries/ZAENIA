@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.55  |  Date: 2026-11-04 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.57  |  Date: 2026-11-04 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1348,6 +1348,22 @@ Owner requested publication through `CLAUDE_TO_CODEX_COMMIT_REQUEST_2026-11-04.m
 - **Publication review fixes:** reject malformed Seek JSON shapes, reject extracted facts with changed numeric values, disclose section-cap clipping, bound the reading caller's deadline/cancellation and prevent late workers from mutating its returned sections. Progress-only chat rows close correctly on Stop, failure or empty completion. In-flight model requests have bounded timeouts but cannot be forcibly killed by a Python thread; final answer generation has its own latency beyond the reading budget. Passage matches and numeric checks remain heuristics, not a proof that every generated claim is true.
 
 Verification: Claude reported 961 Python tests, all desktop Node scripts, TypeScript and a prior native build/install. Codex independently ran 90 focused Python tests before the review fixes and reproduced the failure cases above. Final post-fix tests/build results are recorded in the latest handoff. Publication uses `codex/claude-file-web`, based on published password commit `bbf3857`, preserving that feature's history. Existing startup authentication, owner data and permission boundaries remain unchanged. This task publishes source; it does not by itself install the post-review changes or restart Core.
+
+### 28.60 Constellation Fusion SE model — Codex, 2026-11-04 (v3.56)
+
+The owner requested a usable model blending the orbital, crystalline and living-lattice concepts with Claude's Model C Neural Constellation. `fusionModel.ts` implements real mesh geometry for Talk, Seek, Study and Keep around the Conductor, with a separate execution gate. `SEFusionCanvas.tsx` adds WebGL rotation, zoom, picking, accessible controls and bounded animation. The existing SE view in Arena and Readiness offers Fusion alongside Claude's lightweight constellation. At publication, Claude's current selector initially shows Constellation and remembers the owner's choice. This is frontend presentation; the three engines, model routing, authentication and Core authorization remain authoritative.
+
+The portable `desktop/public/models/zaenia-se-fusion.glb` uses ordinary meshes/materials and no external textures. The app uses the procedural builder for live brightness and signals. Its roster activity remains an Ollama keep-alive heuristic, not exact internal telemetry. Geometry is 56 meshes / 51,852 triangles; the lazy viewer caps continuous animation at 30 FPS and suspends it for hidden/offscreen/reduced-motion/background states. A synthetic, API-free development preview and actual capture are included.
+
+Read `SE_FUSION_MODEL_HANDOFF.md` for Claude's source/asset map, API contract, rebuild steps and limitations. TypeScript, all 22 desktop Node scripts, the GLB round-trip and desktop/mobile visual interaction checks pass. Final desktop/browser build and application-install status are in handoff section 20. Changes remain separate on `codex/se-fusion-model`; no merge or new GitHub publication is implied.
+
+### 28.61 Deliberate two-hand controls — Codex, 2026-11-04 (v3.57)
+
+The owner approved the proposed MediaPipe control upgrade. The existing local 1.1.1 runtime and bundled assets now detect two hands. `HandMotionController` extends `handGestures.ts` with stable hand continuity, point/pinch activation, calibrated/smoothed cursor motion, pinch/release hysteresis and bounded two-hand center/scale/twist transforms. `handTargets.ts` limits manipulation to title bars, the Fusion model and an explicit presentation action menu. App uses existing bounded shell updates; the model receives visual transforms only. Pinch no longer closes tabs, and open palm consistently means Stop. Nonconflicting older gestures remain in a separately selected shortcut mode.
+
+The camera HUD adds device/hand selection, sensitivity and comfortable-reach calibration. Tracking loss, target removal, stale/stalled results and view/context changes cancel manipulation. Controls stop when hidden, unfocused, in Calm or during the existing authentication prompts. Hand activity prevents unintended idle transitions without unlocking Calm. Frames stay in RAM, local CPU processing retains one in-flight frame and the existing 30 FPS capture cap, and no execution/authentication privileges or dependencies are added.
+
+Read `MEDIAPIPE_HAND_CONTROLS_HANDOFF.md` and handoff section 21. TypeScript and all 25 desktop Node scripts pass. A real local worker processed a blank image, and synthetic browser replays moved/resized an actual window and turned/scaled the model. Physical hand/camera accuracy and calibration are not yet live-verified. Final native/browser build and install evidence is recorded in the handoff. Branch: `codex/mediapipe-hand-control`; no new GitHub merge/publication is implied.
 
 ## 29. Integrated completion roadmap — Complete Feature Blueprint
 
