@@ -94,14 +94,14 @@ async function load(category: string): Promise<Panel[]> {
     ];
   }
   const [bar, checks, activity, security] = await Promise.all([
-    get<{ model: string; voice: string; cpu: number; ramUsedGb: number; ramTotalGb: number; diskFreeGb: number; backup: string | null }>("/api/status/bar"),
+    get<{ model: string; brains?: { model: string }[]; voice: string; cpu: number; ramUsedGb: number; ramTotalGb: number; diskFreeGb: number; backup: string | null }>("/api/status/bar"),
     get<{ latest: { status: string; at?: string; counts?: Record<string, number> } | null }>("/api/security/checks"),
     get<{ events: { at: string; label: string; severity: string }[] }>("/api/security/activity?limit=6"),
     get<{ level: string; score: number }>("/api/security/summary"),
   ]);
   return [
     { id: "status", title: "This PC now", tab: "status", tabLabel: "Status", items: bar && [
-      { primary: `CPU ${Math.round(bar.cpu)}% · RAM ${bar.ramUsedGb.toFixed(1)} of ${bar.ramTotalGb.toFixed(1)} GB` }, { primary: `Brain: ${bar.model}`, meta: `Voice: ${bar.voice}` },
+      { primary: `CPU ${Math.round(bar.cpu)}% · RAM ${bar.ramUsedGb.toFixed(1)} of ${bar.ramTotalGb.toFixed(1)} GB` }, { primary: `SE: ${bar.brains?.[0] ? `Talk ${bar.brains[0].model}` : bar.model}`, meta: `Voice: ${bar.voice}` },
       { primary: `${Math.round(bar.diskFreeGb)} GB free`, meta: bar.backup ? `Backup ${bar.backup}` : "" }] },
     { id: "security", title: "Security", tab: "security", tabLabel: "Security", items: security && [
       { primary: `Score ${security.score} · ${security.level}`, meta: checks?.latest ? `Last check: ${checks.latest.status}${checks.latest.at ? `, ${when(checks.latest.at)}` : ""}` : "" }] },

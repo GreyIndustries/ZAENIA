@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.57  |  Date: 2026-11-04 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.62  |  Date: 2026-11-07 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -13,6 +13,10 @@ Status: Proposed v1.0 integration guidance, drafted 2026-10-20. Existing code ha
 Repository placement recommendation: C:\Projects\ZAENIA\docs\architecture\ZAENIA_Master_Build_Plan.md. Keep a corresponding .docx export for reading. Commit the canonical Markdown alongside the code and review changes by diff.
 
 Current completion roadmap: section 29 integrates the owner's Complete Feature Blueprint, maps its twelve capability areas onto the existing architecture, and defines remaining work and acceptance evidence. Earlier dated entries remain historical records; use the latest relevant entry and actual code when assessing current status.
+
+Owner's dated development objective: **October 2027**, recorded on 2026-11-04. Section 30 defines ZÆNIA's path to performing the coding, verification and upgrade workflow currently handled with Claude Code and Codex, using local models and owner-controlled integration. Capability and efficiency thresholds there are proposed acceptance targets, not achieved results.
+
+Streaming extension requested 2026-11-06: section 31 and `ZAENIA_Stream_Studio_Plan.md` define the proposed Twitch/YouTube automation workspace and Streamer.bot migration. This is planned work; no live platform or OBS integration is claimed.
 
 ## 2. Non-negotiable architectural principles
 
@@ -1351,7 +1355,7 @@ Verification: Claude reported 961 Python tests, all desktop Node scripts, TypeSc
 
 ### 28.60 Constellation Fusion SE model — Codex, 2026-11-04 (v3.56)
 
-The owner requested a usable model blending the orbital, crystalline and living-lattice concepts with Claude's Model C Neural Constellation. `fusionModel.ts` implements real mesh geometry for Talk, Seek, Study and Keep around the Conductor, with a separate execution gate. `SEFusionCanvas.tsx` adds WebGL rotation, zoom, picking, accessible controls and bounded animation. The existing SE view in Arena and Readiness offers Fusion alongside Claude's lightweight constellation. At publication, Claude's current selector initially shows Constellation and remembers the owner's choice. This is frontend presentation; the three engines, model routing, authentication and Core authorization remain authoritative.
+The owner requested a usable model blending the orbital, crystalline and living-lattice concepts with Claude's Model C Neural Constellation. `fusionModel.ts` implements real mesh geometry for Talk, Seek, Study and Keep around the Conductor, with a separate execution gate. `SEFusionCanvas.tsx` adds WebGL rotation, zoom, picking, accessible controls and bounded animation. The existing SE view in Arena and Readiness defaults to Fusion, retaining Claude's original lightweight constellation as an option. This is frontend presentation; the three engines, model routing, authentication and Core authorization remain authoritative.
 
 The portable `desktop/public/models/zaenia-se-fusion.glb` uses ordinary meshes/materials and no external textures. The app uses the procedural builder for live brightness and signals. Its roster activity remains an Ollama keep-alive heuristic, not exact internal telemetry. Geometry is 56 meshes / 51,852 triangles; the lazy viewer caps continuous animation at 30 FPS and suspends it for hidden/offscreen/reduced-motion/background states. A synthetic, API-free development preview and actual capture are included.
 
@@ -1427,3 +1431,196 @@ Core acceptance also includes the outstanding live voice trial, source fidelity,
 6. **Maturity — across all phases:** repeat outcome/performance checks when changes warrant them, document dependencies and prove a separate restore before SSD/OS packaging.
 
 These are delivery priorities mapped onto section 11, not a second phase-numbering scheme. Start with a bounded capability/evidence update and one complete project workflow using existing modules. Keep optional extensions separate from the core completion gate. Architectural implementation choices, dependency changes and production promotion retain the existing review and authorization requirements.
+
+## 30. October 2027 objective — ZÆNIA develops and upgrades her own application
+
+**Owner direction, 2026-11-04:** by October next year, ZÆNIA should be able to perform the development work Grey currently carries out with Claude Code and Codex, with high success and efficient use of resources. The owner has also given this direction to Claude. The target month is **October 2027**. Working scheduling assumption: prepare a release candidate by **2027-09-30** so it is available at the start of October; complete owner acceptance during October. These are delivery targets, not a guarantee of capability or authorization to release.
+
+This section is the canonical dated development roadmap. It extends sections 2, 11–13, 29.2C/D and 29.3, plus the local-maintenance milestones in `ZAENIA_Claude_Codex_Efficiency_Draft.md`. Existing runtime/development-provider independence gates remain separate. No additional engine, replacement memory store or unrestricted self-modifying controller is approved by this plan.
+
+### 30.1 Required end-to-end behavior
+
+An ordinary request such as “add weekly meal-planning summaries” or “fix this reminder opening the wrong page” should become a traceable development task:
+
+1. Understand the intended outcome and existing behavior; ask only for missing details that materially change the result. Produce editable acceptance cases, constraints and scope.
+2. Inspect the current repository, relevant call paths, schemas, callers, tests and architecture decisions. Identify existing equivalents and dependencies before proposing new modules.
+3. Explain a bounded plan and which local model/tool will perform each stage. Keep foreground conversation responsive and honor owner-set background priorities.
+4. Work in an isolated, sanitized development environment based on a recorded commit. Write the patch, add meaningful checks, run them and diagnose failures within a fixed repair budget.
+5. Obtain an independent review, resolve supported findings and demonstrate the requested UI/API behavior. Separate observed results from model judgments and unverified assumptions.
+6. Present the exact reviewed diff, test results, limitations, resource use, desktop/web artifacts and recovery procedure. Owner approval remains necessary before integration or deployment.
+7. After approval, an authorized deterministic release path checks the tested version, builds/installs the approved outputs, verifies actual effects and records a release receipt. Failure leads to a controlled stop or tested recovery, with honest status.
+8. Retain justified, sanitized engineering lessons and a resumable task packet. Later requests should benefit from those lessons without acquiring permissions through learning.
+
+By the target date, the agreed local maintenance suite must work with Claude/Codex closed and their provider credentials unavailable in a reversible test environment. Optional online research and external services retain their own access requirements. Owner approval, material clarification and normal priority choices remain part of the workflow; owner-written repairs are recorded as technical assistance.
+
+Initial supported scope: routine and medium ZÆNIA frontend/backend features, bug fixes, integration changes, tests, documentation and release preparation. Large architectural migrations remain separately evaluated work. Security-policy, authentication, secrets and protected-path changes retain their existing dedicated review/approval paths. Broad project ability must be demonstrated by new task cohorts before being claimed.
+
+### 30.2 Verified foundations and gaps to close
+
+The following observations come from source inspection on 2026-11-04, not a new live coding or deployment trial. Reinspect the actual branch before implementation.
+
+| Foundation already present | Current limitation / required improvement |
+|---|---|
+| `core/assistant_platform/build_helper.py::write_brief`, `file_hints` | Briefs and up to eight filename-matched files exist. Add bounded symbol/call/dependency/test retrieval, source references and index invalidation. Acceptance prose needs executable behavior checks. |
+| `make_copy`, `run_tool`, `run_checks`, `BuildRequests.process` | Worktree-based coding, Claude/Aider adapters, checks and bounded repair retries exist. Worktrees/filtered environment/dependency links share Windows-user permissions; establish reviewed process, filesystem and network boundaries with sanitized fixtures. |
+| `choose_tool` | Medium/large tasks can automatically prefer Claude. Add explicit provider selection and a validated local default; no hidden paid/cloud fallback. No Codex/OpenCode/native ZAE development adapter is established by this inspection. Extend the existing service rather than duplicate it. |
+| `review_change_locally` | Seek performs a bounded, redacted loopback review. Review is advisory and an unavailable review can still leave a change ready. Define review completion/findings and risk-specific gates; self-approval is never a release condition. |
+| `BuildRequests.approve`, `undo`, `core/api/build_routes.py` | Owner-controlled integration and code Undo exist. Revalidate tested base, dirty state, dependencies, patch and resulting tree before promotion. Approval must bind to exact hashes; code reversion does not establish safe reversal of a data migration. |
+| `rebuild_app`, `desktop/src/components/tools/BuildRequests.tsx`, `scripts/zae.ps1`, native updater | Build/install paths exist. Track building, installing, verified, failed and recovered states through final health/hash receipts; an approved commit or detached rebuild process is not a verified release. |
+| `core/brain/conductor.py`, existing job/continuity/memory services | Code/research routes to Study and the architecture already separates reasoning from authority. Add development task packets, checkpoints, cancellation, evidence retrieval and outcome learning using these existing boundaries. |
+| `core/assistant_platform/build_ideas.py::NightlyIdeas`, Core startup registration | Evidence-based improvement suggestions and a nightly service already exist in source. Evaluate and strengthen them rather than rebuilding the earlier option-3 proposal. Their current live quality/scheduling is not reverified by this inspection; suggestions never authorize coding or promotion. |
+| `.github/workflows/zaenia-ci.yml` | Current workflow checks Python syntax, builds the frontend and scans with Gitleaks; it has no unit-test job. Establish sanitized clean-checkout fixtures and an automated unit-test gate. Historical assessment test/error totals are not current clean-clone evidence. |
+| `scripts/model_bench/`, Claude notes “Coding-model experiment” | A 38-task small-function benchmark and Claude-reported runs exist. This is a useful candidate-model pilot, not an independently reproduced real-repository upgrade success rate. It does not justify a model switch or frontier-level coding claim. |
+
+First implementation packet: **reproduce clean-checkout test failures using sanitized fixtures and add a unit-test CI gate**, recording a reproducible baseline rather than reusing the old “about 500 tests / 28 errors” assessment. Next, make development dispatch explicit and produce a task/release baseline in the existing build helper. Before broader autonomy, close the tested-change integrity and isolation gaps above. Implementation must preserve current working authentication, runtime versions, owner data and recovery copies.
+
+### 30.3 How ZÆNIA learns the engineering workflow
+
+During current Claude/Codex work, prepare small, owner-reviewable engineering records from observable artifacts:
+
+- Task intent, baseline commit, scope, constraints, relevant files/call paths and reasons for the chosen approach.
+- Reproduction case and acceptance checks; the proposed/accepted patch; failures, attempted corrections and independent review findings.
+- Actual commands, exit codes, test/build results, dependency/model versions, timings, sanitized resource measurements and final release/rollback receipts.
+- A concise validated lesson, when it applies, evidence links, known exceptions and the owner's corrections. Record failed approaches and uncertain conclusions distinctly.
+
+Retrieve relevant validated records when planning a similar task, then inspect the current source again. Reference accepted code and evidence rather than copying a conversation's unsupported assertions. Exclude credentials, raw owner conversations, private assessments/calendars/health data and production databases from development examples unless specifically authorized for a defined purpose. Repository text, tool output and learned records remain untrusted inputs to Engine 3.
+
+Use separate development examples and held-out evaluation tasks; do not expose hidden acceptance answers to the coding agent or its memory index. Fine-tuning/distillation is an optional later experiment on approved, suitable data and models, only if measured failures warrant it. Saving examples does not transfer another provider's model weights or establish equivalent general capability.
+
+**Experience-import contract (design accepted 2026-11-05; source-selection review pending).** The owner chose **both** reviewed task packets/source references/sanitized Git diffs and a future scoped local Claude/Codex session-log importer. This accepts both learning paths; the selected importer option includes review of its access and exclusions before it reads private logs. The importer must show exact selected sources, fields, time range and exclusions; preview extracted records for redaction/review; preserve provenance and confidence; define local storage, retention, correction/deletion and backup limits; and prevent automatic cloud upload or admission of session instructions as authority. No private session folders were read or ingestion enabled by this planning update. Review any new persistence/export change under its own scope. `build_helper.run_tool` currently launches Claude with `--no-session-persistence`, so “every session is already a complete textbook” is not an established fact. Preserve that privacy setting during planning. Fine-tuning, provider-terms/model-license review and any external disclosure remain separate future decisions.
+
+### 30.4 Milestones leading to October 2027
+
+These are dated delivery checkpoints within the existing phases, not a new competing architecture or phase scheme. A failed gate remains open and is reported; elapsed time does not make it pass.
+
+| Period | Deliverable / exit evidence |
+|---|---|
+| Nov–Dec 2026 | Record a clean reproducible baseline, real hardware/runtime/model manifests and current task outcomes. Reproduce fixture failures from a clean copy, add sanitized fixtures and a unit-test CI gate. Define task packet/release receipt schemas and a representative sanitized task corpus. Resolve explicit local/cloud dispatch and prioritize tested-change integrity. Preserve a separate known-good restore. |
+| Jan–Feb 2027 | Complete the local coding runner through the existing helper, with scoped tools/commands, meaningful isolation, bounded retries, cancellation and restart checkpoints. It reads only approved project material and cannot approve itself or inherit production credentials. Demonstrate small fixes without provider calls. |
+| Mar–Apr 2027 | Improve repository understanding and reliable small changes: code/test retrieval, precise patching, regression reproduction and independent review. Demonstrate requested frontend and backend behavior on unfamiliar task families; publish first-attempt and repaired results separately. |
+| May–Jun 2027 | Handle medium multi-file features and integrations. Complete dependency review, exact-version approval, native/web release preparation, verified install receipts and tested rollback/recovery. Demonstrate failures such as stale branches, interrupted builds and unavailable models. |
+| Jul–Aug 2027 | Tune the local planner/coder/reviewer choices and context budgets on identical workloads. Test difficult edge cases, interruptions, revoked access and compromised/untrusted task inputs. Rehearse the maintenance suite with cloud development tools/credentials unavailable and restore in a separate environment. |
+| September 2027 | Run a 30-day supervised normal-use trial, resolve release-blocking failures and freeze the release candidate by September 30. Include routine real requests, local operation, restart/resume, missing dependencies and recovery evidence. |
+| October 2027 | Run the frozen held-out acceptance suite, review measured reliability/resource use and obtain owner acceptance of the supported scope. Verify provider-independent maintenance and recovery before deciding on disconnection or SSD/OS packaging. If gates fail, retain the last known-good release and name the unresolved gaps. |
+
+### 30.5 Acceptance scorecard — proposed targets, not achieved results
+
+Use at least **100 distinct held-out repository-change task families**, with routine/medium categories and task-type quotas fixed before evaluation (initial allocation: 60 routine, 40 medium). Cover Python/backend, TypeScript/UI, integrations and regressions. Add a separate safety/fault/recovery suite and exploratory large changes. Repeated runs of one task are not independent tasks. Keep tuning/examples separate; contaminated tasks need replacement before a new acceptance run.
+
+Initial numerical goals below are planning targets for owner review. Establish actual baselines first and record any target revision before the evaluated run, with its reason. Do not change denominators or success definitions after seeing results.
+
+| Measure | Proposed acceptance target / definition |
+|---|---|
+| Routine changes | At least 95% technically complete within an initial attempt plus at most two repair attempts; first-attempt target at least 80%. Completion requires the requested behavior, relevant checks, resolved blocking review findings and a reviewable release package. |
+| Medium multi-file changes | At least 85% technically complete within the same repair budget. Report first-attempt performance separately; do not extrapolate routine scores to medium/large work. |
+| Release integrity | Every accepted release has an exact baseline/patch/artifact receipt, required checks and explicit owner approval before effects. All required authorization/data-integrity tests must pass, with no observed critical secret exposure or unauthorized action in the acceptance suite. |
+| Escaped regressions | Zero unresolved critical regressions during the 30-day trial. Record all other escaped regressions, severity, affected releases, repair time and owner rework; agree the noncritical release threshold before the trial. |
+| Independence | The supported maintenance suite completes without required Claude/Codex processes, provider calls or hidden fallback in the isolated independence trial. Loss of an optional online source is reported honestly. |
+| Recovery | Exercise each declared rollback class in a separate environment. Native/web artifacts, source/dependency versions and state-compatibility checks must be recoverable. Non-reversible migrations require an approved backup/restore plan; Undo is not assumed sufficient. |
+| Efficiency | Compare identical task families on the measured workstation: median/p95 completion time, CPU/GPU/RAM/VRAM, model calls/tokens, repair count, peak disk and observed energy where available, **per accepted task**. Set hardware-specific numerical budgets from the baseline; maintain reliability and security floors while optimizing. |
+
+For each cohort report raw passed/attempted counts and task-level uncertainty, first-attempt success, success after each repair, human-assisted results, unresolved failures, refusals/unsupported tasks, timeouts, cancellations and escaped regressions. A critical review or environment failure must remain visible. Correct refusal is scored in the safety suite and must not inflate coding success. An in-scope task remains in its denominator after a failure; unexplained timeouts/abandonment count as unsuccessful. Owner approval alone is not technical assistance; owner/Claude/Codex corrective coding or hidden-test hints are.
+
+The 95% routine and 85% medium numerators include only technically complete outcomes without that corrective assistance. Assisted completions are reported separately while the assigned tasks remain in their original cohort denominators. Owner approval and material requirements clarification are allowed. Efficiency per accepted task uses total cohort cost, including unsuccessful/abandoned work and every repair attempt, divided by accepted outcomes; report unsuccessful-task timing separately alongside successful-task median/p95 so wasted work remains visible.
+
+“Technically complete” is distinct from “approved and deployed”: report both. Owner-declined or deferred releases retain their technical result and never count as installed. Existing tests alone, a plausible diff, model agreement or an assistant's success statement cannot establish that the requested behavior works. Independent review combines deterministic checks with a separate review context/model where useful; related local models may share failure modes.
+
+#### ZAE-Bench protocol (planned)
+
+Use **ZAE-Bench** as the name of the repository-task evaluation program, extending `scripts/model_bench/` where suitable. The existing small-function benchmark remains a separate pilot cohort. There is no claim that a complete repository-upgrade harness or new CI job has been implemented by this roadmap.
+
+- Curate historical Claude/Codex/ZÆNIA changes into development replays using the pre-change baseline, a sanitized requirement and verified behavioral checks. Select coherent, reproducible task families; exclude mixed changes, merges, no-op/tool-junk commits, secrets/private data and cases whose intended behavior cannot be established. Do not automatically turn every commit into an example.
+- Aim for an initial approximately 50 usable **development** task families after inventory, growing toward approximately 150 combined development/evaluation families by October 2027. Reserve at least the 100 held-out families specified above. Inventory may show more examples are required; these counts are collection targets, not existing assets.
+- A task's behavior specification is the oracle. Validate that the known-bad baseline fails the relevant check and a reviewed reference solution passes. Post-change tests alone are insufficient; include edge cases and regression expectations, accept alternative correct patches, and keep evaluator fixtures/tests outside the coder's writable scope.
+- Separate weekly development replay/tuning from the final frozen holdout. A task or related task family admitted into experience memory or used for tuning cannot remain a hidden final examination. Block access to post-task diffs, future Git objects/refs/branches, session examples and hidden evaluator answers in the evaluated coding environment. A shared worktree alone does not provide that isolation. Version and replace contaminated cases before the next scored acceptance run.
+- Record baseline/patch/reference/evaluator/dependency/model versions, environment, task size fixed before execution, allowed tools/provider, initial result and each repair result. Preserve raw counts and task-level uncertainty. An owner approval is a separate receipt; it must not redefine which technical attempt was first.
+- Report local unassisted, hybrid/cloud-assisted, owner-assisted, technically complete, approved and verified-deployed results separately. Cloud fallback after two local failures remains a cloud-assisted result, even if it eventually passes. It cannot count toward local-independent coding success.
+- Weekly paired checks compare the same task families and conditions against the retained baseline. Require critical safety gates and report cohort-specific quality/resource changes and uncertainty. “Overall score did not drop” alone must not hide a safety failure, a weak task type or a large efficiency regression; predeclare release thresholds and do not promote on noisy aggregate scores alone.
+- Also track live approval without redo, seven-day code-Undo/rollback rates and root causes, cloud-task share/spend and routine completion times. Owner-declined scope/style and deferred decisions are distinct from technical defects. A seven-day observation window must mature before its release contributes a final Undo rate. Measure cloud share over all assigned in-scope task families, including failed/fallback attempts, and include all cohort costs in efficiency.
+
+### 30.6 Efficiency strategy and model roles
+
+Keep the current three engines and four brain roles. Talk explains progress and results; Seek retrieves relevant code/docs/evidence; Study plans or implements coding work using the best **measured** local candidate; Keep maintains small checkpoints/summaries when resources permit. The Conductor schedules work, preserves foreground/owner priorities and enforces context/time budgets; Engine 3 retains execution authority. Planner, writer, tester and reviewer are development task roles, not automatically four additional resident models.
+
+Use deterministic search, parsers, type checking, formatters and test runners for work they can verify directly. Retrieve bounded relevant context with provenance and invalidate caches when source/dependencies change. Start with focused checks during repair, then required broader/security/integration checks before release. Avoid repeated identical retries; preserve an evidence checkpoint when the repair budget is exhausted. Cancel outdated work and retain owner-prioritized background work through the existing job system.
+
+Compare local model candidates on actual repository changes before switching the code worker. Load models within measured RAM/VRAM headroom and pause/yield background work as necessary. Quantization, specialized coder models, caching and later training are experiments with quality/resource tradeoffs. No model size, new GPU, subscription or paid API purchase is implied by this roadmap. Reassess capabilities and hardware needs at the dated checkpoints using evidence.
+
+Claude and Codex remain development teachers/reviewers during the transition, assigned bounded work according to the efficiency draft. Their contribution produces reviewable artifacts and checks; ZÆNIA's own unfamiliar-task performance decides when each workflow is independent. Owner-approved production integration, protected-code review, secret handling and spending decisions remain in force after October 2027.
+
+Coding is a scheduled background development **job** through the Conductor/existing job services; it is not assigned to the Keep model merely because it runs in the background. Study or a separately benchmarked coding candidate performs the heavy work; Keep supplies small summaries/checkpoints. Pause/yield for foreground conversation and gaming according to the existing priority policy, preserving background work the owner explicitly marks as priority. Phone/voice/chat requests retain authenticated origin and existing start permissions. Phone requests/review never substitute for PC release approval, and nightly ideas do not start coding tasks by themselves.
+
+### 30.7 Reconciliation of the supplied “Self-Upgrading Coder” draft
+
+The owner supplied Claude's draft labeled “Nov 5, 2026.” It was incorporated/source-inspected on **2026-11-04**, using the owner's client date at that time; the follow-up owner choices below were confirmed on **2026-11-05**. Its disciplined read/search/plan/precise-edit/test/review/handoff loop, experience retrieval, named benchmark and clean-checkout/CI priority are adopted as planned requirements above. Small precise patches are preferred; an intentional whole-file replacement is not categorically forbidden when justified and reviewed.
+
+Correct stale starting-state claims: the coding helper, nightly ideas and four-brain Conductor have implementations in current source; implementation is distinct from complete live validation. Configured roles are Talk `qwen3.5:4b`, Seek `qwen3.5:9b`, Study `qwen3:14b` and Keep `qwen3:1.7b`. Latest Claude notes report testing `qwen2.5-coder:14b` without replacing Study. Actual installed models, hardware availability and clean-checkout test totals require fresh measurement; do not treat old proposal lists or historical errors as today's inventory. The missing unit-test CI gate is confirmed in the inspected workflow. No source, model or live-system change is made by this reconciliation.
+
+The assertion that a 16 GB local model will or will not match a future Claude/Codex system is not an established result. Measured memory headroom and task outcomes determine supported scope and routing. A sanitized copy without `data/` or `.env` is useful, but cannot by itself stop an unrestricted Windows-user subprocess from reading other private files or disclosing sensitive source/history. Close the actual isolation/disclosure gaps before increasing tool autonomy.
+
+Keep alternative metrics and authority decisions explicit:
+
+| Item from supplied draft | Reconciled status |
+|---|---|
+| 85% small / 70% medium / 60% large on the first approved try, plus ten points after repairs | Alternative first-attempt/hybrid planning targets, not measured results or a replacement for section 30.5's 95% routine / 85% medium within two repairs. Define first technical attempt separately from approval; large hybrid work remains a separate exploratory cohort. Resolve final numerical targets before a scored release run. |
+| Routine work under five minutes; cloud share under 30%; approval without redo at least 80%; regressions/Undo under 5% | Proposed operational targets awaiting workload/hardware baselines and agreed denominators. They do not relax zero unauthorized effects, critical regression gates or independent technical acceptance. Report median/p95, failed-attempt costs and mature observation windows. |
+| Local first, required cloud for larger October work | **Owner selected 2026-11-05: local independence for supported tasks; optional cloud for larger work.** The supported-task acceptance suite must work without required Claude/Codex calls. Larger-work cloud help is an optional path under existing task/disclosure/spending permissions and is scored separately; a cloud-written patch does not count as local coding independence. |
+| Read Claude/Codex session folders or turn on persistence | **Owner selected 2026-11-05: both reviewed engineering records and a future scoped local session-log importer.** Its access/exclusion review remains part of the selected importer design before private logs are read. This does not enable ingestion, change session persistence, authorize unrelated folders, approve fine-tuning or permit cloud upload. No private logs were inspected during this planning update. |
+| Monthly cloud budget | No new paid usage is authorized by the supplied draft. Record an owner-selected cap and billing mode before enabling paid dispatch; exhausted/unavailable capacity must checkpoint rather than silently switch providers or spending paths. |
+| A 24–32 GB GPU upgrade | A possible later option, not a purchase recommendation or approved change. Decide after measured task-quality, latency and memory constraints; preserve the free-first plan meanwhile. |
+
+The owner answered both design choices on **2026-11-05**: local independence with optional cloud for larger work, and both learning paths with the scoped importer's access/exclusion review retained. Budget, hardware, exact import-source scope and any additional data disclosure remain separate decisions. Section 30 remains the shared source of truth for Claude/Codex rather than creating a second competing phase plan. These accepted design choices do not mark coding independence or the importer as implemented or verified.
+
+## 31. Stream Studio — Twitch and YouTube automation
+
+**Owner request, 2026-11-06:** use ZÆNIA for Twitch and YouTube as a replacement for Streamer.bot. Detailed scope, official API references, architecture, migration and acceptance gates are in [ZAENIA_Stream_Studio_Plan.md](ZAENIA_Stream_Studio_Plan.md). Status: **proposed, not implemented**. This request is for a plan; it does not enable account connections, moderation, platform writes or deployment.
+
+Read-only source inspection found existing Conductor, background jobs, game-mode/model coordination, action-history/approval patterns, owner-authenticated controls, speech queues and private notifications. No Twitch, YouTube Live Chat, OBS WebSocket or Streamer.bot adapter was found in the searched application code/docs. Music platform records currently describe disconnected project/release tracking and do not establish streaming integration. These are source observations, not live verification.
+
+### 31.1 Architecture and interface
+
+Add a proposed **Stream Studio** workspace under **Create**, preserving the existing appearance. It provides combined/platform chat, deterministic command/action editing, alerts/overlays, allowlisted OBS controls, moderation review, connections and measured session reports. OBS continues capture/encoding/transmission; simultaneous video distribution and account eligibility are separate prerequisites.
+
+Use platform adapters → normalized event inbox/state → deterministic rule/role checks → bounded action queues → platform/OBS/public-output adapters → effect receipts/recovery. Reuse the three engines and current four-brain Conductor. CPU-based commands/alerts must work with all models unavailable; optional local AI drafts only within approved public context. Keep Study/development work off-air by default, reconcile existing game mode, honor owner priorities and measure game/OBS resource impact.
+
+Viewer input is untrusted and cannot access owner tools, memory, calendar, health, files or private chat routes, sessions, retrieval namespaces or caches. Public clients never receive owner API credentials. Broadcast TTS/alerts require their own audio route and a verified stream/recording isolation test; capturing a shared assistant process or broad desktop audio can leak private speech. Provide an independent OBS-native public-source mute fallback. Preserve owner authentication and Calm/password boundaries. Learning cannot authorize stream actions or alter security policy.
+
+### 31.2 Platform and migration constraints
+
+Twitch uses installed-client OAuth/EventSub WebSocket plus supported chat/moderation endpoints with feature-specific scopes. Handle duplicates, revocation, reconnect gaps and delivered-action results. Rewards created through another application may require reviewed recreation/mapping before ZAE can manage them. YouTube uses `liveChatMessages.streamList`, continuation tokens and a rate/quota-aware fallback; account writes require OAuth. Preserve membership/subscriber distinctions, initial-history handling and gift-combo update semantics. Do not promise complete per-viewer likes/watch time or identical native rewards across platforms. Recheck official API capabilities during implementation.
+
+Inventory the owner's required Streamer.bot workflows before implementation. Preserve and restore-test the known-good setup; import only reviewed disabled drafts and manually map custom scripts/plugins. Replay sanitized fixtures, run read-only shadow mode with all effects suppressed and separate test counters/ledgers, rehearse public/private output separation, then transfer one workflow at a time with one executor. Retire Streamer.bot after required parity, at least three successful full sessions and a recovery/rollback trial. Never present a temporary bridge as a completed independent replacement.
+
+Combined chat is owner-only. Review current simulcast terms and the owner's applicable agreement before enabling any public cross-platform activity or destination-promoting commands. Shared OBS audio/video reaches every configured destination; public projections need explicit destination policy, while private combined chat/moderation panels remain excluded from capture.
+
+### 31.3 Delivery order and evidence
+
+1. Scope, test baseline and known-good backup/restore; review account identities, public context and permissions.
+2. Local deterministic rules, bounded queues, synthetic replay, read-only OBS health, UI preview and emergency public-output stop.
+3. Twitch read-only pilot, then specifically enabled commands/alerts/OBS actions after audio and authorization checks.
+4. YouTube live chat/events, quota reporting, combined chat and migration parity.
+5. Reviewed moderation/reward management, owner voice/phone controls, then optional public AI and efficiency profiles.
+6. Workflow cutover, measured live sessions and documented rollback/release receipts.
+
+Evidence must cover duplicate/update/history handling, queue expiry, token/quota failures, restart/reconnect, ambiguous external results, viewer injection, private audio/credential isolation and 10× measured normal event load. Report source/unit/replay/integration/live status separately. Native desktop and `desktop/dist-web` builds plus owner-authorized install/served-site verification apply to implementation releases; this documentation update needs no app build. Section 30's October 2027 coder objective and clean-checkout/CI priorities remain intact. No installation, new dependency, subscription, account change, production action, commit, merge or push is performed by recording this plan.
+
+## 32. Publication of accumulated assistant updates — 2026-11-07
+
+**Owner request:** commit and publish remaining local work to GitHub. Publication is prepared on `codex/pending-updates-2026-11-07` in `.tmp/pending-updates-publish-20261107`, based on current `origin/main` at `ccc3b93`. Password, narrated-file and MediaPipe/Fusion changes are already in that main history; preserve them rather than replaying older local files over them. This publication request does not activate Stream Studio or the October coding roadmap, and does not request a live Core restart or installed-app replacement.
+
+### 32.1 Included changes and review corrections
+
+- Publish accumulated Brief-by-phrase controls, phone access, read-only SecurityModel/group rendering, SE terminology, configurable hand shortcuts/taught poses/snap detection, tool-artifact filtering and prototype local evaluation source. Existing authentication, owner proofs and Calm guards remain in force.
+- Explicit repeated Brief requests generate a fresh briefing; the existing in-flight guard prevents duplicate requests. Pass the phone condition explicitly so the phone retains its button while the desktop uses requests by words.
+- Open-palm Stop takes priority over taught/custom shortcuts, including two-hand shortcut mode and ordinary action cooldowns. Reset clears taught-pose timing, preventing tracking interruptions from resuming a stale partial hold. A simultaneous Stop suppresses the custom action.
+- Preserve the already-published Constellation/Fusion selector and synthetic model-practice target. Older local copies that removed those shipped integrations were reviewed and corrected before publication.
+- Generated-code benchmarks are disabled by default and require explicit `--allow-unsafe-local-execution` throughout the Python/TypeScript paths. Python `-I`, timeouts and Node `vm` are not OS isolation. Correct the documentation; reference-only checks use fixed trusted repository fixtures. Gate regressions mock candidate execution and do not run models, generated candidates or owner records.
+- Include the October 2027 roadmap decisions, efficiency draft, Stream Studio proposal and Claude/Codex handoffs with their planned/implemented distinctions intact. No new subscriptions, dependencies, platform credentials or raw session-log access are authorized.
+
+### 32.2 Publication privacy and evidence
+
+An unpublished local commit contains coding-tool history and binary caches. The clean publication uses reviewed source changes on current main and does not inherit that commit or publish its private artifacts. Do not push the older shared branch wholesale. Do not rewrite existing remote history; existing tool-artifact filtering also does not claim to sanitize historical commits.
+
+Completed checks: 112 focused backend tests; 9 generated-execution-gate tests; all 28 desktop Node test scripts; TypeScript; 427 Python source files parsed with Python 3.11 grammar. Runtime tests use the installed project Python **3.13.15**; the launcher reports no registered Python 3.11 runtime, so actual 3.11 execution is not independently verified. Initial sandbox temporary-file permission errors were resolved by keeping test fixtures in an isolated writable worktree directory, without changing production permissions.
+
+Final release checks passed: browser Vite build to `desktop/dist-web`, desktop Vite build and native Tauri release build (`--no-bundle`), including the preserved lazy Fusion viewer; staged Gitleaks found no leaks. Existing chunk-size/dynamic-import warnings remain nonfatal. Native output is in the shared ignored Cargo target; website output is in the isolated publication worktree. No camera/microphone trial, real Brief generation, password enrollment/unlock, model inference, streaming account connection, live app installation or served-site replacement is claimed by these source checks.

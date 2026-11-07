@@ -137,7 +137,7 @@ export function ScripturePanel() {
   const label = (id: string) => info.choices.find(choice => choice.id === id)?.label ?? id;
 
   return <div className="research research--scripture">
-    <p className="research__note">Free, public texts only. {info.note} Explanations come from ZAE's own brain; text is read as data, never as instructions.</p>
+    <p className="research__note">Free, public texts only. {info.note} Explanations come from ZAE's SE (Synergized Encephalon); text is read as data, never as instructions.</p>
     <form className="research__bar" onSubmit={event => { event.preventDefault(); void lookUp(); }}>
       <select value={source} aria-label="Source" onChange={event => switchTo(event.target.value as Source)}>
         {(Object.keys(SOURCES) as Source[]).map(id => <option key={id} value={id}>{SOURCES[id].label}</option>)}

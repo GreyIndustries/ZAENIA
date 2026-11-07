@@ -122,6 +122,34 @@ class FlowTest(RepoCase):
         self.assertIn("locked files", done["step"])
         self.assertFalse((self.root / "core" / "foundation").exists())
 
+    def test_a_tools_own_files_are_not_part_of_the_change(self):
+        real_edit = self.edit
+
+        def messy(folder):
+            real_edit(folder)
+            (folder / ".aider.chat.history.md").write_text("# chat\n", encoding="utf-8")
+            (folder / ".aider.tags.cache.v4").mkdir()
+            (folder / ".aider.tags.cache.v4" / "x.val").write_text("cache", encoding="utf-8")
+        self.edit = messy
+        store = self.requests()
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        done = store.process(item["id"])
+        self.assertEqual(done["status"], "ready", done.get("step"))
+        self.assertEqual(done["changed"], ["core/colour.py"])
+        self.assertNotIn(".aider", done["diff"])
+
+    def test_a_run_that_only_leaves_tool_files_changed_nothing(self):
+        def junk_only(folder):
+            (folder / ".aider.input.history").write_text("x", encoding="utf-8")
+        self.edit = junk_only
+        store = self.requests()
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        done = store.process(item["id"])
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("didn't change anything", done["step"])
+
     def test_reject_deletes_the_branch(self):
         store = self.requests()
         item = self.draft(store)

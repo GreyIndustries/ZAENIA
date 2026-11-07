@@ -68,7 +68,7 @@ export function WebAgentPanel() {
   const current = jobs.find(job => job.id === open) ?? jobs[0];
 
   return <div className="research">
-    <p className="research__note">Ask ZAE to research anything: she searches the web, reads up to six pages and answers with numbered sources, on her own brain. You can also say “research …” or “watch the topic …”. Only your search words and ordinary page requests leave the PC; page text is read as data, never as instructions.</p>
+    <p className="research__note">Ask ZAE to research anything: she searches the web, reads up to six pages and answers with numbered sources, on her SE (Synergized Encephalon). You can also say “research …” or “watch the topic …”. Only your search words and ordinary page requests leave the PC; page text is read as data, never as instructions.</p>
     <form className="research__bar" onSubmit={event => { event.preventDefault(); void ask(); }}>
       <input value={question} maxLength={500} aria-label="What should ZAE research?" placeholder="What should I research? e.g. best GPU under $500 right now" onChange={event => setQuestion(event.target.value)}/>
       <button type="submit" className="research__primary" disabled={question.trim().length < 3}>Research</button>

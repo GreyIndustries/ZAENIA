@@ -13,3 +13,6 @@
 .browser-briefing__panel audio[hidden]{display:none}
 .browser-briefing__error{color:#ffc7ac}
 @media(max-width:760px){.browser-briefing{top:10px;right:12px;max-width:calc(100% - 24px)}.browser-briefing__panel{width:calc(100vw - 48px);max-height:50dvh;padding:15px}.browser-briefing__toggle{min-height:40px;padding:8px 13px;font-size:12px}}
+
+.browser-briefing__head>span{display:flex;gap:8px}
+.browser-briefing:not(.browser-briefing--open):not(:has(.browser-briefing__toggle)){pointer-events:none}

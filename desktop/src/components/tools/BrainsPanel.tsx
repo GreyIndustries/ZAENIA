@@ -24,7 +24,7 @@ export function BrainsPanel() {
   if (!LIVE_API) return <p className="cs-muted">This needs the ZÆNIA server: open it in the desktop app.</p>;
   return <div className="cs">
     <div className="cs-head">
-      <div><span className="cs-kicker">Brains & tools</span><h2 className="zx-title">What thinks for ZAE, live</h2></div>
+      <div><span className="cs-kicker">SE & tools</span><h2 className="zx-title">The Synergized Encephalon, live</h2></div>
       {roster && <span className={roster.ollama.running ? "cs-good" : "cs-bad"}>{roster.ollama.running ? `Ollama ${roster.ollama.version} running on this PC only` : "Ollama isn't running"}</span>}
     </div>
     {error && <p className="cs-error" role="alert">{error}</p>}

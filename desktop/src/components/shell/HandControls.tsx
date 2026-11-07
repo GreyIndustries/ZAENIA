@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ACTION_LABEL, BONES, GestureActions } from "../../core/gestureActions";
+import { ACTION_LABEL, BONES, GestureActions, shapeOf } from "../../core/gestureActions";
+import { SnapDetector } from "../../core/snapDetector";
+import { SNAP_EVENT, readSnap, saveSnap, type SnapSettings } from "../../core/handPoses";
+import { MATCH_LIMIT, MATCH_MARGIN, MAX_COMMAND, MAX_NAME, MAX_POSES, POSES_EVENT, POSE_ACTIONS, buildPose, cleanLabel, distance, makeMatcher, readPoses, savePoses, template, type PoseAction, type TaughtPose } from "../../core/handPoses";
 import type { GestureAction } from "../../core/gestureActions";
 import { DEFAULT_HAND_SETTINGS, HandMotionController, normalizeHandSettings, type HandDetection, type HandFrame, type HandSettings } from "../../core/handGestures";
+import { CUSTOM_SHAPES, MAX_TEXT, SHORTCUTS_EVENT, cleanText, readShortcuts, saveShortcuts, withShortcut, withoutShortcut, type CustomShape, type CustomShortcut } from "../../core/gestureShortcuts";
 import { HAND_ACTIVITY_EVENT, HandTargetSession, type VisualHandMotion } from "../../core/handTargets";
 import "./HandControls.css";
 
@@ -24,6 +28,14 @@ export function HandControls({ enabled, suspended = false, speaking, onDisable, 
   const modeRef = useRef(mode); modeRef.current = mode;
   const [state, setState] = useState("Off"), [frame, setFrame] = useState<HandFrame>(EMPTY), [target, setTarget] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null), [configOpen, setConfigOpen] = useState(false), [calibrating, setCalibrating] = useState(false);
+  const [custom, setCustom] = useState<CustomShortcut[]>(readShortcuts);
+  const [newShape, setNewShape] = useState<CustomShape>("thumbsUp"), [newText, setNewText] = useState("");
+  const [poses, setPoses] = useState<TaughtPose[]>(readPoses);
+  const [poseName, setPoseName] = useState(""), [poseAction, setPoseAction] = useState<string>("close"), [poseText, setPoseText] = useState("");
+  const [teaching, setTeaching] = useState(false);
+  const teach = useRef<{ began: number; frames: (number[] | null)[]; last: { x: number; y: number }[] | null; shown: number; draft: { name: string; action: PoseAction } } | null>(null);
+  const [snap, setSnap] = useState<SnapSettings>(readSnap), [snapMic, setSnapMic] = useState("");
+  const snapRef = useRef(snap); snapRef.current = snap;
   const calibration = useRef<Calibration | null>(null);
   const previewRef = useRef<HTMLDivElement>(null), skeletonRef = useRef<HTMLCanvasElement>(null), cursorRef = useRef<HTMLDivElement>(null);
   useEffect(() => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* Optional preferences only. */ } }, [settings]);
@@ -34,6 +46,28 @@ export function HandControls({ enabled, suspended = false, speaking, onDisable, 
     let stream: MediaStream | null = null, activeSettings = settingsRef.current, activeMode = modeRef.current;
     let engine = new HandMotionController(activeSettings);
     const shortcuts = new GestureActions();
+    const loadCustom = () => shortcuts.setCustom(readShortcuts());
+    loadCustom(); window.addEventListener(SHORTCUTS_EVENT, loadCustom);
+    const loadPoses = () => shortcuts.setPoses(makeMatcher(readPoses()));
+    loadPoses(); window.addEventListener(POSES_EVENT, loadPoses);
+    // Teaching a pose: a 3 second countdown to get ready, then 1.5 seconds of the held pose are averaged.
+    const teachStep = (hands: HandDetection[], at: number): boolean => {
+      const t = teach.current; if (!t) return false;
+      const now = performance.now(), wait = 3000, hold = 1500;
+      if (now - t.began < wait) { const left = Math.ceil((wait - (now - t.began)) / 1000); if (left !== t.shown) { t.shown = left; setNotice(`Get your pose ready… ${left}`); } return true; }
+      if (hands.length !== 1) { if (now - t.began > wait + hold + 4000) { teach.current = null; setTeaching(false); setNotice("I couldn't see one hand. Try again."); } return true; }
+      t.last = hands[0].points; t.frames.push(template(hands[0].points));
+      if (now - t.began < wait + hold) { if (t.shown !== -1) { t.shown = -1; setNotice("Hold it… recording"); } return true; }
+      teach.current = null; setTeaching(false);
+      const built = buildPose(t.frames), reserved = t.last ? ["five", "four", "pinch"].includes(shapeOf(t.last) ?? "") : false;
+      if (!built) { setNotice("The hand moved too much or was hard to see. Hold it still and try again."); return true; }
+      if (reserved) { setNotice("That looks like an open hand or pinch, which are reserved. Try another pose."); return true; }
+      const clash = readPoses().find(pose => distance(pose.template, built) < MATCH_LIMIT + MATCH_MARGIN);
+      if (clash) { setNotice(`Too close to "${clash.name}". Try a clearly different pose.`); return true; }
+      const next = [...readPoses(), { id: `p${Date.now().toString(36)}`, name: t.draft.name, template: built, action: t.draft.action }].slice(0, MAX_POSES);
+      setPoses(next); savePoses(next); setNotice(`Saved "${t.draft.name}". Use Shortcut gestures mode and hold it for a moment.`);
+      void at; return true;
+    };
     const session = new HandTargetSession((id, motion) => latest.current.onWindowMotion(id, motion), action => runAction(action));
     const video = document.createElement("video"); video.muted = true; video.playsInline = true; video.className = "air-hud__video";
     let worker: Worker;
@@ -102,10 +136,10 @@ export function HandControls({ enabled, suspended = false, speaking, onDisable, 
         if (!Number.isFinite(at) || at <= lastReply || performance.now() - at > 500) { cancel(); return; } lastReply = at;
         if (settingsRef.current !== activeSettings || modeRef.current !== activeMode) { cancel(); activeSettings = settingsRef.current; activeMode = modeRef.current; engine = new HandMotionController(activeSettings); }
         const hands = (Array.isArray(event.data.hands) ? event.data.hands : []).filter((h: HandDetection) => h && Array.isArray(h.points)).slice(0, 2) as HandDetection[];
-        draw(hands); if (calibrate(hands, at)) return;
+        draw(hands); if (calibrate(hands, at)) return; if (teachStep(hands, at)) return;
         const out = engine.update(hands, at, activeMode === "move" ? session.resolve : () => null);
         if (!session.consume(out)) { cancel(); return; }
-        if (activeMode === "shortcuts") { const result = shortcuts.update(hands.length === 1 ? hands[0].points : null, at, latest.current.speaking); if (result.action) runAction(result.action); }
+        if (activeMode === "shortcuts") { const result = shortcuts.update(hands.length === 1 ? hands[0].points : null, at, latest.current.speaking, out.stop); if (result.action) runAction(result.action); }
         else if (out.stop) runAction({ kind: "stop" });
         if (out.cursor && out.target && at - lastActive > 750) { window.dispatchEvent(new Event(HAND_ACTIVITY_EVENT)); lastActive = at; }
         if (cursorRef.current) { cursorRef.current.hidden = !out.cursor || activeMode !== "move"; if (out.cursor) { cursorRef.current.style.left = `${out.cursor.x * 100}%`; cursorRef.current.style.top = `${out.cursor.y * 100}%`; cursorRef.current.dataset.phase = out.phase; } }
@@ -128,9 +162,48 @@ export function HandControls({ enabled, suspended = false, speaking, onDisable, 
     const blurred = () => fail("Hand controls paused when the app lost focus. Enable them again when ready.");
     document.addEventListener("visibilitychange", hidden); window.addEventListener("blur", blurred); window.addEventListener("resize", cancel);
     navigator.mediaDevices.addEventListener("devicechange", listCameras);
-    return () => { stop(); document.removeEventListener("visibilitychange", hidden); window.removeEventListener("blur", blurred); window.removeEventListener("resize", cancel); navigator.mediaDevices.removeEventListener("devicechange", listCameras); };
+    return () => { stop(); window.removeEventListener(SHORTCUTS_EVENT, loadCustom); window.removeEventListener(POSES_EVENT, loadPoses); teach.current = null; document.removeEventListener("visibilitychange", hidden); window.removeEventListener("blur", blurred); window.removeEventListener("resize", cancel); navigator.mediaDevices.removeEventListener("devicechange", listCameras); };
   }, [enabled, suspended, camera]);
+  // Finger snap by microphone (opt-in): the audio is analysed in RAM for short bright bursts and never stored or sent.
+  useEffect(() => {
+    if (!enabled || suspended || !snap.on) { setSnapMic(""); return; }
+    let closed = false, timer = 0, stream: MediaStream | null = null, context: AudioContext | null = null;
+    const detector = new SnapDetector();
+    (async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: false, autoGainControl: false } });
+        if (closed) { stream.getTracks().forEach(track => track.stop()); return; }
+        context = new AudioContext(); const source = context.createMediaStreamSource(stream), analyser = context.createAnalyser();
+        analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0; source.connect(analyser);
+        const bins = new Float32Array(analyser.frequencyBinCount), hz = context.sampleRate / analyser.fftSize;
+        const band = (from: number, to: number) => { let sum = 0; for (let i = Math.floor(from / hz); i <= Math.min(bins.length - 1, Math.floor(to / hz)); i++) sum += 10 ** (bins[i] / 10); return sum; };
+        setSnapMic("Listening for a snap");
+        timer = window.setInterval(() => {
+          analyser.getFloatFrequencyData(bins);
+          const event = detector.update(band(2500, 9000), band(100, 1500), performance.now());
+          if (!event || latest.current.speaking) return;      // ZAE's own voice never counts
+          const action = snapRef.current[event];
+          if (action) { const said = latest.current.onAction(action); setNotice(said || ACTION_LABEL[action.kind]); window.dispatchEvent(new Event(HAND_ACTIVITY_EVENT)); }
+        }, 20);
+      } catch { if (!closed) setSnapMic("Microphone not available"); }
+    })();
+    return () => { closed = true; window.clearInterval(timer); stream?.getTracks().forEach(track => track.stop()); void context?.close(); };
+  }, [enabled, suspended, snap.on]);
+  useEffect(() => { const reload = () => setSnap(readSnap()); window.addEventListener(SNAP_EVENT, reload); return () => window.removeEventListener(SNAP_EVENT, reload); }, []);
   if (!enabled || suspended) return null;
+  const changeSnap = (patch: Partial<SnapSettings>) => { const next = { ...snap, ...patch }; if (!next.single && !next.double) next.on = false; setSnap(next); saveSnap(next); };
+  const snapChoice = (action: PoseAction | null) => action ? action.kind : "none";
+  const snapFrom = (value: string, previous: PoseAction | null): PoseAction | null => value === "none" ? null : value === "command" ? { kind: "command", text: previous?.kind === "command" ? previous.text : "brief me" } : { kind: value as Exclude<PoseAction["kind"], "command"> };
+  const addShortcut = () => { const text = cleanText(newText); if (!text) return; const next = withShortcut(custom, newShape, text); setCustom(next); saveShortcuts(next); setNewText(""); setNotice(`Saved: ${CUSTOM_SHAPES.find(shape => shape.id === newShape)?.name} → ${text}`); };
+  const startTeach = () => {
+    const name = cleanLabel(poseName, MAX_NAME), text = cleanLabel(poseText, MAX_COMMAND);
+    const action: PoseAction | null = poseAction === "command" ? (text ? { kind: "command", text } : null) : { kind: poseAction as Exclude<PoseAction["kind"], "command"> };
+    if (!name || !action) { setNotice(poseAction === "command" ? "Give the pose a name and type what it should do." : "Give the pose a name first."); return; }
+    if (poses.length >= MAX_POSES) { setNotice(`You can keep ${MAX_POSES} taught poses. Remove one first.`); return; }
+    teach.current = { began: performance.now(), frames: [], last: null, shown: 0, draft: { name, action } }; setTeaching(true); setPoseName(""); setPoseText("");
+  };
+  const removePose = (id: string) => { const next = poses.filter(pose => pose.id !== id); setPoses(next); savePoses(next); };
+  const removeShortcut = (shape: CustomShape) => { const next = withoutShortcut(custom, shape); setCustom(next); saveShortcuts(next); };
   const updateSettings = (patch: Partial<HandSettings>) => setSettings(normalizeHandSettings({ ...settings, ...patch }));
   return <>
     <div ref={cursorRef} className="hand-cursor" hidden aria-hidden="true"><span/></div>
@@ -149,6 +222,32 @@ export function HandControls({ enabled, suspended = false, speaking, onDisable, 
         <label>Sensitivity <output>{settings.sensitivity.toFixed(1)}×</output><input type="range" min="0.4" max="2" step="0.1" value={settings.sensitivity} onChange={event => updateSettings({ sensitivity: Number(event.target.value) })}/></label>
         <div className="air-hud__actions"><button type="button" disabled={calibrating} onClick={() => { calibration.current = { step: "upper-left", began: performance.now(), samples: [] }; setCalibrating(true); setNotice("Point to the upper-left of your comfortable reach and hold still."); }}>Calibrate reach</button>
           <button type="button" onClick={() => { calibration.current = null; setCalibrating(false); updateSettings({ range: { ...DEFAULT_HAND_SETTINGS.range } }); setNotice("Default reach restored."); }}>Reset reach</button></div>
+        <div className="air-hud__custom" aria-label="Finger snap">
+          <b>Finger snap (microphone)</b>
+          {(["single", "double"] as const).map(which => <div key={which} className="air-hud__snap-row"><label>{which === "single" ? "One snap" : "Two quick snaps"}<select value={snapChoice(snap[which])} onChange={event => changeSnap({ [which]: snapFrom(event.target.value, snap[which]) })}><option value="none">Nothing</option>{POSE_ACTIONS.map(action => <option key={action.id} value={action.id}>{action.name}</option>)}<option value="command">Type a request for ZAE…</option></select></label>
+            {snap[which]?.kind === "command" && <input type="text" aria-label={`Request for ${which} snap`} value={(snap[which] as { text: string }).text} maxLength={MAX_COMMAND} onChange={event => changeSnap({ [which]: { kind: "command", text: cleanLabel(event.target.value, MAX_COMMAND) || "brief me" } })}/>}</div>)}
+          <label className="air-hud__check"><input type="checkbox" checked={snap.on} disabled={!snap.single && !snap.double} onChange={event => changeSnap({ on: event.target.checked })}/> Listen for snaps {snapMic && <em>· {snapMic}</em>}</label>
+          <small>Off until you turn it on, and it uses the microphone only while hand controls are on. Audio is checked on this PC for a short bright click and is never saved or sent. ZAE's own voice is ignored. A single snap waits a moment to be sure it isn't a double. Claps or keyboard clicks may sometimes count.</small>
+        </div>
+        <div className="air-hud__custom" aria-label="Taught poses">
+          <b>Your own poses</b>
+          {poses.length === 0 && <small>None yet. Name a pose, choose what it does, then record it.</small>}
+          {poses.map(pose => <div key={pose.id} className="air-hud__custom-row"><span>{pose.name}</span><em>{pose.action.kind === "command" ? pose.action.text : POSE_ACTIONS.find(action => action.id === pose.action.kind)?.name}</em><button type="button" aria-label={`Remove pose ${pose.name}`} onClick={() => removePose(pose.id)}>Remove</button></div>)}
+          <label>Pose name<input type="text" value={poseName} maxLength={MAX_NAME} placeholder="e.g. snap hand, flat fist" onChange={event => setPoseName(event.target.value)}/></label>
+          <label>What it does<select value={poseAction} onChange={event => setPoseAction(event.target.value)}>{POSE_ACTIONS.map(action => <option key={action.id} value={action.id}>{action.name}</option>)}<option value="command">Type a request for ZAE…</option></select></label>
+          {poseAction === "command" && <label>Request<input type="text" value={poseText} maxLength={MAX_COMMAND} placeholder="e.g. brief me" onChange={event => setPoseText(event.target.value)}/></label>}
+          <button type="button" disabled={teaching || !cleanLabel(poseName, MAX_NAME)} onClick={startTeach}>{teaching ? "Recording…" : "Record pose"}</button>
+          <small>After a 3 second countdown, hold one hand still for 1.5 seconds. Fires in Shortcut gestures mode after about 0.7 seconds. Open hand, swipes and pinch stay reserved. Typed requests are sent as if you typed them.</small>
+        </div>
+        <div className="air-hud__custom" aria-label="Custom shortcuts">
+          <b>Your shortcuts</b>
+          {custom.length === 0 && <small>None yet. Pick a hand shape and type what ZAE should do.</small>}
+          {custom.map(item => <div key={item.shape} className="air-hud__custom-row"><span>{CUSTOM_SHAPES.find(shape => shape.id === item.shape)?.name}</span><em>{item.text}</em><button type="button" aria-label={`Remove shortcut for ${item.shape}`} onClick={() => removeShortcut(item.shape)}>Remove</button></div>)}
+          <label>Hand shape<select value={newShape} onChange={event => setNewShape(event.target.value as CustomShape)}>{CUSTOM_SHAPES.map(shape => <option key={shape.id} value={shape.id}>{shape.name}{custom.some(item => item.shape === shape.id) ? " (replace)" : ""}</option>)}</select></label>
+          <label>What it does<input type="text" value={newText} maxLength={MAX_TEXT} placeholder="e.g. brief me, or open my calendar" onChange={event => setNewText(event.target.value)} onKeyDown={event => { if (event.key === "Enter") addShortcut(); }}/></label>
+          <button type="button" disabled={!cleanText(newText)} onClick={addShortcut}>Save shortcut</button>
+          <small>Held for about a second in Shortcut gestures mode. The text is sent to ZAE as if you typed it, so the usual approvals apply. A camera can't tell whose hand it is, so don't use sensitive requests.</small>
+        </div>
       </div>}
       <p className="air-hud__help">{mode === "move" ? "Point, pause, pinch. Move one hand to drag or turn. Pinch both hands to resize; turn them to rotate the model. Release to let go. Open palm stops speech." : "One hand: hold 1–4 fingers for Plan/Health/Know/Create; rock sign for System; fist for Calm; peace sign for mic; thumbs up/down for supported cards. Open palm stops speech. Pinch never closes a tab."}</p>
     </aside>

@@ -42,6 +42,7 @@ import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
 import { NotificationCenter } from "./components/shell/NotificationCenter";
+import { BRIEF_EVENT, isBriefRequest } from "./core/briefRequest";
 // Module windows load when first opened, so the core appears sooner.
 const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
@@ -479,6 +480,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   function handleHandAction(action: GestureAction): string | void {
     if (calmOpen || background || document.hidden || nearCode || faceIdPending.length) return "Hand controls paused";
     if (action.kind === "stop") { interrupt(); return "Stopped"; }
+    if (action.kind === "command") { const text = action.text.trim().slice(0, 160); if (!text) return "Empty shortcut"; submit(text); return `Sent: ${text.length > 40 ? `${text.slice(0, 39)}…` : text}`; }
     if (action.kind === "home") { openSection("overview"); return "Home"; }
     if (action.kind === "calm") { goCalm(); return "Calm view"; }
     if (action.kind === "mic") { const on = !listen.alwaysWanted; toggleListening(); return on ? "Mic on" : "Mic off"; }
@@ -1056,6 +1058,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       const at = new Date().toISOString();
       setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, at }, { id: ++messageCounter.current, role: "assistant", text: fixReply, at }]);
       if (speakReplies) { speech.prime(); void speech.speak(`fix-${messageCounter.current}`, fixReply); }
+      return;
+    }
+    if (!photoQuestion && !fileQuestion && LIVE_API && isBriefRequest(message)) {
+      // The briefing panel (calendar, weather, traffic; read aloud) starts from words now that its button is gone.
+      const at = new Date().toISOString();
+      setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, at }, { id: ++messageCounter.current, role: "assistant", text: "Pulling your brief now. It plays and shows at the top right.", at }]);
+      window.dispatchEvent(new Event(BRIEF_EVENT));
       return;
     }
     const restyle = photoQuestion || fileQuestion ? null : parseAppearanceCommand(message, appearance);
@@ -1711,7 +1720,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             <button type="button" className="launch-card__later" onClick={() => setLaunchDismissed(true)}>Not now</button>
           </section>}
           {connectionNotice && <p className="phone-connect__message" role="status">{connectionNotice}</p>}
-          {LIVE_API && <BrowserBriefing onAuthLost={onAuthLost} onActive={setBriefingActive} beforePlay={speech.stop}/>}
+          {LIVE_API && <BrowserBriefing onAuthLost={onAuthLost} onActive={setBriefingActive} beforePlay={speech.stop} showButton={isPhone}/>}
           {/* Talk to ZÆNIA from every page: input bar plus a floating transcript. */}
           {clarify && <ClarifyCard original={clarify.original} questions={clarify.questions} onCancel={() => setClarify(null)}
             onSend={text => { setClarify(null); submit(text); }}/>}

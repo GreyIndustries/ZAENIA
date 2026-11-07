@@ -42,7 +42,7 @@ export const IDLE_CHOICES = [0, 1, 2, 5, 10, 15, 30] as const;
 export function idleMinutes(): number {
   try { const value = Number(localStorage.getItem(IDLE_KEY) ?? "5"); return (IDLE_CHOICES as readonly number[]).includes(value) ? value : 5; } catch { return 5; }
 }
-const SUGGESTIONS = ["Brief me", "Plan tomorrow", "Log food", "Start workout"];
+const SUGGESTIONS = ["Plan tomorrow", "Log food", "Start workout"];
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fmt = (n: number | null | undefined) => n === null || n === undefined ? "—" : Math.round(n).toLocaleString();
 const clock = (time: string) => { const [h, m] = time.split(":").map(Number); return Number.isFinite(h) ? new Date(2000, 0, 1, h, m || 0).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : time; };

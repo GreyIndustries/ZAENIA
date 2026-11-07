@@ -190,7 +190,7 @@ export function ArenaLeaderboard() {
   };
   return <div className="mv">
     <div className="mv-head"><div><span className="mv-kicker">Your votes · {Math.round(total / 2)} rounds</span><h2 className="zx-title">Leaderboard</h2></div>
-      <span className="zx-inset sv-pill">ZAE's brain now: <b>{brain ?? "…"}</b></span></div>
+      <span className="zx-inset sv-pill">The SE's main model now: <b>{brain ?? "…"}</b></span></div>
     {error && <p className="mv-error">{error}</p>}
     <div className="sv-split">
       <section className="zx-card sv-table" role="table" aria-label="Models ranked by your votes">
@@ -203,14 +203,14 @@ export function ArenaLeaderboard() {
           <span>{r.wins}–{r.rounds - r.wins}</span>
           <span className="mv-muted">{r.avgSeconds ? `${r.avgSeconds} s` : "—"}</span>
           <span className="mv-muted">{size(r.model)}</span>
-          <button type="button" className="zx-inset" disabled={r.model === brain || busy !== null} onClick={() => void choose(r.model)}>{r.model === brain ? "Current brain" : busy === r.model ? "Switching…" : "Make ZAE's brain"}</button>
+          <button type="button" className="zx-inset" disabled={r.model === brain || busy !== null} onClick={() => void choose(r.model)}>{r.model === brain ? "Current SE model" : busy === r.model ? "Switching…" : "Make ZAE's brain"}</button>
         </div>)}
       </section>
       <aside className="sv-stack">
         <section className="zx-card"><h3>Installed models</h3>
           {(data?.models ?? []).filter(m => !/embed/i.test(m.name)).map(m => <div key={m.name} className="mv-row sv-line"><span className="sv-mono">{m.name}</span><span className="mv-muted">{m.parameters} · {(m.size / 1e9).toFixed(1)} GB</span></div>)}
         </section>
-        <section className="zx-card"><h3>How it's scored</h3><p className="mv-muted">Each head to head you vote on is a win for one model. Speed is the average time to a full answer on this PC. Changing the brain is a desktop-only setting.</p></section>
+        <section className="zx-card"><h3>How it's scored</h3><p className="mv-muted">Each head to head you vote on is a win for one model. Speed is the average time to a full answer on this PC. Changing the SE's main model is a desktop-only setting.</p></section>
       </aside>
     </div>
   </div>;

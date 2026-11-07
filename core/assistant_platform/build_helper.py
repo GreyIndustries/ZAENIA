@@ -186,6 +186,13 @@ def make_copy(request_id: str, *, root: Path = PROJECT_ROOT, helper: Path = HELP
     base = git("rev-parse", "HEAD", cwd=root)
     branch = f"zae/{request_id[:8]}"
     git("worktree", "add", "-B", branch, str(helper), base, cwd=root)
+    try:  # keep the tools' own files out of the copy's git view altogether
+        exclude = Path(git("rev-parse", "--path-format=absolute", "--git-path", "info/exclude", cwd=helper))
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        with open(exclude, "a", encoding="utf-8") as handle:
+            handle.write("\n".join(f"{pattern}*" for pattern in TOOL_JUNK) + "\n")
+    except (RuntimeError, OSError):
+        pass
     node_modules = root / "desktop" / "node_modules"
     if node_modules.is_dir() and (helper / "desktop").is_dir():
         # The copy shares the live app's packages through a junction (removed before the copy is deleted).
@@ -210,10 +217,16 @@ def remove_copy(*, root: Path = PROJECT_ROOT, helper: Path = HELPER_ROOT) -> Non
     git("worktree", "prune", cwd=root, check=False)
 
 
+# Files the coding tools leave behind (Aider's chat history, input history and tag caches): never part of a change.
+# They were committed into the live code by an approved build (2026-11-02) before this was filtered.
+TOOL_JUNK = (".aider",)
+
+
 def changed_paths(folder: Path, base: str) -> list[str]:
     git("add", "-A", cwd=folder)
+    git("reset", "-q", "--", *[f":(glob){pattern}*" for pattern in TOOL_JUNK], *[f":(glob){pattern}*/**" for pattern in TOOL_JUNK], cwd=folder, check=False)
     names = git("diff", "--cached", "--name-only", "--no-renames", base, cwd=folder)
-    return [line.strip() for line in names.splitlines() if line.strip()]
+    return [line.strip() for line in names.splitlines() if line.strip() and not line.strip().startswith(TOOL_JUNK)]
 
 
 _REVIEW_REDACTIONS = (

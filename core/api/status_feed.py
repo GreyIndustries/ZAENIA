@@ -78,9 +78,9 @@ def _brain() -> dict[str, str]:
     try:
         reply = requests.get(OLLAMA_TAGS, timeout=1.5)
     except requests.RequestException:
-        return _module("brain", "Local Brain", "error", "Ollama is not running")
+        return _module("brain", "SE engine (Ollama)", "error", "Ollama is not running")
     if reply.status_code != 200:
-        return _module("brain", "Local Brain", "error", f"Ollama answered HTTP {reply.status_code}")
+        return _module("brain", "SE engine (Ollama)", "error", f"Ollama answered HTTP {reply.status_code}")
     try:
         names = {str(item.get("name", "")) for item in (reply.json().get("models") or [])}
     except ValueError:
@@ -88,10 +88,10 @@ def _brain() -> dict[str, str]:
     if model and model not in names:
         fallback = _configured_model("fallback_model")
         if fallback and fallback in names:
-            return _module("brain", "Local Brain", "working",
+            return _module("brain", "SE engine (Ollama)", "working",
                            f"Ollama running {fallback}; {model} is not downloaded yet (ollama pull {model})")
-        return _module("brain", "Local Brain", "working", f"Ollama running; {model} is not downloaded")
-    return _module("brain", "Local Brain", "ready", f"Ollama running {model}" if model else "Ollama running")
+        return _module("brain", "SE engine (Ollama)", "working", f"Ollama running; {model} is not downloaded")
+    return _module("brain", "SE engine (Ollama)", "ready", "Ollama running; the Synergized Encephalon's brains are below")
 
 
 def _brains() -> list[dict[str, str]]:
@@ -296,7 +296,7 @@ def build_status(mode: str) -> dict[str, Any]:
             carplay, last_brief = carplay
         modules = [
             _guard(lambda: _security(mode), "security", "Security"),
-            _guard(_brain, "brain", "Local Brain"),
+            _guard(_brain, "brain", "SE engine (Ollama)"),
             *_brains(),
             _guard(_voice, "voice", "Voice"),
             calendar,

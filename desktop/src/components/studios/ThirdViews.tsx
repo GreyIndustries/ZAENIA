@@ -29,8 +29,8 @@ const PLACES: { name: string; where: string; help: string; page: string; tab: st
   { name: "Workout and food reminders", where: "Fitness & Health", help: "Training days, weigh-in and food log nudges", page: "fitness", tab: "", words: "workout food weigh reminder fitness training" },
   { name: "Backups", where: "Status › Self-Sustain", help: "Nightly backup of ZAE's data and the watchdog", page: "status", tab: "selfsustain", words: "backup restore watchdog self sustain" },
   { name: "Security unlock and passkey", where: "Security › Details", help: "Passkey, spoken phrase and voice check settings", page: "security", tab: "details", words: "passkey security unlock voice phrase password" },
-  { name: "ZAE's brain model", where: "Arena › Leaderboard", help: "Which local model answers you", page: "arena", tab: "leaders", words: "brain model llm llama qwen arena" },
-  { name: "Her brains and coding tools", where: "Arena › Brains & tools", help: "Talk, Seek, Study, Keep, Ollama, Claude Code, Aider and OpenCode, live", page: "arena", tab: "brains", words: "brains talk seek study keep ollama models gpu claude aider opencode coding tools" },
+  { name: "The SE's main model", where: "Arena › Leaderboard", help: "Which local model the Synergized Encephalon uses", page: "arena", tab: "leaders", words: "brain model llm llama qwen arena" },
+  { name: "The SE and coding tools", where: "Arena › SE & tools", help: "Talk, Seek, Study, Keep, Ollama, Claude Code, Aider and OpenCode, live", page: "arena", tab: "brains", words: "se synergized encephalon brains brain talk seek study keep ollama models gpu claude aider opencode coding tools" },
   { name: "Build requests", where: "Code Doctor › Build requests", help: "Ask ZAE to change her own app; approve at the PC", page: "codedoctor", tab: "build", words: "build request code change upgrade yourself approve undo" },
   { name: "Memory and learned patterns", where: "Assistant › Memory & rules", help: "What ZAE keeps about you, and confirming patterns", page: "assistant", tab: "memory", words: "memory facts learn pattern remember forget" },
   { name: "Quiet hours and spoken notices", where: "Assistant › Assistant tools", help: "When ZAE speaks and when she stays quiet", page: "assistant", tab: "tools", words: "quiet hours spoken notices follow through timezone" },
@@ -97,7 +97,7 @@ export function LookStudio({ appearance, onChange }: { appearance: Appearance; o
 }
 
 // ---------------------------------------------------------------- Status A: readiness
-const READY_GROUPS = [{ name: "Brain and safety", ids: ["brain", "brain_talk", "brain_seek", "brain_study", "brain_keep", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
+const READY_GROUPS = [{ name: "SE and safety", ids: ["brain", "brain_talk", "brain_seek", "brain_study", "brain_keep", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
 const phaseOk = (phase: ModulePhase) => phase === "ready" || phase === "working";
 export function StatusReadiness({ telemetry, onStartVoice }: { telemetry: CoreTelemetry | null; onStartVoice?: () => void }) {
   const [extra, setExtra] = useState<{ id: string; name: string; now: boolean | null; percent: number | null }[]>([]);

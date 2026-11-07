@@ -42,7 +42,7 @@ export function StatusBar({ micListening }: { micListening: boolean }) {
     {/* Her four brains: a lit dot means it's in memory now; hover for its model and job. */}
     {bar.brains?.length ? bar.brains.map(brain => <span key={brain.name} title={`${brain.name}: ${brain.model}. ${brain.job}. ${brain.loaded ? "Loaded now." : "Not loaded; it loads when needed."}`}>
       {dot(brain.loaded ? "good" : "off")}{brain.name} <small className="zae-status__model">{brain.model}</small></span>)
-      : <span title={bar.loaded.length ? `Loaded now: ${bar.loaded.join(", ")}` : "Brain unloaded (loads when you talk to her)"}>{dot(bar.loaded.length ? "good" : "off")}Model {bar.model}</span>}
+      : <span title={bar.loaded.length ? `Loaded now: ${bar.loaded.join(", ")}` : "SE unloaded (loads when you talk to her)"}>{dot(bar.loaded.length ? "good" : "off")}Model {bar.model}</span>}
     <span>{dot("good")}Voice {bar.voice}</span>
     <span>{dot(micListening ? "good" : "off")}Mic {micListening ? "listening" : "off"}</span>
     <span>{dot(bar.pcVoice !== "off" ? "good" : "off")}PC voice {bar.pcVoice}</span>

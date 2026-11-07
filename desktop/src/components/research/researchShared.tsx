@@ -7,7 +7,7 @@ export type AnalysisTask = "summary" | "facts_opinion" | "book" | "ask" | "what_
   | "nb_summary" | "nb_compare" | "nb_claims" | "nb_timeline" | "nb_patterns" | "nb_next";
 export type Material = { text?: string; url?: string; kind?: "article" | "book"; title?: string; term?: string; period?: string; topicId?: string };
 
-export const UNTRUSTED_NOTE = "Free, legal sources only. Web, news and book text is untrusted: ZAE reads it, never follows it. Analysis runs on her own brain on your PC.";
+export const UNTRUSTED_NOTE = "Free, legal sources only. Web, news and book text is untrusted: ZAE reads it, never follows it. Analysis runs on her SE (Synergized Encephalon) on your PC.";
 
 export async function analyze(task: AnalysisTask, material: Material, question = ""): Promise<string> {
   const reply = await api<{ result: string }>("POST", "/api/research/analyze", { task, question, ...material }, { timeoutMs: 300_000 });
