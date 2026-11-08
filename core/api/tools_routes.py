@@ -16,6 +16,9 @@ class ProjectBody(BaseModel):
 class FileBody(ProjectBody):
     file: str = Field(min_length=1, max_length=400)
     findings: list[str] = Field(default_factory=list, max_length=40)
+    # "plain": the Plain English tab's explanation (cached by the file's contents); "review": the Review queue's.
+    mode: str = Field(default="review", pattern=r"^(review|plain)$")
+    refresh: bool = False
 
 
 class ApplyBody(ProjectBody):
@@ -44,7 +47,11 @@ class PlaygroundAskBody(BaseModel):
     code: str = Field(max_length=200_000)
     tests: str = Field(default="", max_length=50_000)
     result: dict | None = None
-    question: str = Field(default="", max_length=1000)
+    question: str = Field(default="", max_length=4000)
+    # "english": the Plain English tab turns the question (Grey's instructions) into a Python draft. Only text comes back.
+    mode: str = Field(default="help", pattern=r"^(help|english)$")
+    project: str = Field(default="", max_length=400)
+    file: str = Field(default="", max_length=400)
 
 
 class SnippetBody(BaseModel):
@@ -127,6 +134,9 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
     def code_explain(body: FileBody) -> dict[str, Any]:
         from core.assistant_platform import code_doctor as doctor
         try:
+            if body.mode == "plain":
+                from core.assistant_platform.plain_english import explain
+                return explain(body.project, body.file, _ask_study, refresh=body.refresh)
             target, text = doctor.read_file(body.project, body.file)
             return {"review": _ask_study(doctor.review_prompt(body.file, text, body.findings, fix=False))}
         except Exception as error:
@@ -174,6 +184,9 @@ def create_tools_router(require_api_authentication: Callable[..., None]) -> APIR
         from core.assistant_platform import code_doctor as doctor
         from core.assistant_platform.playground import ask_prompt
         try:
+            if body.mode == "english":
+                from core.assistant_platform.plain_english import write_python
+                return write_python(body.question, _ask_study, project=body.project, context_file=body.file)
             answer = _ask_study(ask_prompt(body.language, body.code, body.tests, body.result, body.question))
             return {"answer": answer, "code": doctor.extract_code(answer)}
         except Exception as error:

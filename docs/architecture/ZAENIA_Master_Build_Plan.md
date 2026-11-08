@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.62  |  Date: 2026-11-07 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.63  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1624,3 +1624,15 @@ An unpublished local commit contains coding-tool history and binary caches. The 
 Completed checks: 112 focused backend tests; 9 generated-execution-gate tests; all 28 desktop Node test scripts; TypeScript; 427 Python source files parsed with Python 3.11 grammar. Runtime tests use the installed project Python **3.13.15**; the launcher reports no registered Python 3.11 runtime, so actual 3.11 execution is not independently verified. Initial sandbox temporary-file permission errors were resolved by keeping test fixtures in an isolated writable worktree directory, without changing production permissions.
 
 Final release checks passed: browser Vite build to `desktop/dist-web`, desktop Vite build and native Tauri release build (`--no-bundle`), including the preserved lazy Fusion viewer; staged Gitleaks found no leaks. Existing chunk-size/dynamic-import warnings remain nonfatal. Native output is in the shared ignored Cargo target; website output is in the isolated publication worktree. No camera/microphone trial, real Brief generation, password enrollment/unlock, model inference, streaming account connection, live app installation or served-site replacement is claimed by these source checks.
+
+## 33. Code Doctor Plain English tab — 2026-11-08
+
+**Owner request:** a Code Doctor tab that translates ZAE's code into plain English, and lets Grey write plain English that becomes Python for ZAE's system. Implemented on `claude/code-doctor-plain-english` (worktree `.tmp/plain-english`), based on `codex/pending-updates-2026-11-07` at `9af7887`.
+
+- **Read ZAE's code:** file list from the existing Code Doctor scan (`scan()` now also returns `files`). Picking a file returns an outline built from the code without a model (Python `ast`; TS/JS top-level declarations) and a plain-English explanation from Study (`qwen3:14b`). Long files are explained in parts of about 12,000 characters (up to 12 parts). Explanations are cached in `data/ui/plain_english.json` by the file's exact contents, so an unchanged file is never explained twice. "Translate all" walks the filtered list one file at a time, with progress and a Stop button.
+- **Write in plain English:** instructions (optionally fitted to an existing `.py` file) become a Python draft, `assert` tests, a step-by-step plain-English walk-through and stated assumptions. A draft is text only. "Test in Playground" loads it into the existing Playground, whose runs still need the desktop app. "Send to Build requests" uses the existing tested-copy and owner-approval flow. Nothing in this tab runs code or writes project files.
+- **No new routes or permissions:** reuses `/api/code/explain` (`mode: "plain"`) and `/api/code/playground/ask` (`mode: "english"`). Their existing operation entries in the protected `ui_routes.py` are unchanged, and `read_file` keeps the same allowed folders and size limit.
+- Module: `core/assistant_platform/plain_english.py`. UI: `desktop/src/components/tools/PlainEnglish.tsx`.
+
+**Checks:** 7 new tests in `plain_english_test.py` plus the existing Code Doctor tests pass; the full Python suite ran 986 tests, of which 11 operator/document tests fail only because this worktree sits under a dot-folder (`.tmp`) that those tests' fixture-folder guard refuses; TypeScript, all 28 desktop scripts and the desktop Vite build pass. The UI was exercised in a browser against mocked API responses (file list, explanation, draft, Playground hand-off). Explanation quality on real files with the local model is not yet measured, and the change is not installed in the running app.
+

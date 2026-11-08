@@ -152,6 +152,8 @@ def scan(path: str = "") -> dict[str, Any]:
     counts = {level: sum(1 for item in findings if item["level"] == level) for level in order}
     return {"project": str(root), "isZae": root == PROJECT_ROOT, "totals": totals, "languages": languages,
             "counts": counts, "findings": findings[:600],
+            # Every readable file with its line count, for the Plain English tab's file list.
+            "files": [{"file": rel, "lines": lines} for lines, rel in sorted(sizes, key=lambda item: item[1])],
             "biggest": [{"file": rel, "lines": lines} for lines, rel in sorted(sizes, reverse=True)
                         if not re.search(r"(?:^|/)(?:wasm|vendor|third_party)/|\.min\.", rel)][:6]}
 

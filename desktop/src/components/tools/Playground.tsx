@@ -51,6 +51,15 @@ export function PlaygroundPanel() {
   useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify({ language, code, tests, stdin, title, id: snippetId })); } catch { /* optional */ } }, [language, code, tests, stdin, title, snippetId]);
   const loadList = useCallback(() => api<{ snippets: Snippet[] }>("GET", "/api/code/snippets").then(r => setList(r.snippets), () => undefined), []);
   useEffect(() => { if (LIVE_API) void loadList(); }, [loadList]);
+  useEffect(() => { // a Python draft from the Plain English tab
+    const load = (event: Event) => {
+      const draft = (event as CustomEvent<{ code: string; tests: string; title: string }>).detail;
+      if (!draft) return;
+      setLanguage("python"); setCode(draft.code); setTests(draft.tests); setTitle(draft.title); setSnippetId(""); setResult(null); setAnswer(null);
+      setNote("Loaded the Plain English draft. Run or test it here; nothing is saved to a project until you implement it.");
+    };
+    window.addEventListener("zae:playground-load", load); return () => window.removeEventListener("zae:playground-load", load);
+  }, []);
 
   const act = async (label: string, action: () => Promise<void>) => {
     setBusy(label); setError(null); setNote(null);
