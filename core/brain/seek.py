@@ -48,7 +48,9 @@ def gather_web_evidence(
             content = reader(page["url"])
         except Exception:
             content = {}
-        excerpt = " ".join(str(content.get("text") or page.get("snippet") or "").split())[:1200]
+        from core.research.evidence import best_passages
+        # The part of the page that matches the question, not just its first lines (2026-11-08).
+        excerpt = best_passages(" ".join(str(content.get("text") or page.get("snippet") or "").split()), question, 1200)[:1400]
         evidence.append({
             "id": str(len(evidence) + 1),
             "title": str(content.get("title") or page.get("title") or page["url"])[:200],

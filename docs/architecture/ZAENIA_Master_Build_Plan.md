@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.64  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.65  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1648,4 +1648,23 @@ Final release checks passed: browser Vite build to `desktop/dist-web`, desktop V
 - It correctly said there's no hydroponics tab (an idea), no Twitch connection (Stream Studio planned), no finance tracker (planned) and no home cameras (an idea).
 - It placed workouts in Fitness & Health > Training and reminders in Tasks & Calendar > Reminders.
 - It wrongly said Code Doctor "lives in the Files tab", confusing the page name "Code Doctor & Files". The 4B model sometimes simplifies the map; the Seek and Study brains were not tried.
+
+## 35. Research upgrades: passages, citation checks, free sources, saved research — 2026-11-08
+
+**Owner request:** of the research recommendations, do 1 (read the relevant part of pages), 3 (check citations), 4 (add as many free research sources as possible) and 6 (remember research). Implemented on `claude/research-upgrades` (worktree `.tmp/plain-english`), on top of sections 33–34.
+
+- **Free sources** (`core/research/sources.py`, all free with no account or key, 20 in total):
+  - General: Wikipedia, DuckDuckGo instant answers, OpenAlex.
+  - Science: arXiv, Crossref, Semantic Scholar, DOAJ, PLOS.
+  - Health: PubMed, Europe PMC, ClinicalTrials.gov. Drugs: openFDA.
+  - Tech: Stack Overflow, Hacker News. News: GDELT, Google News.
+  - History and books: Library of Congress, Open Library, Project Gutenberg, Internet Archive.
+  - `pick()` always uses the general sources and adds a group when the question is about it. `search_all()` runs them in parallel; a failure is recorded and skipped. Rate-limited sources (GDELT, Semantic Scholar) get one query per job. Search words are cleaned of punctuation that breaks API query syntax.
+- **Passages and ranking** (`core/research/evidence.py`): pages are read in full (up to 40,000 characters), split into passages, and the best-matching ones are kept (BM25, up to 1,800 characters per source). Results are ranked on title, snippet and opening text; ones under 30% of the best score are dropped. Up to three web pages are kept alongside the abstracts. A source that already returned an abstract of 600 or more characters isn't opened. Seek's quick in-chat web lookups use the same passage picking.
+- **Citation check:** every cited sentence is compared with its cited source(s): word overlap, plus any number in the claim must appear in the source. Up to 4 borderline claims are asked of Study. Unsupported claims are marked `[unverified]` in the answer, and the job keeps a report and summary. Lines that only describe the sources aren't checked. It is advisory only.
+- **Saved research:** each finished job becomes a Research notebook topic (the answer and citation summary as the topic's note, each source as a source). A new question that shares most of its words with an earlier finished one includes that answer as clearly labelled context. Topic notes aren't marked for ZAE to reference in chat; Grey keeps that choice in Notes.
+- **Web search robot check:** when DuckDuckGo answers with a robot check, ZAE stops asking it for that job, records "skipped (robot check)" and continues with the other sources. She never tries to get around the check. A self-hosted SearXNG would give a reliable free web search but needs installing, so it is left for owner approval.
+- **UI:** the Web agent shows each source's name and date, `[unverified]` marks, the citation check summary, whether the research was saved or built on earlier research, and a "Searched N sources" list with each source's status.
+
+**Checks:** 26 research tests pass (including 12 new ones), as do the Seek tests. The full suite ran 1,004 tests with only the 11 known worktree-location failures (section 33). `closure_check`, `self_test` and `integration_check` pass. All 19 API source connections were exercised live on 2026-11-08: most returned results; Semantic Scholar and GDELT rate-limited; the Library of Congress and Gutenberg were slow but answered with a longer timeout. Data.gov's API returned 404 and was replaced by the Internet Archive and openFDA. Live end-to-end jobs on Study took 12–43 seconds, read 7–8 sources, and saved notebook topics. The creatine question checked 8 of 8 cited claims as supported. In the hydroponics question the check correctly flagged EC ranges the model attributed to sources that don't contain them. DuckDuckGo began showing a robot check after repeated test searches, and those runs relied on the free sources. Not installed yet.
 

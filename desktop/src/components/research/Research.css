@@ -102,3 +102,9 @@
 .research .live-transcript__btn{border-color:rgba(255,120,120,.45);background:rgba(60,14,20,.45);color:#ffd2d2;border-radius:999px}
 .research .live-transcript__btn--on{background:#b3262e;color:#fff;border-color:#ff6b6b}
 .research .live-transcript__level{height:6px;border-radius:3px;background:#ff6b6b}.research .live-transcript small{font-size:11px;color:#9fb6cf}
+/* Web agent research upgrades (2026-11-08): citation check, unverified claims, searched sources */
+.wa-unverified{background:transparent;color:var(--zx-warn,#e0a353);border:1px dashed currentColor;border-radius:6px;padding:0 5px;font-size:.8em;margin-left:4px}
+.wa-check{margin:6px 0 2px}.wa-check--warn{color:var(--zx-warn,#e0a353)}
+.wa-searched{margin:6px 0;font-size:12px}.wa-searched summary{cursor:pointer;color:var(--zx-muted,#9fb6cf)}
+.wa-searched ul{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:4px 12px}
+.wa-searched li{display:flex;justify-content:space-between;gap:8px}.wa-searched small{color:var(--zx-muted,#9fb6cf)}
