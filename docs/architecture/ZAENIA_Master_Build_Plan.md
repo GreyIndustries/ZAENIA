@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.63  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.64  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1635,4 +1635,17 @@ Final release checks passed: browser Vite build to `desktop/dist-web`, desktop V
 - Module: `core/assistant_platform/plain_english.py`. UI: `desktop/src/components/tools/PlainEnglish.tsx`.
 
 **Checks:** 7 new tests in `plain_english_test.py` plus the existing Code Doctor tests pass; the full Python suite ran 986 tests, of which 11 operator/document tests fail only because this worktree sits under a dot-folder (`.tmp`) that those tests' fixture-folder guard refuses; TypeScript, all 28 desktop scripts and the desktop Vite build pass. The UI was exercised in a browser against mocked API responses (file list, explanation, draft, Playground hand-off). Explanation quality on real files with the local model is not yet measured, and the change is not installed in the running app.
+
+## 34. ZAE self-map: what's inside her and what isn't — 2026-11-08
+
+**Owner request:** ZAE should know what is and isn't inside her whole system, especially the UI app. Implemented on the same branch as section 33 (`claude/code-doctor-plain-english`).
+
+- `core/brain/self_map.py` generates the map from source files, not by hand. App pages come from `App.tsx`'s sidebar list and page descriptions. Each page's sub-tabs are read from its `PageTabs` list or from the page component it renders (plain and lazy imports; object and tuple tab lists). Server areas come from the `*_routes.py` docstrings and `component_registry.yaml`. The map is rebuilt whenever one of those files changes.
+- `core/brain/self_map_planned.yaml` is the hand-kept "not built" list: planned (Stream Studio, personal finance, linked decisions, offline device sync, health devices), partial (local self-coding by October 2027) and ideas (plant growing systems, home security, OS replacement). Remove an item when its feature ships; the generated map then lists the feature.
+- **In conversation:** every system prompt gets a one-line-per-page summary (about 1 KB) with a rule against inventing pages or features. The stale hand-written page list in `UI_CAPABILITIES` now points to it. Questions about herself (do you have…, where is…, which tab…, or a question naming one of her pages) also get the full map (at most 6,000 characters) in the existing "Reference context only" message, counted in the prompt budget. The map is reference text and never grants an action.
+
+**Checks:** 7 new tests in `self_map_test.py` (fixture app, fall-through cases, rebuild on change, question detection, prompt placement, the real app covering every sidebar page) pass. The full suite ran 993 tests, with the same 11 worktree-location failures as section 33. `closure_check` (63), `self_test` and `integration_check` (16) pass with the check-only files lent as Build requests do. Asked live of the Talk model (`qwen3.5:4b`):
+- It correctly said there's no hydroponics tab (an idea), no Twitch connection (Stream Studio planned), no finance tracker (planned) and no home cameras (an idea).
+- It placed workouts in Fitness & Health > Training and reminders in Tasks & Calendar > Reminders.
+- It wrongly said Code Doctor "lives in the Files tab", confusing the page name "Code Doctor & Files". The 4B model sometimes simplifies the map; the Seek and Study brains were not tried.
 

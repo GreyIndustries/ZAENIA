@@ -95,7 +95,22 @@ def get_system_prompt() -> str:
             "You are ZÆNIA, Zack's personal AI assistant.",
         )
     ).strip()
-    return "\n\n".join((base, RULES.strip(), CONTEXT_RULES.strip(), UI_CAPABILITIES.strip()))
+    parts = [base, RULES.strip(), CONTEXT_RULES.strip(), UI_CAPABILITIES.strip()]
+    try:  # her app's real pages and tabs, generated from the source files (self_map.py)
+        from core.brain.self_map import summary
+        parts.append(summary())
+    except Exception:
+        pass
+    return "\n\n".join(part for part in parts if part)
+
+
+def self_map_context(user_text: str) -> str:
+    """The full map of what's inside ZAE (and what isn't), only for questions about herself."""
+    try:
+        from core.brain.self_map import about_self, full_text
+        return full_text() if about_self(user_text) else ""
+    except Exception:
+        return ""
 
 
 def check_ollama_available() -> bool:
@@ -159,8 +174,9 @@ def build_messages(
     # of an over-long prompt, which is where the instructions above live.
     from core.brain.context_budget import fit_prompt
     clock = clock_context()
+    self_map = self_map_context(user_text)
     fitted = fit_prompt(
-        fixed_text="".join(m["content"] for m in messages) + clock,
+        fixed_text="".join(m["content"] for m in messages) + clock + self_map,
         question=user_text,
         behavior=behavior_context,
         conversation=conversation_context,
@@ -169,6 +185,9 @@ def build_messages(
     )
     behavior_context, conversation_context, recent_messages = fitted.behavior, fitted.conversation, fitted.history
     extra_context_parts: list[str] = []
+
+    if self_map:
+        extra_context_parts.append(self_map)
 
     if behavior_context:
         extra_context_parts.append(
