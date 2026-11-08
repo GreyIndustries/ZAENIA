@@ -9,7 +9,9 @@ type Loaded = { vramGb: number; sizeGb: number; context: number | null; until: s
 type Brain = { id: string; name: string; model: string; where: string; role: string; keepAlive: string; installed: boolean; loaded: Loaded };
 type Tool = { id: string; name: string; installed: boolean; version: string | null; model: string | null; use: string };
 type Model = { name: string; sizeGb: number; parameters: string; loaded: boolean; usedBy: string[] };
-type Roster = { ollama: { running: boolean; version: string | null; address: string }; brains: Brain[]; tools: Tool[]; models: Model[] };
+type Turns = { turns: number; firstTextP50Ms: number | null; firstTextP95Ms: number | null; fillerTurns: number; fallbackTurns: number; failedTurns: number; byRoute: Record<string, number>; byModel: Record<string, number>; claimsChecked: number; claimsUnsupported: number };
+type Roster = { ollama: { running: boolean; version: string | null; address: string }; brains: Brain[]; tools: Tool[]; models: Model[]; turns?: Turns };
+const seconds = (ms: number | null) => ms === null ? "—" : `${(ms / 1000).toFixed(2)} s`;
 
 export function BrainsPanel() {
   const [roster, setRoster] = useState<Roster | null>(null);
@@ -38,6 +40,17 @@ export function BrainsPanel() {
         <span className="cs-muted">{brain.role}</span>
         <small className="cs-muted">{brain.where} · stays loaded: {brain.keepAlive}{brain.loaded ? ` · using ${brain.loaded.vramGb} GB graphics memory` : ""}</small>
       </div>)}</div>
+      {roster.turns && <>
+        <h3 className="zx-title" style={{ marginTop: 8 }}>How recent turns went</h3>
+        <div className="zx-card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 6 }}>
+          {roster.turns.turns === 0 ? <small>No turns recorded yet.</small> : <>
+            <b>Last {roster.turns.turns} turns · first words in {seconds(roster.turns.firstTextP50Ms)} (typical), {seconds(roster.turns.firstTextP95Ms)} (slowest 5%)</b>
+            <small>{roster.turns.fillerTurns} needed the filler · {roster.turns.fallbackTurns} fell back to Seek · {roster.turns.failedTurns} failed</small>
+            <small>Citations checked: {roster.turns.claimsChecked}, not supported: {roster.turns.claimsUnsupported}</small>
+            <small>Routes: {Object.entries(roster.turns.byRoute).map(([name, count]) => `${name} ${count}`).join(" · ")}</small>
+            <small>Models: {Object.entries(roster.turns.byModel).map(([name, count]) => `${name} ${count}`).join(" · ")}</small>
+            <small>Only timings and routes are kept, never what was said.</small></>}
+        </div></>}
       <h3 className="zx-title" style={{ marginTop: 8 }}>Coding tools</h3>
       <div className="wb-cards">{roster.tools.map(tool => <div className="zx-card" style={{ padding: 14, display: "flex", flexDirection: "column", gap: 6 }} key={tool.id}>
         <div className="cs-row cs-row--between"><b style={{ fontSize: 16 }}>{tool.name}</b>

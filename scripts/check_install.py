@@ -24,7 +24,7 @@ MODELS = {
     "Piper fallback voice": "data/voices/piper/en_US-hfc_female-medium.onnx",
     "Speaker verification (ECAPA)": "data/models/speaker_verification/ecapa_voxceleb",
 }
-OLLAMA_MODELS = ("llama3.1:8b", "qwen3.5:4b", "nomic-embed-text")
+OLLAMA_MODELS = ("qwen3.5:4b", "qwen3.5:9b", "qwen3:14b", "qwen3:1.7b", "nomic-embed-text")
 
 
 def requirements(root: Path = ROOT) -> list[tuple[str, str]]:

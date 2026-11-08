@@ -315,9 +315,10 @@ def learning_settings() -> dict[str, Any]:
         every = int(raw.get("every_turns", 6))
     except (TypeError, ValueError):
         every = 6
-    model = str(raw.get("model") or "qwen3:1.7b").strip()[:100]
+    from core.brain.conductor import KEEP_MODEL
+    model = str(raw.get("model") or KEEP_MODEL).strip()[:100]
     return {"enabled": raw.get("enabled", True) is not False, "every_turns": min(50, max(2, every)),
-            "model": model or "qwen3:1.7b"}
+            "model": model or KEEP_MODEL}
 
 
 class InsightLearner:

@@ -64,10 +64,7 @@ def get_brain_settings() -> dict[str, Any]:
     )
 
     return {
-        "model": _arena_choice() or brain.get(
-            "model",
-            "qwen3:8b",
-        ),
+        "model": _arena_choice() or brain.get("model") or _default_model(),
         "fallback_model": str(brain.get("fallback_model") or brain.get("model") or ""),
         "endpoint": brain.get(
             "endpoint",
@@ -82,6 +79,11 @@ def get_brain_settings() -> dict[str, Any]:
         # Room for Grey's profile, recent turns and the question (Ollama's default is smaller).
         "context_window": int(brain.get("context_window", 8192)),
     }
+
+
+def _default_model() -> str:
+    from core.brain.conductor import model_for
+    return model_for("default")
 
 
 def get_system_prompt() -> str:

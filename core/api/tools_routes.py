@@ -107,8 +107,9 @@ def _ask_brain(prompt: str) -> str:
 def _ask_study(prompt: str) -> str:
     """Code Doctor (explain, fix, Playground) uses Study, her 14B brain (Grey, 2026-11-01). It stays loaded for
     Ollama's keep-alive, so a few questions in a row don't each wait for it to load; Talk fits beside it."""
+    from core.brain.conductor import model_for
     from core.research.analyze import run_local
-    return run_local(prompt, model="qwen3:14b")
+    return run_local(prompt, model=model_for("code"))
 
 
 def require_desktop(x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY")) -> None:

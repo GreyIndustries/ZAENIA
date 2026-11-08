@@ -138,14 +138,15 @@ def _local_model_call(prompt: str, model: str, cpu_only: bool = False) -> str:
 @background_call
 def _ask_study(prompt: str) -> str:
     """Long research work uses Study locally; it never changes action authority."""
-    return _local_model_call(prompt, model="qwen3:14b")
+    from core.brain.conductor import model_for
+    return _local_model_call(prompt, model=model_for("research"))
 
 
 def _study_done() -> None:
     """After a research job: free Study's graphics memory and bring Talk back, so the next chat turn isn't a cold start."""
-    from core.brain.conductor import TALK_KEEP_ALIVE, TALK_MODEL
+    from core.brain.conductor import STUDY_MODEL, TALK_KEEP_ALIVE, TALK_MODEL
     from core.brain.local_llm import _game_keep_alive, set_residency
-    set_residency("qwen3:14b", 0)
+    set_residency(STUDY_MODEL, 0)
     if _game_keep_alive(TALK_KEEP_ALIVE) == TALK_KEEP_ALIVE:
         set_residency(TALK_MODEL, TALK_KEEP_ALIVE)
         try:  # the small topic-tracking embedder each chat turn uses
@@ -158,7 +159,8 @@ def _study_done() -> None:
 @background_call
 def _ask_keep(prompt: str) -> str:
     """Small scheduled watch summaries stay on Keep's CPU model."""
-    return _local_model_call(prompt, model="qwen3:1.7b", cpu_only=True)
+    from core.brain.conductor import model_for
+    return _local_model_call(prompt, model=model_for("summarize_small"), cpu_only=True)
 
 
 def plan_queries(question: str, ask: Callable[[str], str]) -> list[str]:

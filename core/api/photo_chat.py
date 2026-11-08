@@ -53,7 +53,8 @@ def stream_photo(message, images, history, stop):
     )}]
     messages.extend(history)
     messages.append({"role": "user", "content": message, "images": images})
-    body = {"model": "qwen3.5:4b", "stream": True, "think": False, "keep_alive": "2m",
+    from core.brain.conductor import model_for
+    body = {"model": model_for("vision"), "stream": True, "think": False, "keep_alive": "2m",
             "options": {"num_predict": 1400}, "messages": messages}
     request = urllib.request.Request("http://127.0.0.1:11434/api/chat", data=json.dumps(body).encode(),
                                      headers={"Content-Type": "application/json"})

@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.65  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.66  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1667,4 +1667,21 @@ Final release checks passed: browser Vite build to `desktop/dist-web`, desktop V
 - **UI:** the Web agent shows each source's name and date, `[unverified]` marks, the citation check summary, whether the research was saved or built on earlier research, and a "Searched N sources" list with each source's status.
 
 **Checks:** 26 research tests pass (including 12 new ones), as do the Seek tests. The full suite ran 1,004 tests with only the 11 known worktree-location failures (section 33). `closure_check`, `self_test` and `integration_check` pass. All 19 API source connections were exercised live on 2026-11-08: most returned results; Semantic Scholar and GDELT rate-limited; the Library of Congress and Gutenberg were slow but answered with a longer timeout. Data.gov's API returned 404 and was replaced by the Internet Archive and openFDA. Live end-to-end jobs on Study took 12–43 seconds, read 7–8 sources, and saved notebook topics. The creatine question checked 8 of 8 cited claims as supported. In the hydroponics question the check correctly flagged EC ranges the model attributed to sources that don't contain them. DuckDuckGo began showing a robot check after repeated test searches, and those runs relied on the free sources. Not installed yet.
+
+## 36. Synergized Encephalon improvements — 2026-11-08
+
+**Owner request:** do all ten improvements from the SE review. Implemented on `claude/se-improvements`, on top of sections 33–35.
+
+1. **One model table.** `conductor.WORKLOADS` now names every job, and a test fails if a model name is written elsewhere in `core/` (Arena's own model list excepted). The unlisted default was `llama3.1:8b`. On 50 labelled action messages: `qwen3.5:9b` 50/50, `qwen3.5:4b` 49/50, `llama3.1:8b` 47/50, so the default is now Seek's `qwen3.5:9b`. An Arena choice (`data/ui/brain_model.json`) still takes precedence; none is set.
+2. **Turn records.** `core/brain/turn_log.py` records route, model, level, first-text and total time, filler, fallback, source count and citation-check counts, never the words. Only the real server writes `data/ui/se_turns.jsonl`. Shown in Arena > SE & tools through the existing `/api/brains`.
+3. **Study context.** `context_for` gives Study 16,384 tokens only when the prompt needs it. Measured on this card, any window above 8,192 pushes Talk out of graphics memory (Study used 9.0 GB at 8,192, 9.7 GB at 16,384), so everyday work stays at 8,192. Code Doctor now puts its task after the file and caps the file text.
+4. **Honest fallback.** The 2-second filler no longer claims a search. When Talk fails, Seek gets earlier research and notes marked for reference (`seek.gather_local_evidence`, requires memory.read), and only then says it is looking through saved work. Notes marked "reference" had no effect in chat before this.
+5. **Checked web answers.** Web answers are held until `check_citations` has run, so an unsupported claim is marked `[unverified]` before it is shown or spoken. This delays the first text. Seek writes the answer when accuracy matters (numbers, health, money, law, safety), which relaxes the 2026-11-03 "only Talk writes" rule at the owner's direction.
+6. **Routing and escalation.** `core/brain/router.py` picks chat, web, deep or local with rules. 70 labelled messages in `router_eval.py` pass 70/70, after fixing two bugs the set exposed in the old web rule ("weather" contained "eat", "AI " contained "i "). Deep questions start a Study research job and Talk says so. A deep question must already qualify as an online request, so nothing new leaves the PC. No model classifier was added.
+7. **Working memory.** Each turn also gets the open tab, running research and builds, and the latest watch-list findings (labelled untrusted), only with memory.read. Named conversations persist to `data/ui/working_memory.json` for 12 hours; only the real server writes it.
+8. **Local coding checks.** A Build request is rejected and retried when it only changes whitespace, when Aider claims an edit with no real change, or when behaviour changes with no test. The last local retry uses `code_retry` (Seek's model). Replaying the two bad builds' shapes in tests rejects both.
+9. **Transcript.** Conductor progress lines now go through the Transcript (`drain()` for single-thread use), so nothing is said twice or out of order.
+10. **Overnight model and voice trial.** Nightly ideas use `gpt-oss:20b`, free its memory afterwards, bring Talk back, and fall back to Study. A live call returned correctly in 12.5 s including load; idea quality isn't measured. **The owner/other-speaker voice trial needs Grey and a second person** (Status > Readiness > Voice trial) and was not run.
+
+**Checks:** 18 new SE tests and 4 new Build tests pass. The full suite ran 1,026 tests with only the 11 known worktree-location failures. `closure_check` (63), `self_test` and `integration_check` (16), TypeScript, 28 desktop scripts and the desktop build pass. Live turns through the real Conductor and models: chat 0.89 s to first text; web answer on Talk 10.4 s with 2 of 2 citations matching; web answer on Seek 8.2 s with 1 citation unclear; deep question handed to Study instantly (the job itself was stubbed). Not measured: answer quality across many real questions and the live fallback path with a real Talk failure. Not installed.
 
