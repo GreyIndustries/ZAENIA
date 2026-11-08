@@ -118,7 +118,7 @@ class SelfMapTest(unittest.TestCase):
     def test_real_app_map_covers_every_sidebar_page(self) -> None:
         pages = {page["label"]: page["tabs"] for page in self_map.ui_pages()}
         self.assertIn("Code Doctor & Files", pages)
-        self.assertIn("Plain English", pages["Code Doctor & Files"])
+        self.assertIn("ENTHON", pages["Code Doctor & Files"])
         self.assertIn("Playground", pages["Code Doctor & Files"])
         self.assertTrue(pages["Tasks & Calendar"])
         self.assertIn("Calm password", pages["Security"])

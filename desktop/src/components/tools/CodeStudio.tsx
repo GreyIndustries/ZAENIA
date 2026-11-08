@@ -202,7 +202,7 @@ export function ReviewQueue({ code, focusFile }: { code: ScanState; focusFile: s
 export function CodeDoctorStudio({ extra }: { extra: { id: string; label: string; render: () => React.ReactNode }[] }) {
   const code = useCodeScan();
   const [focusFile, setFocusFile] = useState<string | null>(null);
-  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, { id: "side", label: "Side by side" }, { id: "editor", label: "Editor" }, { id: "plain", label: "Plain English" }, ...extra.map(({ id, label }) => ({ id, label }))];
+  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, { id: "side", label: "Side by side" }, { id: "editor", label: "Editor" }, { id: "plain", label: "ENTHON" }, ...extra.map(({ id, label }) => ({ id, label }))];
   const [tab, setTab] = useState(() => { try { const saved = localStorage.getItem("zaenia.pageTab.codedoctor"); return tabs.some(t => t.id === saved) ? saved! : "health"; } catch { return "health"; } });
   const [opened, setOpened] = useState<string[]>([tab]);
   const choose = (next: string) => { setTab(next); setOpened(list => list.includes(next) ? list : [...list, next]); try { localStorage.setItem("zaenia.pageTab.codedoctor", next); } catch { /* optional */ } };

@@ -3,7 +3,7 @@ import { api, errorText, LIVE_API } from "../../core/bridge";
 import type { useCodeScan } from "./CodeStudio";
 
 /**
- * Plain English (Grey, 2026-11-08): read ZAE's code explained in everyday words, one file at a time or all of it, and
+ * ENTHON (Grey named it 2026-11-08; built as "Plain English"): read ZAE's code explained in everyday words, one file at a time or all of it, and
  * turn plain-English instructions into a Python draft. A draft is only text: running it stays in the Playground and
  * changing ZAE's code stays with Build requests, which test it in a copy and wait for Grey's approval.
  */
@@ -132,7 +132,7 @@ function WritePython({ code }: { code: ScanState }) {
   });
   return <div className="pe-write">
     <section className="zx-card">
-      <span className="cs-kicker">Plain English → Python</span>
+      <span className="cs-kicker">ENTHON · plain English → Python</span>
       <h2 className="zx-title">Say what the code should do</h2>
       <textarea className="pe-request" value={request} onChange={event => setRequest(event.target.value)} rows={6} maxLength={4000}
         placeholder={"For example: Every morning, check the grow tent's water temperature. If it's above 26°C, add a reminder to top up cool water, and keep a log of the readings for a week."}
@@ -158,7 +158,7 @@ function WritePython({ code }: { code: ScanState }) {
         <div className="cs-row cs-row--between"><h3>Python</h3>
           <div className="cs-row">
             <button type="button" onClick={() => { void navigator.clipboard?.writeText(written.code).then(() => setNote("Copied."), () => undefined); }}>Copy</button>
-            <button type="button" onClick={() => openInPlayground(written.code, written.tests, request.trim().split("\n")[0].slice(0, 60) || "Plain English draft")}>Test in Playground</button>
+            <button type="button" onClick={() => openInPlayground(written.code, written.tests, request.trim().split("\n")[0].slice(0, 60) || "ENTHON draft")}>Test in Playground</button>
             <button type="button" className="cs-primary" disabled={Boolean(busy)} onClick={() => void toBuild()}>Send to Build requests</button>
           </div></div>
         <pre className="cs-diff" aria-label="Python draft"><span>{written.code}</span></pre>
@@ -168,13 +168,13 @@ function WritePython({ code }: { code: ScanState }) {
   </div>;
 }
 
-/** The Plain English tab in Code Doctor. */
+/** The ENTHON tab in Code Doctor. */
 export function PlainEnglish({ code }: { code: ScanState }) {
   const [view, setView] = useState<"read" | "write">(() => { try { return localStorage.getItem("zaenia.plainEnglish.view") === "write" ? "write" : "read"; } catch { return "read"; } });
   const choose = (next: "read" | "write") => { setView(next); try { localStorage.setItem("zaenia.plainEnglish.view", next); } catch { /* optional */ } };
-  if (!LIVE_API) return <p className="cs-muted">Plain English needs the ZÆNIA server: open it in the desktop app.</p>;
+  if (!LIVE_API) return <p className="cs-muted">ENTHON needs the ZÆNIA server: open it in the desktop app.</p>;
   return <div className="cs pe">
-    <div className="cs-chips" role="group" aria-label="Plain English">
+    <div className="cs-chips" role="group" aria-label="ENTHON">
       <button type="button" aria-pressed={view === "read"} onClick={() => choose("read")}>Read ZAE's code</button>
       <button type="button" aria-pressed={view === "write"} onClick={() => choose("write")}>Write in plain English</button>
     </div>
