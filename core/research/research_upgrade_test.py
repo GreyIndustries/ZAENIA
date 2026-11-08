@@ -17,8 +17,55 @@ class EvidenceTest(unittest.TestCase):
         text = menu + useful + " " + menu
         picked = evidence.best_passages(text, "best pH for hydroponic lettuce", budget=400)
         self.assertIn("pH of 5.8", picked)
-        self.assertLessEqual(len(picked), 800)
+        self.assertLessEqual(len(picked), 400)
         self.assertEqual(evidence.best_passages("Short page.", "anything"), "Short page.")
+
+    def test_long_sentence_retains_its_tail_and_passage_budget_is_exact(self) -> None:
+        text = "background word " * 100 + "needle target information"
+        passages = evidence.split_passages(text)
+        self.assertEqual(" ".join(passages), " ".join(text.split()))
+        self.assertTrue(all(len(p) <= 700 for p in passages))
+        picked = evidence.best_passages(text, "needle target", budget=400)
+        self.assertIn("needle target information", picked)
+        self.assertLessEqual(len(picked), 400)
+        for budget in (0, 1, 10, 300, 700, 1000, 1800):
+            with self.subTest(budget=budget):
+                self.assertLessEqual(len(evidence.best_passages(text, "needle target", budget)), budget)
+
+    def test_citation_numbers_match_complete_tokens_and_preserve_sign(self) -> None:
+        for claim, source in [("10", "100"), ("-10", "10"), ("1", "1e3"), ("5", ".5")]:
+            with self.subTest(claim=claim, source=source):
+                marked, report = evidence.check_citations(f"The reading is {claim} volts [1].", {1: f"The reading is {source} volts."})
+                self.assertEqual(report["supported"], 0)
+                self.assertEqual(report["unsupported"], 1)
+                self.assertIn("[unverified]", marked)
+        for value in ("10", "100", "-10", "10.5", ".5", "1e3"):
+            with self.subTest(matching=value):
+                marked, report = evidence.check_citations(f"The reading is {value} volts [1].", {1: f"The reading is {value} volts."})
+                self.assertEqual(report["supported"], 1)
+                self.assertNotIn("[unverified]", marked)
+
+    def test_opposite_negation_needs_semantic_support_not_word_overlap(self) -> None:
+        for claim, source in [("The sensor is safe", "The sensor is not safe"), ("The sensor is not safe", "The sensor is safe")]:
+            with self.subTest(claim=claim):
+                marked, report = evidence.check_citations(claim + " [1].", {1: source + "."})
+                self.assertEqual(report["supported"], 0)
+                self.assertEqual(report["unclear"], 1)
+                self.assertIn("[unverified]", marked)
+                ask = mock.Mock(return_value="NO")
+                marked, report = evidence.check_citations(claim + " [1].", {1: source + "."}, ask=ask)
+                ask.assert_called_once()
+                self.assertEqual(report["unsupported"], 1)
+        for sentence in ("The sensor is safe", "The sensor is not safe"):
+            marked, report = evidence.check_citations(sentence + " [1].", {1: sentence + "."})
+            self.assertEqual(report["supported"], 1)
+            self.assertNotIn("[unverified]", marked)
+
+    def test_partial_semantic_support_stays_unclear(self) -> None:
+        marked, report = evidence.check_citations("The sensor is safe [1].", {1: "The sensor is not always safe."}, ask=mock.Mock(return_value="PARTLY"))
+        self.assertEqual(report["supported"], 0)
+        self.assertEqual(report["unclear"], 1)
+        self.assertIn("[unverified]", marked)
 
     def test_rank_puts_matching_results_first(self) -> None:
         results = [{"title": "Cat videos", "snippet": "funny cats"}, {"title": "Aquaponics fish to plant ratio", "snippet": "tilapia and lettuce"}]

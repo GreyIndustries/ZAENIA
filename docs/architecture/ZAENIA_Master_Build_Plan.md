@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.66  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.67  |  Date: 2026-11-08 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1684,4 +1684,14 @@ Final release checks passed: browser Vite build to `desktop/dist-web`, desktop V
 10. **Overnight model and voice trial.** Nightly ideas use `gpt-oss:20b`, free its memory afterwards, bring Talk back, and fall back to Study. A live call returned correctly in 12.5 s including load; idea quality isn't measured. **The owner/other-speaker voice trial needs Grey and a second person** (Status > Readiness > Voice trial) and was not run.
 
 **Checks:** 18 new SE tests and 4 new Build tests pass. The full suite ran 1,026 tests with only the 11 known worktree-location failures. `closure_check` (63), `self_test` and `integration_check` (16), TypeScript, 28 desktop scripts and the desktop build pass. Live turns through the real Conductor and models: chat 0.89 s to first text; web answer on Talk 10.4 s with 2 of 2 citations matching; web answer on Seek 8.2 s with 1 citation unclear; deep question handed to Study instantly (the job itself was stubbed). Not measured: answer quality across many real questions and the live fallback path with a real Talk failure. Not installed.
+
+## 37. ENTHON, research and SE source publication — 2026-11-08
+
+Owner requested commit and push. Clean publication branch `codex/enthon-research-se-2026-11-08` preserves all six Claude commits through `09fd055`, including `150a2c6` (Plain English), `84facb8` (self-map), `e8f62df` (research), `f2971ca` (ENTHON naming) and `2900a1c` (Build quality/retry). These extend published `9af7887`; no older private tool-history branch is merged or pushed. `CLAUDE_INSTALL_NOTE_2026-11-08.md` preserves Claude's earlier installation report separately from this publication's independent checks.
+
+Publication review corrected three defects in the clean copy: Python build-change comparison now uses ASTs to preserve meaningful literal-space and indentation edits, with conservative comparison for other formats; citation numbers use complete tokens and differing negation cannot auto-pass wording overlap; long source sentences retain their tails and selected passages respect their exact character budget. Added focused synthetic regressions. Citation checking remains advisory, not proof that a claim is true; unclear/partial support stays `[unverified]`. Existing authentication, protected paths, approval gates and model-routing permissions are preserved.
+
+Independent checks on the publication tree: **118 focused backend tests**, **all 28 desktop Node test scripts**, TypeScript, browser Vite, desktop Vite and native Tauri release (`--no-bundle`) builds pass. **438 Python files** parse with Python 3.11 grammar; runtime tests use installed project Python **3.13.15**, not an independently verified 3.11 runtime. The initial TestClient stall under the process sandbox was resolved by running mocked API regressions outside that sandbox with isolated writable fixtures. No live model calls, generated candidate execution, private owner records, platform connections or physical voice trials were used for these checks. Existing nonfatal frontend chunk/dynamic-import and TestClient deprecation warnings remain.
+
+The six incoming commits pass Gitleaks; final staged changes are scanned before push. Source publication does not merge `main`, install the application, replace the served website, restart Core or change owner credentials. Earlier live results and install reports in sections 33–36 and Claude's install note are attributed historical evidence, not newly repeated validation. The clean worktree is `.tmp/enthon-research-se-publish-20261108`; preserve Claude's independent working branch.
 

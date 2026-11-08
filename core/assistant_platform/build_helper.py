@@ -17,6 +17,7 @@ ZAE never starts, approves or merges anything herself, never pushes, and can't c
 """
 from __future__ import annotations
 
+import ast
 import glob
 import json
 import os
@@ -243,7 +244,11 @@ def _is_test_file(name: str) -> bool:
 
 
 def substantive_changes(folder: Path, base: str, changed: list[str]) -> list[str]:
-    """The changed files that differ by more than spaces, tabs and line endings."""
+    """Ignore equivalent Python syntax and line-ending/EOF-newline changes.
+
+    Whitespace inside literals and Python indentation can change behavior. Other
+    formats stay conservative: do not discard whitespace without a parser.
+    """
     real = []
     for name in changed:
         old = git("show", f"{base}:{name}", cwd=folder, check=False)
@@ -251,7 +256,17 @@ def substantive_changes(folder: Path, base: str, changed: list[str]) -> list[str
             new = (folder / name).read_text(encoding="utf-8", errors="replace")
         except OSError:
             new = ""
-        if "".join(old.split()) != "".join(new.split()):
+        normalize = lambda text: text.replace("\r\n", "\n").replace("\r", "\n").rstrip("\n")
+        same = normalize(old) == normalize(new)
+        if name.lower().endswith(".py"):
+            try:
+                old_tree = ast.parse(old, type_comments=True)
+                new_tree = ast.parse(new, type_comments=True)
+            except (SyntaxError, ValueError, RecursionError):
+                pass  # Invalid/unsupported syntax still reaches the normal checks.
+            else:
+                same = ast.dump(old_tree, include_attributes=False) == ast.dump(new_tree, include_attributes=False)
+        if not same:
             real.append(name)
     return real
 

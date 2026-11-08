@@ -6,6 +6,10 @@
 
 Read and follow AGENTS.md.
 
+## ENTHON, research and SE publication — 2026-11-08
+
+Read Master Build Plan **v3.67, sections 33–37**, handoff section 31 and `CLAUDE_INSTALL_NOTE_2026-11-08.md`. Owner authorized commit/push. Clean publication branch `codex/enthon-research-se-2026-11-08` preserves all six Claude commits through `09fd055` atop `9af7887`, plus review fixes for meaningful build edits, numeric/negation citation matching and long-source passage retention. Use those fixes when integrating; do not overwrite them from an older worktree. Incoming commits, focused tests, desktop/web/native builds and secret scans are recorded separately from older live-install reports. Authentication/approvals and protected paths stay intact. This publication does not merge main, reinstall the app/site or restart Core; keep physical owner/other-speaker testing as pending until actually performed.
+
 ## Accumulated source publication — 2026-11-07
 
 Read Master Build Plan **v3.62, section 32**, and handoff section 26. Owner requested publishing remaining work. Use clean branch `codex/pending-updates-2026-11-07`, based on current main at `ccc3b93`; older shared-branch history contains private coding-tool artifacts and must not be pushed wholesale. Publication includes Brief/security/gesture/evaluation changes and the latest plans, preserving the already-published password/file/hand/Fusion integrations. Review corrections preserve Stop priority, phone Brief access, fresh repeated briefs and explicit unsafe benchmark execution opt-in. Authentication and Calm guards stay intact; Stream Studio/coder roadmap proposals are not activated. Source checks do not establish a live install or hardware trial; see the handoff for exact evidence.

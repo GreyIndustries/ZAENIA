@@ -4,12 +4,41 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from core.assistant_platform import build_helper as bh
 
 
 def sh(*args, cwd):
     subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True)
+
+
+class SubstantiveChangeTest(unittest.TestCase):
+    def changes(self, name, old, new):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / name).write_text(new, encoding="utf-8")
+            with patch.object(bh, "git", return_value=old):
+                return bh.substantive_changes(root, "base", [name])
+
+    def test_python_string_spaces_are_a_real_change(self):
+        self.assertEqual(self.changes("value.py", "VALUE = 'a b'\n", "VALUE = 'ab'\n"), ["value.py"])
+
+    def test_python_indentation_that_changes_behavior_is_a_real_change(self):
+        old = "def value(flag):\n    if flag:\n        return 1\n    return 2\n"
+        new = "def value(flag):\n    if flag:\n        return 1\n        return 2\n"
+        self.assertEqual(self.changes("value.py", old, new), ["value.py"])
+
+    def test_extra_eof_newlines_are_not_a_real_change(self):
+        for name in ("value.py", "value.js"):
+            with self.subTest(name=name):
+                self.assertEqual(self.changes(name, "VALUE = 1\n", "VALUE = 1\n\n"), [])
+
+    def test_other_languages_keep_literal_whitespace_changes(self):
+        self.assertEqual(self.changes("value.js", "const value = 'a b';\n", "const value = 'ab';\n"), ["value.js"])
+
+    def test_unparseable_python_uses_conservative_text_comparison(self):
+        self.assertEqual(self.changes("value.py", "VALUE = 'a b\n", "VALUE = 'ab\n"), ["value.py"])
 
 
 class RepoCase(unittest.TestCase):
