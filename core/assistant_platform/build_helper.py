@@ -36,7 +36,9 @@ HELPER_ROOT = PROJECT_ROOT.parent / "ZAENIA-Helper"
 STATE_FILE = PROJECT_ROOT / "data" / "ui" / "build_requests.json"
 APPLY_LOG = PROJECT_ROOT / "data" / "ui" / "build_apply.log"
 AIDER_HOME = PROJECT_ROOT.parent / "ZAENIA-Tools" / "aider"  # its own Python environment, outside the repo
-AIDER_MODEL = "qwen3:14b"
+from core.brain.conductor import model_for  # noqa: E402  (the one table of which model does what)
+AIDER_MODEL = model_for("code")
+RETRY_MODEL = model_for("code_retry")
 KEEP = 50
 TOOLS = ("claude", "aider")
 SIZES = ("small", "medium", "large")
@@ -143,6 +145,7 @@ def run_tool(tool: str, folder: Path, prompt: str, files: list[str]) -> tuple[bo
     """Run one coding pass in the copy. Returns (finished, what it said)."""
     rules = RULES.format(locked=", ".join(item.rstrip("/") for item in LOCKED[:20]) + ", and ZAE's security code")
     env = _clean_env()
+    tool, _, other_model = tool.partition("@")  # "aider@model": a retry on a different local model
     if tool == "claude":
         exe = claude_exe()
         if not exe:
@@ -156,7 +159,7 @@ def run_tool(tool: str, folder: Path, prompt: str, files: list[str]) -> tuple[bo
         if not exe:
             raise RuntimeError("Aider isn't installed.")
         env.update({"OLLAMA_API_BASE": "http://127.0.0.1:11434", "AIDER_ANALYTICS": "false", "PYTHONIOENCODING": "utf-8"})
-        command = [exe, "--model", f"ollama_chat/{AIDER_MODEL}", "--yes-always", "--no-auto-commits", "--no-dirty-commits",
+        command = [exe, "--model", f"ollama_chat/{other_model or AIDER_MODEL}", "--yes-always", "--no-auto-commits", "--no-dirty-commits",
                    "--no-suggest-shell-commands", "--no-check-update", "--no-analytics", "--no-show-model-warnings",
                    "--no-detect-urls", "--no-pretty", "--no-stream", "--no-gitignore", "--map-tokens", "2048",
                    "--message", rules + "\n\n" + prompt,
@@ -227,6 +230,49 @@ def changed_paths(folder: Path, base: str) -> list[str]:
     git("reset", "-q", "--", *[f":(glob){pattern}*" for pattern in TOOL_JUNK], *[f":(glob){pattern}*/**" for pattern in TOOL_JUNK], cwd=folder, check=False)
     names = git("diff", "--cached", "--name-only", "--no-renames", base, cwd=folder)
     return [line.strip() for line in names.splitlines() if line.strip() and not line.strip().startswith(TOOL_JUNK)]
+
+
+# ---------------------------------------------------------------- is this a real change? (SE improvements, 2026-11-08)
+# Two approved local builds did nothing: one committed only the tool's own files, the other a newline at the end of a file.
+_BEHAVIOUR_FILES = (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".ps1")
+
+
+def _is_test_file(name: str) -> bool:
+    lowered = name.lower()
+    return lowered.endswith("_test.py") or ".test." in lowered or ".spec." in lowered or "/tests/" in lowered
+
+
+def substantive_changes(folder: Path, base: str, changed: list[str]) -> list[str]:
+    """The changed files that differ by more than spaces, tabs and line endings."""
+    real = []
+    for name in changed:
+        old = git("show", f"{base}:{name}", cwd=folder, check=False)
+        try:
+            new = (folder / name).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            new = ""
+        if "".join(old.split()) != "".join(new.split()):
+            real.append(name)
+    return real
+
+
+def claimed_edits(said: str) -> list[str]:
+    """The files Aider says it edited."""
+    return sorted({match.strip().replace("\\", "/") for match in re.findall(r"^Applied edit to (.+?)\s*$", said or "", re.M)})
+
+
+def change_problem(folder: Path, base: str, changed: list[str], said: str) -> str:
+    """Why this attempt can't be accepted, in words for the coding tool and for Grey; empty when it can."""
+    real = substantive_changes(folder, base, changed)
+    if not real:
+        return "It only changed spaces or line endings, so it isn't a real change."
+    missing = [name for name in claimed_edits(said) if name not in real]
+    if missing:
+        return "It said it edited " + ", ".join(missing[:5]) + ", but those files have no real change."
+    behaviour = [name for name in real if name.endswith(_BEHAVIOUR_FILES) and not _is_test_file(name)]
+    if behaviour and not any(_is_test_file(name) for name in real):
+        return "It changed how the code behaves but added no test. Add or update a test next to the code that proves the change works."
+    return ""
 
 
 _REVIEW_REDACTIONS = (
@@ -504,16 +550,25 @@ class BuildRequests:
             if item.get("files"):
                 prompt += "\nFiles that may be involved: " + ", ".join(item["files"])
             said, report, changed = "", "", []
+            rejected = ""
+            task = f"TASK: {item['title']}\n{item['brief']}\n\nGrey's own words: {item['request']}"
             for attempt in range(RETRIES + 1):
-                label = "Claude Code" if tool == "claude" else "Aider (local)"
+                # The last local try goes to a different model: in the coding test they failed on different tasks.
+                runner = f"aider@{RETRY_MODEL}" if tool == "aider" and attempt == RETRIES and RETRY_MODEL != AIDER_MODEL else tool
+                label = "Claude Code" if tool == "claude" else "Aider (local)" if runner == tool else f"Aider on {RETRY_MODEL}"
                 self._update(request_id, step=f"{label} is writing the change." if not attempt else f"{label} is fixing what failed (try {attempt + 1}).")
-                finished, said = self.tool_runner(tool, self.helper, prompt, item.get("files") or [])
+                finished, said = self.tool_runner(runner, self.helper, prompt, item.get("files") or [])
                 changed = changed_paths(self.helper, base)
-                if not changed:
+                if not changed and (tool != "aider" or attempt == RETRIES):
                     raise RuntimeError("The coding tool didn't change anything. " + (said[:400] if said else ""))
                 bad = [name for name in changed if locked(name)]
                 if bad:
                     raise PermissionError("It tried to change locked files (" + ", ".join(bad[:5]) + "), so the work was thrown away.")
+                rejected = "It didn't change anything." if not changed else change_problem(self.helper, base, changed, said)
+                if rejected:
+                    report = rejected
+                    prompt = f"{task}\n\nYour last attempt wasn't accepted: {rejected} Make the real change the task asks for."
+                    continue
                 self._update(request_id, step="Testing the change in the copy.", changed=changed)
                 lent = _lend_check_files(self.root, self.helper)
                 try:
@@ -530,9 +585,9 @@ class BuildRequests:
                           f"Fix it without weakening any test:\n{report[-3000:]}")
             else:
                 diff = git("diff", "--cached", base, cwd=self.helper)
-                self._update(request_id, status="failed", step="The tests still failed after the retries. Nothing changed.",
+                self._update(request_id, status="failed", step=(f"Stopped: {rejected} Nothing changed." if rejected else "The tests still failed after the retries. Nothing changed."),
                              summary=said, checks={"ok": False, "text": report[-4000:]}, diff=diff[:200_000])
-                self.notify(request_id, f"Build request failed: {item['title']}", "The tests still failed; see Code Doctor > Build requests.")
+                self.notify(request_id, f"Build request failed: {item['title']}", (rejected or "The tests still failed") + " See Code Doctor > Build requests.")
                 return self.get(request_id)
             review: dict[str, Any]
             try:

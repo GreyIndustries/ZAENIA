@@ -31,6 +31,7 @@ WORKLOADS: dict[str, str] = {
     "web": SEEK_MODEL,              # web questions with sources
     "research": STUDY_MODEL,        # research agent jobs
     "code": STUDY_MODEL,            # Code Doctor, Playground, Build briefs' hard parts
+    "code_retry": SEEK_MODEL,       # the last local retry of a failed build: a different model fails on different tasks
     "ideas": STUDY_MODEL,           # Suggestions and the nightly fix ideas
     "summarize_small": KEEP_MODEL,  # watch-list summaries (CPU)
 }

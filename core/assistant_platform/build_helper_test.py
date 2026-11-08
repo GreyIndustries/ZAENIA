@@ -27,7 +27,10 @@ class RepoCase(unittest.TestCase):
         sh("commit", "-qm", "start", cwd=self.root)
         self.applied, self.notices, self.tool_calls = [], [], []
         self.review_calls = []
-        self.edit = lambda folder: (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8")
+        def edit(folder):
+            (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8")
+            (folder / "core" / "colour_test.py").write_text("assert True\n", encoding="utf-8")
+        self.edit = edit
         self.results = [(True, "Python tests: OK")]
 
     def tearDown(self):
@@ -65,7 +68,7 @@ class FlowTest(RepoCase):
         store._update(item["id"], status="queued")
         done = store.process(item["id"])
         self.assertEqual(done["status"], "ready", done.get("step"))
-        self.assertEqual(done["changed"], ["core/colour.py"])
+        self.assertEqual(done["changed"], ["core/colour.py", "core/colour_test.py"])
         self.assertIn("+RING = 'blue'", done["diff"])
         self.assertEqual((self.root / "core" / "colour.py").read_text(), "RING = 'gold'\n")   # live code unchanged
         self.assertFalse(self.helper.exists())                                                 # the copy is cleaned up
@@ -136,7 +139,7 @@ class FlowTest(RepoCase):
         store._update(item["id"], status="queued")
         done = store.process(item["id"])
         self.assertEqual(done["status"], "ready", done.get("step"))
-        self.assertEqual(done["changed"], ["core/colour.py"])
+        self.assertEqual(done["changed"], ["core/colour.py", "core/colour_test.py"])
         self.assertNotIn(".aider", done["diff"])
 
     def test_a_run_that_only_leaves_tool_files_changed_nothing(self):
@@ -149,6 +152,46 @@ class FlowTest(RepoCase):
         done = store.process(item["id"])
         self.assertEqual(done["status"], "failed")
         self.assertIn("didn't change anything", done["step"])
+
+    def rejected_runs(self, edit, said="done"):
+        calls = []
+
+        def tool(name, folder, prompt, files):
+            calls.append((name, prompt))
+            edit(folder)
+            return True, said
+        store = self.requests()
+        store.tool_runner = tool
+        store.choose = lambda size, wanted=None: "aider"
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        return store.process(item["id"]), calls
+
+    def test_whitespace_only_change_is_not_a_real_change_and_last_retry_uses_another_model(self):
+        def newline(folder):
+            path = folder / "core" / "colour.py"
+            path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n", encoding="utf-8")
+        done, calls = self.rejected_runs(newline)
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("spaces or line endings", done["step"])
+        self.assertEqual([name for name, _ in calls], ["aider", "aider", f"aider@{bh.RETRY_MODEL}"])
+        self.assertIn("wasn't accepted", calls[1][1])
+
+    def test_behaviour_change_without_a_test_is_rejected(self):
+        done, _ = self.rejected_runs(lambda folder: (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8"))
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("added no test", done["step"])
+
+    def test_claimed_edit_that_is_not_there_is_rejected(self):
+        done, _ = self.rejected_runs(self.edit, said="Applied edit to core/colour.py\nApplied edit to desktop/src/ClarifyCard.tsx")
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("ClarifyCard.tsx", done["step"])
+
+    def test_a_css_only_change_needs_no_test(self):
+        def css(folder):
+            (folder / "core" / "look.css").write_text("a{color:red}", encoding="utf-8")
+        done, _ = self.rejected_runs(css)
+        self.assertEqual(done["status"], "ready", done.get("step"))
 
     def test_reject_deletes_the_branch(self):
         store = self.requests()
