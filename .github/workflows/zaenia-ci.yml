@@ -70,6 +70,24 @@ jobs:
           print(f"Validated {total} Python files")
           PY
 
+  critical-unit-tests:
+    name: Critical isolated unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Install Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: '3.11'
+      - name: Install test-only dependencies
+        run: python -m pip install -r requirements-ci.txt
+      - name: Run synthetic critical regressions
+        run: python -m unittest core.brain.context_budget_test core.research.workshop_test core.assistant_platform.learning_lab_test core.personal_memory.adaptive_learning_test core.maps.commute_test core.api.update_routes_test
+
   desktop-build:
     name: React Desktop Build
     runs-on: ubuntu-latest

@@ -4,8 +4,8 @@ The flow (Grey picked option 2 with Claude Code and Aider, and option 3, nightly
 1. Grey asks ("ZAE, build ...") or taps "Build it" on an idea. Talk writes a brief; nothing runs yet.
 2. Grey checks the brief and taps Start. The request waits while a game is running.
 3. A separate git worktree (ZAENIA-Helper, branch zae/<id>) is made from the live code. data/, secrets and the
-   live app are never in it. The coding tool works only there: Claude Code (no shell, no web) for most work,
-   Aider with the local Study model for small changes or when offline.
+   live app are never in it. Aider with the local coding model is the automatic path at every size.
+   Claude Code (no shell, no web) is available only through an explicit owner choice.
 4. Every changed path is checked against the locked list (security, voice check, passkey, permissions, the
    scripts that build and restart her, and this helper). Any hit throws the work away.
 5. The test suite, the security suites and (for app changes) the UI checks and TypeScript run in the copy. A
@@ -36,7 +36,9 @@ HELPER_ROOT = PROJECT_ROOT.parent / "ZAENIA-Helper"
 STATE_FILE = PROJECT_ROOT / "data" / "ui" / "build_requests.json"
 APPLY_LOG = PROJECT_ROOT / "data" / "ui" / "build_apply.log"
 AIDER_HOME = PROJECT_ROOT.parent / "ZAENIA-Tools" / "aider"  # its own Python environment, outside the repo
-AIDER_MODEL = "qwen3:14b"
+from core.brain.conductor import model_for  # noqa: E402  (the one table of which model does what)
+AIDER_MODEL = model_for("code")
+RETRY_MODEL = model_for("code_retry")
 KEEP = 50
 TOOLS = ("claude", "aider")
 SIZES = ("small", "medium", "large")
@@ -126,23 +128,24 @@ def tools_available() -> dict[str, bool]:
 
 def choose_tool(size: str, wanted: str | None = None, *, available: dict[str, bool] | None = None,
                 is_online: Callable[[], bool] = online) -> str:
-    """Claude Code for real features; Aider (local, free) for small changes or when Claude Code can't be reached."""
-    available = available or tools_available()
-    if wanted in TOOLS and available.get(wanted):
-        return wanted
-    if available.get("claude") and (size != "small" or not available.get("aider")) and is_online():
-        return "claude"
+    """Local by default at every task size; cloud requires an explicit request."""
+    available = tools_available() if available is None else available
+    if wanted is not None and wanted not in TOOLS:
+        raise ValueError("Choose the local tool or explicitly opt in to Claude Code.")
+    if wanted == "claude":
+        if available.get("claude"):
+            return "claude"
+        raise RuntimeError("The explicitly requested Claude Code tool is unavailable. No cloud fallback was attempted.")
     if available.get("aider"):
         return "aider"
-    if available.get("claude"):
-        return "claude"
-    raise RuntimeError("Neither coding tool is installed (Claude Code or Aider).")
+    raise RuntimeError("Local Aider is not installed. ZAE will not silently use a cloud subscription.")
 
 
 def run_tool(tool: str, folder: Path, prompt: str, files: list[str]) -> tuple[bool, str]:
     """Run one coding pass in the copy. Returns (finished, what it said)."""
     rules = RULES.format(locked=", ".join(item.rstrip("/") for item in LOCKED[:20]) + ", and ZAE's security code")
     env = _clean_env()
+    tool, _, other_model = tool.partition("@")  # "aider@model": a retry on a different local model
     if tool == "claude":
         exe = claude_exe()
         if not exe:
@@ -156,7 +159,7 @@ def run_tool(tool: str, folder: Path, prompt: str, files: list[str]) -> tuple[bo
         if not exe:
             raise RuntimeError("Aider isn't installed.")
         env.update({"OLLAMA_API_BASE": "http://127.0.0.1:11434", "AIDER_ANALYTICS": "false", "PYTHONIOENCODING": "utf-8"})
-        command = [exe, "--model", f"ollama_chat/{AIDER_MODEL}", "--yes-always", "--no-auto-commits", "--no-dirty-commits",
+        command = [exe, "--model", f"ollama_chat/{other_model or AIDER_MODEL}", "--yes-always", "--no-auto-commits", "--no-dirty-commits",
                    "--no-suggest-shell-commands", "--no-check-update", "--no-analytics", "--no-show-model-warnings",
                    "--no-detect-urls", "--no-pretty", "--no-stream", "--no-gitignore", "--map-tokens", "2048",
                    "--message", rules + "\n\n" + prompt,
@@ -186,6 +189,13 @@ def make_copy(request_id: str, *, root: Path = PROJECT_ROOT, helper: Path = HELP
     base = git("rev-parse", "HEAD", cwd=root)
     branch = f"zae/{request_id[:8]}"
     git("worktree", "add", "-B", branch, str(helper), base, cwd=root)
+    try:  # keep the tools' own files out of the copy's git view altogether
+        exclude = Path(git("rev-parse", "--path-format=absolute", "--git-path", "info/exclude", cwd=helper))
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        with open(exclude, "a", encoding="utf-8") as handle:
+            handle.write("\n".join(f"{pattern}*" for pattern in TOOL_JUNK) + "\n")
+    except (RuntimeError, OSError):
+        pass
     node_modules = root / "desktop" / "node_modules"
     if node_modules.is_dir() and (helper / "desktop").is_dir():
         # The copy shares the live app's packages through a junction (removed before the copy is deleted).
@@ -210,10 +220,59 @@ def remove_copy(*, root: Path = PROJECT_ROOT, helper: Path = HELPER_ROOT) -> Non
     git("worktree", "prune", cwd=root, check=False)
 
 
+# Files the coding tools leave behind (Aider's chat history, input history and tag caches): never part of a change.
+# They were committed into the live code by an approved build (2026-11-02) before this was filtered.
+TOOL_JUNK = (".aider",)
+
+
 def changed_paths(folder: Path, base: str) -> list[str]:
     git("add", "-A", cwd=folder)
+    git("reset", "-q", "--", *[f":(glob){pattern}*" for pattern in TOOL_JUNK], *[f":(glob){pattern}*/**" for pattern in TOOL_JUNK], cwd=folder, check=False)
     names = git("diff", "--cached", "--name-only", "--no-renames", base, cwd=folder)
-    return [line.strip() for line in names.splitlines() if line.strip()]
+    return [line.strip() for line in names.splitlines() if line.strip() and not line.strip().startswith(TOOL_JUNK)]
+
+
+# ---------------------------------------------------------------- is this a real change? (SE improvements, 2026-11-08)
+# Two approved local builds did nothing: one committed only the tool's own files, the other a newline at the end of a file.
+_BEHAVIOUR_FILES = (".py", ".ts", ".tsx", ".js", ".jsx", ".rs", ".ps1")
+
+
+def _is_test_file(name: str) -> bool:
+    lowered = name.lower()
+    return lowered.endswith("_test.py") or ".test." in lowered or ".spec." in lowered or "/tests/" in lowered
+
+
+def substantive_changes(folder: Path, base: str, changed: list[str]) -> list[str]:
+    """The changed files that differ by more than spaces, tabs and line endings."""
+    real = []
+    for name in changed:
+        old = git("show", f"{base}:{name}", cwd=folder, check=False)
+        try:
+            new = (folder / name).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            new = ""
+        if "".join(old.split()) != "".join(new.split()):
+            real.append(name)
+    return real
+
+
+def claimed_edits(said: str) -> list[str]:
+    """The files Aider says it edited."""
+    return sorted({match.strip().replace("\\", "/") for match in re.findall(r"^Applied edit to (.+?)\s*$", said or "", re.M)})
+
+
+def change_problem(folder: Path, base: str, changed: list[str], said: str) -> str:
+    """Why this attempt can't be accepted, in words for the coding tool and for Grey; empty when it can."""
+    real = substantive_changes(folder, base, changed)
+    if not real:
+        return "It only changed spaces or line endings, so it isn't a real change."
+    missing = [name for name in claimed_edits(said) if name not in real]
+    if missing:
+        return "It said it edited " + ", ".join(missing[:5]) + ", but those files have no real change."
+    behaviour = [name for name in real if name.endswith(_BEHAVIOUR_FILES) and not _is_test_file(name)]
+    if behaviour and not any(_is_test_file(name) for name in real):
+        return "It changed how the code behaves but added no test. Add or update a test next to the code that proves the change works."
+    return ""
 
 
 _REVIEW_REDACTIONS = (
@@ -481,26 +540,50 @@ class BuildRequests:
                 continue
             self.process(queued[0]["id"])
 
+    def _help_packet(self, item, error):
+        """Private failure handoff, excluded from publication; never invokes a cloud tool."""
+        identifier = str(item.get("id", ""))
+        if not re.fullmatch(r"[0-9a-f]{32}", identifier):
+            return None
+        folder = self.root / "docs" / "handoffs" / "zae-needs-help"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / (identifier + ".md")
+        body = ("# ZAE needs help\n\nStatus: failed local attempt; no automatic cloud call or approval.\n\n"
+                + "Request: " + str(item.get("request", ""))[:2000] + "\n\nBrief: " + str(item.get("brief", ""))[:3000]
+                + "\n\nFailure: " + str(error)[:1200] + "\n\nReview the saved checks and diff in Build requests before retrying.\n")
+        from core.foundation.security.io import atomic_write
+        atomic_write(path, body.encode("utf-8"))
+        return str(path.relative_to(self.root))
+
     def process(self, request_id: str) -> dict[str, Any]:
         item = self._update(request_id, status="working", step="Making a safe copy of the code.")
         try:
             tool = self.choose(item.get("size") or "medium", item.get("wantedTool"))
             branch, base = make_copy(request_id, root=self.root, helper=self.helper)
-            self._update(request_id, tool=tool, branch=branch, base=base)
+            self._update(request_id, tool=tool, model=AIDER_MODEL if tool == "aider" else None, branch=branch, base=base)
             prompt = f"TASK: {item['title']}\n{item['brief']}\n\nGrey's own words: {item['request']}"
             if item.get("files"):
                 prompt += "\nFiles that may be involved: " + ", ".join(item["files"])
             said, report, changed = "", "", []
+            rejected = ""
+            task = f"TASK: {item['title']}\n{item['brief']}\n\nGrey's own words: {item['request']}"
             for attempt in range(RETRIES + 1):
-                label = "Claude Code" if tool == "claude" else "Aider (local)"
-                self._update(request_id, step=f"{label} is writing the change." if not attempt else f"{label} is fixing what failed (try {attempt + 1}).")
-                finished, said = self.tool_runner(tool, self.helper, prompt, item.get("files") or [])
+                # The last local try goes to a different model: in the coding test they failed on different tasks.
+                runner = f"aider@{RETRY_MODEL}" if tool == "aider" and attempt == RETRIES and RETRY_MODEL != AIDER_MODEL else tool
+                label = "Claude Code (explicit owner choice)" if tool == "claude" else f"Local: Aider on {AIDER_MODEL}" if runner == tool else f"Local: Aider on {RETRY_MODEL}"
+                self._update(request_id, model=(RETRY_MODEL if runner != tool else AIDER_MODEL) if tool == "aider" else None, attempt=attempt + 1, step=f"{label} is writing the change." if not attempt else f"{label} is fixing what failed (try {attempt + 1}).")
+                finished, said = self.tool_runner(runner, self.helper, prompt, item.get("files") or [])
                 changed = changed_paths(self.helper, base)
-                if not changed:
+                if not changed and (tool != "aider" or attempt == RETRIES):
                     raise RuntimeError("The coding tool didn't change anything. " + (said[:400] if said else ""))
                 bad = [name for name in changed if locked(name)]
                 if bad:
                     raise PermissionError("It tried to change locked files (" + ", ".join(bad[:5]) + "), so the work was thrown away.")
+                rejected = "It didn't change anything." if not changed else change_problem(self.helper, base, changed, said)
+                if rejected:
+                    report = rejected
+                    prompt = f"{task}\n\nYour last attempt wasn't accepted: {rejected} Make the real change the task asks for."
+                    continue
                 self._update(request_id, step="Testing the change in the copy.", changed=changed)
                 lent = _lend_check_files(self.root, self.helper)
                 try:
@@ -517,9 +600,9 @@ class BuildRequests:
                           f"Fix it without weakening any test:\n{report[-3000:]}")
             else:
                 diff = git("diff", "--cached", base, cwd=self.helper)
-                self._update(request_id, status="failed", step="The tests still failed after the retries. Nothing changed.",
+                self._update(request_id, status="failed", step=(f"Stopped: {rejected} Nothing changed." if rejected else "The tests still failed after the retries. Nothing changed."),
                              summary=said, checks={"ok": False, "text": report[-4000:]}, diff=diff[:200_000])
-                self.notify(request_id, f"Build request failed: {item['title']}", "The tests still failed; see Code Doctor > Build requests.")
+                self.notify(request_id, f"Build request failed: {item['title']}", (rejected or "The tests still failed") + " See Code Doctor > Build requests.")
                 return self.get(request_id)
             review: dict[str, Any]
             try:
@@ -535,7 +618,11 @@ class BuildRequests:
             review_notice = " A separate local model review is attached." if review.get("status") == "reviewed" else " The second-pass review was unavailable."
             self.notify(request_id, f"Ready to review: {item['title']}", "Tests passed. Approve or reject it in Code Doctor > Build requests on the PC." + review_notice)
         except Exception as error:
-            self._update(request_id, status="failed", step="Stopped: " + str(error)[:500], error=str(error)[:800])
+            try:
+                packet = self._help_packet(self.get(request_id), error)
+            except Exception:
+                packet = None
+            self._update(request_id, status="failed", step="Stopped: " + str(error)[:500], error=str(error)[:800], helpPacket=packet)
             self.notify(request_id, f"Build request stopped: {item['title']}", str(error)[:300])
         finally:
             try:

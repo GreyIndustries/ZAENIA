@@ -1,3 +1,6 @@
+import { ResearchWorkshop, ResearchReference, ResearchCards } from "./ResearchWorkshop";
+import { usePaneNav } from "../shell/PaneNav";
+import { PageNavigator } from "../shell/PageNavigator";
 import { lazy, Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { ReadItem } from "./ResearchStudio";
@@ -14,10 +17,10 @@ const WebAgentPanel = lazy(() => import("./WebAgentPanel").then(module => ({ def
 const TranslatePanel = lazy(() => import("./TranslatePanel").then(module => ({ default: module.TranslatePanel })));
 const ScripturePanel = lazy(() => import("./ScripturePanel").then(module => ({ default: module.ScripturePanel })));
 
-export type ResearchTab = "desk" | "reader" | "board" | "history" | "notebook" | "news" | "library" | "scripture" | "translate" | "agent";
+export type ResearchTab = "workshop" | "reference" | "cards" | "desk" | "reader" | "board" | "history" | "notebook" | "news" | "library" | "scripture" | "translate" | "agent";
 // Grey's order (2026-10-29): Desk, Reader, Evidence board, then every tool the page already had.
 const TABS: { id: ResearchTab; label: string }[] = [
-  { id: "desk", label: "Desk" }, { id: "reader", label: "Reader" }, { id: "board", label: "Evidence board" },
+  { id: "desk", label: "Desk" }, { id: "workshop", label: "Analysis workshop" }, { id: "reference", label: "Learning explorer" }, { id: "cards", label: "Study cards" }, { id: "reader", label: "Reader" }, { id: "board", label: "Evidence board" },
   { id: "agent", label: "Web agent" }, { id: "history", label: "Historical Connections" }, { id: "notebook", label: "Notebook" },
   { id: "news", label: "News" }, { id: "library", label: "The Library" }, { id: "scripture", label: "Scripture & ancient" },
   { id: "translate", label: "Translate" },
@@ -37,30 +40,28 @@ export function ResearchPage({ initial }: { initial?: ResearchTab }) {
   const choose = (next: ResearchTab) => { setTab(next); try { localStorage.setItem(KEY, next); } catch { /* optional */ } };
   const read = (item: ReadItem) => { setReading(item); choose("reader"); };
   const board = (topicId: string) => { setBoardTopic(topicId); choose("board"); };
+  const paneScope = usePaneNav();
   useEffect(() => {
-    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: ResearchTab }>).detail; if (detail?.page === "research" && TABS.some(item => item.id === detail.tab)) choose(detail.tab); };
+    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: ResearchTab }>).detail; if ((detail as { pane?: string })?.pane && paneScope && (detail as { pane?: string }).pane !== paneScope.paneId) return; if (detail?.page === "research" && TABS.some(item => item.id === detail.tab)) choose(detail.tab); };
     window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
   });
-  const panel = (id: ResearchTab) => id === "desk" ? <ResearchDesk onRead={read} onBoard={board}/>
+  const panel = (id: ResearchTab) => id === "workshop" ? <ResearchWorkshop/> : id === "reference" ? <ResearchReference/> : id === "cards" ? <ResearchCards/> : id === "desk" ? <ResearchDesk onRead={read} onBoard={board}/>
     : id === "reader" ? <ResearchReader item={reading} onRead={read}/>
     : id === "board" ? <EvidenceBoard topicId={boardTopic} onTopic={setBoardTopic} onRead={read}/>
     : id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : id === "scripture" ? <ScripturePanel/>
     : id === "translate" ? <TranslatePanel/> : id === "agent" ? <WebAgentPanel/> : <LibraryPanel/>;
   return <div className="research-page">
-    <nav className="research-page__tabs" role="tablist" aria-label="Research">
-      {TABS.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id}
-        className={tab === item.id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(item.id)}>{item.label}</button>)}
-    </nav>
+    <PageNavigator id={"research"} name={"Research"} items={TABS} current={tab} onChoose={next => choose(next as ResearchTab)}/>
     {/* Each tab stays mounted once opened, so switching back keeps your search, notes and timeline. */}
-    {TABS.map(item => <OpenedTab key={item.id} active={tab === item.id}>{panel(item.id)}</OpenedTab>)}
+    {TABS.map(item => <OpenedTab key={item.id} label={item.label} active={tab === item.id}>{panel(item.id)}</OpenedTab>)}
   </div>;
 }
 
-function OpenedTab({ active, children }: { active: boolean; children: ReactNode }) {
+function OpenedTab({ active, children, label }: { active: boolean; children: ReactNode; label: string }) {
   const [opened, setOpened] = useState(active);
   if (active && !opened) setOpened(true);
   if (!opened) return null;
-  return <div role="tabpanel" hidden={!active}>
+  return <div role="region" aria-label={label} data-page-panel={label} hidden={!active}>
     <Suspense fallback={<p className="research__empty">Loading…</p>}>{children}</Suspense>
   </div>;
 }

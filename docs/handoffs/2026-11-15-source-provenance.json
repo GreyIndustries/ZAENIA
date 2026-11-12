@@ -1,0 +1,23 @@
+{
+  "installedBaseline": "system 0.31.1 / UI 0.26.0",
+  "safetyBranch": "wip/shared-root-2026-11-12",
+  "safetyCommit": "fbf8062",
+  "sourceStrategy": "Sanitized source reconciliation onto fetched origin/main; no private/tool-bearing local ancestry is published.",
+  "preservedRemote": "642a36c including LICENSE",
+  "included": [
+    "installed page navigation and split panes",
+    "Mail IMAP and attachments",
+    "GODSPEED aircraft/routes/weather",
+    "updater root repair",
+    "SE/research/Code Doctor improvements",
+    "Sunday C1 correction",
+    "approved nodes/War Room/LLM Training/Research candidate",
+    "Sunday packet reliability and local-default coding changes"
+  ],
+  "heldOut": [
+    "login-gate phase1 practice implementation",
+    "CarPlay native draft implementation",
+    "Stream Studio runtime experiments"
+  ],
+  "notInstalled": true
+}

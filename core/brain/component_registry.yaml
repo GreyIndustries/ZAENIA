@@ -214,13 +214,15 @@ registry:
           default_action: "conversation.response_policy.default_action"
 
     local_brain:
-      name: "Local Brain"
-      description: "Provides ZÆNIA's local language reasoning and brain routing: Talk (qwen3.5:4b) answers, Seek (qwen3.5:9b) handles web questions, Study (qwen3:14b) does research, Keep (qwen3:1.7b, on the CPU) writes small summaries, and nomic-embed-text tracks topics."
+      name: "Synergized Encephalon (SE)"
+      description: "The SE: provides ZÆNIA's local language reasoning and routing, four brains directed by a conductor: Talk (qwen3.5:4b) answers, Seek (qwen3.5:9b) handles web questions, Study (qwen3:14b) does research, Keep (qwen3:1.7b, on the CPU) writes small summaries, and nomic-embed-text tracks topics."
       role: "reasoning"
       scope: "core"
       local_first: true
 
       aliases:
+        - "se"
+        - "synergized encephalon"
         - "brain"
         - "qwen"
         - "ollama"

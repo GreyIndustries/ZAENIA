@@ -52,7 +52,7 @@ export function TranslatePanel() {
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
 
   return <div className="research">
-    <p className="research__note">Translation runs on ZAE's own brain on your PC; nothing is sent to a translation service. Web pages are fetched as text and read as data, never as instructions. Long texts are translated in pieces.</p>
+    <p className="research__note">Translation runs on ZAE's SE (Synergized Encephalon) on your PC; nothing is sent to a translation service. Web pages are fetched as text and read as data, never as instructions. Long texts are translated in pieces.</p>
     <div className="research__bar">
       <label className="research__meta">From <select value={choice.source} onChange={event => pick("source", event.target.value)}>
         <option value="auto">Detect language</option>{languages.map(name => <option key={name}>{name}</option>)}</select></label>

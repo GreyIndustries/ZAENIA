@@ -86,7 +86,9 @@ def readiness():
     checks.append({"id": "model", "ok": models is not None and any(name in models for name in (settings["model"], settings.get("fallback_model"))), "detail": "Local language model available through Ollama"})
     for module,label in [('docx','Word documents'),('openpyxl','Excel workbooks'),('playwright','ZAE browser'),('PIL','Selected-window images'),('pywinauto','Window selection'),('psutil','Process identity checks'),('ddgs','Public web search')]:
         checks.append({'id':'operator_'+module,'ok':importlib.util.find_spec(module) is not None,'detail':label+' integration runtime'})
-    checks.append({'id':'vision_model','ok':models is not None and 'qwen3.5:4b' in models,'detail':'Installed local qwen3.5:4b vision model; no automatic download'})
+    from core.brain.conductor import model_for
+    vision=model_for('vision')
+    checks.append({'id':'vision_model','ok':models is not None and vision in models,'detail':f'Installed local {vision} vision model; no automatic download'})
     return {"checks": checks, "ready": all(item["ok"] for item in checks), "platform": os.name,
         "scope": "Readiness of this Windows assistant installation; not a bootable OS certification.",
         "manualChecks": ["Owner microphone and hands-only camera acceptance", "Selected-window vision and dedicated Edge browser acceptance", "VS Code editor focus and live phone/CarPlay handoff acceptance", "Encrypted export/restore round-trip on the destination", "Cold start and recovery on the destination SSD/PC", "Offline model, speech and document use; live weather/calendar/research need their network sources"],

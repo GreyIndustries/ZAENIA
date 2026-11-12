@@ -27,7 +27,10 @@ class RepoCase(unittest.TestCase):
         sh("commit", "-qm", "start", cwd=self.root)
         self.applied, self.notices, self.tool_calls = [], [], []
         self.review_calls = []
-        self.edit = lambda folder: (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8")
+        def edit(folder):
+            (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8")
+            (folder / "core" / "colour_test.py").write_text("assert True\n", encoding="utf-8")
+        self.edit = edit
         self.results = [(True, "Python tests: OK")]
 
     def tearDown(self):
@@ -65,7 +68,7 @@ class FlowTest(RepoCase):
         store._update(item["id"], status="queued")
         done = store.process(item["id"])
         self.assertEqual(done["status"], "ready", done.get("step"))
-        self.assertEqual(done["changed"], ["core/colour.py"])
+        self.assertEqual(done["changed"], ["core/colour.py", "core/colour_test.py"])
         self.assertIn("+RING = 'blue'", done["diff"])
         self.assertEqual((self.root / "core" / "colour.py").read_text(), "RING = 'gold'\n")   # live code unchanged
         self.assertFalse(self.helper.exists())                                                 # the copy is cleaned up
@@ -122,6 +125,74 @@ class FlowTest(RepoCase):
         self.assertIn("locked files", done["step"])
         self.assertFalse((self.root / "core" / "foundation").exists())
 
+    def test_a_tools_own_files_are_not_part_of_the_change(self):
+        real_edit = self.edit
+
+        def messy(folder):
+            real_edit(folder)
+            (folder / ".aider.chat.history.md").write_text("# chat\n", encoding="utf-8")
+            (folder / ".aider.tags.cache.v4").mkdir()
+            (folder / ".aider.tags.cache.v4" / "x.val").write_text("cache", encoding="utf-8")
+        self.edit = messy
+        store = self.requests()
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        done = store.process(item["id"])
+        self.assertEqual(done["status"], "ready", done.get("step"))
+        self.assertEqual(done["changed"], ["core/colour.py", "core/colour_test.py"])
+        self.assertNotIn(".aider", done["diff"])
+
+    def test_a_run_that_only_leaves_tool_files_changed_nothing(self):
+        def junk_only(folder):
+            (folder / ".aider.input.history").write_text("x", encoding="utf-8")
+        self.edit = junk_only
+        store = self.requests()
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        done = store.process(item["id"])
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("didn't change anything", done["step"])
+
+    def rejected_runs(self, edit, said="done"):
+        calls = []
+
+        def tool(name, folder, prompt, files):
+            calls.append((name, prompt))
+            edit(folder)
+            return True, said
+        store = self.requests()
+        store.tool_runner = tool
+        store.choose = lambda size, wanted=None: "aider"
+        item = self.draft(store)
+        store._update(item["id"], status="queued")
+        return store.process(item["id"]), calls
+
+    def test_whitespace_only_change_is_not_a_real_change_and_last_retry_uses_another_model(self):
+        def newline(folder):
+            path = folder / "core" / "colour.py"
+            path.write_text(path.read_text(encoding="utf-8").rstrip("\n") + "\n\n", encoding="utf-8")
+        done, calls = self.rejected_runs(newline)
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("spaces or line endings", done["step"])
+        self.assertEqual([name for name, _ in calls], ["aider", "aider", f"aider@{bh.RETRY_MODEL}"])
+        self.assertIn("wasn't accepted", calls[1][1])
+
+    def test_behaviour_change_without_a_test_is_rejected(self):
+        done, _ = self.rejected_runs(lambda folder: (folder / "core" / "colour.py").write_text("RING = 'blue'\n", encoding="utf-8"))
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("added no test", done["step"])
+
+    def test_claimed_edit_that_is_not_there_is_rejected(self):
+        done, _ = self.rejected_runs(self.edit, said="Applied edit to core/colour.py\nApplied edit to desktop/src/ClarifyCard.tsx")
+        self.assertEqual(done["status"], "failed")
+        self.assertIn("ClarifyCard.tsx", done["step"])
+
+    def test_a_css_only_change_needs_no_test(self):
+        def css(folder):
+            (folder / "core" / "look.css").write_text("a{color:red}", encoding="utf-8")
+        done, _ = self.rejected_runs(css)
+        self.assertEqual(done["status"], "ready", done.get("step"))
+
     def test_reject_deletes_the_branch(self):
         store = self.requests()
         item = self.draft(store)
@@ -165,12 +236,19 @@ class RulesTest(unittest.TestCase):
     def test_tool_choice(self):
         both = {"claude": True, "aider": True}
         self.assertEqual(bh.choose_tool("small", available=both, is_online=lambda: True), "aider")
-        self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: True), "claude")
+        self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: True), "aider")
         self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: False), "aider")
         self.assertEqual(bh.choose_tool("small", "claude", available=both), "claude")
-        self.assertEqual(bh.choose_tool("small", available={"claude": True, "aider": False}, is_online=lambda: True), "claude")
+        with self.assertRaises(RuntimeError):
+            bh.choose_tool("small", available={"claude": True, "aider": False}, is_online=lambda: True)
         with self.assertRaises(RuntimeError):
             bh.choose_tool("small", available={"claude": False, "aider": False})
+
+    def test_automatic_selection_never_probes_or_calls_cloud(self):
+        def forbidden():raise AssertionError('Network probe must not run')
+        for size in ['small','medium','large']:
+            self.assertEqual(bh.choose_tool(size,available={'aider':True,'claude':True},is_online=forbidden),'aider')
+        with self.assertRaises(RuntimeError):bh.choose_tool('large',available={'claude':True,'aider':False},is_online=forbidden)
 
     def test_secrets_stay_out_of_the_tools(self):
         import os

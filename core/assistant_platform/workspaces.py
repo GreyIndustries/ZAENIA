@@ -2,7 +2,7 @@
 import math
 from core.assistant_platform.store import text
 
-WINDOWS = frozenset({"status", "security", "tasks", "calendar", "notes", "news", "files", "assistant", "system", "workbench", "music", "fitness"})
+WINDOWS = frozenset({"status", "security", "tasks", "calendar", "notes", "news", "files", "assistant", "system", "workbench", "music", "fitness", "research", "codedoctor", "arena", "warroom"})
 
 
 def validate_workspace(body):

@@ -1,3 +1,4 @@
+mod update_paths;
 use std::{
     env,
     fs,
@@ -222,10 +223,13 @@ async fn zaenia_api(
         || route.starts_with("/api/voice")
         || route.starts_with("/api/briefing")
         || route.starts_with("/api/calendar")
-        || route.starts_with("/api/research");
+        || route.starts_with("/api/research")
+        || route.starts_with("/api/email");
     // Her research analysis reads long material on the local brain.
-    let slowest = route == "/api/research/analyze";
-    call_api(method, &path, body, if slowest { 300 } else if slow { 150 } else { 30 }).await
+    let slowest = route == "/api/research/analyze" || route == "/api/research/workshop/analyze";
+    // Up to three installed models practice sequentially; preserve the request until results return.
+    let training = route.starts_with("/api/learning-lab/evaluate/");
+    call_api(method, &path, body, if training { 780 } else if slowest { 300 } else if slow { 150 } else { 30 }).await
 }
 
 
@@ -353,16 +357,31 @@ const VOICE_SCRIPT: &[&str] = &["scripts", "start_zaenia_voice.ps1"];
 const VOICE_SCRIPT: &[&str] = &["scripts", "linux", "open_zaenia_voice.sh"];
 
 
+
+fn runtime_project_root() -> Result<PathBuf, String> {
+    let configured = env::var("ZAENIA_PROJECT_ROOT").ok().or_else(|| env::var("ZAENIA_ROOT").ok())
+        .filter(|value| !value.trim().is_empty()).map(|value| PathBuf::from(value.trim()));
+    let mut config_files = Vec::new();
+    if let Ok(exe) = env::current_exe() { if let Some(parent) = exe.parent() { config_files.push(parent.join("root.json")); } }
+    if let Some(data) = env::var_os("APPDATA") { config_files.push(PathBuf::from(data).join("ZAENIA/root.json")); }
+    let mut config_root = None;
+    if configured.is_none() {
+        for file in config_files { if file.is_file() {
+            let raw = std::fs::read_to_string(file).map_err(|_| "Could not read root.json.")?;
+            let data: serde_json::Value = serde_json::from_str(&raw).map_err(|_| "root.json must contain a root path.")?;
+            let value = data.get("root").and_then(|v| v.as_str()).ok_or("root.json must contain a root path.")?;
+            config_root = Some(PathBuf::from(value)); break;
+        }}
+    }
+    update_paths::runtime_root(configured.as_deref().or(config_root.as_deref()), &[], Path::new("C:/Projects/ZAENIA"))
+}
+
 /// Opens the ZÆNIA Voice window on this PC (scripts/start_zaenia_voice.ps1 on
 /// Windows, scripts/linux/open_zaenia_voice.sh on Linux).
 /// The passkey is typed in that real terminal window, never in the UI.
 #[tauri::command]
 fn start_voice_service() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     let script = VOICE_SCRIPT.iter().fold(root.clone(), |path, part| path.join(part));
     if !script.is_file() {
         return Err(format!("Voice script not found: {}", script.display()));
@@ -375,11 +394,7 @@ fn start_voice_service() -> Result<(), String> {
 /// "passkey": opens a window where the owner types the passkey (full mode).
 #[tauri::command]
 fn start_server(mode: String) -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     match mode.as_str() {
         "token" => run_restart_script(&root),
         "passkey" => {
@@ -397,11 +412,7 @@ fn start_server(mode: String) -> Result<(), String> {
 /// Opens the one-time Google Calendar sign-in (the browser asks Zack to Allow).
 #[tauri::command]
 fn connect_google_calendar() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     let script = root.join("scripts").join("connect_google_calendar.ps1");
     if !script.is_file() {
         return Err(format!("Google connect script not found: {}", script.display()));
@@ -412,11 +423,7 @@ fn connect_google_calendar() -> Result<(), String> {
 /// Opens the guided voice training (retrain profile, calibrate, refresh app-mic check).
 #[tauri::command]
 fn open_voice_training() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     let script = root.join("scripts").join("voice_training.ps1");
     if !script.is_file() {
         return Err(format!("Voice training script not found: {}", script.display()));
@@ -424,31 +431,73 @@ fn open_voice_training() -> Result<(), String> {
     open_voice_window(&script, &root).map_err(|_| "Could not open voice training.".to_string())
 }
 
-/// Opens the one-time Gmail (read-only) sign-in for important-email summaries.
+/// Opens the one-time Gmail connect window (IMAP app password, typed at the PC).
 #[tauri::command]
 fn connect_gmail() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     let script = root.join("scripts").join("connect_gmail.ps1");
     if !script.is_file() {
         return Err(format!("Gmail connect script not found: {}", script.display()));
     }
-    open_voice_window(&script, &root).map_err(|_| "Could not open the Gmail sign-in window.".to_string())
+    open_voice_window(&script, &root).map_err(|_| "Could not open the Gmail connect window.".to_string())
 }
 
 /// Restarts the ZÆNIA API server with the project's own script, hidden.
 /// Works even when the server is down, since it doesn't go through the API.
 #[tauri::command]
 fn restart_server() -> Result<(), String> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
-        .to_path_buf();
+    let root = runtime_project_root()?;
     run_restart_script(&root)
+}
+
+/// Settings > Updates > Install: runs scripts/install_update.ps1 for one staged update, hidden and detached so it
+/// can close and reopen this app. Only the update's folder name (checked here) and the restart choice are passed.
+#[tauri::command]
+fn install_update(app: tauri::AppHandle, id: String, restart: bool) -> Result<(), String> {
+    let valid = !id.is_empty() && id.len() <= 64
+        && id.chars().next().map_or(false, |c| c.is_ascii_alphanumeric())
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-');
+    if !valid {
+        return Err("Choose an update from Settings > Updates.".to_string());
+    }
+    let deployment = runtime_project_root()?;
+    let root = update_paths::find_update_root(&deployment, Some(&deployment), &id)?;
+    run_install_script(&root, &id, restart)?;
+    // ZAE closes itself so the installer can replace it (a window close can be held up by an unsaved-note prompt).
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        app.exit(0);
+    });
+    Ok(())
+}
+
+#[cfg(windows)]
+fn run_install_script(root: &Path, id: &str, restart: bool) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+    let script = root.join("scripts").join("install_update.ps1");
+    if !script.is_file() {
+        return Err(format!("Install script not found: {}", script.display()));
+    }
+    let command = |flags: u32| {
+        let mut command = std::process::Command::new("powershell.exe");
+        command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]).arg(&script).args(["-Id", id]).arg("-Root").arg(root);
+        if restart {
+            command.arg("-RestartServer");
+        }
+        command.current_dir(root).creation_flags(flags).spawn()
+    };
+    command(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB)
+        .or_else(|_| command(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP))
+        .map_err(|error| format!("Could not start the update: {}", error))?;
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn run_install_script(_root: &Path, _id: &str, _restart: bool) -> Result<(), String> {
+    Err("Installing updates from the app is only set up on Windows.".to_string())
 }
 
 /// Security-tab owner console: unlocking with the passkey or the spoken phrase,
@@ -464,8 +513,7 @@ fn run_security_tool(mode: String, request: Option<String>) -> Result<(), String
         || (!mode.starts_with("unlock_") && !request.is_empty()) {
         return Err("Choose a security action from the Security tab.".to_string());
     }
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not locate the project.".to_string())?;
+    let root = runtime_project_root()?;
     let script = root.join("scripts").join("security_console.ps1");
     if !script.is_file() { return Err("The security console is missing.".to_string()); }
     #[cfg(windows)]
@@ -489,8 +537,7 @@ fn run_profile_tool(mode: String, request: String) -> Result<(), String> {
         || request.len() != 32 || !request.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err("Choose a prepared profile request or source snapshot.".to_string());
     }
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().and_then(|desktop| desktop.parent())
-        .ok_or_else(|| "Could not locate the project.".to_string())?;
+    let root = runtime_project_root()?;
     let script = root.join("scripts").join("profile_console.ps1");
     if !script.is_file() { return Err("The local profile console is missing.".to_string()); }
     #[cfg(windows)]
@@ -547,6 +594,7 @@ pub fn run() {
                 zaenia_stream,
                 start_voice_service,
                 restart_server,
+                install_update,
                 zaenia_briefing_audio,
                 start_server,
                 connect_google_calendar,

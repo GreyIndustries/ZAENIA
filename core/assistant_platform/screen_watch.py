@@ -41,7 +41,8 @@ NOTE_EVERY_SECONDS = 20.0
 GAME_NOTE_EVERY_SECONDS = 60.0  # during game mode: fewer notes, to leave the GPU to the game
 CHANGE_THRESHOLD = 6.0      # mean grey-level difference (0-255) on a small thumbnail
 MAX_NOTES = 12
-VISION_MODEL = "qwen3.5:4b"
+from core.brain.conductor import model_for  # noqa: E402  (the one table of which model does what)
+VISION_MODEL = model_for("vision")
 
 SCREEN_QUESTION = re.compile(
     r"\b(?:(?:on|at|of|in) (?:my|the|this|that) (?:\w+ )?(?:screen|monitor|display)|what(?:'s| is) (?:on )?(?:my|the) (?:\w+ )?(?:screen|monitor)|"

@@ -1,0 +1,914 @@
+{
+  "scheme": "Beta: every version is 0.MINOR.PATCH until ZAENIA 1.0. MINOR goes up for a new feature or change, PATCH for a fix. The SYSTEM version covers capabilities and security (server, brains, memory, tools, security). The UI version covers anything that is only the interface. Each tab has its own version too. Starting numbers count the update days already in the project history.",
+  "system": {
+    "name": "ZAENIA system",
+    "version": "0.32.0",
+    "note": "Capabilities and security. Started from the 26 recorded system milestones in the build handoff; 0.27.0 adds in-app updates."
+  },
+  "ui": {
+    "name": "Interface",
+    "version": "0.27.0",
+    "note": "Started from 14 UI update days in history; 0.15.0 LIFE tab and full-screen tabs, 0.16.0 Settings hub, Updates and About."
+  },
+  "tabs": {
+    "home": {
+      "name": "Home",
+      "version": "0.10.0"
+    },
+    "life": {
+      "name": "LIFE",
+      "version": "0.19.0",
+      "note": "Continues Plan (0.11): 0.12 LIFE with Fitness & Health, 0.13 Map & traffic."
+    },
+    "notes": {
+      "name": "Notes",
+      "version": "0.7.0"
+    },
+    "workbench": {
+      "name": "Workbench",
+      "version": "0.6.0"
+    },
+    "music": {
+      "name": "Music",
+      "version": "0.5.0"
+    },
+    "research": {
+      "name": "Research",
+      "version": "0.11.0"
+    },
+    "codedoctor": {
+      "name": "Code Doctor & Files",
+      "version": "0.8.0"
+    },
+    "arena": {
+      "name": "LLM Training",
+      "version": "0.8.0"
+    },
+    "assistant": {
+      "name": "Assistant",
+      "version": "0.9.0"
+    },
+    "settings": {
+      "name": "Settings",
+      "version": "0.8.0",
+      "note": "0.5.0: Settings, Status and Security in one place, plus Updates and About."
+    },
+    "status": {
+      "name": "Status",
+      "version": "0.9.0"
+    },
+    "security": {
+      "name": "Security",
+      "version": "0.10.0"
+    },
+    "warroom": {
+      "name": "War Room",
+      "version": "0.1.0"
+    }
+  },
+  "modules": {
+    "server": {
+      "name": "Core server and API",
+      "version": "0.8.0"
+    },
+    "security": {
+      "name": "Security and owner approval",
+      "version": "0.8.0"
+    },
+    "brains": {
+      "name": "Conductor (four brains)",
+      "version": "0.11.0"
+    },
+    "memory": {
+      "name": "Memory and learning",
+      "version": "0.5.0"
+    },
+    "voice": {
+      "name": "Voice in and out",
+      "version": "0.8.0"
+    },
+    "research": {
+      "name": "Research and web answers",
+      "version": "0.9.0"
+    },
+    "calendar": {
+      "name": "Calendar",
+      "version": "0.5.0"
+    },
+    "reminders": {
+      "name": "Reminders and follow-through",
+      "version": "0.5.0"
+    },
+    "briefing": {
+      "name": "Daily brief",
+      "version": "0.2.0"
+    },
+    "fitness": {
+      "name": "Fitness and nutrition",
+      "version": "0.5.0"
+    },
+    "mail": {
+      "name": "Mail",
+      "version": "0.2.0"
+    },
+    "maps": {
+      "name": "GODSPEED",
+      "version": "0.16.0"
+    },
+    "phone": {
+      "name": "Phone app and CarPlay",
+      "version": "0.6.0"
+    },
+    "builder": {
+      "name": "Code Doctor and build requests",
+      "version": "0.6.0"
+    },
+    "updates": {
+      "name": "In-app updates",
+      "version": "0.2.1"
+    }
+  },
+  "nodes": {
+    "talk": {
+      "name": "Talk",
+      "version": "0.11.0",
+      "job": "Conversation"
+    },
+    "seek": {
+      "name": "Seek",
+      "version": "0.11.0",
+      "job": "Retrieval and investigation"
+    },
+    "keep": {
+      "name": "Keep",
+      "version": "0.11.0",
+      "job": "Light continuity and checkpoints"
+    },
+    "study": {
+      "name": "Study",
+      "version": "0.11.0",
+      "job": "Deeper analysis and development"
+    }
+  },
+  "history": [
+    {
+      "date": "2026-11-11",
+      "part": "system",
+      "version": "0.32.0",
+      "title": "Sunday whole-system update: nodes, learning, reliable updates and local builds",
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "Nodes and workspace navigation",
+          "description": "Health remains inside LIFE and its duplicate top-level category is removed. Mail moves from Assistant into LIFE, Workbench moves into BUILD, and Plan is presented as Schedule Board. Existing internal IDs preserve saved records and supported aliases."
+        },
+        {
+          "kind": "added",
+          "title": "LLM Training modules",
+          "description": "Arena becomes LLM Training with saved model-specific protocol, action, response and correction lessons, sequential local practice and owner-reviewed expected responses. Existing comparison and benchmark screens remain available as evaluation tools."
+        },
+        {
+          "kind": "added",
+          "title": "War Room planning",
+          "description": "Defense and business plans use 19 editable sections covering objectives, evidence, operations, finances, risks, incident response and milestones. Local model drafts are reviewed in the editor and saved explicitly; plans export as Markdown."
+        },
+        {
+          "kind": "added",
+          "title": "Camera registry",
+          "description": "Register explicitly chosen HTTP(S) camera viewer addresses and open them deliberately. Embedded credentials and query tokens are rejected. No network discovery or claim of active monitoring is made."
+        },
+        {
+          "kind": "added",
+          "title": "Research workshop and learning explorer",
+          "description": "Adds evidence-based deep dives, fact checks, scenario checks, timelines, source comparisons, study guides and saved study cards. Adapts 1557 offline reference entries from the supplied Quantum Research files without executing their UI or network code."
+        },
+        {
+          "kind": "security",
+          "title": "Guarded learning and research",
+          "description": "New routes use existing memory, chat and status authorization scopes. Lesson evaluation and saved-topic analysis additionally require memory.read. Revision checks protect concurrent edits; learning examples cannot create execution grants."
+        },
+        {
+          "kind": "limitations",
+          "title": "Training, reference and camera boundaries",
+          "description": "Teaching is model-specific reference retrieval and rehearsal, not model-weight fine-tuning. Camera entries are viewer links; RTSP/ONVIF streaming and recording need device-specific integration. Imported reference entries are unverified; citation matching does not prove factual truth. Native/mobile voice and owner-data trials require live verification after integration."
+        },
+        {
+          "kind": "changed",
+          "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+          "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+        },
+        {
+          "kind": "changed",
+          "title": "Voice states swell the orb instead of bursting from the mic",
+          "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+        },
+        {
+          "kind": "changed",
+          "title": "The mic button is a normal mic again",
+          "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+        },
+        {
+          "kind": "limitations",
+          "title": "C1 visual validation scope",
+          "description": "C1 was verified in synthetic desktop and phone layouts; real microphone, installed GPU and physical-phone behavior still need owner validation. Other parts of this combined update add the features described in the release notes."
+        },
+        {
+          "kind": "fixed",
+          "title": "Updates target the real deployment folder",
+          "description": "Native service and installer commands resolve a validated runtime project root, using trusted environment configuration, root.json or the real deployment folder. Temporary build roots are rejected and installer roots are passed explicitly."
+        },
+        {
+          "kind": "fixed",
+          "title": "Reliable install checks and recovery",
+          "description": "Installer CheckOnly validates hashes and target roots without closing ZAE. Installation closes only matching ZAE processes, retries file copies, reports blocking processes and restores the previous website as well as executable if replacement fails. SHA-256 works without the optional Get-FileHash cmdlet."
+        },
+        {
+          "kind": "fixed",
+          "title": "No stale install offers and reconnect refresh",
+          "description": "Installed version receipts prevent same-version or older update offers. The interface refreshes while visible to recover after a Core restart and shows the latest installed release notes as What’s new. Source version bumps alone are not mistaken for completed installations."
+        },
+        {
+          "kind": "changed",
+          "title": "ZAE builds locally by default",
+          "description": "Small, medium and large automatic build requests use local Aider and record the selected model/attempt. Missing local tools stop with an explanation instead of consuming a cloud subscription. Claude remains an explicit per-request opt-in labeled with its allowance cost. Failed local requests produce a private help packet; a 20-task historical catalog is provenance-checked, with no unmeasured success-rate claim."
+        },
+        {
+          "kind": "added",
+          "title": "Work commute answers use GODSPEED routing",
+          "description": "An explicit Save work commute control stores selected origin/destination coordinates. Conversation uses the existing routing service to estimate that saved route, labels the origin as saved rather than live GPS, and reports missing or unavailable data without inventing an ETA. Personal mail and commute context require the existing read scopes."
+        },
+        {
+          "kind": "limitations",
+          "title": "Owner device and mail-send trials remain separate",
+          "description": "Automated tests use synthetic mail, route data and installer fixtures. No real reply is sent without exact recipient/text approval. The Sunday integrated release still needs Claude’s independent security review and owner desktop, phone, microphone and post-restart checks."
+        },
+        {
+          "kind": "added",
+          "title": "Critical unit tests in CI",
+          "description": "Adds an isolated Python 3.11 regression job for context budgeting, evidence analysis, model-scoped teaching, adaptive learning, commute boundaries and update version handling. Test-only dependencies are pinned separately; production dependencies are unchanged."
+        }
+      ],
+      "changes": [
+        "Nodes and workspace navigation",
+        "LLM Training modules",
+        "War Room planning",
+        "Camera registry",
+        "Research workshop and learning explorer",
+        "Guarded learning and research",
+        "Training, reference and camera boundaries",
+        "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+        "Voice states swell the orb instead of bursting from the mic",
+        "The mic button is a normal mic again",
+        "C1 visual validation scope",
+        "Updates target the real deployment folder",
+        "Reliable install checks and recovery",
+        "No stale install offers and reconnect refresh",
+        "ZAE builds locally by default",
+        "Work commute answers use GODSPEED routing",
+        "Owner device and mail-send trials remain separate",
+        "Critical unit tests in CI"
+      ]
+    },
+    {
+      "version": "0.26.1",
+      "part": "ui",
+      "date": "2026-11-11",
+      "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+      "changes": [
+        "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+        "Voice states swell the orb instead of bursting from the mic",
+        "The mic button is a normal mic again",
+        "Nothing else changed"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+          "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+        },
+        {
+          "kind": "changed",
+          "title": "Voice states swell the orb instead of bursting from the mic",
+          "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+        },
+        {
+          "kind": "changed",
+          "title": "The mic button is a normal mic again",
+          "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+        },
+        {
+          "kind": "limitations",
+          "title": "Nothing else changed",
+          "description": "Only the core's look and position off Home changed. Home, Calm view, the page colours, the single core that never restarts and the pause-when-hidden behaviour from 0.26.0 are the same, and no feature or setting works differently. Checked in headless Chrome at 1440x900, 390x844 and 360x780 with a dev-only voice switch; not yet with a real microphone, the installed app's GPU or a physical phone."
+        }
+      ]
+    },
+    {
+      "version": "0.26.0",
+      "part": "ui",
+      "date": "2026-11-11",
+      "title": "One core, and Core in the mic (C5)",
+      "changes": [
+        "The core lives in the mic on every page except Home",
+        "Voice states burst out of the mic",
+        "The mic core takes the page's colour",
+        "Phone uses the M5 bar's mic",
+        "One core that never restarts",
+        "The core pauses whenever you can't see it",
+        "Small fixes around the core",
+        "What was not tested"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "The core lives in the mic on every page except Home",
+          "description": "Home keeps the big core in the centre card with its Standing by / Listening / Thinking / Speaking label. On every other page (category sheets, apps, records, split panes, Settings and the tab manager) the same core glides into the chat bar's mic button in about half a second and becomes a small spinning field there. Pages stay clean: no corner core and no second core anywhere."
+        },
+        {
+          "kind": "added",
+          "title": "Voice states burst out of the mic",
+          "description": "Off Home, while ZAE is listening, thinking or speaking, the core grows out of the mic into a ring about 150 px across, with the state word (LISTENING, THINKING, SPEAKING) to its left. The ring always stays fully on screen: next to a screen edge (as on the phone) it slides toward the middle, past any notch or rounded-corner safe area, and only shrinks on a screen narrower than the ring. Listening sends out pulse rings, thinking orbits three small dots, and speaking pulses one ring gently. When she is done it shrinks back into the mic."
+        },
+        {
+          "kind": "changed",
+          "title": "The mic core takes the page's colour",
+          "description": "Off Home the core is tinted with the open app's colour: LIFE green, Notes violet, Research teal, Assistant pink, and the app's own colour elsewhere; the category sheet and tab manager use amber. Home keeps its usual colours."
+        },
+        {
+          "kind": "changed",
+          "title": "Phone uses the M5 bar's mic",
+          "description": "On the phone, any page other than Home puts the core in the 42 px mic of the 'Say or type a page' bar (or the chat bar's when a page has no M5 bar). The phone Home core is unchanged."
+        },
+        {
+          "kind": "fixed",
+          "title": "One core that never restarts",
+          "description": "There is now exactly one core for the whole app. Opening the first window, going back Home, opening Calm view or moving between phone screens no longer rebuilds it, so its animation never jumps or restarts. Calm view no longer runs a second core alongside the hidden Home one."
+        },
+        {
+          "kind": "performance",
+          "title": "The core pauses whenever you can't see it",
+          "description": "The core stops drawing when it is fully under an opaque window or sheet, scrolled off-screen, or between places, and starts again the moment any of it is visible. It is drawn at the size you actually see (46 px in the mic, smaller in orbit view) instead of a full-size image shrunk down. Window unfocused or minimised still pauses it as before."
+        },
+        {
+          "kind": "fixed",
+          "title": "Small fixes around the core",
+          "description": "The Around the core view no longer shows STANDING BY over the CORE label. The Tabs strip no longer covers the Today card on Home. The security readout splits its words correctly. Unused core styles were removed."
+        },
+        {
+          "kind": "limitations",
+          "title": "What was not tested",
+          "description": "Checked in headless Chrome at 1440x900, 390x844 and 360x780 with a dev-only voice switch, not with a real microphone or real speech playback. Speaking uses a gentle pulse because the app has no speech output level to follow. Not yet checked on the installed desktop app's GPU or a physical phone."
+        }
+      ]
+    },
+    {
+      "version": "0.31.1",
+      "part": "system",
+      "date": "2026-11-11",
+      "title": "GODSPEED aircraft + updater installation repair",
+      "changes": [
+        "Install from the deployment project",
+        "Compatibility repair for the currently installed app",
+        "Preserve the already installed UI",
+        "Existing owner and package checks are preserved",
+        "Install must be retried on the PC"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "fixed",
+          "title": "Install from the deployment project",
+          "description": "The installed app was built in Claude’s temporary folder and searched that folder for staged packages, so Install stopped before the main installer ran. The updater now resolves a valid deployment ancestor containing Core, the installer and the selected staged manifest instead of blindly using the build folder."
+        },
+        {
+          "kind": "fixed",
+          "title": "Compatibility repair for the currently installed app",
+          "description": "A backed-up temporary-build installer now forwards only the validated update ID and existing restart flag to C:\\Projects\\ZAENIA. Discovery manifests are mirrored for the old native check; binaries, hash validation, backups, website installation and receipts stay in the real project. Nothing installs until the owner presses Install and confirms."
+        },
+        {
+          "kind": "fixed",
+          "title": "Preserve the already installed UI",
+          "description": "Claude’s temporary build also contained the newer Preview 05 screens, M5 phone layout, per-pane navigation and browser-like tabs already installed as UI 0.24. The repair package preserves that reviewed installed source and merges GODSPEED moving-aircraft changes into it, rather than downgrading to the older shared UI. Combined interface version is 0.25.0."
+        },
+        {
+          "kind": "security",
+          "title": "Existing owner and package checks are preserved",
+          "description": "Update IDs remain restricted, the desktop confirmation stays in place, and staged executable hashes are still verified by the existing installer. No new remote installation action is introduced. An optional trusted Windows process setting, ZAENIA_PROJECT_ROOT, must name an absolute valid deployment with the selected package."
+        },
+        {
+          "kind": "limitations",
+          "title": "Install must be retried on the PC",
+          "description": "This repair is staged and the compatibility path is ready; automatic installation and server restart have not been performed. Retry the corrected update in desktop Settings > Updates, confirm the second Install button, and keep Restart server enabled for the included aircraft timestamp changes."
+        }
+      ]
+    },
+    {
+      "version": "0.31.0",
+      "part": "system",
+      "date": "2026-11-11",
+      "title": "GODSPEED 0.16.0 — moving aircraft",
+      "changes": [
+        "Smooth moving aircraft",
+        "Real observation timestamps",
+        "Bounded and stale-data-safe movement",
+        "Animate aircraft control",
+        "Clearer flight details",
+        "Animation without extra provider calls",
+        "Voice paths use the existing guarded UI controls",
+        "Estimated movement and incomplete coverage"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "added",
+          "title": "Smooth moving aircraft",
+          "description": "Aircraft markers move between feed reports using observed position, speed and heading. Short corrections blend toward new reports rather than jumping at every refresh. Predicted markers are labeled estimated; this is not a continuous radar stream."
+        },
+        {
+          "kind": "changed",
+          "title": "Real observation timestamps",
+          "description": "Core now preserves each aircraft position timestamp and last-contact time from OpenSky. Feed observation time and fetch time are separate; a cached or newly fetched old observation is not relabeled fresh. Missing/future timestamps keep an aircraft stationary and visibly unknown."
+        },
+        {
+          "kind": "fixed",
+          "title": "Bounded and stale-data-safe movement",
+          "description": "Prediction stops after 45 seconds from the position report. Aircraft fade as stale after 60 seconds and disappear after 120 seconds. Ground aircraft and invalid speed/heading values are not extrapolated. Invalid coordinates are omitted, older out-of-order reports are rejected, and missing IDs are removed on a successful new feed."
+        },
+        {
+          "kind": "added",
+          "title": "Animate aircraft control",
+          "description": "GODSPEED Air has a named Animate aircraft checkbox. Turning it on also shows aircraft on the map; turning it off shows reported positions only. The preference stays on this device. Operating-system reduced-motion preferences disable animated prediction while still allowing report updates."
+        },
+        {
+          "kind": "changed",
+          "title": "Clearer flight details",
+          "description": "The Air panel shows feed observation age and explains estimated motion. Aircraft tooltips show report age and whether a marker is reported, estimated, stale or unknown. Selected flight details update to new reports and state the observation time."
+        },
+        {
+          "kind": "performance",
+          "title": "Animation without extra provider calls",
+          "description": "The aircraft overlay updates independently at up to 20 frames per second while visible; the full map and route do not redraw for every aircraft frame. Hidden/disabled layers stop visible animation work. The existing 30-second feed refresh and server cache remain; no additional provider polling or dependency is introduced."
+        },
+        {
+          "kind": "added",
+          "title": "Voice paths use the existing guarded UI controls",
+          "description": "With GODSPEED open, say Press Air, then Turn on Animate aircraft or Turn off Animate aircraft. The recognized-text path uses the same native checkbox handler as a click and does not grant permissions. Browser tests verify named-control routing; microphone/acoustic trials remain separate."
+        },
+        {
+          "kind": "limitations",
+          "title": "Estimated movement and incomplete coverage",
+          "description": "Motion between reports is a bounded speed/heading estimate and may differ from actual turns, acceleration or coverage gaps. Public feed data can be delayed or rate limited. Core must restart to supply observation timestamps; older Core responses stay stationary instead of inventing fresh positions. Real-device live display remains to validate after owner installation."
+        }
+      ]
+    },
+    {
+      "version": "0.30.0",
+      "part": "system",
+      "date": "2026-11-10",
+      "title": "Mission Deck, contextual voice resume and window layouts",
+      "changes": [
+        "Mission Deck with recent work for app pages",
+        "Voice resume offers respect later and do not ask again",
+        "2/3/4 window layouts with Undo and voice control"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "added",
+          "title": "Mission Deck app and page experience",
+          "description": "Applies the selected Mission Deck design to app cards and page directories while preserving the current neural core, palette, saved preferences and existing app features. Parent page groups become compact when a child page owns the work surface."
+        },
+        {
+          "kind": "added",
+          "title": "Recently worked on each page",
+          "description": "Page headers show observed recent work for that page, including explicit context titles where available. Records describe editing or using a control, not a claimed successful save. Work metadata stays on this device, is bounded to 100 page records and expires after 90 days; input values, document bodies, credentials and audio are not captured."
+        },
+        {
+          "kind": "added",
+          "title": "Context-aware spoken resume offers",
+          "description": "Returning to relevant work by voice can say You were recently working on [context], sir. Would you want to continue? The offer is voice-origin only and respects the Voice setting. Later/not-now/busy replies defer the same work for 24 hours; do not ask again and completed replies suppress it for the retained context. Repeated timestamps do not reset suppression. A resume response returns to the existing saved page; deferral creates no reminder."
+        },
+        {
+          "kind": "added",
+          "title": "Two, three or four app-window layouts",
+          "description": "A titlebar snap picker and tab manager arrange two side-by-side panes, a large-left pane with two stacked panes, or four quadrants. Named app order is preserved; extra windows minimize instead of closing. Undo restores prior geometry for still-open windows without discarding their drafts. The paired phone can queue these bounded screen-only requests for the PC."
+        },
+        {
+          "kind": "changed",
+          "title": "Shared voice page and control interface",
+          "description": "App microphone and recognized PC-listener turns share deterministic page navigation, recent-work, layout and named-control handling. Commands support app/subpage paths, page choices, next/previous, reading recent work, ordinary button presses, field filling and checkbox changes. Field filling does not submit a form. Ambiguous or unavailable controls are reported instead of guessed; protected actions retain their existing confirmation/authentication."
+        },
+        {
+          "kind": "fixed",
+          "title": "Readable panes and cancelled stale navigation",
+          "description": "Snapped windows stay visible at their assigned sizes while listening/speaking or while background animation pauses. Split-pane mastheads are compact. New requests invalidate delayed page-navigation acknowledgements and offers. The page catalogue no longer advertises the nonexistent Workbench Playground; the actual Code Doctor Playground remains available."
+        },
+        {
+          "kind": "performance",
+          "title": "Local metadata and no-model UI commands",
+          "description": "One throttled interaction observer records page-work metadata and the interface command router handles supported page/layout/control phrases without model inference or cloud calls. Existing models, core memory and speech-recognition configuration are unchanged. No package was installed."
+        },
+        {
+          "kind": "security",
+          "title": "Keep authentication and remote execution boundaries",
+          "description": "Screen-only remote layout actions use fixed enums, at most four distinct allowlisted app IDs, existing authenticated routes and queue expiry. They cannot execute shell commands, apply code or approve changes. Calm/password and pending owner-authentication flows block navigation/layout interference. UI control labels are an additional guard, never a replacement for server authorization."
+        },
+        {
+          "kind": "limitations",
+          "title": "Voice and resume scope",
+          "description": "Tests inject recognized text and capture requested speech; real microphone/acoustic and paired-phone use still need live validation. Recent work is device-local and resumes a page or retained draft, not an exact document cursor or cross-device session. These layouts arrange ZAE app windows, not third-party Windows applications. Custom canvas gestures, native file pickers and protected confirmations keep their dedicated interactions; universal natural-language control of every legacy feature is not claimed."
+        }
+      ]
+    },
+    {
+      "version": "0.20.0",
+      "part": "ui",
+      "date": "2026-11-10",
+      "title": "App context previews and visible mobile pages",
+      "changes": [
+        "Resume app cards with last-view context",
+        "Visible page directory in place of clipped tab strips",
+        "Touch-friendly navigation with preserved page drafts"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "added",
+          "title": "Last-view previews in category workspaces",
+          "description": "App cards show the saved page or nested view, last-opened time when available, and recent context from existing authenticated category records. Resume opens the existing app at its saved view. Missing data is labeled instead of invented."
+        },
+        {
+          "kind": "changed",
+          "title": "Page navigation across apps",
+          "description": "LIFE, Plan, Fitness & Health, Notes, Workbench, Research, Music, Code Doctor, Arena, Assistant and Settings/Status/Security use a clearly titled page with a Pages directory and previous/next buttons in place of the affected horizontal tab strips. Food, training and assistant-tool sections use the same chooser. Existing mounted-page draft preservation remains in place."
+        },
+        {
+          "kind": "fixed",
+          "title": "Mobile page controls no longer collapse",
+          "description": "Page navigation cannot shrink into the thin strip shown on phones. Page choices wrap into a touch-friendly directory, controls are at least 44 pixels tall, and leftover legacy tab rows retain a minimum height. Swipe navigation uses the page chooser and does not jump into another app at a subpage boundary."
+        },
+        {
+          "kind": "performance",
+          "title": "Reuse category context instead of fetching twice",
+          "description": "Workspace preview cards and category activity panels share the same read-only request batch. Responses for a category that has been left are discarded. No model inference, screenshot capture or new dependency is needed for previews."
+        },
+        {
+          "kind": "security",
+          "title": "Preserve private data and action boundaries",
+          "description": "Last-view lookup reads only allowlisted presentation keys and validates them against the page inventory. Saved view metadata contains no chat, document content, password or token. Context remains behind the existing authenticated APIs; navigation grants no execution or approval permissions."
+        },
+        {
+          "kind": "limitations",
+          "title": "Standalone-page designs remain review previews",
+          "description": "The five visual concepts cover 13 apps and 107 app/subpage destinations with sample data. They are design previews, not a migration to independent production URLs. This update fixes current navigation and shows one active page at a time while retaining the existing app structure. Resume restores a saved view, not an exact document cursor or full cross-device session. Platform-specific features keep their existing restrictions."
+        }
+      ]
+    },
+    {
+      "version": "0.29.0",
+      "part": "system",
+      "date": "2026-11-10",
+      "title": "GODSPEED 0.15.0 trip progress and detailed patch notes",
+      "changes": [
+        "Opt-in trip tracking",
+        "Visible route completion",
+        "Follow and current instruction",
+        "Unreliable GPS cannot falsely complete a trip",
+        "Trip estimates decrease with progress",
+        "Destination weather alerts",
+        "Clearer weather and radar context",
+        "Traffic colors expire",
+        "Manual traffic refresh",
+        "Detailed patch notes throughout ZAE",
+        "Release packaging requires explanations",
+        "Trip data stays temporary",
+        "Device and locked-phone validation remains",
+        "Road and feed coverage varies",
+        "Automatic off-route rerouting",
+        "App-session background trip ownership",
+        "Traffic ETA and reroutes have bounded coverage"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "added",
+          "title": "Opt-in trip tracking",
+          "description": "Start trip watches device location while the ZAE app session remains running, including across ZAE tab switches. Pause, reset, permission loss, arrival and phone disconnect release GPS tracking. App close/reload ends the RAM-only trip; operating-system location permissions remain unchanged."
+        },
+        {
+          "kind": "added",
+          "title": "Visible route completion",
+          "description": "The map shows completed-route shading, percentage completed, distance traveled, distance remaining and remaining time. Measurements follow the planned road geometry rather than straight-line distance to your destination."
+        },
+        {
+          "kind": "added",
+          "title": "Follow and current instruction",
+          "description": "Follow keeps the map centered on an accepted GPS position. Dragging pauses following so you can inspect the map; Recenter / follow restores it. The instruction display advances using route progress; it is not spoken turn-by-turn navigation."
+        },
+        {
+          "kind": "fixed",
+          "title": "Unreliable GPS cannot falsely complete a trip",
+          "description": "Stale, inaccurate, off-route and physically implausible fixes leave the last accepted progress unchanged. Arrival requires progress near the route end and a position close to the destination. Looping routes do not complete just because the start is near the endpoint."
+        },
+        {
+          "kind": "changed",
+          "title": "Trip estimates decrease with progress",
+          "description": "Remaining distance follows accepted geometry progress. Remaining time adds approximate flow-category penalties (slower 1.25x, heavy 1.65x, stop-and-go 2.2x) only where current traffic geometry matches the remaining route. Unknown roads retain baseline time. Coverage and estimated delay are shown; these are heuristics, not provider-measured travel times."
+        },
+        {
+          "kind": "added",
+          "title": "Destination weather alerts",
+          "description": "The weather panel checks alerts near the destination as well as near the current location or saved home. It labels these as point-area checks, not complete weather coverage for every road along the trip."
+        },
+        {
+          "kind": "changed",
+          "title": "Clearer weather and radar context",
+          "description": "Current conditions remain labeled with their saved-home location so they are not mistaken for a live GPS weather observation. Radar shows its observation age and is identified as observed precipitation rather than a forecast."
+        },
+        {
+          "kind": "fixed",
+          "title": "Traffic colors expire",
+          "description": "Timestamp-gated route colors now re-evaluate as time passes. Missing, saved-only or stale traffic remains dashed grey instead of implying clear roads; blue/orange/red retain their reported regular/slower/heavy meanings."
+        },
+        {
+          "kind": "added",
+          "title": "Manual traffic refresh",
+          "description": "Refresh traffic requests an updated report through the existing authenticated API. WSDOT coverage and source timestamps remain visible; this does not add nationwide traffic data."
+        },
+        {
+          "kind": "added",
+          "title": "Detailed patch notes throughout ZAE",
+          "description": "Waiting updates, installed updates and version history now show categorized Added, Changed, Fixed, Removed, Performance, Security & privacy and Known limitations sections when relevant. Each item includes a title and an explanation; older notes remain readable without invented details."
+        },
+        {
+          "kind": "changed",
+          "title": "Release packaging requires explanations",
+          "description": "Every future staged release must supply valid detailed notes in its matching version-history entry or a JSON file. Notes travel with the staged manifest and are preserved in installed history; a short title alone is no longer sufficient."
+        },
+        {
+          "kind": "security",
+          "title": "Trip data stays temporary",
+          "description": "Raw fixes and progress stay in RAM across ZAE tab switches, not on disk or in an AI model. Existing providers may receive routing coordinates during automatic rerouting, including the existing online fallback. Weather lookup uses a rounded area. Phone disconnect ends the trip. Authentication and execution permissions are unchanged."
+        },
+        {
+          "kind": "limitations",
+          "title": "Device and locked-phone validation remains",
+          "description": "Synthetic GPS/browser checks pass; real-road Windows/iPhone use remains to validate. Tracking can continue across ZAE tabs and while the runtime permits background GPS. A browser cannot guarantee GPS on a locked or suspended iPhone; native iOS Core Location integration is still required for reliable locked-phone navigation. Voice maneuvers are not included."
+        },
+        {
+          "kind": "limitations",
+          "title": "Road and feed coverage varies",
+          "description": "Projection onto nearby route geometry is not lane-level map matching. Parallel roads, tunnels and GPS gaps can need a manual route review/reset. Weather is US NWS coverage and traffic is regional WSDOT coverage; unavailable feeds are not fabricated."
+        },
+        {
+          "kind": "added",
+          "title": "Automatic off-route rerouting",
+          "description": "After at least three accurate off-route observations spanning eight seconds, GODSPEED recalculates from the current fix, preserving every unvisited intermediate stop and destination. Requests have a 30-second cooldown and stale replies are ignored after pause/reset. Failures retain the previous route. A switch can disable automatic rerouting."
+        },
+        {
+          "kind": "added",
+          "title": "App-session background trip ownership",
+          "description": "A shared in-memory trip service owns GPS independently of the map component, so switching ZAE tabs does not end the trip and reopening GODSPEED restores it. It requests a screen wake lock when supported and reports when the device releases or cannot provide it. Desktop minimization/background operation depends on the OS and WebView; phone locking may suspend GPS."
+        },
+        {
+          "kind": "limitations",
+          "title": "Traffic ETA and reroutes have bounded coverage",
+          "description": "WSDOT flow classes are regional and approximate; traffic penalties are uncalibrated estimates, and provider route durations may already reflect time-of-day assumptions. Automatic reroutes address being off route or retaining missed stops; they do not globally optimize around congestion. Completion percentages measure the current route and restart when a new remaining route is calculated."
+        }
+      ]
+    },
+    {
+      "version": "0.14.1",
+      "part": "tab:life",
+      "date": "2026-11-09",
+      "title": "GODSPEED v0.14.1",
+      "changes": [
+        "Maps & traffic is now GODSPEED",
+        "Map module version set to 0.14.1 at owner request",
+        "Includes familiar directions, suggestions and traffic updates"
+      ]
+    },
+    {
+      "version": "0.28.0",
+      "part": "system",
+      "date": "2026-11-09",
+      "title": "Familiar map directions and destination suggestions",
+      "changes": [
+        "Typing suggestions, current-location start, swap and recent destinations",
+        "Selectable alternative driving routes when available",
+        "Blue/orange/red reported traffic; unknown traffic stays grey",
+        "Provider connection reuse and bounded suggestion caching"
+      ]
+    },
+    {
+      "version": "0.17.0",
+      "part": "ui",
+      "date": "2026-11-09",
+      "title": "Category workspaces and orbital core launcher",
+      "changes": [
+        "Top categories open full workspaces with app cards and live recent records",
+        "Core launcher uses orbital category cards, app search and clearable device-local recent apps",
+        "Large mobile tiles, keyboard and mouse Back support, reduced motion and preserved open windows"
+      ]
+    },
+    {
+      "version": "0.27.1",
+      "part": "system",
+      "date": "2026-11-09",
+      "title": "Fix map tiles requiring an API key",
+      "changes": [
+        "Replace key-gated CARTO street tiles with OpenStreetMap",
+        "Use labelled USGS satellite imagery and preserve traffic overlay colours",
+        "Bypass cached API KEY REQUIRED images without deleting saved files"
+      ]
+    },
+    {
+      "version": "0.16.0",
+      "part": "ui",
+      "date": "2026-11-09",
+      "title": "Settings hub, Updates and About",
+      "changes": [
+        "The top-bar SYSTEM tab is now Settings, with Settings, Status and Security in a side menu",
+        "Updates: install waiting updates yourself, with an optional server restart, and see past updates",
+        "About: every version number in one place"
+      ]
+    },
+    {
+      "version": "0.27.0",
+      "part": "system",
+      "date": "2026-11-09",
+      "title": "In-app updates",
+      "changes": [
+        "Updates are staged for you to install from Settings, instead of being installed for you",
+        "Install backs up the current app first and can restart the server"
+      ]
+    },
+    {
+      "version": "0.15.0",
+      "part": "ui",
+      "date": "2026-11-09",
+      "title": "LIFE tab and full-screen tabs",
+      "changes": [
+        "Apps sidebar removed on every desktop screen",
+        "Plan and Fitness & Health combined into LIFE",
+        "Tabs open using the full screen"
+      ]
+    },
+    {
+      "version": "0.13.0",
+      "part": "tab:life",
+      "date": "2026-11-09",
+      "title": "Map & traffic in LIFE",
+      "changes": [
+        "Saved map tiles, landmarks and live traffic"
+      ]
+    },
+    {
+      "version": "0.7.0",
+      "part": "tab:assistant",
+      "date": "2026-11-09",
+      "title": "Mail in Assistant",
+      "changes": [
+        "Mail sub-tab"
+      ]
+    },
+    {
+      "version": "0.24.0",
+      "part": "ui",
+      "date": "2026-11-11",
+      "title": "Preview 05 screens, M5 phone and Chrome-like screen tabs",
+      "changes": [
+        "Desktop screens match preview 05; old title bars, mastheads and dock removed",
+        "Phone is exactly M5",
+        "Screen tabs: open any page in a new tab, two screens of one app side by side, tab manager",
+        "Records open full width; only the model's final answer is shown; tool clutter hidden from file lists"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "Desktop screens now match preview 05 exactly",
+          "description": "Every category, app and screen uses the preview-05 layout: a top row with the category switcher (Life, Health, Know, Create, Build, Settings), the 'Go to any page' search (Ctrl+K, mic), Back and the window buttons; then the breadcrumb, a large title and the sibling-page pills; then the 'Recent work here' card. App homes and category pages are bento tiles, each listing the screens and your records inside as small tiles. The old window title bars, mastheads, voice-help panels and dock are gone. The global top bar, chat bar and status bar stay."
+        },
+        {
+          "kind": "changed",
+          "title": "Phone is exactly M5",
+          "description": "Phone screens use only the M5 design: a header with Back, a one-line breadcrumb and the title; the 56px 'Say or type a page' bar with a 42px mic; category chips; the Continue card; and one-open-at-a-time accordions with 46px rows. App pages use a page dropdown. No mix of the older phone look is left."
+        },
+        {
+          "kind": "added",
+          "title": "Screen tabs, like Chrome",
+          "description": "Every open page is a tab in a strip under the top bar. Open any page in a new tab with the ⧉ button, Ctrl+click or middle-click on a tile, or by voice ('open suggestions in a new tab'). Two tabs of the same app (for example Build requests and Suggestions) each keep their own page and their own Back. Drag a tab onto the left or right half to show two side by side. Middle-click a tab to close it."
+        },
+        {
+          "kind": "added",
+          "title": "Tab manager",
+          "description": "'Tabs N' (or 'show tabs') lists every tab with where it is. Switch, close, move up or down, pin (pinned tabs stay first and survive Close all), move to pane 1-4, choose a 2/3/4 layout, Undo layout, minimise, restore and close all. 'Recently closed' brings a tab back in its old spot. Voice: 'show tabs', 'close this tab', 'reopen closed tab', 'split build requests and suggestions'."
+        },
+        {
+          "kind": "changed",
+          "title": "Records open full width",
+          "description": "A build request, note, recipe or other record replaces its list as its own full-width screen. Build requests have a main column (brief, what changed, review, diff, Approve/Reject) and a right column (status, what you asked, step, tool and time, files, checks). Long text has sensible maximum heights. The list's intro and ask box step aside while a record is open."
+        },
+        {
+          "kind": "fixed",
+          "title": "Only the final answer from the model",
+          "description": "Build summaries and reviews show only the text after the model's final answer marker (for example **ANSWER**); its thinking is hidden."
+        },
+        {
+          "kind": "fixed",
+          "title": "Changed-files list hides tool clutter",
+          "description": ".aider cache and chat-history files, __pycache__ and .pyc files no longer appear in a build request's files."
+        },
+        {
+          "kind": "fixed",
+          "title": "Solid windows and sheets",
+          "description": "Windows, the category sheet and the tab manager are fully opaque, so the background no longer shows through."
+        },
+        {
+          "kind": "fixed",
+          "title": "Back and toasts",
+          "description": "'Nothing to go forward to' and other voice notes fade after a few seconds instead of sticking. Each screen shows one Back button. 'Settings › Settings' style breadcrumbs show the name once."
+        }
+      ]
+    },
+    {
+      "version": "0.23.0",
+      "part": "ui",
+      "date": "2026-11-11",
+      "title": "Every screen is a page: category tiles, page search and phone accordion",
+      "changes": [
+        "Every app, sub-page and opened record is its own page with Back and a breadcrumb",
+        "Category pages show every screen as a tile; find any page with Ctrl+K or voice",
+        "Phone: voice-first accordion with a say-or-type bar",
+        "Split panes: reliable 2/3/4 layouts, own history per pane, no lost drafts"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "added",
+          "title": "Every screen is its own page with Back",
+          "description": "Each app, sub-page and opened record has one header with Back, a breadcrumb (for example LIFE › Fitness & Health › Food › Cookbook), the title and a switcher for its sibling pages: tiles on wide screens, a dropdown in narrow panes and on the phone. Parent levels shrink to a slim row. This replaces the in-place tab rows and the editors that used to appear under lists."
+        },
+        {
+          "kind": "added",
+          "title": "Category pages with every screen one tap away",
+          "description": "Choosing a category (Life, Health, Know, Create, Build, Settings) shows each of its apps as a tile, with every screen inside as a small button marked 'Screen' or 'N inside'. Apps with more than six screens stretch full width. Last view, Resume and recent items are kept."
+        },
+        {
+          "kind": "added",
+          "title": "Find any page by typing (Ctrl+K) or voice",
+          "description": "A 'Find any page' bar on every category page, or Ctrl+K anywhere on the desktop, searches every category, app and screen. Results highlight the match and show where the page lives. Enter opens the best match, using the same matching as voice commands like 'open cookbook', so typing and speaking reach the same page."
+        },
+        {
+          "kind": "added",
+          "title": "Phone: voice-first accordion",
+          "description": "On the phone, a category page has a large 'Say or type a page' bar with a mic button (it uses the existing voice input), scrolling category chips, a Continue card for your last view, and one accordion per app. One app is open at a time and lists 'Open home' plus every screen. App pages also list their deeper screens as accordions. The phone still shows one screen at a time."
+        },
+        {
+          "kind": "added",
+          "title": "Records open as their own screens",
+          "description": "These now open as their own page or Back step with a title: recipes, Workbench projects, training plans, nutrition targets, food and exercise entries, the meal review, scan results, notes, Notebook notes, picked map items, Research runs/periods/topics/books/articles, mail threads and attachments, memory corrections, Assistant-tools projects, songs, Code Doctor reviews/fixes/files/requests, Vault items and older security reports. Back keeps unsaved work, shown as 'Continue … · unsaved draft', and Forward reopens it."
+        },
+        {
+          "kind": "changed",
+          "title": "Map, Scripture, ENTHON, Files and song text are pages",
+          "description": "GODSPEED's Directions, Traffic, Weather, Air and Sea are pages, and the page list now matches these five real tabs. Scripture's Passage, Word search, Ancient texts and My marks are pages. So are ENTHON's Read and Write, Files' Recent, Browse and Changes, and a song's Lyrics and Session notes."
+        },
+        {
+          "kind": "added",
+          "title": "Each pane and the phone keep their own history",
+          "description": "Every desktop pane and the phone keep their own Back/Forward history and each page's scroll position, and reloading keeps it. Mouse side buttons act on the pane under the pointer. 'Go back', 'go forward', 'next pane', 'left/right/top/bottom pane', 'restore size' and 'exit full screen' work by voice. Page names work without 'the' ('open research library')."
+        },
+        {
+          "kind": "fixed",
+          "title": "Three- and four-window layouts work every time",
+          "description": "Layouts now fill from open windows in their current spots, then minimized ones, then recently used apps, so choosing 3 or 4 after an earlier layout, or with one window open, no longer does nothing. Panes keep their spots, and the result names the apps placed."
+        },
+        {
+          "kind": "fixed",
+          "title": "No lost drafts; better resizing, maximize and Undo",
+          "description": "Minimized windows stay loaded, so unsaved typing survives. Dragging the edge between panes moves both. Maximize then restore returns a pane to its spot, even after a reload. The layout picker no longer closes itself on hover-then-click. Undo appears in the dock row after arranging."
+        },
+        {
+          "kind": "fixed",
+          "title": "Workspace sheet visible when ZAE is not focused; map links wait for the map",
+          "description": "The category sheet used to stay invisible if it opened while another program had focus, because animations pause in the background. It now shows immediately. Opening a map page by voice or search waits for the map to load instead of sometimes failing."
+        },
+        {
+          "kind": "changed",
+          "title": "Compact chrome in small panes and on the phone",
+          "description": "Panes are size containers. Short panes hide the module banner and shrink headers and the recent-work card. Phone headers use a 40px Back button, a one-line breadcrumb and a 20px title. Touch targets are at least 44px, and there is no sideways page scroll at 360–430px widths."
+        },
+        {
+          "kind": "changed",
+          "title": "Phone layout requests are labelled as PC requests",
+          "description": "The phone always shows one screen. Asking it to arrange windows sends the existing bounded, authenticated request to the PC and says so. If the PC can't be reached, ZAE says the request wasn't sent."
+        },
+        {
+          "kind": "security",
+          "title": "No new permissions; security flows unchanged",
+          "description": "Back, Forward, search and the accordions only open pages, and only replay choices already made on screen. These are unchanged: Calm password, Face ID, near-code prompts, the server-offline card, mission approvals, the Vault lock, file-change approvals and the remote layout allowlist. History stores only page identifiers in session storage."
+        },
+        {
+          "kind": "limitations",
+          "title": "What has not been checked yet",
+          "description": "Screens that need the live server to show content were type-checked and covered by shared tests, but not seen in a browser: Research selections, Mail, Assistant projects, Music songs, Code Doctor, Vault, security reports, the meal review, scan results, picked map items and Notebook notes. Real microphone input, physical mouse side buttons, a real phone and live data were not used. Minimized windows keep doing their background refreshes. A few things that update in place without changing the screen stay as they were: Program's day panel, the ingredient type-ahead, the Mail reply box and the 'Why?' expanders."
+        }
+      ]
+    }
+  ]
+}

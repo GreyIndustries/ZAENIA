@@ -1,0 +1,873 @@
+{
+  "status": "Static inspection only; no supplied code executed. Reference data adapted; network, Tkinter, local paths and permission machinery not imported.",
+  "files": [
+    {
+      "file": "alphabet.py",
+      "sha256": "5abfab3d60388496a6b37b537178d4782e0dc5badb2bfe528b6f071e06b9c64f",
+      "functions": [
+        "_norm",
+        "find",
+        "greek_extra",
+        "rune",
+        "describe",
+        "gematria",
+        "chat_block",
+        "flashcards"
+      ]
+    },
+    {
+      "file": "ancient_map.py",
+      "sha256": "b9430028d5f4647644e30de9358bd62d8f1bf335c8e83e52edca247c29fcf648",
+      "functions": [
+        "_load",
+        "basemap",
+        "world",
+        "display_name",
+        "confidence",
+        "places",
+        "add_pin",
+        "remove_pin",
+        "find",
+        "search",
+        "in_chapter",
+        "mentioned_in",
+        "distance_km",
+        "describe"
+      ]
+    },
+    {
+      "file": "art_history.py",
+      "sha256": "170386afa05f089ae79e1ce0d22b450d82a8b8db1623534231cde2ec8783854b",
+      "functions": [
+        "work",
+        "symbol_list",
+        "search_symbols",
+        "works_for_culture",
+        "lens_text",
+        "work_notes",
+        "compare_reading",
+        "ask_lens",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "art_ui.py",
+      "sha256": "1bca0aaa9f3f039976b3a07cf2e23ccac009518068926d9a07b7f9bc57baf84c",
+      "functions": [
+        "_load",
+        "_save",
+        "ArtTab",
+        "ReadPanel",
+        "LensPanel",
+        "SymbolsPanel",
+        "fetch_picture",
+        "fetch_large",
+        "find_picture",
+        "StudyWindow"
+      ]
+    },
+    {
+      "file": "calendars.py",
+      "sha256": "131cf148f85380693ecfdbdbc504b53e1e4758f971f42ce21cbb5b9e1aec9b61",
+      "functions": [
+        "astro",
+        "historical",
+        "fmt_year",
+        "g_leap",
+        "fixed_from_gregorian",
+        "gregorian_year",
+        "gregorian_from_fixed",
+        "j_leap",
+        "fixed_from_julian",
+        "julian_from_fixed",
+        "h_leap",
+        "_h_elapsed",
+        "_h_correction",
+        "h_new_year",
+        "h_days",
+        "h_month_days",
+        "h_last_month",
+        "fixed_from_hebrew",
+        "hebrew_from_fixed",
+        "h_month_name",
+        "fixed_from_islamic",
+        "islamic_from_fixed",
+        "to_fixed",
+        "month_names",
+        "hebrew_month_number",
+        "validate",
+        "from_fixed",
+        "convert",
+        "today",
+        "year_labels",
+        "realms",
+        "rulers",
+        "_span",
+        "regnal_to_year",
+        "rulers_in",
+        "parse_regnal",
+        "parse_year_text",
+        "year_report",
+        "report_text",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "deep_dive.py",
+      "sha256": "18c9dcbac4b4bcd462b4567e0d288732b5ea235197bdfeb18a87fc16a5bfa7a4",
+      "functions": [
+        "_words",
+        "offline",
+        "online",
+        "summary_prompt",
+        "to_notebook",
+        "to_timeline"
+      ]
+    },
+    {
+      "file": "deep_dive_ui.py",
+      "sha256": "5e970a45bba03d31ffe071d070e77df80581568e36a9e2b015d67c0244195dc8",
+      "functions": [
+        "DeepDiveWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "doc_writer.py",
+      "sha256": "eaaa77cf0f85c89db4cb3ff7f03f5ec6f04d56bf7fcfe5cb809bfd6656ab53d2",
+      "functions": [
+        "parse",
+        "to_text",
+        "_run",
+        "_body",
+        "write_docx",
+        "save"
+      ]
+    },
+    {
+      "file": "etymology.py",
+      "sha256": "3acc590e86c45f585840c769653563b3cca2fc20db3cd48c1df5421d397ccd84",
+      "functions": [
+        "find",
+        "search",
+        "groups",
+        "myth",
+        "describe",
+        "tree_lines",
+        "path_to",
+        "wiktionary_url",
+        "online",
+        "_clean_wikitext",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "fact_check.py",
+      "sha256": "b06181ff6f5dd230c539c1f5964dc75858d0be4699936c42b021563df04db79b",
+      "functions": [
+        "_ask",
+        "split",
+        "plan",
+        "_local",
+        "_wiki",
+        "_news",
+        "gather",
+        "judge",
+        "log",
+        "markdown"
+      ]
+    },
+    {
+      "file": "fact_check_ui.py",
+      "sha256": "68d03fd0475bce6886ee5fc237199be13b99e6954a91c149bb47214f7ac671c2",
+      "functions": [
+        "FactCheckWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "family_names.py",
+      "sha256": "e0de0a6baad1994e46c08c7a3f89ee8f358a051078d2097c75df6921cbbe4f45",
+      "functions": [
+        "clean_name",
+        "variants",
+        "plan",
+        "_wiki",
+        "_news",
+        "_books",
+        "_local",
+        "run",
+        "site_links"
+      ]
+    },
+    {
+      "file": "family_names_ui.py",
+      "sha256": "f4903c4d52ee7662017b47c0316b4775f429cdd3cf270779754aaed20996b593",
+      "functions": [
+        "FamilyWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "flashcards.py",
+      "sha256": "4e74180d8d917c6a35a98a65a10ae9ee7af051ac3428baa876b5a339333eb310",
+      "functions": [
+        "_hebrew_cards",
+        "_greek_cards",
+        "_word_cards",
+        "_slug",
+        "_load",
+        "_save",
+        "decks",
+        "cards",
+        "new_deck",
+        "add_cards",
+        "edit_card",
+        "remove_card",
+        "remove_deck",
+        "parse_import",
+        "draft",
+        "parse_draft",
+        "progress",
+        "_today",
+        "card_state",
+        "due_cards",
+        "grade",
+        "deck_stats",
+        "reset_deck",
+        "_fold",
+        "check_typed",
+        "_distance",
+        "choices",
+        "summary_line"
+      ]
+    },
+    {
+      "file": "journeys.py",
+      "sha256": "80f3d0b08f70a38c9d64dcd7d0f6d01bf3c9b8b5f4873c932ea01ec12b586d5f",
+      "functions": [
+        "bounds",
+        "describe"
+      ]
+    },
+    {
+      "file": "learn_more_ui.py",
+      "sha256": "3c427ddb52840f126af5c2fb64022dc66d1dc4be306ffa974b3d5e91b6be88d1",
+      "functions": [
+        "_write",
+        "_link",
+        "_listbox",
+        "_two_columns",
+        "_ask_allow",
+        "_in_thread",
+        "PeoplePanel",
+        "CalendarPanel",
+        "WordsPanel",
+        "SourcesPanel"
+      ]
+    },
+    {
+      "file": "learn_ui.py",
+      "sha256": "d83bb4cd816efe542f1d23dec36c37810467e9237d062bbf3b113d29ae42b366",
+      "functions": [
+        "_more",
+        "LearnTab",
+        "CardsPanel",
+        "MakeCards",
+        "TimelinePanel",
+        "MapPanel",
+        "AlphabetPanel",
+        "TacticsPanel"
+      ]
+    },
+    {
+      "file": "library.py",
+      "sha256": "22355ee6cbc491d1386a886df743e8518e2ea2506208ca2ebd65601e13c93815",
+      "functions": [
+        "_norm",
+        "_first",
+        "open_library",
+        "gutenberg",
+        "pg_row",
+        "gutenberg_site",
+        "_gutendex",
+        "internet_archive",
+        "more_links",
+        "find_books",
+        "topic_summary",
+        "_cache_path",
+        "can_read",
+        "strip_gutenberg",
+        "read_book",
+        "cached_books",
+        "sections",
+        "_pattern",
+        "scan",
+        "near",
+        "top_words"
+      ]
+    },
+    {
+      "file": "local_sources.py",
+      "sha256": "c82af4fac1218837252d6b2fdbf05d4ce8ca623806c1f887e1083ff3a31d19e9",
+      "functions": [
+        "_keywords",
+        "_off",
+        "_bible_code",
+        "bible_refs",
+        "_passage_block",
+        "_quran_block",
+        "_sefaria_block",
+        "_topic_block",
+        "_word_block",
+        "_xref_block",
+        "_book_block",
+        "_notebook_block",
+        "_place_block",
+        "_tactics_block",
+        "_letter_block",
+        "_more_blocks",
+        "_marks_block",
+        "context"
+      ]
+    },
+    {
+      "file": "map_layers.py",
+      "sha256": "fea0a6dd74230758fff934d961efdd88ad2b26a851b95606f6c42c38f0f59352",
+      "functions": [
+        "battle_list",
+        "site_list",
+        "work_list",
+        "fmt_year",
+        "describe",
+        "search",
+        "empire_years",
+        "borders",
+        "colour_for"
+      ]
+    },
+    {
+      "file": "museum.py",
+      "sha256": "06592ef1bb640136f2d952d816300406ea74f419e757c80ca13907f8de1c7f10",
+      "functions": [
+        "_aic",
+        "_met",
+        "_cma",
+        "met_object",
+        "commons_image",
+        "search",
+        "thumbnail",
+        "large_url",
+        "large_image",
+        "study_image",
+        "photo",
+        "credit",
+        "page_link",
+        "query_for_link"
+      ]
+    },
+    {
+      "file": "museum_ui.py",
+      "sha256": "47a4872e8b9348c0130cbee5069eba16385c532d1ca8126024b997f2a0f9b57a",
+      "functions": [
+        "MuseumWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "news.py",
+      "sha256": "98bc72b7dfe47bd844ec8ae9dc3c98d4654cd8333127e7b9e981d82d604e4179",
+      "functions": [
+        "feeds",
+        "region_of",
+        "groups",
+        "save_feeds",
+        "add_feed",
+        "remove_feed",
+        "_clean",
+        "_when",
+        "parse_feed",
+        "headlines",
+        "matches",
+        "gdelt_query",
+        "_market",
+        "bing_search",
+        "search",
+        "gdelt_search",
+        "ago",
+        "_article_html",
+        "read_article"
+      ]
+    },
+    {
+      "file": "notebook_share_ui.py",
+      "sha256": "528091e9c6a8e6da2837e01df6d2434f989816ef7687f543a3e7bd90f5ad5a2e",
+      "functions": [
+        "_button",
+        "_check",
+        "ShareWindow",
+        "open_share"
+      ]
+    },
+    {
+      "file": "offline_library.py",
+      "sha256": "98ae8a7ed9fcd0ec6e6cc2c055ee8146b8a11172776872a68a46bede388c507b",
+      "functions": [
+        "_pg_direct",
+        "manifest",
+        "_mark",
+        "_save",
+        "_load",
+        "folder_size",
+        "status",
+        "has",
+        "_plain",
+        "bible_codes",
+        "_bible",
+        "bible_store",
+        "bible",
+        "bible_chapter",
+        "bible_codes_here",
+        "book_names",
+        "bible_search",
+        "_quran",
+        "quran_store",
+        "quran_search",
+        "_sefaria_lengths",
+        "_sefaria_section",
+        "_sefaria_work",
+        "sefaria_lookup",
+        "sefaria_titles",
+        "sefaria_search",
+        "_ancient",
+        "ancient_books",
+        "_study",
+        "download"
+      ]
+    },
+    {
+      "file": "patterns.py",
+      "sha256": "b52a950851c31bada0f43027bc5e20bedf84d7ac0794757c38ce308d51130f80",
+      "functions": [
+        "_term",
+        "_quoted",
+        "periods",
+        "label",
+        "_loc_dates",
+        "_lang",
+        "_loc_count",
+        "_ia_count",
+        "_norms",
+        "_save_norms",
+        "_cache_file",
+        "_flat",
+        "_drop_flat_totals",
+        "_cached",
+        "timeline",
+        "_gdelt_timeline",
+        "_values",
+        "spikes",
+        "trend",
+        "correlation",
+        "describe",
+        "examples"
+      ]
+    },
+    {
+      "file": "people.py",
+      "sha256": "550eec14c7fd2b47a09becd0a150a89d681227e2d6434006c322b0e83488d35d",
+      "functions": [
+        "_p",
+        "_mine",
+        "all_people",
+        "find",
+        "search",
+        "add_person",
+        "remove_person",
+        "fmt",
+        "lifespan",
+        "age_at_death",
+        "span",
+        "alive_in",
+        "children",
+        "contemporaries",
+        "describe",
+        "tree",
+        "timeline_events",
+        "aliases",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "research_more.py",
+      "sha256": "bb7019b004a205a677bf96ce4a1fea25fc5ad082d19a175744ded7c533340efb",
+      "functions": [
+        "suggest_menu",
+        "suggest_button",
+        "_background",
+        "explore",
+        "_permission",
+        "_run_allowed",
+        "teach_dialog",
+        "send_menu",
+        "_chat_about",
+        "ScriptureTab",
+        "TranslateTab",
+        "_Downloader",
+        "open_offline"
+      ]
+    },
+    {
+      "file": "research_net.py",
+      "sha256": "57f6308a147fcd1ae368eb26acaee9305503c880c4329249c0dc284f84c62f42",
+      "functions": [
+        "WebOff",
+        "NetError",
+        "web_on",
+        "require_web",
+        "_wait",
+        "_agent",
+        "_log_error",
+        "_public",
+        "get",
+        "_get",
+        "_sleep",
+        "get_json",
+        "get_text",
+        "open_in_browser"
+      ]
+    },
+    {
+      "file": "research_notebook.py",
+      "sha256": "6c8a3967dde66faeca17c83c37973f33fe4afb118beef5c7673383371b166a10",
+      "functions": [
+        "_load",
+        "_save",
+        "topics",
+        "topic",
+        "new_topic",
+        "_now",
+        "add_source",
+        "remove_source",
+        "set_notes",
+        "delete_topic",
+        "_store_analysis",
+        "pack",
+        "clean",
+        "stream",
+        "_cache_load",
+        "_cache_save",
+        "_bodies",
+        "plan",
+        "_groups",
+        "_block",
+        "analyse",
+        "ask_about",
+        "markdown",
+        "_plain",
+        "analysis_ok",
+        "share_text",
+        "share_plain",
+        "share_save",
+        "save_to_vault"
+      ]
+    },
+    {
+      "file": "research_partner.py",
+      "sha256": "662d90fb815aeab1e04f31097f8a3963a8d6de94d1af05c04da05b6452d7f504",
+      "functions": [
+        "_ask",
+        "_lines",
+        "suggest",
+        "plan",
+        "run_plan",
+        "summary_text",
+        "draft_lessons",
+        "teach",
+        "to_suggestion",
+        "to_prediction"
+      ]
+    },
+    {
+      "file": "research_ui.py",
+      "sha256": "510711cbd2a76abc5e3e1f5c0c0b4dcd451049661192c431fac27d2b8273df81",
+      "functions": [
+        "_button",
+        "_entry",
+        "_text",
+        "_scrolled",
+        "_button_grid",
+        "_box",
+        "_write",
+        "_tree",
+        "ResearchPage",
+        "open_research"
+      ]
+    },
+    {
+      "file": "scenario_check.py",
+      "sha256": "fae06a0bc1d59313184ece0bf8d72261f0c549a1832e1f062d31bb740f6de908",
+      "functions": [
+        "known_origin",
+        "_ollama_json",
+        "_parse",
+        "_int",
+        "exposure",
+        "years_to_expose",
+        "matching_precedents",
+        "_precedent_list",
+        "gather",
+        "check",
+        "verdict",
+        "render",
+        "_log",
+        "to_experiment"
+      ]
+    },
+    {
+      "file": "scenario_ui.py",
+      "sha256": "e7815907c9ec967fcb4c0bbc4cb350f5a5914b28c806e86abbbad26954f0ae69",
+      "functions": [
+        "ScenarioWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "scripture.py",
+      "sha256": "b6d4912af87f4451ab2336c3378b95c1f82abd6011dcd01eac7e0bf02afbe28b",
+      "functions": [
+        "_key",
+        "_extra_books",
+        "book_id",
+        "parse_ref",
+        "book_name",
+        "ref_name",
+        "_plain",
+        "strongs",
+        "_cache",
+        "_remember",
+        "_offline",
+        "translations",
+        "chapter",
+        "passage",
+        "compare",
+        "search",
+        "word_counts",
+        "dictionary",
+        "_flat",
+        "sefaria",
+        "_at",
+        "quran",
+        "quran_search",
+        "links"
+      ]
+    },
+    {
+      "file": "source_check.py",
+      "sha256": "77b40f08775f9cbfc8eb12a95758edaca7c352a73c53be66d31b5d63001af5de",
+      "functions": [
+        "run",
+        "open_check"
+      ]
+    },
+    {
+      "file": "source_text.py",
+      "sha256": "8350de187f3661b5d2f436622fae172daa6af86db76a59638187ad77b243eeb2",
+      "functions": [
+        "path_for",
+        "has_full",
+        "read_full",
+        "supported",
+        "_archive",
+        "_loc",
+        "_gutenberg",
+        "_wikipedia",
+        "fetch",
+        "focus_terms",
+        "excerpt"
+      ]
+    },
+    {
+      "file": "sources.py",
+      "sha256": "7490c87ba0df96efffe79f1c1bdd23fc041f82b619e28dd1eefd5c79a3e132cc",
+      "functions": [
+        "_path",
+        "have",
+        "read",
+        "_Text",
+        "html_to_text",
+        "download",
+        "source_url",
+        "fmt_year",
+        "describe",
+        "search_saved",
+        "myth_text",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "study.py",
+      "sha256": "bbef2788edd3c4410511cd0075c6e79a9f103e72b95b6f32b80827552d9a4636",
+      "functions": [
+        "_save",
+        "_load",
+        "_strip_html",
+        "base_strong",
+        "_ref",
+        "parse_words",
+        "parse_lexicon",
+        "download_words",
+        "has_words",
+        "_cached",
+        "lexicon",
+        "interlinear",
+        "concordance",
+        "find_strong",
+        "_bare",
+        "_osis",
+        "parse_openbible",
+        "parse_crossrefviz",
+        "download_crossrefs",
+        "has_crossrefs",
+        "_collapse",
+        "crossrefs",
+        "gospel_parallels",
+        "verse_text",
+        "search_all",
+        "marks",
+        "add_mark",
+        "remove_mark",
+        "marks_for_chapter",
+        "marks_markdown"
+      ]
+    },
+    {
+      "file": "study_ui.py",
+      "sha256": "fb1c9fa244678dee20adff74e179bb69078eb9e85e09c43186d6cb3dbc527bb7",
+      "functions": [
+        "links_setup",
+        "link",
+        "_click",
+        "side",
+        "goto_bible",
+        "current_verse",
+        "remember_click",
+        "english_code",
+        "search_all",
+        "show_all",
+        "open_hit",
+        "open_book",
+        "crossrefs",
+        "interlinear",
+        "word_study_strong",
+        "word_study",
+        "bookmark",
+        "my_marks",
+        "marks_to_vault",
+        "highlight_tags",
+        "Reader",
+        "read_aloud"
+      ]
+    },
+    {
+      "file": "tactics.py",
+      "sha256": "e3c612b8042ad8e8e79944ea80a62587c17604817801688c2757df87f5f09734",
+      "functions": [
+        "find",
+        "battles_for",
+        "describe",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "then_now.py",
+      "sha256": "f1b2bb3ca556737328a6500b75b7d6f76092254ff08de975b35d3b65d302f5e8",
+      "functions": [
+        "_norm",
+        "_coords",
+        "_km",
+        "entry",
+        "lookup",
+        "text",
+        "links",
+        "chat_block"
+      ]
+    },
+    {
+      "file": "then_now_ui.py",
+      "sha256": "5ebc831dbd18d1a70b412bb0e166d7c2c7cf98dd56405920b04dcfa11dd65079",
+      "functions": [
+        "open_window"
+      ]
+    },
+    {
+      "file": "timeline.py",
+      "sha256": "6d1eeb24a8ebfa51f68f3465e02a692d2f884e327bab4a23bed3417dcba1aa8d",
+      "functions": [
+        "parse_year",
+        "_part",
+        "fmt_year",
+        "fmt_span",
+        "_slug",
+        "_load",
+        "_save",
+        "anchors",
+        "lanes",
+        "new_lane",
+        "_lane_path",
+        "add_events",
+        "edit_event",
+        "remove_event",
+        "remove_lane",
+        "parse_timeline_text",
+        "from_notebook",
+        "markdown"
+      ]
+    },
+    {
+      "file": "topic_watch.py",
+      "sha256": "acbe8a76737d862d8178f265638997574bac608d757c6a46490b0e6f58dd0720",
+      "functions": [
+        "_load",
+        "_save",
+        "_key",
+        "watches",
+        "add",
+        "set_on",
+        "remove",
+        "inbox",
+        "mark_read",
+        "unread_total",
+        "due",
+        "check",
+        "summary_line",
+        "schedule",
+        "open_window"
+      ]
+    },
+    {
+      "file": "topic_watch_ui.py",
+      "sha256": "adf561d3a709a4f2fa670748289d3ef3d6d38bd5247837d4dc693de7b0af506c",
+      "functions": [
+        "_countries",
+        "WatchWindow",
+        "open_window"
+      ]
+    },
+    {
+      "file": "translate.py",
+      "sha256": "a28d70e68fca81f0792dc7478b8b77c59361b6a9b4fef007ce1f5531c56fa386",
+      "functions": [
+        "detect",
+        "chunks",
+        "_clean",
+        "offline_available",
+        "offline_pairs",
+        "_offline",
+        "_model",
+        "translate",
+        "titles"
+      ]
+    }
+  ]
+}

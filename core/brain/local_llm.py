@@ -64,10 +64,7 @@ def get_brain_settings() -> dict[str, Any]:
     )
 
     return {
-        "model": _arena_choice() or brain.get(
-            "model",
-            "qwen3:8b",
-        ),
+        "model": _arena_choice() or brain.get("model") or _default_model(),
         "fallback_model": str(brain.get("fallback_model") or brain.get("model") or ""),
         "endpoint": brain.get(
             "endpoint",
@@ -84,6 +81,11 @@ def get_brain_settings() -> dict[str, Any]:
     }
 
 
+def _default_model() -> str:
+    from core.brain.conductor import model_for
+    return model_for("default")
+
+
 def get_system_prompt() -> str:
     config = load_brain_config()
     from core.brain.conversation_rules import RULES, UI_CAPABILITIES
@@ -95,7 +97,22 @@ def get_system_prompt() -> str:
             "You are ZÆNIA, Zack's personal AI assistant.",
         )
     ).strip()
-    return "\n\n".join((base, RULES.strip(), CONTEXT_RULES.strip(), UI_CAPABILITIES.strip()))
+    parts = [base, RULES.strip(), CONTEXT_RULES.strip(), UI_CAPABILITIES.strip()]
+    try:  # her app's real pages and tabs, generated from the source files (self_map.py)
+        from core.brain.self_map import summary
+        parts.append(summary())
+    except Exception:
+        pass
+    return "\n\n".join(part for part in parts if part)
+
+
+def self_map_context(user_text: str) -> str:
+    """The full map of what's inside ZAE (and what isn't), only for questions about herself."""
+    try:
+        from core.brain.self_map import about_self, full_text
+        return full_text() if about_self(user_text) else ""
+    except Exception:
+        return ""
 
 
 def check_ollama_available() -> bool:
@@ -159,8 +176,9 @@ def build_messages(
     # of an over-long prompt, which is where the instructions above live.
     from core.brain.context_budget import fit_prompt
     clock = clock_context()
+    self_map = self_map_context(user_text)
     fitted = fit_prompt(
-        fixed_text="".join(m["content"] for m in messages) + clock,
+        fixed_text="".join(m["content"] for m in messages) + clock + self_map,
         question=user_text,
         behavior=behavior_context,
         conversation=conversation_context,
@@ -169,6 +187,9 @@ def build_messages(
     )
     behavior_context, conversation_context, recent_messages = fitted.behavior, fitted.conversation, fitted.history
     extra_context_parts: list[str] = []
+
+    if self_map:
+        extra_context_parts.append(self_map)
 
     if behavior_context:
         extra_context_parts.append(
@@ -328,8 +349,20 @@ def build_payload(
         # A caller's own keep-alive (Talk stays loaded) still lets go of graphics memory in game mode.
         settings = {**settings, "keep_alive": _game_keep_alive(keep_alive)}
 
+    chosen = active_model(settings)
+    # Retrieve only after memory.read was checked by BrainService, and only for
+    # this call's actual model (Talk, Seek, or an explicit caller override).
+    from core.assistant_platform.learning_lab import AuthorizedTeachingContext, teaching_context
+    if isinstance(behavior_context, AuthorizedTeachingContext):
+        try:
+            lesson_context = teaching_context(user_text, chosen)
+        except Exception:
+            lesson_context = ""
+        if lesson_context:
+            behavior_context = f"{behavior_context}\n\n{lesson_context}"
+
     return {
-        "model": active_model(settings),
+        "model": chosen,
         "messages": build_messages(
             user_text,
             recent_messages=recent_messages,

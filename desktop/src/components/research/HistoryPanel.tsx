@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import { AddToNotebook, AnalysisResult, NeedsServer, UNTRUSTED_NOTE, useAnalysis } from "./researchShared";
 import "./Research.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 type Point = { period: string; count: number | null; rate: number };
 type Track = { source: string; label: string; unit: string; series: { term: string; points: Point[] }[] };
@@ -79,7 +80,9 @@ export function HistoryPanel() {
     catch (failure) { setError(errorText(failure)); }
     finally { setBusy(false); }
   };
+  const seenPicks = useRef(new Map<string, { term: string; period: string }>());
   const pick = async (term: string, period: string) => {
+    seenPicks.current.set(detailKey(`${term}-${period}`), { term, period });
     setPicked({ term, period }); setRows([]); setRowsBusy(true); analysis.clear(); setTranslated(null);
     try { setRows((await api<{ rows: Row[] }>("GET", `/api/research/history/samples?term=${encodeURIComponent(term)}&source=${data?.source ?? source}&period=${period.slice(0, 4)}&language=${language}`, undefined, { timeoutMs: 90_000 })).rows); }
     catch (failure) { setError(errorText(failure)); }
@@ -132,6 +135,9 @@ export function HistoryPanel() {
         <AnalysisResult {...analysis}/>
       </div>
       <div className="research__side">
+        <DetailScreen id="history-term" name="Historical Connections" open={!!picked} itemId={picked ? `${picked.term}-${picked.period}` : undefined}
+          title={picked ? `${picked.term} · ${picked.period}` : "A period"}
+          onOpen={key => { const seen = seenPicks.current.get(key ?? ""); if (seen) void pick(seen.term, seen.period); }} onClose={() => { setPicked(null); setRows([]); }}/>
         <div className="research__table-wrap">
           <table className="research__table">
             <thead><tr><th>When</th><th>What was written</th><th>Where</th></tr></thead>

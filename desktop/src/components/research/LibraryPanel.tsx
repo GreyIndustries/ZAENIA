@@ -3,6 +3,7 @@ import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import { AddToNotebook, AnalysisResult, NeedsServer, UNTRUSTED_NOTE, useAnalysis } from "./researchShared";
 import "./Research.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 type Book = { id: string; title: string; author: string; year: number | string | null; source: string; access: string; url: string; readUrl: string | null };
 type Found = { query: string; results: Book[]; readable: number; skipped: string[]; overview: { title: string; summary: string; url: string } | null };
@@ -54,6 +55,8 @@ export function LibraryPanel() {
         {!found && <p className="research__empty">Search for a title, author or subject. Free-to-read books are highlighted.</p>}
       </div>
       <aside className="research__side">
+        <DetailScreen id="library-book" name="The Library" open={!!selected} itemId={selected?.id} title={selected?.title || "Book"}
+          onOpen={key => { const book = found?.results.find(item => detailKey(item.id) === key); if (book) { setSelected(book); analysis.clear(); } }} onClose={() => setSelected(null)}/>
         {selected ? <>
           <h3>{selected.title}</h3>
           <p className="research__meta">{[selected.author, selected.year, selected.source].filter(Boolean).join(" · ")} · {selected.access}</p>

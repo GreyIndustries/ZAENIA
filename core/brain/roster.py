@@ -43,15 +43,15 @@ def brain_modules(installed: set[str] | None, loaded: set[str]) -> list[dict[str
 
 
 def brains() -> list[dict[str, Any]]:
-    from core.brain.conductor import SEEK_MODEL, TALK_KEEP_ALIVE, TALK_MODEL
+    from core.brain.conductor import KEEP_MODEL, SEEK_MODEL, STUDY_MODEL, TALK_KEEP_ALIVE, TALK_MODEL
     return [
         {"id": "talk", "name": "Talk", "model": TALK_MODEL, "where": "Graphics card",
          "role": "The only brain that speaks or writes to you, including progress notes while others work. Kept loaded all day; freed while you game.", "keepAlive": TALK_KEEP_ALIVE},
         {"id": "seek", "name": "Seek", "model": SEEK_MODEL, "where": "Graphics card",
-         "role": "Thinks, never speaks: reads shared files part by part, finds facts in them, and answers web questions with sources.", "keepAlive": "as needed"},
-        {"id": "study", "name": "Study", "model": "qwen3:14b", "where": "Graphics card",
+         "role": "Reads shared files part by part, finds facts in web pages, works out which app action you meant, checks answers about ZAE herself, and writes web answers where accuracy matters most.", "keepAlive": "as needed"},
+        {"id": "study", "name": "Study", "model": STUDY_MODEL, "where": "Graphics card",
          "role": "Thinks, never speaks: research jobs, Code Doctor, Suggestions, nightly fix ideas and Aider's local coding. Unloaded after each research job.", "keepAlive": "10m after Code Doctor; unloads after research"},
-        {"id": "keep", "name": "Keep", "model": "qwen3:1.7b", "where": "Processor",
+        {"id": "keep", "name": "Keep", "model": KEEP_MODEL, "where": "Processor",
          "role": "Small watch-list summaries, on the processor so the graphics card stays free.", "keepAlive": "30m"},
         {"id": "topics", "name": "Topic tracker", "model": "nomic-embed-text", "where": "Graphics card",
          "role": "Keeps track of which conversation topic you're on.", "keepAlive": "10m"},
@@ -94,6 +94,11 @@ def coding_tools() -> list[dict[str, Any]]:
     ]
 
 
+def turn_summary() -> dict[str, Any]:
+    from core.brain.turn_log import summary
+    return summary()
+
+
 def roster() -> dict[str, Any]:
     import requests
     loaded: dict[str, dict[str, Any]] = {}
@@ -117,9 +122,12 @@ def roster() -> dict[str, Any]:
         model = brain["model"] if brain["model"] in names or ":" in brain["model"] else brain["model"] + ":latest"
         roles.setdefault(model, []).append(brain["name"])
         rows.append({**brain, "installed": model in names, "loaded": loaded.get(model)})
-    roles.setdefault("qwen3:14b", []).append("Aider")
+    from core.assistant_platform.build_helper import AIDER_MODEL
+    roles.setdefault(AIDER_MODEL, []).append("Aider")
     roles.setdefault("zae-code:14b", []).append("OpenCode")
+    from core.brain.conductor import OVERNIGHT_MODEL
+    roles.setdefault(OVERNIGHT_MODEL, []).append("Nightly ideas")
     for model in installed:
         model["usedBy"] = roles.get(model["name"], [])
     return {"ollama": {"running": version is not None, "version": version, "address": OLLAMA}, "brains": rows,
-            "tools": coding_tools(), "models": sorted(installed, key=lambda m: (not m["usedBy"], m["name"]))}
+            "tools": coding_tools(), "turns": turn_summary(), "models": sorted(installed, key=lambda m: (not m["usedBy"], m["name"]))}

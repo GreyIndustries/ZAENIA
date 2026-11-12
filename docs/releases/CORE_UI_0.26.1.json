@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "changed",
+    "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+    "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+  },
+  {
+    "kind": "changed",
+    "title": "Voice states swell the orb instead of bursting from the mic",
+    "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+  },
+  {
+    "kind": "changed",
+    "title": "The mic button is a normal mic again",
+    "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+  },
+  {
+    "kind": "limitations",
+    "title": "Nothing else changed",
+    "description": "Only the core's look and position off Home changed. Home, Calm view, the page colours, the single core that never restarts and the pause-when-hidden behaviour from 0.26.0 are the same, and no feature or setting works differently. Checked in headless Chrome at 1440x900, 390x844 and 360x780 with a dev-only voice switch; not yet with a real microphone, the installed app's GPU or a physical phone."
+  }
+]

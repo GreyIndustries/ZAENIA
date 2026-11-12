@@ -55,6 +55,12 @@ export function useSwipeNavigation({ enabled, root, pages, current, open }: {
       if (!direction) return;
       const { pages: order, current: page, open: go } = latest.current;
       // The page's own sub-tab row: the first visible tab list in the main view.
+      const pageNavigator = [...host.querySelectorAll<HTMLElement>("[data-page-navigator]")].find(node => node.offsetParent !== null && !node.closest("[hidden]"));
+      if (pageNavigator) {
+        const step = pageNavigator.querySelector<HTMLButtonElement>(direction === "next" ? "[data-page-next]" : "[data-page-previous]");
+        if (step && !step.disabled) step.click();
+        return; // Never switch apps accidentally at a subpage boundary.
+      }
       const row = [...host.querySelectorAll<HTMLElement>('[role="tablist"]')].find(list => list.offsetParent !== null && !list.closest("[hidden]"));
       const tabs = row ? [...row.querySelectorAll<HTMLElement>('[role="tab"]')] : [];
       const selected = tabs.findIndex(tab => tab.getAttribute("aria-selected") === "true");

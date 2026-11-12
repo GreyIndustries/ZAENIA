@@ -507,9 +507,11 @@ class BrainService:
             except Exception:
                 ambient = None
         learned = None
+        memory_read_allowed = False
         try:
             from core.assistant_service import authorize_memory
             authorize_memory(self.memory_authorizer, "memory.read")
+            memory_read_allowed = True
             from core.personal_memory.insights import learner
             learned = learner().context(question)
         except Exception:
@@ -557,6 +559,8 @@ class BrainService:
             gaming = None
         mail = None
         try:
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.read")
             from core.email_watch.service import email_context
             mail = email_context(question)
         except Exception:
@@ -583,8 +587,21 @@ class BrainService:
             fitness = training_context(question)
         except Exception:
             fitness = None
-        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security, pc, fitness) if part]
-        return "\n\n".join(parts) or None
+        commute = None
+        try:
+            from core.assistant_service import authorize_memory
+            authorize_memory(self.memory_authorizer, "memory.read")
+            authorize_memory(self.memory_authorizer, "status.read")
+            from core.maps.commute import context as commute_context
+            commute = commute_context(question)
+        except Exception:
+            commute = None
+        parts = [part for part in (profile, owner, learned, ambient, screen, gaming, news, mail, security, pc, fitness, commute) if part]
+        context = "\n\n".join(parts)
+        if memory_read_allowed:
+            from core.assistant_platform.learning_lab import AuthorizedTeachingContext
+            return AuthorizedTeachingContext(context)
+        return context or None
 
     def _load_behavior_profile(
         self,

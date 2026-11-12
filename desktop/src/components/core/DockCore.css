@@ -1,0 +1,43 @@
+/* C1 "Docked companion" (Claude, 2026-11-11). */
+/* The slot each top row reserves: 38 px idle, 54 px while ZAE listens, thinks or speaks (only the row holding the orb). */
+.core-dock-slot{flex:none;display:block;width:38px;height:38px;transition:width .55s cubic-bezier(.2,.8,.2,1)}
+.zaenia-app[data-dock-voice] .core-dock-slot[data-dock-on]{width:54px}
+
+/* The orb: a 96 px drawing box centred on the slot, shown at ~57 px (1.5x the slot) so its glow spills a little. */
+.core-dock{--core-accent:#e0a353;--dock-idle:.594;--dock-voice:.76;position:fixed;z-index:85;margin:-48px 0 0 -48px;pointer-events:none}
+.core-dock *{pointer-events:none!important}
+.core-dock__core{position:absolute;inset:0;display:flex;transform:scale(var(--dock-idle));
+  transition:transform .55s cubic-bezier(.2,.8,.2,1),filter .55s ease}
+.core-dock__core .neural-core{flex:1;min-width:0}
+.core-dock:not(.core-dock--idle) .core-dock__core{transform:scale(var(--dock-voice));
+  filter:brightness(1.25) drop-shadow(0 0 8px color-mix(in srgb,var(--core-accent) 70%,transparent))}
+.core-dock .core-state,.core-dock .core-hud,.core-dock .core-tap{display:none}
+
+/* Voice effects around the orb: listening pulses outward, thinking orbits dots, speaking pulses one ring. */
+.core-dock__fx{position:absolute;inset:0;opacity:0;transition:opacity .3s ease}
+.core-dock:not(.core-dock--idle) .core-dock__fx{opacity:1}
+.core-dock__fx i{position:absolute;display:block;box-sizing:border-box}
+.core-dock--listening .core-dock__fx i{inset:24%;border:1.5px solid var(--core-accent);border-radius:50%;animation:core-dock-pulse 1.8s ease-out infinite}
+.core-dock--listening .core-dock__fx i:nth-child(2){animation-delay:.6s}
+.core-dock--listening .core-dock__fx i:nth-child(3){animation-delay:1.2s}
+@keyframes core-dock-pulse{0%{transform:scale(.7);opacity:.85}100%{transform:scale(1.35);opacity:0}}
+.core-dock--thinking .core-dock__fx{animation:core-dock-orbit 1.6s linear infinite}
+.core-dock--thinking .core-dock__fx i{left:50%;top:12px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--core-accent);
+  box-shadow:0 0 6px var(--core-accent);transform-origin:2.5px 36px}
+.core-dock--thinking .core-dock__fx i:nth-child(2){transform:rotate(120deg);opacity:.7}
+.core-dock--thinking .core-dock__fx i:nth-child(3){transform:rotate(240deg);opacity:.45}
+@keyframes core-dock-orbit{from{rotate:0deg}to{rotate:360deg}}
+.core-dock--speaking .core-dock__fx i:first-child{inset:14%;border:2px solid var(--core-accent);border-radius:50%;
+  box-shadow:0 0 12px color-mix(in srgb,var(--core-accent) 55%,transparent);animation:core-dock-speak .9s ease-in-out infinite alternate}
+.core-dock--speaking .core-dock__fx i:not(:first-child){display:none}
+@keyframes core-dock-speak{from{transform:scale(.92);opacity:.55}to{transform:scale(1.04);opacity:1}}
+
+/* Reduced motion: no swell, pulse or slot change; colour only. */
+@media (prefers-reduced-motion:reduce){
+  .core-dock-slot,.zaenia-app[data-dock-voice] .core-dock-slot[data-dock-on]{width:38px;transition:none}
+  .core-dock__core,.core-dock:not(.core-dock--idle) .core-dock__core{transform:scale(var(--dock-idle));filter:none;transition:none}
+  .core-dock__fx{display:none}
+}
+.zaenia-app[data-motion=off] .core-dock-slot,.zaenia-app[data-motion=reduced] .core-dock-slot{width:38px!important;transition:none}
+.zaenia-app[data-motion=off] .core-dock__core,.zaenia-app[data-motion=reduced] .core-dock__core{transform:scale(var(--dock-idle))!important;filter:none!important;transition:none}
+.zaenia-app[data-motion=off] .core-dock__fx,.zaenia-app[data-motion=reduced] .core-dock__fx{display:none}

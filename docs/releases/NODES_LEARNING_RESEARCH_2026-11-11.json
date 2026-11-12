@@ -1,0 +1,37 @@
+[
+  {
+    "kind": "changed",
+    "title": "Nodes and workspace navigation",
+    "description": "Health remains inside LIFE and its duplicate top-level category is removed. Mail moves from Assistant into LIFE, Workbench moves into BUILD, and Plan is presented as Schedule Board. Existing internal IDs preserve saved records and supported aliases."
+  },
+  {
+    "kind": "added",
+    "title": "LLM Training modules",
+    "description": "Arena becomes LLM Training with saved model-specific protocol, action, response and correction lessons, sequential local practice and owner-reviewed expected responses. Existing comparison and benchmark screens remain available as evaluation tools."
+  },
+  {
+    "kind": "added",
+    "title": "War Room planning",
+    "description": "Defense and business plans use 19 editable sections covering objectives, evidence, operations, finances, risks, incident response and milestones. Local model drafts are reviewed in the editor and saved explicitly; plans export as Markdown."
+  },
+  {
+    "kind": "added",
+    "title": "Camera registry",
+    "description": "Register explicitly chosen HTTP(S) camera viewer addresses and open them deliberately. Embedded credentials and query tokens are rejected. No network discovery or claim of active monitoring is made."
+  },
+  {
+    "kind": "added",
+    "title": "Research workshop and learning explorer",
+    "description": "Adds evidence-based deep dives, fact checks, scenario checks, timelines, source comparisons, study guides and saved study cards. Adapts 1557 offline reference entries from the supplied Quantum Research files without executing their UI or network code."
+  },
+  {
+    "kind": "security",
+    "title": "Guarded learning and research",
+    "description": "New routes use existing memory, chat and status authorization scopes. Lesson evaluation and saved-topic analysis additionally require memory.read. Revision checks protect concurrent edits; learning examples cannot create execution grants."
+  },
+  {
+    "kind": "limitations",
+    "title": "Training, reference and camera boundaries",
+    "description": "Teaching is model-specific reference retrieval and rehearsal, not model-weight fine-tuning. Camera entries are viewer links; RTSP/ONVIF streaming and recording need device-specific integration. Imported reference entries are unverified; citation matching does not prove factual truth. Native/mobile voice and owner-data trials require live verification after integration."
+  }
+]

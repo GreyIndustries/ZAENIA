@@ -59,6 +59,35 @@ check(() => assert.deepEqual(run(hold(hand({ fingers: [true, false, false, false
 // Open palm always stops; pinch can never close a tab.
 check(() => assert.deepEqual(run(hold(hand({ fingers: up4, thumb: "out" }), 700), true).actions, [{ kind: "stop" }]));
 check(() => assert.deepEqual(run(hold(hand({ fingers: up4, thumb: "out" }), 1200)).actions, [{ kind: "stop" }]));
+// Even a broad saved-pose matcher cannot replace the reserved palm Stop or bypass its hold.
+check(() => {
+  const engine = new GestureActions(); let matched = 0;
+  engine.setPoses(() => { matched++; return { id: "broad", name: "Close", action: { kind: "close" } }; });
+  const actions = hold(hand({ fingers: up4, thumb: "out" }), 1200).map(([points, at]) => engine.update(points, at).action).filter(Boolean);
+  assert.deepEqual(JSON.parse(JSON.stringify(actions)), [{ kind: "stop" }]);
+  assert.equal(matched, 0);
+});
+// Emergency Stop is independent of the general action cooldown.
+check(() => {
+  const engine = new GestureActions();
+  assert.equal(engine.update(hand({ thumb: "up" }), 0).action, null);
+  assert.equal(engine.update(hand({ thumb: "up" }), 600).action.kind, "confirm");
+  const palm = hand({ fingers: up4, thumb: "out" });
+  assert.equal(engine.update(palm, 650).action, null);
+  assert.equal(engine.update(palm, 1099).action, null);
+  assert.equal(engine.update(palm, 1100).action.kind, "stop");
+  assert.equal(engine.update(palm, 1600).action, null);
+});
+// Open-hand navigation and pinch remain reserved even when a taught matcher claims them.
+check(() => {
+  for (const [points, expected] of [[hand({ fingers: up4 }), [{ kind: "category", index: 3 }]],
+    [hand({ fingers: [true, false, false, false], thumb: "pinch" }), []]]) {
+    const engine = new GestureActions(); let matched = 0;
+    engine.setPoses(() => { matched++; return { id: "broad", name: "Close", action: { kind: "close" } }; });
+    const actions = hold(points, 1200).map(([pts, at]) => engine.update(pts, at).action).filter(Boolean);
+    assert.deepEqual(JSON.parse(JSON.stringify(actions)), expected); assert.equal(matched, 0);
+  }
+});
 // Swipes with an open hand. The camera is mirrored: moving the hand to the camera's left is "right" on screen.
 const swipe = (dx, dy) => Array.from({ length: 9 }, (_, i) => [hand({ fingers: up4, at: { x: 0.5 - dx * i / 8, y: 0.75 + dy * i / 8 } }), 1000 + i * 40]);
 check(() => assert.deepEqual(run(swipe(0.3, 0)).actions, [{ kind: "next" }]));

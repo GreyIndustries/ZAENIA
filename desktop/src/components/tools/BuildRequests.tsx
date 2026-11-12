@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, errorText, LIVE_API, restartServer } from "../../core/bridge";
 import "./CodeStudio.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
+import { displayFiles, finalAnswer } from "../../core/buildText";
 
 /**
  * Build requests (Grey's options 2 and 3, 2026-11-01): ZAE writes a brief, Claude Code or Aider makes the change in a
@@ -8,7 +10,7 @@ import "./CodeStudio.css";
  * goes live otherwise. Her security code is locked: a change that touches it is thrown away.
  */
 type Status = "draft" | "queued" | "working" | "ready" | "failed" | "approved" | "undone" | "rejected";
-type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null;
+type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null; model?: string; attempt?: number;
   status: Status; step: string; createdAt: string; updatedAt: string; summary?: string; diff?: string; changed?: string[];
   checks?: { ok: boolean; text: string }; review?: { status: "reviewed" | "unavailable"; model?: string; text: string; at: string; advisory?: boolean };
   source?: string; needs?: { app: boolean; server: boolean } };
@@ -42,7 +44,7 @@ export function BuildRequests() {
     window.addEventListener("zae:records-changed", changed); return () => window.removeEventListener("zae:records-changed", changed);
   }, [load]);
   const items = view?.requests ?? [];
-  const current = items.find(item => item.id === picked) ?? items[0] ?? null;
+  const current = items.find(item => item.id === picked) ?? null;  // list first (preview 05); a request opens as its own screen
   useEffect(() => { setBrief(current?.brief ?? ""); setTool(""); setShowChecks(false); setNote(null); }, [current?.id, current?.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = async (label: string, work: () => Promise<unknown>, done?: string) => {
@@ -95,21 +97,21 @@ export function BuildRequests() {
         {items.map(item => <button key={item.id} type="button" className="zx-inset cs-qitem" aria-pressed={current?.id === item.id} onClick={() => setPicked(item.id)}>
           <span className={`cs-sev ${TONE[item.status]}`}>{LABEL[item.status].toUpperCase()}{item.source === "idea" ? " · FROM AN IDEA" : ""}</span>
           <b>{item.title}</b>
-          <small className="cs-muted">{new Date(item.createdAt).toLocaleString()}{item.tool ? ` · ${TOOL[item.tool]}` : ""}</small>
+          <small className="cs-muted">{new Date(item.createdAt).toLocaleString()}{item.tool ? ` · ${TOOL[item.tool]}${item.model ? ` on ${item.model}` : ""}` : ""}</small>
         </button>)}
       </div>
-      {current && <div className="cs-queue__main zx-card" style={{ padding: 16 }}>
-        <div><span className={`cs-sev ${TONE[current.status]}`}>{LABEL[current.status].toUpperCase()}</span><h2 className="zx-title">{current.title}</h2></div>
-        <p className="cs-muted">You asked: “{current.request}”</p>
-        <p className={current.status === "failed" ? "cs-error" : "cs-muted"} role="status">{["queued", "working"].includes(current.status) ? "⏳ " : ""}{current.step}</p>
+      <DetailScreen id="build-request" name="Build requests" open={!!current} itemId={current?.id} quiet={picked === null} title={current?.title || "Request"}
+        onOpen={id => { const item = items.find(entry => detailKey(entry.id) === id); if (item) setPicked(item.id); }} onClose={() => setPicked(null)}/>
+      {current && <div className="cs-queue__main br-layout">
+        <div className="br-main">
         {(current.status === "draft" || current.status === "failed") ? <>
           <label className="cs-stack" style={{ gap: 4 }}><span className="cs-kicker">Brief for the coding tool (edit it if needed)</span>
             <textarea value={brief} onChange={event => setBrief(event.target.value)} rows={6} maxLength={3000} style={{ width: "100%" }}/></label>
           {current.files?.length ? <p className="cs-muted">Files that may be involved: {current.files.join(", ")}</p> : null}
           <div className="cs-row">
             <label className="cs-field">Tool<select value={tool} onChange={event => setTool(event.target.value)}>
-              <option value="">Let ZAE choose ({current.size} change)</option>
-              <option value="claude" disabled={!view?.tools.claude}>Claude Code</option>
+              <option value="">Local Aider — default for every task size</option>
+              <option value="claude" disabled={!view?.tools.claude}>Claude Code — explicit opt-in; uses your Claude allowance</option>
               <option value="aider" disabled={!view?.tools.aider}>Aider (local, free)</option>
             </select></label>
             <button type="button" className="cs-primary" disabled={!!busy} onClick={() => void act("starting", () => post("start", { brief, tool: tool || null }, true), "Started. She'll tell you when it's ready.")}>
@@ -117,16 +119,11 @@ export function BuildRequests() {
             <button type="button" disabled={!!busy} onClick={() => void act("throwing it away", () => post("reject"))}>Throw away</button>
           </div>
         </> : <p className="cs-body">{current.brief}</p>}
-        {current.summary && <div className="zx-inset cs-explain"><p><strong>What changed:</strong> {current.summary}</p></div>}
-        {current.changed?.length ? <p className="cs-muted">Files: {current.changed.join(", ")}</p> : null}
-        {current.checks && <div>
-          <button type="button" onClick={() => setShowChecks(open => !open)}>{current.checks.ok ? "✓ Tests passed" : "✗ Tests failed"} · {showChecks ? "hide" : "show"} details</button>
-          {showChecks && <pre className="cs-diff" aria-label="Test results"><span>{current.checks.text}</span></pre>}
-        </div>}
+        {finalAnswer(current.summary) && <div className="zx-inset cs-explain"><p><strong>What changed:</strong> {finalAnswer(current.summary)}</p></div>}
         {current.review && <section className="zx-inset cs-explain" aria-label="Independent second-pass review">
           <strong>Second-pass local review · {current.review.status === "reviewed" ? current.review.model : "unavailable"}</strong>
           <p className="cs-muted">Advisory only. It cannot approve, reject, or change this request. You remain the reviewer.</p>
-          <pre className="cs-diff">{current.review.text}</pre>
+          <pre className="cs-diff br-text">{finalAnswer(current.review.text)}</pre>
         </section>}
         {current.diff && ["ready", "failed", "approved"].includes(current.status) && <pre className="cs-diff" aria-label="The change">{current.diff.split("\n").map((line, i) =>
           <span key={i} className={line.startsWith("+") && !line.startsWith("+++") ? "cs-add" : line.startsWith("-") && !line.startsWith("---") ? "cs-del" : line.startsWith("@@") ? "cs-hunk" : ""}>{line}{"\n"}</span>)}</pre>}
@@ -137,6 +134,18 @@ export function BuildRequests() {
         {current.status === "approved" && <div className="cs-row">
           <button type="button" disabled={!!busy} onClick={() => { if (window.confirm("Undo this change? It's reverted and the app rebuilds.")) live("undo", "undoing it"); }}>Undo this change</button>
         </div>}
+        </div>
+        <aside className="br-meta" aria-label="Request details">
+        <div><span className={`cs-sev ${TONE[current.status]}`}>{LABEL[current.status].toUpperCase()}</span></div>
+        <p className="cs-muted">You asked: “{current.request}”</p>
+        <p className={current.status === "failed" ? "cs-error" : "cs-muted"} role="status">{["queued", "working"].includes(current.status) ? "⏳ " : ""}{current.step}</p>
+        <p className="cs-muted">{current.tool ? TOOL[current.tool] : "Tool not chosen yet"} · created {new Date(current.createdAt).toLocaleString()}</p>
+        {displayFiles(current.changed).length ? <div className="br-files"><span className="cs-kicker">Files</span><ul>{displayFiles(current.changed).map(file => <li key={file}><code>{file}</code></li>)}</ul></div> : null}
+        {current.checks && <div>
+          <button type="button" onClick={() => setShowChecks(open => !open)}>{current.checks.ok ? "✓ Tests passed" : "✗ Tests failed"} · {showChecks ? "hide" : "show"} details</button>
+          {showChecks && <pre className="cs-diff" aria-label="Test results"><span>{current.checks.text}</span></pre>}
+        </div>}
+        </aside>
       </div>}
     </div>}
   </div>;

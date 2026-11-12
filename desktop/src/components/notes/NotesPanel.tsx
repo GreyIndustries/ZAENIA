@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { DetailScreen } from '../shell/PageNavigator';
 import { api, errorText, LIVE_API } from '../../core/bridge';
 import '../assistant/PlatformPanel.css';
 import './NotesPanel.css';
@@ -27,6 +28,11 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
   const [listing, setListing] = useState<Listing | null>(null);
   const [query, setQuery] = useState(''); const [archived, setArchived] = useState(false); const [offset, setOffset] = useState(0);
   const [busy, setBusy] = useState(false); const [error, setError] = useState(''); const [message, setMessage] = useState('');
+  // The note editor is its own screen (Claude 2026-11-11); Back returns to the wall and keeps the draft.
+  const [editing, setEditing] = useState(false);
+  useEffect(() => { const go = (event: Event) => { const detail = (event as CustomEvent<{ screen?: string; id?: string }>).detail; if (detail?.screen === "notes/editor" && detail.id) { open(detail.id); setEditing(true); } };
+    window.addEventListener("zae:open-record", go); return () => window.removeEventListener("zae:open-record", go); });
+
   const locked = useRef(false); const ticket = useRef(0);
   const note = draft.note; const disabled = !LIVE_API || busy;
   const noteRef = useRef(note); noteRef.current = note;
@@ -72,18 +78,20 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
 
   return <section className="platform-panel notes-panel" aria-label="Saved notes" aria-busy={busy}>
     <div className="platform-panel__heading"><div><span className="subheading">KEEP FOR LATER</span><h2>Your notes</h2></div>
-      <button type="button" disabled={disabled || draft.dirty} onClick={() => { onDraft({ note: blank(), dirty: false }); setError(''); setMessage(''); }}>New note</button>
+      <button type="button" disabled={disabled || draft.dirty} onClick={() => { onDraft({ note: blank(), dirty: false }); setError(''); setMessage(''); setEditing(true); }}>New note</button>
     </div>
     {!LIVE_API && <p className="platform-note">Connect to ZAE to open and save your notes.</p>}
     {error && <p className="platform-error" role="alert">{error}</p>}
     {message && <p className="platform-note" role="status">{message}</p>}
-    <div className="notes-controls">
+    <DetailScreen id="note-editor" name="All notes" open={editing && !!note} title={note?.title.trim() || 'New note'} onOpen={() => setEditing(true)} onClose={() => setEditing(false)}/>
+    {!editing && note && <button type="button" className="personal-resume" onClick={() => setEditing(true)}>Continue {note.title.trim() || 'new note'}{draft.dirty ? ' · unsaved draft' : ''}</button>}
+    <div className="notes-controls" hidden={editing && !!note}>
       <label>Search notes<input type="search" value={query} maxLength={300} placeholder="Search titles and text…" onChange={e => { setQuery(e.target.value); setOffset(0); }}/></label>
       <label className="platform-check"><input type="checkbox" checked={archived} onChange={e => { setArchived(e.target.checked); setOffset(0); }}/>Show archived notes</label>
       <button type="button" disabled={disabled} onClick={() => void perform(async () => {})}>Refresh notes</button>
     </div>
     <div className="notes-workspace notes-workspace--wall">
-      <div className="notes-editor">
+      <div className="notes-editor" hidden={!(editing && note)}>
         {note ? <form onSubmit={e => { e.preventDefault(); void perform(() => save()); }}>
           <div className="platform-card__head"><strong>{note.id ? 'Edit note' : 'New note'}</strong><span>{draft.dirty ? 'Unsaved changes' : note.id ? 'Saved' : 'Not saved yet'}</span></div>
           <label>Note title<input value={note.title} maxLength={160} required disabled={disabled} onChange={e => edit({ title: e.target.value })}/></label>
@@ -103,10 +111,10 @@ export function NotesPanel({ draft: initialDraft, onDraft: rememberDraft }: { dr
           {note.archived && <p className="platform-note">Archived. ZAE leaves this note out of conversation references until you restore it.</p>}
         </form> : <p className="platform-note">Pick a note below or select New note. Notes are shared with Research › Notebook and Workbench projects; in chat, say “add this to notes” or “update my ___ note with this”.</p>}
       </div>
-      <div className="notes-wall" aria-label="Your notes">
+      <div className="notes-wall" aria-label="Your notes" hidden={editing && !!note}>
         <small className="notes-wall__count">{listing ? `${listing.total} ${archived ? 'archived' : 'saved'} ${listing.total === 1 ? 'note' : 'notes'}` : 'Loading notes…'}</small>
         {listing?.notes.length === 0 && <p>{query ? 'No notes match this search.' : archived ? 'No archived notes.' : 'Save ideas, details and things you want to come back to.'}</p>}
-        {listing?.notes.map(item => <button type="button" key={item.id} className={look(item)} aria-pressed={note?.id === item.id} disabled={disabled || draft.dirty} onClick={() => open(item.id)}>
+        {listing?.notes.map(item => <button type="button" key={item.id} className={look(item)} aria-pressed={note?.id === item.id} disabled={disabled || draft.dirty} onClick={() => { open(item.id); setEditing(true); }}>
           <strong>{item.pinned ? '★ ' : ''}{item.title}</strong><span>{item.excerpt || 'Empty note'}</span>
           {item.tags?.length ? <em>{item.tags.join(' · ')}</em> : null}
           <small>{new Date(item.updatedAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{item.reference ? ' · ZAE can reference' : ''}</small>

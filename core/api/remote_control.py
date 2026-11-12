@@ -15,6 +15,10 @@ from collections import deque
 from typing import Any
 
 ACTIONS = {
+    "arrange_2": "Arrange two app windows",
+    "arrange_3": "Arrange three app windows",
+    "arrange_4": "Arrange four app windows",
+    "undo_arrange": "Undo the last app-window arrangement",
     "open": "Open a tab on the PC",
     "close": "Close a tab on the PC",
     "minimize": "Minimise a tab on the PC",
@@ -39,7 +43,12 @@ def queue_command(action: str, target: str = "", *, now: float | None = None) ->
     target = str(target or "").strip().lower()
     if action in ("open", "close", "minimize") and not TAB.match(target):
         raise ValueError("Pick a tab first.")
-    command = {"id": uuid.uuid4().hex, "action": action, "target": target if action in ("open", "close", "minimize") else "",
+    if action.startswith("arrange_") and target:
+        targets = target.split(",")
+        known = {"tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "warroom", "assistant", "system"}
+        if len(targets) != int(action[-1]) or len(set(targets)) != len(targets) or not all(item in known for item in targets):
+            raise ValueError("Pick distinct supported app windows for this layout.")
+    command = {"id": uuid.uuid4().hex, "action": action, "target": target if action in ("open", "close", "minimize") or action.startswith("arrange_") else "",
                "at": now if now is not None else time.time()}
     with _lock:
         _queue.append(command)
