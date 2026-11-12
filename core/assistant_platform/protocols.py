@@ -26,7 +26,7 @@ from typing import Any, Callable
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PROTOCOLS_FILE = PROJECT_ROOT / "data" / "protocols.json"
 KINDS = ("say", "open", "remind", "ask", "headlines", "coach", "watch")
-TABS = ("overview", "status", "security", "tasks", "notes", "news", "research", "assistant", "files", "system", "workbench", "music", "fitness")
+TABS = ("overview", "status", "security", "tasks", "notes", "news", "research", "assistant", "files", "system", "workbench", "music", "fitness", "arena", "warroom")
 MAX_STEPS = 12
 _LOCK = threading.Lock()
 

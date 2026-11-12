@@ -23,7 +23,7 @@ class UpdateRoutesTest(unittest.TestCase):
     def test_pending_needs_manifest_and_flags_ready(self):
         good = self.tmp / "pending" / "ui-0.16.0-20261109"
         good.mkdir(parents=True)
-        (good / "manifest.json").write_text(json.dumps({"title": "Settings hub"}), encoding="utf-8")
+        (good / "manifest.json").write_text(json.dumps({"title": "Settings hub", "part":"ui", "version":"0.16.0"}), encoding="utf-8")
         (self.tmp / "pending" / "no-manifest").mkdir()
         (self.tmp / "pending" / "bad name!").mkdir()
         found = update_routes.pending_updates()
@@ -56,6 +56,18 @@ class UpdateRoutesTest(unittest.TestCase):
         for group in ("tabs", "modules", "nodes"):
             for item in data[group].values():
                 self.assertRegex(item["version"], r"^0\.\d+\.\d+$")
+
+    def test_semver_is_numeric_not_lexical(self):
+        self.assertGreater(update_routes.semver('0.10.0'),update_routes.semver('0.9.9'))
+        self.assertIsNone(update_routes.semver('bad'))
+
+    def test_stale_receipt_blocks_downgrade_but_source_bump_does_not(self):
+        (self.tmp/'installed.json').write_text(json.dumps([{'part':'ui','version':'0.26.0','versions':{'ui':'0.26.0','system':'0.31.1'}}]))
+        (self.tmp/'versions.json').write_text(json.dumps({'ui':{'version':'0.27.0'}}))
+        for version in ['0.25.0','0.26.0','0.27.0']:
+            folder=self.tmp/'pending'/('ui-'+version);folder.mkdir(parents=True);(folder/'dist-web').mkdir();(folder/'dist-web/index.html').write_text('test');(folder/'ZAENIA.exe').write_bytes(b'test');(folder/'manifest.json').write_text(json.dumps({'part':'ui','version':version}))
+        rows={r['version']:r for r in update_routes.pending_updates()}
+        self.assertFalse(rows['0.25.0']['ready']);self.assertTrue(rows['0.26.0']['stale']);self.assertTrue(rows['0.27.0']['ready'])
 
 
 if __name__ == "__main__":

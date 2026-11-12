@@ -5,7 +5,7 @@ import { SystemProgressCore } from "./components/core/SystemProgressCore";
 import { NeuralCore } from "./components/core/NeuralCore";
 import { CoreBackdrop } from "./components/core/CoreBackdrop";
 import { CorePortal, CoreSlot } from "./components/core/CoreStage";
-import { MicCore } from "./components/core/MicCore";
+import { DockCore } from "./components/core/DockCore";
 import { useWorkspaceMotion, WorkspaceMotionControls } from "./components/core/WorkspaceMotion";
 import { workspacePhase } from "./core/workspaceDynamics";
 import { usePlatformRuntime } from "./core/usePlatformRuntime";
@@ -46,6 +46,10 @@ import { useAssistantInbox } from "./core/followThrough";
 import { NotificationCenter } from "./components/shell/NotificationCenter";
 import { BRIEF_EVENT, isBriefRequest } from "./core/briefRequest";
 // Module windows load when first opened, so the core appears sooner.
+const LLMTraining = lazy(() => import("./components/studios/NodeWorkspaces").then(m => ({default:m.LLMTraining})));
+const LearningHealth = lazy(() => import("./components/studios/NodeWorkspaces").then(m => ({default:m.LearningHealth})));
+const WarRoomPlans = lazy(() => import("./components/studios/NodeWorkspaces").then(m => ({default:m.WarRoomPlans})));
+const WarRoomCameras = lazy(() => import("./components/studios/NodeWorkspaces").then(m => ({default:m.WarRoomCameras})));
 const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
 const StatusPanel = lazy(() => import("./components/status/StatusPanel").then(module => ({ default: module.StatusPanel })));
@@ -124,7 +128,7 @@ import { catalogNode, moduleMeta, navigatorFor } from "./core/pageCatalog";
 import "./App.css";
 import "./styles/phone-app.css";
 
-type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena" | "remote";
+type Section = "overview" | "status" | "security" | "tasks" | "calendar" | "files" | "system" | "assistant" | "notes" | "news" | "workbench" | "music" | "fitness" | "library" | "history" | "notebook" | "research" | "codedoctor" | "suggestions" | "arena" | "warroom" | "remote";
 type IconName = "codefile" | "core" | "home" | "chat" | "tasks" | "calendar" | "files" | "system" | "arrow" | "bolt" | "clock" | "check" | "send" | "trash" | "plus" | "pulse" | "chevron" | "panel" | "notes" | "news" | "shield" | "code" | "music" | "brain" | "pen";
 type VisualMode = "blend" | "progress";
 
@@ -141,7 +145,8 @@ const nav = ([
   { id: 'music', label: 'Music', short: 'Music', icon: 'music' },
   { id: "research", label: "Research", short: "Research", icon: "pen" },
   { id: "codedoctor", label: "Code Doctor & Files", short: "Code", icon: "codefile" },
-  { id: "arena", label: "Arena", short: "Arena", icon: "brain" },
+  { id: "arena", label: "LLM Training", short: "Training", icon: "brain" },
+  { id: "warroom", label: "War Room", short: "War Room", icon: "security" },
   { id: "assistant", label: "Assistant", short: "Assistant", icon: "bolt" },
   { id: "system", label: "Settings", short: "Settings", icon: "system" },
   // The phone and browser only: a remote for the desktop app on the PC.
@@ -151,7 +156,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
   status: { title: "Status", label: "READINESS", description: "Live module readiness, PC load and ZAE's overall security level." },
   security: { title: "Security", label: "LOCKED · OWNER ONLY", description: "Live attack resistance, weak spots and how to fix them, improvements over time, security checks and the full activity log." },
-  tasks: { title: "LIFE", label: "PLAN · FITNESS & HEALTH · MAP", description: "Your schedule and tasks, training, food and body log, and a map with live traffic, in one tab. Everything is kept on your PC, so the phone and desktop match." },
+  tasks: { title: "LIFE", label: "SCHEDULE BOARD · FITNESS & HEALTH · MAIL · GODSPEED", description: "Your schedule and tasks, training, food and body log, and a map with live traffic, in one tab. Everything is kept on your PC, so the phone and desktop match." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   workbench: { title: 'Workbench', label: 'PROJECTS · TOOLS · LABS', description: 'Projects and inventions, science and tech tools, and chemistry and physics labs, with ZAE to explain.' },
@@ -163,7 +168,8 @@ const sections: Record<Section, { title: string; label: string; description: str
   notebook: { title: 'Notebook', label: 'RESEARCH · TOPICS & NOTES', description: 'Gather sources by topic, keep notes as you go, and have ZAE summarise, compare and check claims against evidence.' },
   codedoctor: { title: 'Code Doctor', label: 'FIND & FIX BUGS · SUGGESTIONS · PLAYGROUND', description: "Scan your projects or ZAE's own code for bugs and review fixes, and approve her ideas for your day, upgrades and new features." },
   suggestions: { title: 'Suggestions', label: 'IDEAS TO APPROVE', description: "ZAE's own ideas for your day and for herself. Approve or dismiss each one." },
-  arena: { title: 'Arena', label: 'PICK THE BEST SE MODEL', description: 'The same question to two or three local models, side by side. Vote, keep score, and choose the model the SE (Synergized Encephalon) uses.' },
+  arena: { title: 'LLM Training', label: 'TEACH · PRACTICE · REVIEW', description: 'Model-specific lessons for protocols, actions, responses and corrections, with local evaluations and learning health.' },
+  warroom: { title: 'War Room', label: 'DEFENSE · CAMERAS · BUSINESS', description: 'Detailed defensive and business planning, with your chosen camera viewer registry.' },
   research: { title: 'Research', label: 'HISTORY · NOTEBOOK · NEWS · LIBRARY · SCRIPTURE · TRANSLATE', description: 'Historical connections, your research notebook, the news reader, the library, scripture and translation, analysed by ZAE on your PC. Free, legal sources only.' },
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
@@ -174,7 +180,7 @@ const sections: Record<Section, { title: string; label: string; description: str
 // Phone bottom bar: these first, the open tab if it's another one, then "More" for everything.
 const PHONE_TABS: readonly string[] = ["overview", "tasks", "research", "notes"];
 const mainStage = () => document.querySelector<HTMLElement>(".main-stage");
-const WINDOW_IDS: readonly string[] = ["tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "assistant", "system"];
+const WINDOW_IDS: readonly string[] = ["tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "warroom", "assistant", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 // News lives in Research and Files in Code Doctor now (Grey, 2026-10-30); the old names open the right sub-tab.
 const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", fitness: "tasks", status: "system", security: "system", library: "research", history: "research", notebook: "research", suggestions: "codedoctor", news: "research", files: "codedoctor" };
@@ -1719,15 +1725,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     return () => window.clearInterval(id);
   }, []);
   const restingNow = resting && workspaceMotion.settings.adaptive && voicePhase === "idle";
-  // C5 "Core in the mic" (Grey, 2026-11-11): Home keeps the hero core; every other page, the category sheet and the
-  // tab manager put the same core in the chat mic, tinted with the page's module colour.
-  const [tabManagerOpen, setTabManagerOpen] = useState(false);
-  useEffect(() => { const on = (event: Event) => setTabManagerOpen(Boolean((event as CustomEvent).detail)); window.addEventListener("zae:tab-manager-state", on); return () => window.removeEventListener("zae:tab-manager-state", on); }, []);
-  const coreAtMic = mode === "blend" && !calmOpen && (isPhone ? section !== "overview" : working || navigationView === "workspace" || tabManagerOpen);
-  const activeApp = isPhone ? section : working && shell.active ? tabBase(shell.active) : "";
-  const coreAccent = coreAtMic && activeApp ? moduleMeta(activeApp).accent : "#e0a353";
+  // C1 "Docked companion" (Grey, 2026-11-11, replacing C5): Home keeps the hero core; on every other page the same core
+  // docks as an orb at the left of the page's top row (focused pane; phone M5 header), in the module's colour.
+  const categorySheet = navigationView === "workspace";
+  const coreDocked = mode === "blend" && !calmOpen && (isPhone ? section !== "overview" || categorySheet : working || categorySheet);
+  const activeApp = isPhone ? (section !== "overview" ? section : "") : working && shell.active && !categorySheet ? tabBase(shell.active) : "";
+  const coreAccent = coreDocked && activeApp ? moduleMeta(activeApp).accent : "#e0a353";
   // Anything that can cover or move the core: it re-checks whether it is visible when this changes.
-  const coreLayoutKey = [section, coreDock, coreAtMic ? "mic" : "", tabManagerOpen ? "tabs" : "", navigationView ?? "", calmOpen ? "calm" : "", isPhone ? "phone" : "", sheetOpen ? "sheet" : "", phoneMore ? "more" : "", restingNow ? "rest" : "",
+  const coreLayoutKey = [section, coreDock, coreDocked ? "dock" : "", navigationView ?? "", calmOpen ? "calm" : "", isPhone ? "phone" : "", sheetOpen ? "sheet" : "", phoneMore ? "more" : "", restingNow ? "rest" : "",
     shell.windows.map(win => `${win.id}:${win.minimized ? "m" : ""}${Math.round(win.x)},${Math.round(win.y)},${Math.round(win.w)},${Math.round(win.h)},${win.z}`).join(";")].join("|");
 
   const coreSettings = <>
@@ -1785,8 +1790,15 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "source", label: "Source", render: () => <Suspense fallback={<p className="hint">Loading…</p>}><SourceSearch/></Suspense> },
       ]}/>;
       case "remote": return <RemotePanel tabs={nav.filter(item => WINDOW_IDS.includes(item.id)).map(item => ({ id: item.id, label: item.label }))}/>;
+      case 'warroom': return <PageTabs id="warroom" tabs={[
+        { id: "defense", label: "Defense planning", render: () => <WarRoomPlans mode="defense"/> },
+        { id: "business", label: "Business plans", render: () => <WarRoomPlans mode="business"/> },
+        { id: "cameras", label: "Cameras", render: () => <WarRoomCameras/> },
+      ]}/>;
       case 'arena': return <PageTabs id="arena" tabs={[
-        { id: "duel", label: "Head to head", render: () => <ArenaHeadToHead/> },
+        { id: "training", label: "Training modules", render: () => <LLMTraining/> },
+        { id: "learning", label: "Learning health", render: () => <LearningHealth/> },
+        { id: "duel", label: "Response comparison", render: () => <ArenaHeadToHead/> },
         { id: "leaders", label: "Leaderboard", render: () => <ArenaLeaderboard/> },
         { id: "bench", label: "Test set", render: () => <ArenaBench/> },
         { id: "board", label: "Rounds & SE model", render: () => <ArenaPanel/> },
@@ -1812,15 +1824,15 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       case "tasks":
       case "calendar":
       case "fitness": return <PageTabs id="life" tabs={[
-        { id: "plan", label: "Plan", render: () => <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/> },
+        { id: "plan", label: "Schedule Board", render: () => <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/> },
         { id: "fitness", label: "Fitness & Health", render: () => <FitnessStudio drafts={personalDrafts.current}/> },
+        { id: "mail", label: "Mail", render: () => <MailPanel/> },
         // Map & traffic (Grey, 2026-11-09): saved OpenStreetMap tiles and landmarks, live WSDOT traffic.
         { id: "map", label: "GODSPEED", render: () => <MapPanel/> },
       ]}/>;
       // Assistant: the front page ("The ZAE Daily") first, then the existing assistant tools.
       case "assistant": return <PageTabs id="assistant" tabs={[
         { id: "front", label: "Today's edition", render: () => <AssistantFront onAsk={text => submit(text)} onOpen={next => openSection(next as Section)} notice={inbox.notice ? { title: inbox.notice.title, message: inbox.notice.message } : null} unread={inbox.unreadCount}/> },
-        { id: "mail", label: "Mail", render: () => <MailPanel/> },
         { id: "remembered", label: "Everything remembered", render: () => <EverythingRemembered/> },
         { id: "memory", label: "Memory & rules", render: () => <AssistantMemoryRules toggles={[
           { id: "listen", name: "Listening", detail: listen.mode === "always" ? "App mic on" : "App mic off", on: listen.mode === "always", toggle: toggleListening, disabled: !listen.supported },
@@ -1868,16 +1880,16 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }
 
   return <div className={`zaenia-app zaenia-app--dynamic zaenia-app--mission-deck${hands && !calmOpen ? " zaenia-app--hands" : ""}${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${!isPhone || sidebarHidden ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
-    data-corners={appearance.corners} data-motion={appearance.motion}>
+    data-corners={appearance.corners} data-motion={appearance.motion} data-dock-voice={coreDocked && voicePhase !== "idle" ? voicePhase : undefined}>
     <CoreBackdrop/>
     {/* One neural core for every page (Claude, 2026-11-11): it moves between the Home, docked, phone and Calm slots
         without remounting, and pauses itself whenever nothing of it can be seen. */}
-    {coreAtMic && <MicCore phase={voicePhase} accent={coreAccent} phone={isPhone} layoutKey={coreLayoutKey}/>}
+    {coreDocked && <DockCore phase={voicePhase} accent={coreAccent} sheet={categorySheet} layoutKey={coreLayoutKey}/>}
     <CorePortal>{calmOpen
       ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES} activeJobs={activeJobs} layoutKey={coreLayoutKey}/>
       : <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} activeJobs={activeJobs} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}
           categories={coreDock === "center" ? CATEGORIES : undefined} onCategory={index => window.dispatchEvent(new CustomEvent("zae:core-category", { detail: index }))}
-          onCore={coreAtMic ? undefined : () => window.dispatchEvent(new CustomEvent("zae:core-apps"))} layoutKey={coreLayoutKey} tint={coreAtMic && activeApp ? coreAccent : undefined}/>}</CorePortal>
+          onCore={coreDocked ? undefined : () => window.dispatchEvent(new CustomEvent("zae:core-apps"))} layoutKey={coreLayoutKey} tint={coreDocked && activeApp ? coreAccent : undefined}/>}</CorePortal>
     <PageActivityObserver section={section} enabled={!calmOpen && !nearCode && faceIdPending.length===0}/>
 
     <NavigationHub apps={nav.filter(item => item.id !== "overview").map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon}/> }))}
@@ -1993,7 +2005,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
           {stageSection === "overview" && <OverviewFrame telemetry={telemetry} look={tabAppearance(appearance, "overview").look} style={tabAppearance(appearance, "overview").style as CSSProperties}
             docked={coreDock !== "center"} apps={nav.filter(item => item.id !== "overview").map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon}/> }))} phone={isPhone} calm={overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
-            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? (coreAtMic ? null : <CoreSlot/>) : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
+            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? (coreDocked ? null : <CoreSlot/>) : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
           </OverviewFrame>}
           {!windowed && section !== "overview" && <PaneNavProvider paneId="phone" appId={section} app={info.title}>{glassBody(section, false)}</PaneNavProvider>}
           {windowed && <div className={`os-layer os-layer--${voicePhase}${shell.snapped ? " os-layer--snapped" : ""}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>

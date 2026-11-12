@@ -1,3 +1,4 @@
+import { DockSlot } from "../core/DockCore";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { CATEGORIES } from "../../core/categories";
 import { clearAppVisits, readAppVisits } from "../../core/navigationActivity";
@@ -15,7 +16,7 @@ const DESCRIPTIONS: Record<string, string> = {
   notes: "Capture something to return to later", research: "Explore sources and your research library",
   assistant: "Memory, follow-through and connected tools", music: "Projects, releases and song statistics",
   workbench: "Ideas, sketches, blueprints and projects", codedoctor: "Inspect code and review proposed changes",
-  arena: "Compare and evaluate your models", system: "Preferences, status, security and updates",
+  warroom: "Defense, cameras and extensive business plans", arena: "Teach and evaluate protocols, actions and responses", system: "Preferences, status, security and updates",
 };
 const ALIASES: Record<string, string> = { fitness: "tasks", news: "research", files: "codedoctor", status: "system", security: "system" };
 const POSITIONS = [[19, 17], [81, 17], [10, 49], [90, 49], [19, 81], [81, 81]];
@@ -155,7 +156,7 @@ export function NavigationHub({ apps, enabled, phone, motion, onOpen, onRoute, o
     if (phone) {
       const last = categoryRecent[0];
       return <div ref={panel} className="navhub navhub--workspace navhub--phone navhub--m5 bx-root" data-app-navigation="workspace" role="region" aria-label={`${category.name} workspace`} style={{ "--a": accent } as CSSProperties}>
-        <div className="bx-ph"><div className="bx-ph__tt"><div className="bx-ph__cr">Your workspace</div><h2 ref={heading} tabIndex={-1} className="bx-ph__t">{CATEGORY_META[category.id]?.name ?? category.name}</h2></div></div>
+        <div className="bx-ph"><DockSlot/><div className="bx-ph__tt"><div className="bx-ph__cr">Your workspace</div><h2 ref={heading} tabIndex={-1} className="bx-ph__t">{CATEGORY_META[category.id]?.name ?? category.name}</h2></div></div>
         <div className="bx-pbody">
           <PageSearch phone voice={voice} onQuery={setQuery}/>
           {!query.trim() && <>
@@ -168,7 +169,7 @@ export function NavigationHub({ apps, enabled, phone, motion, onOpen, onRoute, o
       </div>;
     }
     return <div ref={panel} className="navhub navhub--workspace navhub--p05 bx-root" data-app-navigation="workspace" role="region" aria-label={`${category.name} workspace`} style={{ "--a": accent } as CSSProperties}>
-      <div className="bx-top"><CategorySeg current={category.id} onPick={pickCategory}/><PageSearch/></div>
+      <div className="bx-top"><DockSlot/><CategorySeg current={category.id} onPick={pickCategory}/><PageSearch/></div>
       <div className="bx-lvl"><div className="bx-tt"><h2 ref={heading} tabIndex={-1} className="bx-ttl">{CATEGORY_META[category.id]?.name ?? category.name}</h2></div></div>
       <BentoGrid tiles={tiles}/>
     </div>;

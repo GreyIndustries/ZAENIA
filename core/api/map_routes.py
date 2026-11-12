@@ -25,8 +25,18 @@ class RouteBody(BaseModel):
     alternatives: bool = False
 
 
+class CommuteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    stops: list[Stop] = Field(min_length=2, max_length=2)
+
+
 def create_map_router(require_api_authentication: Callable[..., None]) -> APIRouter:
     router = APIRouter(prefix="/api/map", dependencies=[Depends(require_api_authentication)], tags=["map"])
+
+    @router.post("/commute")
+    def save_commute(body: CommuteBody):
+        from core.maps.commute import save
+        return save([stop.model_dump() for stop in body.stops])
 
     @router.get("/home")
     def map_home() -> dict[str, Any]:

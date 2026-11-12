@@ -53,18 +53,42 @@ def running_versions() -> dict[str, Any]:
     return versions
 
 
+def semver(value):
+    if not isinstance(value, str) or not re.fullmatch(r"0|[0-9]+(?:\.[0-9]+){2}", value):
+        return None
+    parts = tuple(int(x) for x in value.split("."))
+    return parts if len(parts) == 3 else None
+
+
+def installed_version(part):
+    versions = []
+    for entry in install_history():
+        if entry.get("part") == part and semver(entry.get("version")):
+            versions.append(semver(entry["version"]))
+        combined = entry.get("versions") or {}
+        if part in {"system", "ui"} and semver(combined.get(part)):
+            versions.append(semver(combined[part]))
+    return max(versions) if versions else None
+
+
 def pending_updates() -> list[dict[str, Any]]:
     if not PENDING_DIR.is_dir():
         return []
-    found: list[dict[str, Any]] = []
+    found = []
     for folder in sorted(PENDING_DIR.iterdir(), reverse=True):
-        if not folder.is_dir() or not UPDATE_ID.match(folder.name):
+        if not folder.is_dir() or folder.is_symlink() or not UPDATE_ID.fullmatch(folder.name):
             continue
         manifest = _read_json(folder / "manifest.json")
         if not isinstance(manifest, dict):
             continue
+        part, version = manifest.get("part"), semver(manifest.get("version"))
+        current = installed_version(part)
         manifest["id"] = folder.name
-        manifest["ready"] = (folder / "ZAENIA.exe").is_file() and (folder / "dist-web" / "index.html").is_file()
+        manifest["stale"] = bool(version and current and version <= current)
+        manifest["ready"] = not manifest["stale"] and (folder / "ZAENIA.exe").is_file() and (folder / "dist-web" / "index.html").is_file()
+        # Legacy malformed manifests remain visible for diagnosis but cannot be installed.
+        if not version or not (part in {"ui", "system"} or isinstance(part,str) and re.fullmatch(r"tab:[a-z]+",part)):
+            manifest["ready"] = False
         found.append(manifest)
     return found[:10]
 

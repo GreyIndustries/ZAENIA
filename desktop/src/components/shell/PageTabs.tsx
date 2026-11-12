@@ -23,7 +23,7 @@ export function PageTabs({ id, tabs }: { id: string; tabs: { id: string; label: 
     window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
   });
   return <div className="research-page">
-    <PageNavigator id={id} name={id === "life" ? "LIFE" : id.charAt(0).toUpperCase() + id.slice(1)} items={tabs} current={tab} onChoose={choose}/>
+    <PageNavigator id={id} name={id === "life" ? "LIFE" : id === "arena" ? "LLM Training" : id === "warroom" ? "War Room" : id.charAt(0).toUpperCase() + id.slice(1)} items={tabs} current={tab} onChoose={choose}/>
     {tabs.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="region" data-page-panel={item.id} aria-label={item.label} hidden={tab !== item.id}><Suspense fallback={<p className="research__empty">Loading…</p>}>{item.render()}</Suspense></div>)}
   </div>;
 }

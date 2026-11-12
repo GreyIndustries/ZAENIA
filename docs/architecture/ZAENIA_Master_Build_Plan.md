@@ -2,7 +2,7 @@
 
 **Living architecture, hardware, reasoning, memory and security guide**
 
-Version: 3.79  |  Date: 2026-11-11 (v1.0: 2026-10-20)  |  Status: working proposal
+Version: 3.81  |  Date: 2026-11-11 (v1.0: 2026-10-20)  |  Status: working proposal
 
 > Canonical collaboration format: Markdown. Companion DOCX is a reading/export copy. Neither file automatically synchronizes with the local ZAENIA installation.
 
@@ -1870,6 +1870,26 @@ the primary checkout on top of the installed UI 0.25.0 / system 0.31.1.
   phone. The burst ring is kept on screen by `burstFit` (shift toward the middle within the viewport minus safe-area
   insets, shrink only if the screen is narrower than the ring); checked at 390x844 and 360x780.
 
+### 48.1 Visual correction: C1 "Docked companion" replaces C5 — UI 0.26.1 (Claude, 2026-11-11)
+
+Grey switched the off-Home core from C5 to C1 and asked for a minor visual-correction update (requested as "0.26.01";
+shipped as **0.26.1** because versions follow 0.MINOR.PATCH and a leading zero is not standard; the update-ID rules
+would have accepted either). Branch `claude/core-behavior`.
+
+- **Placement:** Home and Calm unchanged. Off Home (any open window or the category sheet; on the phone any section but
+  Home, or the category sheet) `components/core/DockCore.tsx` draws the single core as an orb centred on a `DockSlot`
+  reserved at the left end of the top row: the focused pane's preview-05 row (`shell/PaneNav.tsx`), the category
+  sheet's row (`navigation/NavigationHub.tsx`) or the phone M5 header before Back (`shell/PageNavigator.tsx`,
+  `NavigationHub` phone). The slot is 38 px; the orb is drawn ~57 px in a 96 px box (buffer at real size) so its glow
+  spills; only the slot holding the orb gets `data-dock-on`.
+- **Voice states:** `data-dock-voice` on the app root widens that slot to 54 px; the orb swells and brightens with pulse
+  rings (listening), orbiting dots (thinking) or a pulsing ring (speaking). No status word. Reduced motion: colour only.
+- **Removed:** C5 `MicCore.tsx/.css`, `burstFit`, and the `zae:tab-manager-state` event; the mic buttons are normal.
+- **Fix:** a docked orb (`[data-core-overlay]`) is never counted as covered by the window under it, so it keeps animating.
+- **Evidence:** TypeScript; unit suites; mobile-browser; nav/split 33/33; rendered C1 checks at 1440x900, 390x844 and
+  360x780 all pass (`docs/previews/core-behavior/c1/c1-checks.txt`). Not verified: real microphone, installed-app GPU,
+  physical phone.
+- **Status:** held for the Sunday weekly release (section 49) at Grey's request; not staged.
 
 ## 49. Weekly whole-system release: November 11-15, 2026
 
@@ -1915,3 +1935,27 @@ Detailed release notes explain Added, Changed, Fixed, actual Removed items, Perf
 ### Explicitly later work
 
 This week does not promise full autonomous self-coding, a new OS/SSD migration, guaranteed locked-iPhone background navigation, complete national traffic data, multiple new external platforms or a wholesale brain/UI rewrite. Keep the October 2027 local-maintenance roadmap, and turn this week's repeatable task/review/test/release records into sanitized engineering examples for that later work. Do not read private assistant session logs under this plan without the separately reviewed access scope.
+
+
+## 50. Nodes, LLM Training, War Room and Research expansion (2026-11-11)
+
+Status: implemented and isolated-tested candidate, not merged, installed or live-verified. Details and truthful feature limits are in `NODES_LEARNING_RESEARCH_HANDOFF_2026-11-11.md`. Owner-directed taxonomy: nodes; LIFE owns Schedule Board, F&H, Mail and GODSPEED; Workbench belongs to BUILD; the duplicate Health category becomes War Room; Arena is presented as LLM Training. Internal IDs remain stable. The accepted C1 core correction supersedes older C5 references in section 49.
+
+Owner-authored model-specific lessons are private revisioned records. Enabled, relevant teaching examples are retrieved at payload assembly for the actual selected model only after existing memory.read authorization. An ephemeral typed context marker separates the trusted authorization result from untrusted plain reference strings; it is not persisted and grants no action authority. Sequential local practice returns owner-reviewable results. Model-weight fine-tuning is not implemented by reference learning. Existing insight/correction/privacy behavior is regression-tested, and learning health distinguishes settings from verified worker health.
+
+War Room adds extensive editable business and defensive plans with evidence, finance assumptions, risks, continuity, milestones and Markdown export. Camera registration is explicit viewer-link management; live RTSP/ONVIF, recording and automated monitoring are not claimed.
+
+Research reuses existing ZAE services rather than the donor app's Tkinter/runtime/security stack. All 47 supplied Python files received static review; literal data yields 1557 labeled unverified offline reference entries across 15 categories. Adds evidence-based deep dive, fact-check, scenario, timeline, comparison and study tools using chosen excerpts/notebook topics plus reviewed study cards. Analysis drafts are local; saving is explicit and citation overlap is not independent factual verification. Detailed parity exclusions, provenance and release evidence are in the handoff.
+
+Build both desktop and browser from the reviewed integrated source; stage with Core restart required only after owner-approved integration. Preserve the running app and website meanwhile. No secret, personal runtime dataset or donor authentication mechanism is included.
+
+
+## 51. Sunday release dependency order and shared-source reconciliation (2026-11-12)
+
+Owner approved implementation, main integration and publication after checks. Correct sequence: (1) preserve sanitized shared source and reconcile remote history, (2) validate runtime deployment roots/install lifecycle/stale offers/reconnect/notes, (3) make coding local by default and explicitly label any per-request cloud opt-in, (4) verify guarded Mail and Map conversation paths and phone layouts, (5) combine accepted nodes/learning/War Room/Research plus C1, (6) run complete regression/security/secret checks and native/web builds, (7) independent Claude review, owner installation and post-install verification for November 15. Existing F&H/GODSPEED behavior is preserved apart from the explicitly saved commute reference control.
+
+Codex is the release owner; feature work uses isolated worktrees and note fragments. Deployed C:\Projects\ZAENIA remains untouched while the release is assembled at C:\Projects\ZAENIA-codex\release. The sanitized local safety branch retains shared WIP. Release source is reconciled onto fetched origin/main without importing private/tool-bearing branch history; the new remote LICENSE is preserved. Duplicate section-47 claims were checked against the actual source: moving-aircraft is 47, C5 is 48, and C1 is 48.1; no blind renumbering was performed.
+
+Installed receipts rather than the source versions.json alone determine whether a pending package is stale: source metadata advances before an owner installation and cannot establish what is installed. Installer validation and .NET hashing are tested without changing live files. Runtime-root changes preserve the existing auth/passkey boundaries and dedicated owner confirmations. Learning still grants no action authority.
+
+Local self-build roadmap order: local-default selection first; then an honest historical benchmark catalog/baseline; then retrieval, small-step tests, strengthened review and help packets; overnight models only after measurement and approved disk use. Green tests are evidence, never a guarantee that every defect is absent. No general local-coder success percentage is claimed before held-out runs.

@@ -401,6 +401,10 @@ def create_app(
     application.include_router(create_selfcare_router(require_api_authentication))
     from core.api.research_routes import create_research_router
     application.include_router(create_research_router(require_api_authentication))
+    from core.api.learning_lab_routes import create_learning_lab_router
+    application.include_router(create_learning_lab_router(require_api_authentication, authorize_operation))
+    from core.api.research_workshop_routes import create_research_workshop_router
+    application.include_router(create_research_workshop_router(require_api_authentication, authorize_operation))
     from core.api.update_routes import create_update_router
     application.include_router(create_update_router(require_api_authentication))  # Settings > Updates and About (reads only)
     from core.api.map_routes import create_map_router

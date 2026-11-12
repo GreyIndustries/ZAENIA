@@ -95,6 +95,7 @@ export function MapPanel({ request = api, live = LIVE_API }: { request?: typeof 
   const [selected, setSelected] = useState<Selected>(null);
   const lastPicked = useRef<Selected>(null); if (selected) lastPicked.current = selected;
   const [error, setError] = useState("");
+  const [commuteNotice,setCommuteNotice] = useState("");
   // Directions
   const [stops, setStops] = useState<Stop[]>(() => tripSnapshot().stops.length ? tripSnapshot().stops.map(p=>blankStop(p.label,p.lat,p.lon)) : [blankStop(),blankStop()]);
   const [bestOrder, setBestOrder] = useState(false);
@@ -723,6 +724,10 @@ export function MapPanel({ request = api, live = LIVE_API }: { request?: typeof 
           </section>}
           {routeChoices.length > 0 && <div className="zmap__choices" aria-label="Route options">{routeChoices.map((choice, i) => <button type="button" key={i} aria-pressed={route === choice} onClick={() => { stopTrip(); setTracking(false); setRoute(choice); setPreviewIndex(0); fitLine(choice.line); }}><strong>{duration(choice.duration)}</strong><span>{i === 0 ? "Suggested route" : `Alternative ${i}`} · {miles(choice.distance / 1000)}</span></button>)}</div>}
           {route && <div className="zmap__routeinfo">
+            {commuteNotice && <p role="status">{commuteNotice}</p>}
+            <button type="button" disabled={stops.length !== 2 || stops.some(p => p.lat == null || p.lon == null)} onClick={() => {
+              void api("POST", "/api/map/commute", {stops:stops.map(p=>({lat:p.lat,lon:p.lon}))}).then(()=>setCommuteNotice("Work commute saved for conversation."),e=>setError(errorText(e)));
+            }}>Save work commute</button>
             <p className="zmap__routesum"><strong>{duration(route.duration)}</strong> · {miles(route.distance / 1000)} · arrive {arrive}</p>
             <small>{route.engine === "local" ? "Calculated on this PC" : "Calculated online"}. {routeTraffic}</small>
             <small>Blue: reported regular traffic · orange: slower · red: heavy. Dashed grey: unknown or stale traffic. WSDOT matching is approximate; ETA uses categorical traffic estimates with partial coverage.</small>

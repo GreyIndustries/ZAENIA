@@ -168,7 +168,8 @@ class MailCopyTest(unittest.TestCase):
         notified = []
         watch = EmailWatch(fetch=lambda after: imap_mail.recent_messages(after, store=self.store, opener=lambda: self.imap),
                            judge=lambda m: {"important": True, "summary": "Range moved to Thursday."},
-                           notify=notified.append, connected=lambda: True, state_file=self.dir / "important.json", clock=lambda: datetime(2026,11,8,12,tzinfo=timezone.utc))
+                           notify=notified.append, connected=lambda: True, state_file=self.dir / "important.json",
+                           clock=lambda: datetime(2026,11,8,12,tzinfo=timezone.utc))
         result = watch.check()
         self.assertEqual([i["subject"] for i in result["new"]], ["Range moved"])
         self.assertTrue(result["new"][0]["link"].startswith("https://mail.google.com/"))

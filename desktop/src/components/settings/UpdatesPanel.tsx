@@ -16,7 +16,7 @@ export type VersionFile = {
   history?: { version: string; part: string; date: string; title: string; changes?: string[]; releaseNotes?: ReleaseNote[] }[];
 };
 type Pending = { releaseNotes?: ReleaseNote[]; id: string; title?: string; notes?: string[]; part?: string; version?: string; createdAt?: string;
-  restartServer?: boolean; ready?: boolean; versions?: { system?: string; ui?: string }; builtFrom?: { commit?: string; uncommittedChanges?: boolean } };
+  restartServer?: boolean; ready?: boolean; stale?: boolean; versions?: { system?: string; ui?: string }; builtFrom?: { commit?: string; uncommittedChanges?: boolean } };
 type Installed = { releaseNotes?: ReleaseNote[]; id: string; title?: string; notes?: string[]; part?: string; version?: string; installedAt?: string; restartedServer?: boolean };
 export type UpdatesData = { running?: VersionFile; pending?: Pending[]; installed?: Installed[];
   lastInstall?: { id: string; status: "running" | "ok" | "failed"; message: string; at: string } | null };
@@ -33,7 +33,7 @@ export function useUpdates() {
     try { setData(await api<UpdatesData>("GET", "/api/updates")); setError(null); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "Couldn't read updates from the ZAE server."); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); const timer=window.setInterval(() => { if(document.visibilityState === "visible") void load(); }, 5000); return () => window.clearInterval(timer); }, [load]);
   return { data, error, load };
 }
 
@@ -76,8 +76,8 @@ export function UpdatesPanel() {
       <p className="zu-kicker">Waiting to install</p>
       {error && <p className="zu-muted">{error}</p>}
       {!error && !data && <p className="zu-muted">Checking…</p>}
-      {data && !data.pending?.length && <p className="zu-muted">Nothing waiting. New updates show up here for you to install.</p>}
-      {data?.pending?.map(item => <div key={item.id} className="zu-update">
+      {data && !data.pending?.some(item => !item.stale) && <p className="zu-muted">Nothing waiting. New updates show up here for you to install.</p>}
+      {data?.pending?.filter(item => !item.stale).map(item => <div key={item.id} className="zu-update">
         <h3>{item.title ?? item.id}<span className="zu-tag">{partLabel(item.part)} {item.version}</span></h3>
         <p className="zu-muted">Built {day(item.createdAt)}{item.versions ? ` · system ${item.versions.system} · interface ${item.versions.ui}` : ""}</p>
         <ReleaseNotes entries={item.releaseNotes} fallback={item.notes}/>
@@ -95,6 +95,7 @@ export function UpdatesPanel() {
       </div>)}
     </section>
 
+    {data?.installed?.[0] && <section className="zu-card"><h3>What’s new in {data.installed[0].version}</h3><ReleaseNotes entries={data.installed[0].releaseNotes} fallback={data.installed[0].notes}/></section>}
     <section className="zu-card">
       <p className="zu-kicker">Past updates</p>
       <div className="zu-history">

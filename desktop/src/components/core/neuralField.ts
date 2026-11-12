@@ -53,7 +53,7 @@ const COMPACT_RING: Record<BranchKey, [number, number]> = {
 export function computeLayout(width: number, height: number, ringed = false): FieldLayout {
   const compact = width < 760;
   if (ringed && width < 220 && height < 220) {
-    // C5 mic core (Claude, 2026-11-11): a small box around the chat mic; the rings fill it edge to edge.
+    // Docked orb (C1, Claude, 2026-11-11): a small drawing box; the rings fill it edge to edge.
     const cx = width / 2, cy = height / 2;
     const r = Math.max(8, (Math.min(width, height) / 2 - 2) / RING_OUTER);
     return { width, height, cx, cy, r, orbR: 0, compact: true, orbs: [] };
@@ -105,7 +105,7 @@ export type FieldState = { progress: number; motion: boolean; processing: boolea
  *  tilt   - ring tilt/openness (the hand gesture would turn this live)
  *  night  - day/night: a soft night side across the sphere and warmer, calmer light after sunset
  */
-export type CoreExtras = { mood?: boolean; pulse?: boolean; beads?: number; tilt?: number; night?: boolean; voice?: number; /** "r,g,b": recolour the whole core (C5 mic core takes the page's module accent). */ tint?: string };
+export type CoreExtras = { mood?: boolean; pulse?: boolean; beads?: number; tilt?: number; night?: boolean; voice?: number; /** "r,g,b": recolour the whole core (the docked orb takes the page's module accent). */ tint?: string };
 const MOOD_RGB = { idle: "220,120,50", listening: "120,190,255", thinking: "255,206,96", speaking: "255,246,232" };
 
 /* ------------------------------------------------------------------ */
@@ -850,7 +850,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     });
     ctx.globalAlpha = 1;
 
-    // Module accent tint (mic core off Home): recolour what was drawn, keeping its shape and transparency.
+    // Module accent tint (docked orb off Home): recolour what was drawn, keeping its shape and transparency.
     if (ex.tint) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = "source-atop";

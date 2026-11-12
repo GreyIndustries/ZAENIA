@@ -108,7 +108,7 @@ export function PlanStudio({ tasksVersion = 0, calendarVersion = 0 }: { tasksVer
   // The old Month & reminders sub-tabs (Both / Calendar / Tasks / Reminders) became Month (calendar with tasks) and Reminders (Grey, 2026-10-30).
   const tabs: [Tab, string][] = [["week", "Week"], ["priorities", "Priorities"], ["day", "Day"], ["month", "Month"], ["reminders", "Reminders"]];
   return <div className="ps">
-    <PageNavigator id={"plan"} name={"Plan"} items={tabs.map(([id, label]) => ({ id, label }))} current={tab} onChoose={next => choose(next as Tab)}/>
+    <PageNavigator id={"plan"} name={"Schedule Board"} items={tabs.map(([id, label]) => ({ id, label }))} current={tab} onChoose={next => choose(next as Tab)}/>
     {error && <p className="ps-error" role="alert">{error}</p>}
     {tab === "week" && <Week start={weekStart} setStart={setWeekStart} itemsFor={itemsFor} onOpenDay={d => { setDay(d); choose("day"); }} onToggle={t => void patchTask(t.id, { status: t.status === "Completed" ? "Pending" : "Completed" })}/>}
     {tab === "priorities" && <Priorities tasks={tasks} busy={busy} onMove={(t, priority) => void patchTask(t.id, { priority })} onDone={t => void patchTask(t.id, { status: "Completed" })} onAdd={addTask}/>}

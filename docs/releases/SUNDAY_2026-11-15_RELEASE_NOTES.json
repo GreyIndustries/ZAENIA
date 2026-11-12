@@ -1,0 +1,92 @@
+[
+  {
+    "kind": "changed",
+    "title": "Nodes and workspace navigation",
+    "description": "Health remains inside LIFE and its duplicate top-level category is removed. Mail moves from Assistant into LIFE, Workbench moves into BUILD, and Plan is presented as Schedule Board. Existing internal IDs preserve saved records and supported aliases."
+  },
+  {
+    "kind": "added",
+    "title": "LLM Training modules",
+    "description": "Arena becomes LLM Training with saved model-specific protocol, action, response and correction lessons, sequential local practice and owner-reviewed expected responses. Existing comparison and benchmark screens remain available as evaluation tools."
+  },
+  {
+    "kind": "added",
+    "title": "War Room planning",
+    "description": "Defense and business plans use 19 editable sections covering objectives, evidence, operations, finances, risks, incident response and milestones. Local model drafts are reviewed in the editor and saved explicitly; plans export as Markdown."
+  },
+  {
+    "kind": "added",
+    "title": "Camera registry",
+    "description": "Register explicitly chosen HTTP(S) camera viewer addresses and open them deliberately. Embedded credentials and query tokens are rejected. No network discovery or claim of active monitoring is made."
+  },
+  {
+    "kind": "added",
+    "title": "Research workshop and learning explorer",
+    "description": "Adds evidence-based deep dives, fact checks, scenario checks, timelines, source comparisons, study guides and saved study cards. Adapts 1557 offline reference entries from the supplied Quantum Research files without executing their UI or network code."
+  },
+  {
+    "kind": "security",
+    "title": "Guarded learning and research",
+    "description": "New routes use existing memory, chat and status authorization scopes. Lesson evaluation and saved-topic analysis additionally require memory.read. Revision checks protect concurrent edits; learning examples cannot create execution grants."
+  },
+  {
+    "kind": "limitations",
+    "title": "Training, reference and camera boundaries",
+    "description": "Teaching is model-specific reference retrieval and rehearsal, not model-weight fine-tuning. Camera entries are viewer links; RTSP/ONVIF streaming and recording need device-specific integration. Imported reference entries are unverified; citation matching does not prove factual truth. Native/mobile voice and owner-data trials require live verification after integration."
+  },
+  {
+    "kind": "changed",
+    "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+    "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+  },
+  {
+    "kind": "changed",
+    "title": "Voice states swell the orb instead of bursting from the mic",
+    "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+  },
+  {
+    "kind": "changed",
+    "title": "The mic button is a normal mic again",
+    "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+  },
+  {
+    "kind": "limitations",
+    "title": "C1 visual validation scope",
+    "description": "C1 was verified in synthetic desktop and phone layouts; real microphone, installed GPU and physical-phone behavior still need owner validation. Other parts of this combined update add the features described in the release notes."
+  },
+  {
+    "kind": "fixed",
+    "title": "Updates target the real deployment folder",
+    "description": "Native service and installer commands resolve a validated runtime project root, using trusted environment configuration, root.json or the real deployment folder. Temporary build roots are rejected and installer roots are passed explicitly."
+  },
+  {
+    "kind": "fixed",
+    "title": "Reliable install checks and recovery",
+    "description": "Installer CheckOnly validates hashes and target roots without closing ZAE. Installation closes only matching ZAE processes, retries file copies, reports blocking processes and restores the previous website as well as executable if replacement fails. SHA-256 works without the optional Get-FileHash cmdlet."
+  },
+  {
+    "kind": "fixed",
+    "title": "No stale install offers and reconnect refresh",
+    "description": "Installed version receipts prevent same-version or older update offers. The interface refreshes while visible to recover after a Core restart and shows the latest installed release notes as What’s new. Source version bumps alone are not mistaken for completed installations."
+  },
+  {
+    "kind": "changed",
+    "title": "ZAE builds locally by default",
+    "description": "Small, medium and large automatic build requests use local Aider and record the selected model/attempt. Missing local tools stop with an explanation instead of consuming a cloud subscription. Claude remains an explicit per-request opt-in labeled with its allowance cost. Failed local requests produce a private help packet; a 20-task historical catalog is provenance-checked, with no unmeasured success-rate claim."
+  },
+  {
+    "kind": "added",
+    "title": "Work commute answers use GODSPEED routing",
+    "description": "An explicit Save work commute control stores selected origin/destination coordinates. Conversation uses the existing routing service to estimate that saved route, labels the origin as saved rather than live GPS, and reports missing or unavailable data without inventing an ETA. Personal mail and commute context require the existing read scopes."
+  },
+  {
+    "kind": "limitations",
+    "title": "Owner device and mail-send trials remain separate",
+    "description": "Automated tests use synthetic mail, route data and installer fixtures. No real reply is sent without exact recipient/text approval. The Sunday integrated release still needs Claude’s independent security review and owner desktop, phone, microphone and post-restart checks."
+  },
+  {
+    "kind": "added",
+    "title": "Critical unit tests in CI",
+    "description": "Adds an isolated Python 3.11 regression job for context budgeting, evidence analysis, model-scoped teaching, adaptive learning, commute boundaries and update version handling. Test-only dependencies are pinned separately; production dependencies are unchanged."
+  }
+]

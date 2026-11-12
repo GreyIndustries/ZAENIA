@@ -45,7 +45,7 @@ def queue_command(action: str, target: str = "", *, now: float | None = None) ->
         raise ValueError("Pick a tab first.")
     if action.startswith("arrange_") and target:
         targets = target.split(",")
-        known = {"tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "assistant", "system"}
+        known = {"tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "warroom", "assistant", "system"}
         if len(targets) != int(action[-1]) or len(set(targets)) != len(targets) or not all(item in known for item in targets):
             raise ValueError("Pick distinct supported app windows for this layout.")
     command = {"id": uuid.uuid4().hex, "action": action, "target": target if action in ("open", "close", "minimize") or action.startswith("arrange_") else "",

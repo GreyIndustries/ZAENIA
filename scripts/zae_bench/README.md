@@ -1,0 +1,3 @@
+# ZAE-Bench v0 historical task catalog
+
+Twenty real historical code changes are seeded with parent commits, proxy briefs, affected files and changed tests. `check_catalog.py` validates provenance without invoking a model or executing generated code. This is not a measured coding-success baseline. Review each acceptance case, remove answer leakage, split training and held-out tasks, and run through the existing guarded BuildRequests runner before claiming a score. Existing scripts/model_bench independently compares model coding exercises; its unsafe-execution opt-in is not a sandbox and stays off by default.

@@ -1,3 +1,4 @@
+import { DockSlot } from "../core/DockCore";
 import { routeForActivity, type PageRoute } from "../../core/voiceUi";
 import type { PageActivity } from "../../core/pageActivity";
 import { createContext, useCallback, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -152,6 +153,7 @@ function PaneTopRow({ appId, api }: { appId: string; api: PaneNavApi }) {
     window.addEventListener("keydown", key, true); return () => window.removeEventListener("keydown", key, true);
   }, [api.paneId]);
   return <div className="bx-top pane-top">
+    <DockSlot/>
     <CategorySeg current={category}/>
     <PageSearch focusKey={focusKey}/>
     <button type="button" className="bx-back" data-pane-back aria-label="Back" onClick={() => { if (!api.back()) openCategory(category); }}><Ico name="back"/>Back</button>

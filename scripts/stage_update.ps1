@@ -1,4 +1,4 @@
-# Build a ZAENIA update and stage it for Grey to install from Settings > Updates.
+﻿# Build a ZAENIA update and stage it for Grey to install from Settings > Updates.
 # Nothing installed or served changes here: the desktop exe and the phone site go to updates\pending\<id>\
 # and only Install (scripts\install_update.ps1, run by the desktop app) puts them in place.
 #
@@ -10,12 +10,17 @@ param(
     [string]$Notes = "",   # one string, changes separated by |
     [string]$Part = "ui",
     [string]$ReleaseNotesFile = "", # JSON array: kind, title, description
+    [string]$DeploymentRoot = "C:\Projects\ZAENIA",
     [switch]$RestartServer,
     [switch]$SkipBuild
 )
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Desktop = Join-Path $Root "desktop"
+. (Join-Path $PSScriptRoot "update_helpers.ps1")
+$DeploymentRoot = Assert-ZaeDeploymentRoot $DeploymentRoot
+if (($Root -split '[\\/]') -contains '.tmp') { throw 'Build releases from the release worktree or deployment checkout, never .tmp.' }
+
 $Versions = Get-Content -Raw -Encoding UTF8 (Join-Path $Desktop "src\config\versions.json") | ConvertFrom-Json
 if ($Part -notmatch '^(ui|system|tab:[a-z]+)$') { throw "Part must be ui, system or tab:<id>." }
 $Version = if ($Part -eq "system") { $Versions.system.version } elseif ($Part -like "tab:*") { $Versions.tabs.($Part.Substring(4)).version } else { $Versions.ui.version }
@@ -43,7 +48,7 @@ try {
     }
 } finally { Pop-Location }
 
-$Exe = Join-Path $Desktop "src-tauri\target\release\desktop.exe"
+$Exe = if ($env:CARGO_TARGET_DIR) { Join-Path $env:CARGO_TARGET_DIR "release\desktop.exe" } else { Join-Path $Desktop "src-tauri\target\release\desktop.exe" }
 if (-not (Test-Path -LiteralPath $Exe)) { throw "Desktop build output not found: $Exe" }
 Copy-Item -LiteralPath $Exe (Join-Path $Work "ZAENIA.exe")
 $Commit = (& git -C $Root rev-parse --short HEAD 2>$null)
@@ -52,9 +57,10 @@ $Manifest = [ordered]@{
     id = $Id; title = $Title; notes = @($DetailedNotes | ForEach-Object { "[$($_.kind)] $($_.title) — $($_.description)" }); summary = @($Notes -split '\|' | ForEach-Object { $_.Trim() } | Where-Object { $_ }); part = $Part; version = $Version
     releaseNotes = @($DetailedNotes)
     versions = [ordered]@{ system = $Versions.system.version; ui = $Versions.ui.version }
+    deploymentRoot = $DeploymentRoot
     restartServer = [bool]$RestartServer
     createdAt = (Get-Date).ToString("o")
-    sha256 = (Get-FileHash -LiteralPath (Join-Path $Work "ZAENIA.exe") -Algorithm SHA256).Hash
+    sha256 = (Get-ZaeFileHash -LiteralPath (Join-Path $Work "ZAENIA.exe") -Algorithm SHA256).Hash
     builtFrom = [ordered]@{ commit = "$Commit"; uncommittedChanges = $Dirty }
 }
 $Manifest | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 (Join-Path $Work "manifest.json")

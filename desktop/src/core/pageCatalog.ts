@@ -5,21 +5,23 @@ const pages = (rows: [string, string][]): PageSpec[] => rows.map(([id, label]) =
 export const PAGE_CATALOG: AppSpec[] = [
   { id: "overview", label: "Core", pages: pages([["dashboard","Dashboard"],["launcher","App launcher"],["recent","Recent activity"]]) },
   { id: "tasks", label: "LIFE", pages: [
-    { id: "plan", label: "Plan", children: pages([["week","Week"],["priorities","Priorities"],["day","Day"],["month","Month"],["reminders","Reminders"]]) },
+    { id: "plan", label: "Schedule Board", children: pages([["week","Week"],["priorities","Priorities"],["day","Day"],["month","Month"],["reminders","Reminders"]]) },
     { id: "fitness", label: "Fitness & Health", children: [
       {id:"today",label:"Today"},
       {id:"training",label:"Training",children:pages([["program","Program"],["plans","Plans & targets"],["log","Food & exercise"]])},
       {id:"food",label:"Food",children:pages([["planner","Weekly meal planner"],["week","Made for this week"],["cookbook","Cookbook"],["scan","Scan food"]])},
     ] },
+    { id:"mail",label:"Mail" },
     { id:"map",label:"GODSPEED",children:pages([["directions","Directions"],["traffic","Traffic"],["weather","Weather"],["air","Air"],["sea","Sea"]]) },
   ] },
   { id:"notes",label:"Notes",pages:pages([["board","Board"],["panes","Notebook"],["map","Map"],["editor","All notes"]]) },
   { id:"workbench",label:"Workbench",pages:pages([["lab","Project lab"],["blueprint","Blueprint"],["experiments","Experiments"],["projects","Projects"],["tools","Tools"],["labs","Labs"]]) },
   { id:"music",label:"Music",pages:pages([["dashboard","Dashboard"],["studio","Studio"],["song","Song"],["connections","Connections"]]) },
-  { id:"research",label:"Research",pages:pages([["desk","Desk"],["reader","Reader"],["board","Evidence board"],["agent","Web agent"],["history","Historical Connections"],["notebook","Notebook"],["news","News"],["library","The Library"],["scripture","Scripture & ancient"],["translate","Translate"]]) },
+  { id:"research",label:"Research",pages:pages([["desk","Desk"],["workshop","Analysis workshop"],["reference","Learning explorer"],["cards","Study cards"],["reader","Reader"],["board","Evidence board"],["agent","Web agent"],["history","Historical Connections"],["notebook","Notebook"],["news","News"],["library","The Library"],["scripture","Scripture & ancient"],["translate","Translate"]]) },
   { id:"codedoctor",label:"Code Doctor & Files",pages:pages([["health","Health"],["queue","Review queue"],["side","Side by side"],["editor","Editor"],["plain","ENTHON"],["playground","Playground"],["doctor","Scanner"],["build","Build requests"],["suggestions","Suggestions"],["files","Files"],["source","Source"]]) },
-  { id:"arena",label:"Arena",pages:pages([["duel","Head to head"],["leaders","Leaderboard"],["bench","Test set"],["board","Rounds & SE model"],["brains","SE & tools"]]) },
-  { id:"assistant",label:"Assistant",pages:[...pages([["front","Today"],["mail","Mail"],["remembered","Everything remembered"],["memory","Memory & rules"]]),{id:"tools",label:"Assistant tools",children:pages([["work","Work"],["operate","Operate"],["apps","Apps"],["workspaces","Workspaces"],["projects","Projects"],["documents","Documents"],["approvals","Approvals"],["health","Health"],["portable","Portable"],["hands","Hands"]])}] },
+  { id:"warroom",label:"War Room",pages:pages([["defense","Defense planning"],["business","Business plans"],["cameras","Cameras"]]) },
+  { id:"arena",label:"LLM Training",pages:pages([["training","Training modules"],["learning","Learning health"],["duel","Response comparison"],["leaders","Leaderboard"],["bench","Test set"],["board","Rounds & SE model"],["brains","SE & tools"]]) },
+  { id:"assistant",label:"Assistant",pages:[...pages([["front","Today"],["remembered","Everything remembered"],["memory","Memory & rules"]]),{id:"tools",label:"Assistant tools",children:pages([["work","Work"],["operate","Operate"],["apps","Apps"],["workspaces","Workspaces"],["projects","Projects"],["documents","Documents"],["approvals","Approvals"],["health","Health"],["portable","Portable"],["hands","Hands"]])}] },
   { id:"system",label:"Settings",pages:pages([["center","Control center"],["search","Search"],["look","Make ZAE yours"],["system","System & appearance"],["vault","Vault"],["notifications","Notifications"],["faceid","Phone Face ID"],["updates","Updates"],["about","About"]]) },
   { id:"status",label:"Status",pages:pages([["live","Live"],["automations","Automations"],["readiness","Readiness"],["uptime","Uptime"],["overview","Overview"],["protocols","Protocols"],["selfsustain","Self-Sustain"],["pc","This PC"]]) },
   { id:"remote",label:"PC remote",pages:pages([["desktop","Desktop controls"]]) },
@@ -68,10 +70,10 @@ export function lastAppView(id: string, get: (key: string) => string | null = re
 /** Category → modules, in the order the workspace shows them (module ids are catalogue/window ids). */
 export const CATEGORY_MODULES: Record<string, { app: string; label?: string; path?: string[] }[]> = {
   plan: [{ app: "tasks" }, { app: "notes" }],
-  health: [{ app: "tasks", label: "Fitness & Health", path: ["fitness"] }],
+  warroom: [{ app: "warroom" }],
   know: [{ app: "research" }, { app: "assistant" }],
-  create: [{ app: "music" }, { app: "workbench" }],
-  build: [{ app: "codedoctor" }, { app: "arena" }],
+  create: [{ app: "music" }],
+  build: [{ app: "workbench" }, { app: "codedoctor" }, { app: "arena" }],
   system: [{ app: "system" }, { app: "status" }, { app: "security" }],
 };
 /** The catalogue node at a path inside an app (null for the app itself or an unknown path). */
@@ -88,11 +90,11 @@ export function screensInside(spec: { children?: PageSpec[]; pages?: PageSpec[] 
 
 /* ---- Preview 05 / M1 metadata (Claude 2026-11-11): what each tile says, its colour and icon. Display only. ---- */
 export const CATEGORY_META: Record<string, { name: string; accent: string; icon: string; d: string }> = {
-  plan: { name: "Life", accent: "#e0a353", icon: "cal", d: "Plan, fitness & health, notes" },
-  health: { name: "Health", accent: "#ff7a7a", icon: "heart", d: "Training, food and recovery" },
+  plan: { name: "Life", accent: "#e0a353", icon: "cal", d: "Schedule, fitness & health, mail and notes" },
+  warroom: { name: "War Room", accent: "#ff7a7a", icon: "shield", d: "Defense, cameras and business planning" },
   know: { name: "Know", accent: "#4fd1c5", icon: "book", d: "Research and your assistant" },
-  create: { name: "Create", accent: "#7aa8ff", icon: "music", d: "Music and projects" },
-  build: { name: "Build", accent: "#8fd16a", icon: "code", d: "Code and model testing" },
+  create: { name: "Create", accent: "#7aa8ff", icon: "music", d: "Music production" },
+  build: { name: "Build", accent: "#8fd16a", icon: "code", d: "Workbench, code and model teaching" },
   system: { name: "Settings", accent: "#9fb6cf", icon: "gear", d: "Settings, status and security" },
 };
 export const MODULE_META: Record<string, { accent: string; icon: string; d: string }> = {
@@ -100,18 +102,19 @@ export const MODULE_META: Record<string, { accent: string; icon: string; d: stri
   "tasks/fitness": { accent: "#ff9e6b", icon: "heart", d: "Workouts, training plans and food" },
   notes: { accent: "#a68bff", icon: "note", d: "Capture something to return to later" },
   research: { accent: "#4fd1c5", icon: "book", d: "Sources, reading and evidence" },
-  assistant: { accent: "#f07fb8", icon: "spark", d: "Mail, memory and tools" },
+  assistant: { accent: "#f07fb8", icon: "spark", d: "Memory and tools" },
   music: { accent: "#7aa8ff", icon: "music", d: "Studio, songs and tracks" },
   workbench: { accent: "#ffb454", icon: "tool", d: "Projects, experiments and tools" },
   codedoctor: { accent: "#8fd16a", icon: "code", d: "Review, fix and browse code" },
-  arena: { accent: "#e6c35c", icon: "trophy", d: "Model head-to-heads" },
+  arena: { accent: "#e6c35c", icon: "brain", d: "Teach protocols, actions and responses" },
+  warroom: { accent: "#ff7a7a", icon: "shield", d: "Defense, cameras and extensive business plans" },
   system: { accent: "#9fb6cf", icon: "gear", d: "Make ZAE yours" },
   status: { accent: "#5fd39a", icon: "pulse", d: "Live system status" },
   security: { accent: "#ff9e6b", icon: "shield", d: "Shield and protection" },
 };
 /** One-line descriptions for screens, keyed "app/path". Missing ones show no description. */
 export const SCREEN_DESC: Record<string, string> = {
-  "tasks/plan": "Your week and day", "tasks/plan/week": "Seven-day board", "tasks/plan/priorities": "What matters most", "tasks/plan/day": "Hour-by-hour", "tasks/plan/month": "Month calendar", "tasks/plan/reminders": "All reminders",
+  "tasks/plan": "Schedule Board: your week and day", "tasks/mail": "Inbox and threads", "arena/training": "Model-specific teaching examples and practice", "arena/learning": "Learning settings and reviewed insights", "warroom/defense": "Defensive security plans", "warroom/business": "Detailed business plans", "warroom/cameras": "Your registered camera viewers", "research/workshop": "Evidence-based analysis", "research/reference": "Offline reference explorer", "research/cards": "Saved study cards", "tasks/plan/week": "Seven-day board", "tasks/plan/priorities": "What matters most", "tasks/plan/day": "Hour-by-hour", "tasks/plan/month": "Month calendar", "tasks/plan/reminders": "All reminders",
   "tasks/fitness": "Workouts, training plans and food", "tasks/fitness/today": "Today's workout, meals and targets", "tasks/fitness/training": "Program and plans",
   "tasks/fitness/training/program": "Your current training program", "tasks/fitness/training/plans": "Training plans and goals", "tasks/fitness/training/log": "Logged meals and sessions",
   "tasks/fitness/food": "Meals, recipes and scanning", "tasks/fitness/food/planner": "Plan the week's meals", "tasks/fitness/food/week": "Recipes picked for this week", "tasks/fitness/food/cookbook": "Saved recipes", "tasks/fitness/food/scan": "Barcode and label scanning",
@@ -180,7 +183,7 @@ export function navigatorFor(app: string, path: string[]): string | null {
   const map: Record<string, string> = {
     tasks: "life", "tasks/plan": "plan", "tasks/fitness": "fitness", "tasks/fitness/food": "fitness-food", "tasks/fitness/training": "fitness-training", "tasks/map": "godspeed",
     notes: "notes", workbench: "workbench", music: "music", research: "research", "research/scripture": "scripture", codedoctor: "codedoctor", "codedoctor/plain": "enthon", "codedoctor/files": "files-view",
-    arena: "arena", assistant: "assistant", "assistant/tools": "assistant-tools", system: "settings", status: "status", security: "security",
+    warroom: "warroom", arena: "arena", assistant: "assistant", "assistant/tools": "assistant-tools", system: "settings", status: "status", security: "security",
   };
   return map[key] ?? null;
 }

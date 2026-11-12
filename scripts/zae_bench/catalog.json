@@ -1,0 +1,477 @@
+{
+  "version": 0,
+  "status": "Historical catalog; no model success-rate baseline claimed",
+  "tasks": [
+    {
+      "id": "history-01",
+      "commit": "20a703e42dc4636478f291c54acc66383513e1e8",
+      "parent": "10973229704e2460604be11e9c1bdaadad5ffae7",
+      "brief": "Add two-hand controls and interactive SE fusion model",
+      "files": [
+        "CLAUDE.md",
+        "desktop/hand-controls-preview.html",
+        "desktop/public/handtracking/worker.js",
+        "desktop/public/models/zaenia-se-fusion.glb",
+        "desktop/scripts/export-se-fusion.mjs",
+        "desktop/scripts/fusion-model.test.cjs",
+        "desktop/scripts/gestures.test.cjs",
+        "desktop/scripts/hand-layout.test.cjs",
+        "desktop/scripts/hand-motion.test.cjs",
+        "desktop/scripts/hand-worker.test.cjs",
+        "desktop/scripts/seActivity.test.cjs",
+        "desktop/se-fusion-preview.html",
+        "desktop/src/App.tsx",
+        "desktop/src/components/assistant/PlatformPanel.tsx",
+        "desktop/src/components/overview/OverviewFrame.tsx",
+        "desktop/src/components/shell/HandControls.css",
+        "desktop/src/components/shell/HandControls.tsx",
+        "desktop/src/components/shell/WindowShell.css",
+        "desktop/src/components/studios/ThirdViews.tsx",
+        "desktop/src/components/tools/BrainsPanel.tsx",
+        "desktop/src/components/tools/SEBrainMap.css",
+        "desktop/src/components/tools/SEBrainMap.tsx",
+        "desktop/src/components/tools/se3d/SE3D.css",
+        "desktop/src/components/tools/se3d/SE3DCanvas.tsx",
+        "desktop/src/components/tools/se3d/SEFusionCanvas.css",
+        "desktop/src/components/tools/se3d/SEFusionCanvas.tsx",
+        "desktop/src/components/tools/se3d/constellation.ts",
+        "desktop/src/components/tools/se3d/engine.ts",
+        "desktop/src/components/tools/se3d/fusionModel.ts",
+        "desktop/src/components/tools/seActivity.ts",
+        "desktop/src/core/gestureActions.ts",
+        "desktop/src/core/handGestures.ts",
+        "desktop/src/core/handTargets.ts",
+        "desktop/src/core/windowLayout.ts",
+        "desktop/src/previews/HandControlsPreview.css",
+        "desktop/src/previews/HandControlsPreview.tsx",
+        "desktop/src/previews/SEFusionPreview.css",
+        "desktop/src/previews/SEFusionPreview.tsx",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/MEDIAPIPE_HAND_CONTROLS_HANDOFF.md",
+        "docs/architecture/SE_FUSION_MODEL_HANDOFF.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md",
+        "docs/previews/zaenia-hand-controls.jpg",
+        "docs/previews/zaenia-se-fusion-desktop.jpg"
+      ],
+      "changedTests": [
+        "desktop/scripts/fusion-model.test.cjs",
+        "desktop/scripts/gestures.test.cjs",
+        "desktop/scripts/hand-layout.test.cjs",
+        "desktop/scripts/hand-motion.test.cjs",
+        "desktop/scripts/hand-worker.test.cjs",
+        "desktop/scripts/seActivity.test.cjs"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-02",
+      "commit": "10973229704e2460604be11e9c1bdaadad5ffae7",
+      "parent": "bbf3857c55a3e321b05671d590f3ffd8fa88089b",
+      "brief": "Add narrated file reading and Talk-authored web answers",
+      "files": [
+        "CLAUDE.md",
+        "core/api/chat_files.py",
+        "core/api/chat_files_test.py",
+        "core/api/file_narration.py",
+        "core/api/file_narration_test.py",
+        "core/api/tools_routes.py",
+        "core/api/ui_chat_stream.py",
+        "core/brain/conductor.py",
+        "core/brain/conductor_test.py",
+        "core/brain/roster.py",
+        "core/brain/seek.py",
+        "core/brain/seek_test.py",
+        "core/brain/transcript.py",
+        "core/brain/transcript_test.py",
+        "core/voice_security/actions_test.py",
+        "desktop/scripts/narration-lifecycle.test.cjs",
+        "desktop/src/App.tsx",
+        "desktop/src/components/chat/HomeConversation.css",
+        "desktop/src/components/chat/HomeConversation.tsx",
+        "desktop/src/core/bridge.ts",
+        "docs/architecture/CLAUDE_NOTES_2026-11-02.md",
+        "docs/architecture/CLAUDE_TO_CODEX_COMMIT_REQUEST_2026-11-04.md",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/ZAENIA_Claude_Codex_Efficiency_Draft.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md"
+      ],
+      "changedTests": [
+        "core/api/chat_files_test.py",
+        "core/api/file_narration_test.py",
+        "core/brain/conductor_test.py",
+        "core/brain/seek_test.py",
+        "core/brain/transcript_test.py",
+        "core/voice_security/actions_test.py",
+        "desktop/scripts/narration-lifecycle.test.cjs"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-03",
+      "commit": "bbf3857c55a3e321b05671d590f3ffd8fa88089b",
+      "parent": "f7d8b1dc70b7d7b70e9d88280715b456cb0fac9a",
+      "brief": "Add password return from Calm view",
+      "files": [
+        "core/api/calm_password.py",
+        "core/api/calm_password_routes.py",
+        "core/api/calm_password_test.py",
+        "core/api/server.py",
+        "desktop/src-tauri/src/lib.rs",
+        "desktop/src/App.tsx",
+        "desktop/src/components/overview/CalmView.css",
+        "desktop/src/components/overview/CalmView.tsx",
+        "desktop/src/components/security/CalmPassword.tsx",
+        "desktop/src/core/bridge.ts",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md",
+        "scripts/security_console.ps1"
+      ],
+      "changedTests": [
+        "core/api/calm_password_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-04",
+      "commit": "f7d8b1dc70b7d7b70e9d88280715b456cb0fac9a",
+      "parent": "bf4013e84e6d5b745e10da8f8e770f8290414232",
+      "brief": "Add OneDrive references and detailed Study analysis",
+      "files": [
+        "core/api/platform_routes.py",
+        "core/assistant_platform/documents.py",
+        "core/assistant_platform/service.py",
+        "desktop/src/components/assistant/PlatformPanel.tsx",
+        "desktop/src/components/personal/MealPlanner.tsx",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-05",
+      "commit": "bf4013e84e6d5b745e10da8f8e770f8290414232",
+      "parent": "ea766d203c6e75eb4cbaa0a144c1b623def2c9c4",
+      "brief": "Add mouse back and forward navigation",
+      "files": [
+        "desktop/src/App.tsx"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-06",
+      "commit": "1e403c31f0e096927d7e9b06bf61c0ed0fd106cc",
+      "parent": "cb0c9bf90f3f595298394a1c2b76f431a3048d69",
+      "brief": "ZAE build: Improve date parsing accuracy",
+      "files": [
+        "core/assistant_platform/reminders.py",
+        "core/assistant_platform/selfcare_test.py",
+        "core/calendar_context/calendar_update_main.py",
+        "core/calendar_context/calendar_update_main_test.py"
+      ],
+      "changedTests": [
+        "core/assistant_platform/selfcare_test.py",
+        "core/calendar_context/calendar_update_main_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-07",
+      "commit": "cb0c9bf90f3f595298394a1c2b76f431a3048d69",
+      "parent": "66522a76301ebfff2a431bd6aa09b2046ac8a310",
+      "brief": "Chat never claims a reminder was set when token mode blocked it; plain chat route says it can't set reminders",
+      "files": [
+        "core/api/assistant_stream_test.py",
+        "core/api/chat_routes.py",
+        "core/api/ui_chat_stream.py",
+        "docs/architecture/CLAUDE_NOTES_2026-11-02.md"
+      ],
+      "changedTests": [
+        "core/api/assistant_stream_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-08",
+      "commit": "66522a76301ebfff2a431bd6aa09b2046ac8a310",
+      "parent": "f8d3861032c1002370aacc70d4bba8016c05f918",
+      "brief": "Fix reminder parsing and calendar routing",
+      "files": [
+        "core/api/assistant_stream_test.py",
+        "core/api/ui_chat_stream.py",
+        "core/assistant_platform/reminders.py",
+        "core/assistant_platform/selfcare_test.py",
+        "desktop/src/App.tsx",
+        "desktop/src/components/plan/PlanStudio.tsx",
+        "desktop/src/components/shell/WindowShell.tsx",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md"
+      ],
+      "changedTests": [
+        "core/api/assistant_stream_test.py",
+        "core/assistant_platform/selfcare_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-09",
+      "commit": "f8d3861032c1002370aacc70d4bba8016c05f918",
+      "parent": "f33a819e78859938d1c17bddbcecd538f22912b9",
+      "brief": "Notification bell in the top bar with a notification center: needs you, new, done today",
+      "files": [
+        "desktop/src/App.tsx",
+        "desktop/src/components/shell/NotificationCenter.css",
+        "desktop/src/components/shell/NotificationCenter.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-10",
+      "commit": "f33a819e78859938d1c17bddbcecd538f22912b9",
+      "parent": "44bd93a7ca11b9ca666d981de4c45acbe457b04f",
+      "brief": "Fix the status feed rejected by the app (brain chip details over 100 characters); Code Doctor uses Study",
+      "files": [
+        "core/api/status_feed.py",
+        "core/api/tools_routes.py",
+        "core/brain/roster.py",
+        "core/brain/roster_test.py",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [
+        "core/brain/roster_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-11",
+      "commit": "44bd93a7ca11b9ca666d981de4c45acbe457b04f",
+      "parent": "7ee7faad1509e2bb3c2e2cd460656a74d9ef2042",
+      "brief": "Settings and bottom bar show the four brains with their jobs; 24 more font choices grouped, with a preview",
+      "files": [
+        "core/api/status_bar.py",
+        "core/api/status_feed.py",
+        "core/brain/roster.py",
+        "desktop/src/components/settings/AppearanceSettings.css",
+        "desktop/src/components/settings/AppearanceSettings.tsx",
+        "desktop/src/components/shell/StatusBar.css",
+        "desktop/src/components/shell/StatusBar.tsx",
+        "desktop/src/components/studios/ThirdViews.tsx",
+        "desktop/src/core/appearance.ts",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-12",
+      "commit": "2c087810b076b0d692d02e4ae612ff4fe79aef91",
+      "parent": "f9de466b1a47c3c09411ab9d0b8fe750fb3140b5",
+      "brief": "Fitness & Health: three tabs (Today stacked, Training summary + switch, Food side rail), recipes shelved by week and cookbook, log exercises not in the plan",
+      "files": [
+        "core/assistant_platform/personal_tools.py",
+        "core/assistant_platform/personal_tools_test.py",
+        "desktop/src/components/personal/FitnessStudio.css",
+        "desktop/src/components/personal/FitnessStudio.tsx",
+        "desktop/src/components/personal/PersonalPanels.tsx",
+        "desktop/src/components/personal/TrainingProgram.css",
+        "desktop/src/components/personal/TrainingProgram.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [
+        "core/assistant_platform/personal_tools_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-13",
+      "commit": "4fa18ea86f54c35310c0799ef130c4a20d406df3",
+      "parent": "dacd755b75056813363cc116688064242702d29e",
+      "brief": "Fitness: add weekly meal planner and complete queued updates",
+      "files": [
+        "AGENTS.md",
+        "core/api/platform_routes.py",
+        "core/assistant_platform/build_helper.py",
+        "core/assistant_platform/build_helper_test.py",
+        "core/assistant_platform/chat_actions.py",
+        "core/assistant_platform/chat_actions_test.py",
+        "core/assistant_platform/personal_tools.py",
+        "core/assistant_platform/personal_tools_test.py",
+        "desktop/src/App.tsx",
+        "desktop/src/components/personal/FitnessStudio.css",
+        "desktop/src/components/personal/FitnessStudio.tsx",
+        "desktop/src/components/personal/MealPlanner.tsx",
+        "desktop/src/components/personal/PersonalPanels.tsx",
+        "desktop/src/components/status/AutomationCenter.tsx",
+        "desktop/src/components/tools/BuildRequests.tsx",
+        "docs/architecture/HANDOFF_2026-10-30.md",
+        "docs/architecture/ZAENIA_DEVELOPMENT_ENVIRONMENT_AUDIT.md",
+        "docs/architecture/ZAENIA_Identity_and_Product_Charter.md",
+        "docs/architecture/ZAENIA_Master_Build_Plan.md",
+        "docs/previews/ZAENIA_Core_Black_Hole_Concept.svg"
+      ],
+      "changedTests": [
+        "core/assistant_platform/build_helper_test.py",
+        "core/assistant_platform/chat_actions_test.py",
+        "core/assistant_platform/personal_tools_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-14",
+      "commit": "efd845d07546d66f9d4efa2d6ac6721903d29404",
+      "parent": "dacd755b75056813363cc116688064242702d29e",
+      "brief": "Arena > Brains & tools: her brains, coding tools and local models, live; feature list and self-knowledge updated",
+      "files": [
+        "core/api/tools_routes.py",
+        "core/api/ui_routes.py",
+        "core/assistant_platform/suggestions.py",
+        "core/brain/component_registry.yaml",
+        "core/brain/roster.py",
+        "desktop/src/App.tsx",
+        "desktop/src/components/studios/ThirdViews.tsx",
+        "desktop/src/components/tools/BrainsPanel.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-15",
+      "commit": "571e68904b1e3f3f4bdd8e51504a996b32168f9c",
+      "parent": "4b727f854fe97b6e519a175b3e76de176a040f52",
+      "brief": "Build requests: the desktop app restarts the server after an approved change; rebuild route; security suites get the charter and scripture corpus only while checks run",
+      "files": [
+        "core/api/build_routes.py",
+        "core/api/ui_routes.py",
+        "core/assistant_platform/build_helper.py",
+        "core/assistant_platform/build_helper_test.py",
+        "desktop/src/components/tools/BuildRequests.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [
+        "core/assistant_platform/build_helper_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-16",
+      "commit": "4b727f854fe97b6e519a175b3e76de176a040f52",
+      "parent": "92b0f1deef5c86c29e6dd0330d9b9575f0c6ec8e",
+      "brief": "Build requests: ZAE hands code changes to Claude Code or Aider in a separate copy, tests them, Grey approves at the PC; nightly fix ideas",
+      "files": [
+        "core/api/build_routes.py",
+        "core/api/server.py",
+        "core/api/ui_chat_stream.py",
+        "core/api/ui_routes.py",
+        "core/assistant_platform/build_helper.py",
+        "core/assistant_platform/build_helper_test.py",
+        "core/assistant_platform/build_ideas.py",
+        "core/assistant_platform/build_ideas_test.py",
+        "core/assistant_platform/suggestions.py",
+        "desktop/src/App.tsx",
+        "desktop/src/components/tools/BuildRequests.tsx",
+        "desktop/src/components/tools/ToolTabs.css",
+        "desktop/src/components/tools/ToolTabs.tsx",
+        "desktop/src/core/bridge.ts"
+      ],
+      "changedTests": [
+        "core/assistant_platform/build_helper_test.py",
+        "core/assistant_platform/build_ideas_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-17",
+      "commit": "30f5c86fc80de9c78d46316b684f0da664b690aa",
+      "parent": "ea929f118ecb5bc2159642f4f3727a726b08a4c0",
+      "brief": "Brains: warm Talk at server start; Seek no longer says it can't search the web while citing results",
+      "files": [
+        "core/api/server.py",
+        "core/brain/seek.py",
+        "core/brain/warmup.py",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-18",
+      "commit": "ea929f118ecb5bc2159642f4f3727a726b08a4c0",
+      "parent": "4057015a4a6aaeaee27e28f4833f5f0f2f7600f1",
+      "brief": "Nutrition: fill missing nutrients from USDA for named foods, cholesterol in chat, day totals add up what's known, no duplicate or generic-name logs",
+      "files": [
+        "core/assistant_platform/chat_actions.py",
+        "core/assistant_platform/chat_actions_test.py",
+        "core/assistant_platform/personal_tools.py",
+        "desktop/src/components/personal/PersonalPanels.css",
+        "desktop/src/components/personal/PersonalPanels.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [
+        "core/assistant_platform/chat_actions_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-19",
+      "commit": "558d5dfc1ccd12903f84207fffc15d78c61a8e74",
+      "parent": "ccd108f1ed0cdbefe5cc25394c93f0b490a72776",
+      "brief": "Phase 3: memory rollback, one provenance list, off the record, non-escalation tests; notes file for the plan",
+      "files": [
+        "core/api/assistant_routes.py",
+        "core/brain/brain_service.py",
+        "core/personal_memory/ledger/user_learning.py",
+        "core/personal_memory/no_store.py",
+        "core/personal_memory/overview.py",
+        "core/personal_memory/owner_profile.py",
+        "core/personal_memory/phase3_test.py",
+        "desktop/src/App.tsx",
+        "desktop/src/components/assistant/EverythingRemembered.tsx",
+        "desktop/src/components/assistant/ProfileReview.tsx",
+        "docs/architecture/CLAUDE_NOTES_2026-11-01.md"
+      ],
+      "changedTests": [
+        "core/personal_memory/phase3_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    },
+    {
+      "id": "history-20",
+      "commit": "ccd108f1ed0cdbefe5cc25394c93f0b490a72776",
+      "parent": "725c0e88cbfb0c56748730ecff5abc686e04cc03",
+      "brief": "Voice trial also records PC voice checks (round shared through the trial file)",
+      "files": [
+        "core/voice_security/runtime.py",
+        "core/voice_security/voice_trial.py",
+        "core/voice_security/voice_trial_test.py"
+      ],
+      "changedTests": [
+        "core/voice_security/voice_trial_test.py"
+      ],
+      "status": "needs-acceptance-review",
+      "provenance": "Git commit subject is a proxy brief, not the original owner request."
+    }
+  ]
+}

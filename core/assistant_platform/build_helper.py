@@ -4,8 +4,8 @@ The flow (Grey picked option 2 with Claude Code and Aider, and option 3, nightly
 1. Grey asks ("ZAE, build ...") or taps "Build it" on an idea. Talk writes a brief; nothing runs yet.
 2. Grey checks the brief and taps Start. The request waits while a game is running.
 3. A separate git worktree (ZAENIA-Helper, branch zae/<id>) is made from the live code. data/, secrets and the
-   live app are never in it. The coding tool works only there: Claude Code (no shell, no web) for most work,
-   Aider with the local Study model for small changes or when offline.
+   live app are never in it. Aider with the local coding model is the automatic path at every size.
+   Claude Code (no shell, no web) is available only through an explicit owner choice.
 4. Every changed path is checked against the locked list (security, voice check, passkey, permissions, the
    scripts that build and restart her, and this helper). Any hit throws the work away.
 5. The test suite, the security suites and (for app changes) the UI checks and TypeScript run in the copy. A
@@ -128,17 +128,17 @@ def tools_available() -> dict[str, bool]:
 
 def choose_tool(size: str, wanted: str | None = None, *, available: dict[str, bool] | None = None,
                 is_online: Callable[[], bool] = online) -> str:
-    """Claude Code for real features; Aider (local, free) for small changes or when Claude Code can't be reached."""
-    available = available or tools_available()
-    if wanted in TOOLS and available.get(wanted):
-        return wanted
-    if available.get("claude") and (size != "small" or not available.get("aider")) and is_online():
-        return "claude"
+    """Local by default at every task size; cloud requires an explicit request."""
+    available = tools_available() if available is None else available
+    if wanted is not None and wanted not in TOOLS:
+        raise ValueError("Choose the local tool or explicitly opt in to Claude Code.")
+    if wanted == "claude":
+        if available.get("claude"):
+            return "claude"
+        raise RuntimeError("The explicitly requested Claude Code tool is unavailable. No cloud fallback was attempted.")
     if available.get("aider"):
         return "aider"
-    if available.get("claude"):
-        return "claude"
-    raise RuntimeError("Neither coding tool is installed (Claude Code or Aider).")
+    raise RuntimeError("Local Aider is not installed. ZAE will not silently use a cloud subscription.")
 
 
 def run_tool(tool: str, folder: Path, prompt: str, files: list[str]) -> tuple[bool, str]:
@@ -540,12 +540,27 @@ class BuildRequests:
                 continue
             self.process(queued[0]["id"])
 
+    def _help_packet(self, item, error):
+        """Private failure handoff, excluded from publication; never invokes a cloud tool."""
+        identifier = str(item.get("id", ""))
+        if not re.fullmatch(r"[0-9a-f]{32}", identifier):
+            return None
+        folder = self.root / "docs" / "handoffs" / "zae-needs-help"
+        folder.mkdir(parents=True, exist_ok=True)
+        path = folder / (identifier + ".md")
+        body = ("# ZAE needs help\n\nStatus: failed local attempt; no automatic cloud call or approval.\n\n"
+                + "Request: " + str(item.get("request", ""))[:2000] + "\n\nBrief: " + str(item.get("brief", ""))[:3000]
+                + "\n\nFailure: " + str(error)[:1200] + "\n\nReview the saved checks and diff in Build requests before retrying.\n")
+        from core.foundation.security.io import atomic_write
+        atomic_write(path, body.encode("utf-8"))
+        return str(path.relative_to(self.root))
+
     def process(self, request_id: str) -> dict[str, Any]:
         item = self._update(request_id, status="working", step="Making a safe copy of the code.")
         try:
             tool = self.choose(item.get("size") or "medium", item.get("wantedTool"))
             branch, base = make_copy(request_id, root=self.root, helper=self.helper)
-            self._update(request_id, tool=tool, branch=branch, base=base)
+            self._update(request_id, tool=tool, model=AIDER_MODEL if tool == "aider" else None, branch=branch, base=base)
             prompt = f"TASK: {item['title']}\n{item['brief']}\n\nGrey's own words: {item['request']}"
             if item.get("files"):
                 prompt += "\nFiles that may be involved: " + ", ".join(item["files"])
@@ -555,8 +570,8 @@ class BuildRequests:
             for attempt in range(RETRIES + 1):
                 # The last local try goes to a different model: in the coding test they failed on different tasks.
                 runner = f"aider@{RETRY_MODEL}" if tool == "aider" and attempt == RETRIES and RETRY_MODEL != AIDER_MODEL else tool
-                label = "Claude Code" if tool == "claude" else "Aider (local)" if runner == tool else f"Aider on {RETRY_MODEL}"
-                self._update(request_id, step=f"{label} is writing the change." if not attempt else f"{label} is fixing what failed (try {attempt + 1}).")
+                label = "Claude Code (explicit owner choice)" if tool == "claude" else f"Local: Aider on {AIDER_MODEL}" if runner == tool else f"Local: Aider on {RETRY_MODEL}"
+                self._update(request_id, model=(RETRY_MODEL if runner != tool else AIDER_MODEL) if tool == "aider" else None, attempt=attempt + 1, step=f"{label} is writing the change." if not attempt else f"{label} is fixing what failed (try {attempt + 1}).")
                 finished, said = self.tool_runner(runner, self.helper, prompt, item.get("files") or [])
                 changed = changed_paths(self.helper, base)
                 if not changed and (tool != "aider" or attempt == RETRIES):
@@ -603,7 +618,11 @@ class BuildRequests:
             review_notice = " A separate local model review is attached." if review.get("status") == "reviewed" else " The second-pass review was unavailable."
             self.notify(request_id, f"Ready to review: {item['title']}", "Tests passed. Approve or reject it in Code Doctor > Build requests on the PC." + review_notice)
         except Exception as error:
-            self._update(request_id, status="failed", step="Stopped: " + str(error)[:500], error=str(error)[:800])
+            try:
+                packet = self._help_packet(self.get(request_id), error)
+            except Exception:
+                packet = None
+            self._update(request_id, status="failed", step="Stopped: " + str(error)[:500], error=str(error)[:800], helpPacket=packet)
             self.notify(request_id, f"Build request stopped: {item['title']}", str(error)[:300])
         finally:
             try:

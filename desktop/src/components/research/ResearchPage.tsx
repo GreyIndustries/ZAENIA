@@ -1,3 +1,4 @@
+import { ResearchWorkshop, ResearchReference, ResearchCards } from "./ResearchWorkshop";
 import { usePaneNav } from "../shell/PaneNav";
 import { PageNavigator } from "../shell/PageNavigator";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -16,10 +17,10 @@ const WebAgentPanel = lazy(() => import("./WebAgentPanel").then(module => ({ def
 const TranslatePanel = lazy(() => import("./TranslatePanel").then(module => ({ default: module.TranslatePanel })));
 const ScripturePanel = lazy(() => import("./ScripturePanel").then(module => ({ default: module.ScripturePanel })));
 
-export type ResearchTab = "desk" | "reader" | "board" | "history" | "notebook" | "news" | "library" | "scripture" | "translate" | "agent";
+export type ResearchTab = "workshop" | "reference" | "cards" | "desk" | "reader" | "board" | "history" | "notebook" | "news" | "library" | "scripture" | "translate" | "agent";
 // Grey's order (2026-10-29): Desk, Reader, Evidence board, then every tool the page already had.
 const TABS: { id: ResearchTab; label: string }[] = [
-  { id: "desk", label: "Desk" }, { id: "reader", label: "Reader" }, { id: "board", label: "Evidence board" },
+  { id: "desk", label: "Desk" }, { id: "workshop", label: "Analysis workshop" }, { id: "reference", label: "Learning explorer" }, { id: "cards", label: "Study cards" }, { id: "reader", label: "Reader" }, { id: "board", label: "Evidence board" },
   { id: "agent", label: "Web agent" }, { id: "history", label: "Historical Connections" }, { id: "notebook", label: "Notebook" },
   { id: "news", label: "News" }, { id: "library", label: "The Library" }, { id: "scripture", label: "Scripture & ancient" },
   { id: "translate", label: "Translate" },
@@ -44,7 +45,7 @@ export function ResearchPage({ initial }: { initial?: ResearchTab }) {
     const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: ResearchTab }>).detail; if ((detail as { pane?: string })?.pane && paneScope && (detail as { pane?: string }).pane !== paneScope.paneId) return; if (detail?.page === "research" && TABS.some(item => item.id === detail.tab)) choose(detail.tab); };
     window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
   });
-  const panel = (id: ResearchTab) => id === "desk" ? <ResearchDesk onRead={read} onBoard={board}/>
+  const panel = (id: ResearchTab) => id === "workshop" ? <ResearchWorkshop/> : id === "reference" ? <ResearchReference/> : id === "cards" ? <ResearchCards/> : id === "desk" ? <ResearchDesk onRead={read} onBoard={board}/>
     : id === "reader" ? <ResearchReader item={reading} onRead={read}/>
     : id === "board" ? <EvidenceBoard topicId={boardTopic} onTopic={setBoardTopic} onRead={read}/>
     : id === "history" ? <HistoryPanel/> : id === "notebook" ? <NotebookPanel/> : id === "news" ? <NewsPanel/> : id === "scripture" ? <ScripturePanel/>

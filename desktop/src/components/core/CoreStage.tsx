@@ -4,9 +4,9 @@ import { createPortal } from "react-dom";
 import { computeLayout } from "./neuralField";
 
 // One neural core for the whole app (Claude, 2026-11-11). The core renders once into a host element that
-// moves between slots (Home centre, the chat mic on other pages, phone Home, Calm view) instead of remounting,
+// moves between slots (Home centre, the top-row dock on other pages, phone Home, Calm view) instead of remounting,
 // so its animation never resets. The highest-priority mounted slot holds it; with no slot mounted it is
-// detached and pauses itself. A move between two visible places glides (C5: 0.55 s into or out of the mic).
+// detached and pauses itself. A move between two visible places glides (0.55 s into or out of the dock).
 
 type Slot = { el: HTMLElement; priority: number; order: number };
 type Sphere = { x: number; y: number; r: number; k: number; cx: number; cy: number };
@@ -78,7 +78,7 @@ export function rememberCore(core: Element) {
   if (at && !(core as HTMLElement).style.transform) last = at;
 }
 
-/** Where the core shows. Calm view outranks the mic, which outranks the dashboard. */
+/** Where the core shows. Calm view outranks the dock, which outranks the dashboard. */
 export function CoreSlot({ priority = 0 }: { priority?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {

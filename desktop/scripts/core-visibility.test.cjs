@@ -34,33 +34,15 @@ check(() => assert.match(OPAQUE_SURFACES, /\.navhub--workspace/));
 check(() => assert.doesNotMatch(OPAQUE_SURFACES, /orbit/, "orbit view is glass, not opaque"));
 console.log(`core visibility: ${checks} checks passed`);
 
-// C5 mic core layout: the rings fill a small box around the mic without spilling out; Home layout unchanged.
+// C1 docked orb layout: the rings fill the small 96 px drawing box without spilling out; Home layout unchanged.
 {
   const load = (file, sandbox) => { const out = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, file), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText, { exports: out, require: sandbox, Math, Float32Array }); return out; };
   const wake = load("../src/core/coreWake.ts", () => ({}));
   const field = load("../src/components/core/neuralField.ts", () => wake);
-  const mic = field.computeLayout(150, 150, true);
-  check(() => assert.ok(mic.r * field.RING_OUTER <= 75 && mic.r * field.RING_OUTER > 70, `rings fill the 150 px mic stage: ${mic.r}`));
-  check(() => assert.equal(mic.cx, 75)); check(() => assert.equal(mic.cy, 75));
+  const mic = field.computeLayout(96, 96, true);
+  check(() => assert.ok(mic.r * field.RING_OUTER <= 48 && mic.r * field.RING_OUTER > 44, `rings fill the 96 px orb box: ${mic.r}`));
+  check(() => assert.equal(mic.cx, 48)); check(() => assert.equal(mic.cy, 48));
   const home = field.computeLayout(824, 458, true);
   check(() => assert.ok(home.r >= 48 && home.cy === 458 * 0.45, "Home layout unchanged"));
-  console.log(`core mic layout: ${checks} checks passed in total`);
-}
-
-// C5 burst ring stays on screen (phone mic near the right edge).
-{
-  const fresh = {}; vm.runInNewContext(code, { exports: fresh });
-  const { burstFit } = fresh;
-  const at390 = burstFit({ x: 348, y: 144 }, 150, { width: 390, height: 844 });
-  check(() => assert.equal(at390.scale, 1)); check(() => assert.ok(348 + at390.dx + 75 <= 390 - 6, JSON.stringify(at390)));
-  check(() => assert.equal(at390.dy, 0));
-  const at360 = burstFit({ x: 318, y: 140 }, 150, { width: 360, height: 780, right: 0 });
-  check(() => assert.ok(318 + at360.dx + 75 <= 354 && at360.dx < 0));
-  const notch = burstFit({ x: 348, y: 40 }, 150, { width: 390, height: 844, top: 47 });
-  check(() => assert.ok(40 + notch.dy - 75 >= 47 + 6, "clear of the top safe area"));
-  const tiny = burstFit({ x: 50, y: 50 }, 150, { width: 120, height: 400 });
-  check(() => assert.ok(tiny.scale < 1 && tiny.scale > 0.7, "shrinks only when the screen is narrower than the ring"));
-  const desk = burstFit({ x: 1333, y: 809 }, 150, { width: 1440, height: 900 });
-  check(() => assert.equal(JSON.stringify(desk), JSON.stringify({ dx: 0, dy: 0, scale: 1 }), "desktop mic: centred on the mic"));
-  console.log(`core burst fit: ${checks} checks passed in total`);
+  console.log(`core orb layout: ${checks} checks passed in total`);
 }

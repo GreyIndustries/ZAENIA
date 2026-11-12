@@ -11,9 +11,9 @@ export type UiCommand = { kind: "navigate"; route: PageRoute } | { kind: "ambigu
   | { kind: "back" | "forward" | "restore-size" } | { kind: "focus-pane"; direction: "next" | "previous" | "left" | "right" | "up" | "down" }
   | { kind: "open-tab"; route: PageRoute } | { kind: "split-pages"; routes: [PageRoute, PageRoute] } | { kind: "tabs" | "close-tab" | "reopen-tab" };
 const clean = (value: string) => value.toLowerCase().replace(/[’']/g, "").replace(/&/g, " and ").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-const names: Record<string, string[]> = { overview: ["core","dashboard","home"],tasks:["life","calendar","tasks"],system:["settings","preferences"],codedoctor:["code doctor","code doctor and files","code"],research:["research"],notes:["notes"],workbench:["workbench"],music:["music"],arena:["arena"],assistant:["assistant"],status:["status"],security:["security"],remote:["pc remote","remote"] };
+const names: Record<string, string[]> = { overview: ["core","dashboard","home"],tasks:["life","calendar","tasks"],system:["settings","preferences"],codedoctor:["code doctor","code doctor and files","code"],research:["research"],notes:["notes"],workbench:["workbench"],music:["music"],arena:["llm training","model training","arena"],warroom:["war room"],assistant:["assistant"],status:["status"],security:["security"],remote:["pc remote","remote"] };
 export function parseUiCommand(input: string, currentApp = ""): UiCommand | null {
-  const text = clean(input).replace(/^(?:(?:hey )?(?:zae|zaenia|zay) |please )+/, "");
+  const text = clean(input).replace(/\bnodes\b/g, "tabs").replace(/\bnode\b/g, "tab").replace(/^(?:(?:hey )?(?:zae|zaenia|zay) |please )+/, "");
   if (!text || text.length > 500) return null;
   if (/^(?:undo|revert|restore)(?: the| my)? (?:window )?(?:arrangement|snap layout|split layout)$/.test(text)) return {kind:"undo-arrange"};
   // Screen history and pane focus (Claude 2026-11-11). Whole-utterance matches only.
@@ -49,8 +49,8 @@ export function parseUiCommand(input: string, currentApp = ""): UiCommand | null
   if (/^(?:resume|continue)(?: my| the)? (?:last|recent|previous) (?:work|activity)$|^pick up where i left off$/.test(text))return {kind:"resume"};
   if (/^(?:show|list|read)(?: my| the)? (?:voice commands|available actions)$|^what can i (?:say|do) (?:here|on this page)$/.test(text))return {kind:"voice-help"};
   if (/^(?:clear|forget)(?: my| the)? recent page work$/.test(text))return {kind:"clear-recent"};
-  const workspace=/^(?:open|show)(?: the)? (life|health|know|create|build|settings) workspace$/.exec(text);
-  if(workspace)return {kind:"workspace",id:({life:"plan",settings:"system"} as Record<string,string>)[workspace[1]]??workspace[1]};
+  const workspace=/^(?:open|show)(?: the)? (life|health|war room|know|create|build|settings) workspace$/.exec(text);
+  if(workspace)return {kind:"workspace",id:({life:"plan",health:"plan","war room":"warroom",settings:"system"} as Record<string,string>)[workspace[1]]??workspace[1]};
   const press=/^(?:press|click|tap)(?: the)? (.+?)(?: button)?$/.exec(text);if(press)return {kind:"press",label:press[1]};
   const field=/^(?:set|fill)(?: the)? (.+?)(?: field)? (?:to|with) (.+)$/i.exec(input.trim().replace(/^(?:(?:zae|zaenia|zay|please)[, ]+)+/i,""));
   if(field)return {kind:"field",label:field[1],value:field[2]};
@@ -62,6 +62,12 @@ export function parseUiCommand(input: string, currentApp = ""): UiCommand | null
   return choices.length?{kind:"ambiguous",labels:choices.map(route=>route.label).slice(0,6)}:null;
 }
 const SHORTCUTS: Record<string,PageRoute>={
+  "email":{app:"tasks",path:["mail"],label:"LIFE / Mail"},
+  "inbox":{app:"tasks",path:["mail"],label:"LIFE / Mail"},
+  "mail":{app:"tasks",path:["mail"],label:"LIFE / Mail"},
+  "schedule board":{app:"tasks",path:["plan"],label:"LIFE / Schedule Board"},
+  "plan":{app:"tasks",path:["plan"],label:"LIFE / Schedule Board"},
+  "training modules":{app:"arena",path:["training"],label:"LLM Training / Training modules"},
   "recipes":{app:"tasks",path:["fitness","food","cookbook"],label:"LIFE / Fitness & Health / Food / Cookbook"},
   "meal planner":{app:"tasks",path:["fitness","food","planner"],label:"LIFE / Fitness & Health / Food / Weekly meal planner"},
   "training plans":{app:"tasks",path:["fitness","training","plans"],label:"LIFE / Fitness & Health / Training / Plans & targets"},

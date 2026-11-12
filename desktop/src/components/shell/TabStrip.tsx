@@ -21,8 +21,6 @@ export function TabStrip({ shell, titles, onArrange, onUndo, onNewTab, onNote }:
   shell: TabShell; titles: Record<string, string>; onArrange: (count: SnapCount) => void; onUndo: () => void; onNewTab: () => void; onNote: (text: string) => void;
 }) {
   const [managing, setManaging] = useState(false);
-  // The core moves into the chat mic while the tab manager covers Home (C5).
-  useEffect(() => { window.dispatchEvent(new CustomEvent("zae:tab-manager-state", { detail: managing })); return () => { if (managing) window.dispatchEvent(new CustomEvent("zae:tab-manager-state", { detail: false })); }; }, [managing]);
   const [dragging, setDragging] = useState<string | null>(null);
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -39,13 +37,13 @@ export function TabStrip({ shell, titles, onArrange, onUndo, onNewTab, onNote }:
     event.preventDefault(); const id = dragging ?? event.dataTransfer.getData("text/zae-tab"); setDragging(null);
     if (!id) return;
     const other = visible.filter(win => win.id !== id).sort((a, b) => b.z - a.z)[0]?.id ?? shell.windows.find(win => win.id !== id)?.id;
-    if (!other) { onNote("Open another tab to show two side by side."); return; }
+    if (!other) { onNote("Open another node to show two side by side."); return; }
     const placed = shell.snap(2, side === "left" ? [id, other] : [other, id]);
-    onNote(placed ? `Split: ${placed.map(label).join(" | ")}.` : "Couldn't split those tabs.");
+    onNote(placed ? `Split: ${placed.map(label).join(" | ")}.` : "Couldn't split those nodes.");
   };
   const tabClick = (id: string) => (event: MouseEvent) => { if (event.button === 1) { event.preventDefault(); shell.close(id); return; } shell.open(id); };
   return <>
-    <nav className="zt-strip" aria-label="Open tabs">
+    <nav className="zt-strip" aria-label="Open nodes">
       {shell.windows.map(win => <div key={win.id} role="tab" aria-selected={shell.active === win.id} tabIndex={0} draggable
         className={`zt-tab${shell.active === win.id ? " on" : ""}${win.minimized ? " min" : ""}${win.pinned ? " pinned" : ""}`} data-tab-id={win.id}
         title={[title(win.id), ...where(win.id)].join(" › ")}
@@ -57,14 +55,14 @@ export function TabStrip({ shell, titles, onArrange, onUndo, onNewTab, onNote }:
         {!win.pinned && <button type="button" className="zt-x" aria-label={`Close ${label(win.id)} tab`} onMouseUp={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); shell.close(win.id); }}>×</button>}
       </div>)}
       <button type="button" className="zt-new" aria-label="New tab" title="New tab" onClick={onNewTab}>+</button>
-      <button type="button" className="zt-manage" aria-expanded={managing} aria-controls="zt-manager" onClick={() => setManaging(value => !value)}>Tabs <span>{shell.windows.length}</span></button>
+      <button type="button" className="zt-manage" aria-expanded={managing} aria-controls="zt-manager" onClick={() => setManaging(value => !value)}>Nodes <span>{shell.windows.length}</span></button>
     </nav>
     {dragging && <div className="zt-drop" aria-hidden="true">
       <div onDragOver={event => event.preventDefault()} onDrop={drop("left")}><span>Show on the left</span></div>
       <div onDragOver={event => event.preventDefault()} onDrop={drop("right")}><span>Show on the right</span></div>
     </div>}
-    {managing && <section className="zt-manager" id="zt-manager" aria-label="Tab manager">
-      <header><strong>Tabs</strong><button type="button" aria-label="Close tab manager" onClick={() => setManaging(false)}>×</button></header>
+    {managing && <section className="zt-manager" id="zt-manager" aria-label="Node manager">
+      <header><strong>Nodes</strong><button type="button" aria-label="Close node manager" onClick={() => setManaging(false)}>×</button></header>
       <div className="zt-bulk">
         <SnapLayouts onChoose={onArrange}/>
         <button type="button" disabled={!shell.canUndoSnap} onClick={onUndo}>Undo layout</button>
@@ -85,7 +83,7 @@ export function TabStrip({ shell, titles, onArrange, onUndo, onNewTab, onNote }:
       </li>)}</ol>
       {shell.closedCount > 0 && <div className="zt-closed"><strong>Recently closed</strong>
         {shell.closedTabs().map(item => <button type="button" key={item.id} onClick={() => shell.restoreClosed(item.id)}>{label(item.id)} <small>{new Date(item.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></button>)}</div>}
-      <p className="zt-help">Middle-click or Ctrl+click any tile or page to open it in a new tab. Drag a tab to the left or right half to show two side by side. Say “show tabs”, “close this tab” or “split build requests and suggestions”.</p>
+      <p className="zt-help">Middle-click or Ctrl+click any tile or page to open it in a new node. Drag a node to the left or right half to show two side by side. Say “show nodes”, “close this node” or “split build requests and suggestions”.</p>
     </section>}
   </>;
 }

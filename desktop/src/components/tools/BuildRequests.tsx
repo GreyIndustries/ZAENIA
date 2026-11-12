@@ -10,7 +10,7 @@ import { displayFiles, finalAnswer } from "../../core/buildText";
  * goes live otherwise. Her security code is locked: a change that touches it is thrown away.
  */
 type Status = "draft" | "queued" | "working" | "ready" | "failed" | "approved" | "undone" | "rejected";
-type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null;
+type Request = { id: string; request: string; title: string; brief: string; size: string; files?: string[]; tool: string | null; model?: string; attempt?: number;
   status: Status; step: string; createdAt: string; updatedAt: string; summary?: string; diff?: string; changed?: string[];
   checks?: { ok: boolean; text: string }; review?: { status: "reviewed" | "unavailable"; model?: string; text: string; at: string; advisory?: boolean };
   source?: string; needs?: { app: boolean; server: boolean } };
@@ -97,7 +97,7 @@ export function BuildRequests() {
         {items.map(item => <button key={item.id} type="button" className="zx-inset cs-qitem" aria-pressed={current?.id === item.id} onClick={() => setPicked(item.id)}>
           <span className={`cs-sev ${TONE[item.status]}`}>{LABEL[item.status].toUpperCase()}{item.source === "idea" ? " · FROM AN IDEA" : ""}</span>
           <b>{item.title}</b>
-          <small className="cs-muted">{new Date(item.createdAt).toLocaleString()}{item.tool ? ` · ${TOOL[item.tool]}` : ""}</small>
+          <small className="cs-muted">{new Date(item.createdAt).toLocaleString()}{item.tool ? ` · ${TOOL[item.tool]}${item.model ? ` on ${item.model}` : ""}` : ""}</small>
         </button>)}
       </div>
       <DetailScreen id="build-request" name="Build requests" open={!!current} itemId={current?.id} quiet={picked === null} title={current?.title || "Request"}
@@ -110,8 +110,8 @@ export function BuildRequests() {
           {current.files?.length ? <p className="cs-muted">Files that may be involved: {current.files.join(", ")}</p> : null}
           <div className="cs-row">
             <label className="cs-field">Tool<select value={tool} onChange={event => setTool(event.target.value)}>
-              <option value="">Let ZAE choose ({current.size} change)</option>
-              <option value="claude" disabled={!view?.tools.claude}>Claude Code</option>
+              <option value="">Local Aider — default for every task size</option>
+              <option value="claude" disabled={!view?.tools.claude}>Claude Code — explicit opt-in; uses your Claude allowance</option>
               <option value="aider" disabled={!view?.tools.aider}>Aider (local, free)</option>
             </select></label>
             <button type="button" className="cs-primary" disabled={!!busy} onClick={() => void act("starting", () => post("start", { brief, tool: tool || null }, true), "Started. She'll tell you when it's ready.")}>

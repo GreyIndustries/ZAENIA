@@ -1,3 +1,4 @@
+import { DockSlot } from "../core/DockCore";
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { readPageActivities, type PageActivity } from "../../core/pageActivity";
 import { CATEGORY_META, PAGE_CATALOG, SCREEN_DESC, catalogNode, categoryForRoute, moduleMeta, navigatorFor } from "../../core/pageCatalog";
@@ -101,6 +102,7 @@ function Siblings({ items, current, pick, narrow, name }: { items: readonly { id
 /** Phone M5 header: Back, breadcrumb line, 20px title. */
 function PhoneHeader({ crumbs, title, onBack }: { crumbs: Crumb[]; title: string; onBack?: () => void }) {
   return <div className="bx-ph">
+    <DockSlot/>
     {onBack && <button type="button" className="bx-bk" data-pane-back aria-label="Back" onClick={onBack}><Ico name="back"/></button>}
     <div className="bx-ph__tt"><Crumbs crumbs={crumbs} phone/><h2 className="bx-ph__t">{title}</h2></div>
   </div>;

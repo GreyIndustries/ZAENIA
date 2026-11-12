@@ -2,12 +2,12 @@
   "scheme": "Beta: every version is 0.MINOR.PATCH until ZAENIA 1.0. MINOR goes up for a new feature or change, PATCH for a fix. The SYSTEM version covers capabilities and security (server, brains, memory, tools, security). The UI version covers anything that is only the interface. Each tab has its own version too. Starting numbers count the update days already in the project history.",
   "system": {
     "name": "ZAENIA system",
-    "version": "0.31.1",
+    "version": "0.32.0",
     "note": "Capabilities and security. Started from the 26 recorded system milestones in the build handoff; 0.27.0 adds in-app updates."
   },
   "ui": {
     "name": "Interface",
-    "version": "0.26.0",
+    "version": "0.27.0",
     "note": "Started from 14 UI update days in history; 0.15.0 LIFE tab and full-screen tabs, 0.16.0 Settings hub, Updates and About."
   },
   "tabs": {
@@ -17,7 +17,7 @@
     },
     "life": {
       "name": "LIFE",
-      "version": "0.18.0",
+      "version": "0.19.0",
       "note": "Continues Plan (0.11): 0.12 LIFE with Fitness & Health, 0.13 Map & traffic."
     },
     "notes": {
@@ -34,15 +34,15 @@
     },
     "research": {
       "name": "Research",
-      "version": "0.10.0"
+      "version": "0.11.0"
     },
     "codedoctor": {
       "name": "Code Doctor & Files",
       "version": "0.8.0"
     },
     "arena": {
-      "name": "Arena",
-      "version": "0.7.0"
+      "name": "LLM Training",
+      "version": "0.8.0"
     },
     "assistant": {
       "name": "Assistant",
@@ -60,12 +60,16 @@
     "security": {
       "name": "Security",
       "version": "0.10.0"
+    },
+    "warroom": {
+      "name": "War Room",
+      "version": "0.1.0"
     }
   },
   "modules": {
     "server": {
       "name": "Core server and API",
-      "version": "0.7.0"
+      "version": "0.8.0"
     },
     "security": {
       "name": "Security and owner approval",
@@ -77,7 +81,7 @@
     },
     "memory": {
       "name": "Memory and learning",
-      "version": "0.4.0"
+      "version": "0.5.0"
     },
     "voice": {
       "name": "Voice in and out",
@@ -85,7 +89,7 @@
     },
     "research": {
       "name": "Research and web answers",
-      "version": "0.8.0"
+      "version": "0.9.0"
     },
     "calendar": {
       "name": "Calendar",
@@ -147,6 +151,158 @@
     }
   },
   "history": [
+    {
+      "date": "2026-11-11",
+      "part": "system",
+      "version": "0.32.0",
+      "title": "Sunday whole-system update: nodes, learning, reliable updates and local builds",
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "Nodes and workspace navigation",
+          "description": "Health remains inside LIFE and its duplicate top-level category is removed. Mail moves from Assistant into LIFE, Workbench moves into BUILD, and Plan is presented as Schedule Board. Existing internal IDs preserve saved records and supported aliases."
+        },
+        {
+          "kind": "added",
+          "title": "LLM Training modules",
+          "description": "Arena becomes LLM Training with saved model-specific protocol, action, response and correction lessons, sequential local practice and owner-reviewed expected responses. Existing comparison and benchmark screens remain available as evaluation tools."
+        },
+        {
+          "kind": "added",
+          "title": "War Room planning",
+          "description": "Defense and business plans use 19 editable sections covering objectives, evidence, operations, finances, risks, incident response and milestones. Local model drafts are reviewed in the editor and saved explicitly; plans export as Markdown."
+        },
+        {
+          "kind": "added",
+          "title": "Camera registry",
+          "description": "Register explicitly chosen HTTP(S) camera viewer addresses and open them deliberately. Embedded credentials and query tokens are rejected. No network discovery or claim of active monitoring is made."
+        },
+        {
+          "kind": "added",
+          "title": "Research workshop and learning explorer",
+          "description": "Adds evidence-based deep dives, fact checks, scenario checks, timelines, source comparisons, study guides and saved study cards. Adapts 1557 offline reference entries from the supplied Quantum Research files without executing their UI or network code."
+        },
+        {
+          "kind": "security",
+          "title": "Guarded learning and research",
+          "description": "New routes use existing memory, chat and status authorization scopes. Lesson evaluation and saved-topic analysis additionally require memory.read. Revision checks protect concurrent edits; learning examples cannot create execution grants."
+        },
+        {
+          "kind": "limitations",
+          "title": "Training, reference and camera boundaries",
+          "description": "Teaching is model-specific reference retrieval and rehearsal, not model-weight fine-tuning. Camera entries are viewer links; RTSP/ONVIF streaming and recording need device-specific integration. Imported reference entries are unverified; citation matching does not prove factual truth. Native/mobile voice and owner-data trials require live verification after integration."
+        },
+        {
+          "kind": "changed",
+          "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+          "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+        },
+        {
+          "kind": "changed",
+          "title": "Voice states swell the orb instead of bursting from the mic",
+          "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+        },
+        {
+          "kind": "changed",
+          "title": "The mic button is a normal mic again",
+          "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+        },
+        {
+          "kind": "limitations",
+          "title": "C1 visual validation scope",
+          "description": "C1 was verified in synthetic desktop and phone layouts; real microphone, installed GPU and physical-phone behavior still need owner validation. Other parts of this combined update add the features described in the release notes."
+        },
+        {
+          "kind": "fixed",
+          "title": "Updates target the real deployment folder",
+          "description": "Native service and installer commands resolve a validated runtime project root, using trusted environment configuration, root.json or the real deployment folder. Temporary build roots are rejected and installer roots are passed explicitly."
+        },
+        {
+          "kind": "fixed",
+          "title": "Reliable install checks and recovery",
+          "description": "Installer CheckOnly validates hashes and target roots without closing ZAE. Installation closes only matching ZAE processes, retries file copies, reports blocking processes and restores the previous website as well as executable if replacement fails. SHA-256 works without the optional Get-FileHash cmdlet."
+        },
+        {
+          "kind": "fixed",
+          "title": "No stale install offers and reconnect refresh",
+          "description": "Installed version receipts prevent same-version or older update offers. The interface refreshes while visible to recover after a Core restart and shows the latest installed release notes as What’s new. Source version bumps alone are not mistaken for completed installations."
+        },
+        {
+          "kind": "changed",
+          "title": "ZAE builds locally by default",
+          "description": "Small, medium and large automatic build requests use local Aider and record the selected model/attempt. Missing local tools stop with an explanation instead of consuming a cloud subscription. Claude remains an explicit per-request opt-in labeled with its allowance cost. Failed local requests produce a private help packet; a 20-task historical catalog is provenance-checked, with no unmeasured success-rate claim."
+        },
+        {
+          "kind": "added",
+          "title": "Work commute answers use GODSPEED routing",
+          "description": "An explicit Save work commute control stores selected origin/destination coordinates. Conversation uses the existing routing service to estimate that saved route, labels the origin as saved rather than live GPS, and reports missing or unavailable data without inventing an ETA. Personal mail and commute context require the existing read scopes."
+        },
+        {
+          "kind": "limitations",
+          "title": "Owner device and mail-send trials remain separate",
+          "description": "Automated tests use synthetic mail, route data and installer fixtures. No real reply is sent without exact recipient/text approval. The Sunday integrated release still needs Claude’s independent security review and owner desktop, phone, microphone and post-restart checks."
+        },
+        {
+          "kind": "added",
+          "title": "Critical unit tests in CI",
+          "description": "Adds an isolated Python 3.11 regression job for context budgeting, evidence analysis, model-scoped teaching, adaptive learning, commute boundaries and update version handling. Test-only dependencies are pinned separately; production dependencies are unchanged."
+        }
+      ],
+      "changes": [
+        "Nodes and workspace navigation",
+        "LLM Training modules",
+        "War Room planning",
+        "Camera registry",
+        "Research workshop and learning explorer",
+        "Guarded learning and research",
+        "Training, reference and camera boundaries",
+        "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+        "Voice states swell the orb instead of bursting from the mic",
+        "The mic button is a normal mic again",
+        "C1 visual validation scope",
+        "Updates target the real deployment folder",
+        "Reliable install checks and recovery",
+        "No stale install offers and reconnect refresh",
+        "ZAE builds locally by default",
+        "Work commute answers use GODSPEED routing",
+        "Owner device and mail-send trials remain separate",
+        "Critical unit tests in CI"
+      ]
+    },
+    {
+      "version": "0.26.1",
+      "part": "ui",
+      "date": "2026-11-11",
+      "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+      "changes": [
+        "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+        "Voice states swell the orb instead of bursting from the mic",
+        "The mic button is a normal mic again",
+        "Nothing else changed"
+      ],
+      "releaseNotes": [
+        {
+          "kind": "changed",
+          "title": "Visual correction: the core now docks beside the page's top row instead of living in the mic (C1)",
+          "description": "This is a visual correction update. Grey chose the C1 'Docked companion' look instead of C5. On every page except Home, the core now glides into a small living orb at the left end of the page's top row, just before the Life / Health / Know / Create / Build / Settings switcher. In split panes only the focused pane's row holds it. On the phone it sits at the left of the header, before Back."
+        },
+        {
+          "kind": "changed",
+          "title": "Voice states swell the orb instead of bursting from the mic",
+          "description": "While ZAE listens, thinks or speaks off Home, the orb's space widens a little and the orb swells and glows brighter: listening sends out pulse rings, thinking orbits small dots and speaking pulses a ring. There is no status word beside it. When she is done it settles back."
+        },
+        {
+          "kind": "changed",
+          "title": "The mic button is a normal mic again",
+          "description": "The core no longer sits in the chat bar's mic or the phone's 'Say or type a page' mic. Both mic buttons look and work exactly as before 0.26.0."
+        },
+        {
+          "kind": "limitations",
+          "title": "Nothing else changed",
+          "description": "Only the core's look and position off Home changed. Home, Calm view, the page colours, the single core that never restarts and the pause-when-hidden behaviour from 0.26.0 are the same, and no feature or setting works differently. Checked in headless Chrome at 1440x900, 390x844 and 360x780 with a dev-only voice switch; not yet with a real microphone, the installed app's GPU or a physical phone."
+        }
+      ]
+    },
     {
       "version": "0.26.0",
       "part": "ui",

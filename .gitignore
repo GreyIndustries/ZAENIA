@@ -129,8 +129,11 @@ desktop/dist-web/
 !/updates/notes/
 !/updates/notes/**
 
-/*-test-summary.json
-/desktop/baseline-frontend-tests.json
-/docs/previews/nav-split/
-
+# Private local coding failure packets and test receipts
 /docs/handoffs/zae-needs-help/
+/*-test-summary.json
+/desktop/sunday-frontend-tests.json
+
+# Generated synthetic browser screenshots
+/docs/previews/nav-split/
+/docs/previews/nodes/

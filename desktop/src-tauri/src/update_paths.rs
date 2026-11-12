@@ -77,3 +77,39 @@ mod tests {
         assert!(find_update_root(&root,None,ID).is_err());
     }
 }
+
+
+/// Runtime configuration is trusted process/account configuration, never a client or model path.
+pub fn runtime_root(configured: Option<&Path>, config_files: &[PathBuf], fallback: &Path) -> Result<PathBuf, String> {
+    let validate = |root: &Path| -> Result<PathBuf, String> {
+        if !root.is_absolute() || root.components().any(|c| c.as_os_str().to_string_lossy().eq_ignore_ascii_case(".tmp"))
+            || !root.join("core/api/update_routes.py").is_file() || !root.join("desktop").is_dir()
+            || !root.join("scripts/install_update.ps1").is_file() {
+            return Err("Choose the real ZAENIA deployment folder, not a temporary build. Check ZAENIA_PROJECT_ROOT/root.json.".into());
+        }
+        root.canonicalize().map_err(|_| "Could not resolve the deployment folder.".into())
+    };
+    if let Some(root) = configured { return validate(root); }
+    for file in config_files {
+        if file.is_file() {
+            let text = std::fs::read_to_string(file).map_err(|_| "Could not read root.json.")?;
+            // JSON is parsed by the app; this helper receives a plain path file only in unit tests.
+            return validate(Path::new(text.trim()));
+        }
+    }
+    validate(fallback)
+}
+
+#[cfg(test)] mod runtime_tests {
+    use super::*;
+    #[test] fn runtime_root_rejects_temporary_or_unvalidated_configuration() {
+        assert!(runtime_root(Some(Path::new("relative")), &[], Path::new("missing")).is_err());
+        assert!(runtime_root(Some(Path::new("C:/Projects/ZAENIA/.tmp/build")), &[], Path::new("missing")).is_err());
+    }
+    #[test] fn configured_root_is_validated_at_runtime() {
+        let root=std::env::temp_dir().join(format!("zae-root-runtime-{}",std::process::id()));
+        std::fs::create_dir_all(root.join("core/api")).unwrap();std::fs::create_dir_all(root.join("desktop")).unwrap();std::fs::create_dir_all(root.join("scripts")).unwrap();
+        std::fs::write(root.join("core/api/update_routes.py"), "# test").unwrap();std::fs::write(root.join("scripts/install_update.ps1"), "# test").unwrap();
+        assert_eq!(runtime_root(Some(&root), &[], Path::new("missing")).unwrap(),root.canonicalize().unwrap());
+    }
+}

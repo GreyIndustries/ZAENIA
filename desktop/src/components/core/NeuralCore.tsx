@@ -34,7 +34,7 @@ type Props = {
   activeJobs?: number;
   /** Changes whenever windows, sheets or the dock move, so the core re-checks whether it can be seen. */
   layoutKey?: string;
-  /** Hex accent that recolours the core (C5: the page's module colour while it sits in the mic). */
+  /** Hex accent that recolours the core (C1: the page's module colour while it is docked in the top row). */
   tint?: string;
 };
 
@@ -143,7 +143,10 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     const check = () => {
       frame = 0;
       const box = wrap.getBoundingClientRect();
+      // A docked orb is drawn above every page (pointer-events: none), so nothing under it can cover it.
+      const above = Boolean(wrap.closest("[data-core-overlay]"));
       const hits: CoreHit[] = samplePoints(box).map(([x, y]) => {
+        if (above) return x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight ? "outside" : "core";
         if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return "outside";
         const hit = document.elementFromPoint(x, y);
         if (!hit) return "outside";

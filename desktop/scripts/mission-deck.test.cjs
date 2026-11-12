@@ -30,5 +30,5 @@ assert.equal(voice.parseUiCommand('open notebook','research').route.app,'researc
 assert.deepEqual(JSON.parse(JSON.stringify(voice.parseUiCommand('open recipes').route.path)),['fitness','food','cookbook']);
 assert.equal(voice.routeForActivity(work).path.join('/'),'fitness/food/cookbook');
 let count=0;for(const app of catalog.PAGE_CATALOG)for(const page of catalog.flattenPages(app)){const command=voice.parseUiCommand('open '+app.label+' '+page.label.replaceAll(' / ',' '));assert.equal(command?.kind,'navigate',app.label+'/'+page.label);assert.equal(command.route.app,app.id);assert.equal(command.route.path.join('/'),page.path.join('/'));count++;}
-assert.equal(count,104); // GODSPEED lists its five real tabs (Claude 2026-11-11)
-console.log('PASS Mission Deck: resume/defer/dismiss persistence and new context, metadata filtering, 2/3/4 geometry, natural layout phrases and all 104 page voice destinations.');
+assert.equal(count,112); // Includes approved War Room, learning and Research destinations.
+console.log('PASS Mission Deck: resume/defer/dismiss persistence and new context, metadata filtering, 2/3/4 geometry, natural layout phrases and all 112 page voice destinations.');

@@ -180,7 +180,7 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
     await js(`document.querySelector('.zt-manager [aria-label^="Pin"]').click()`); await b.delay(300);
     assert.equal(await js(`document.querySelectorAll('.zt-tab.pinned').length`), 1, 'pin');
     await js(`[...document.querySelectorAll('.zt-manager [aria-label^="Move"][aria-label$="down"]')].find(x=>!x.disabled)?.click()`); await b.delay(300);
-    await js(`document.querySelector('.zt-manager [aria-label="Close tab manager"]').click()`); await b.delay(200);
+    await js(`document.querySelector('.zt-manager [aria-label="Close node manager"]').click()`); await b.delay(200);
     await js(`window.dispatchEvent(new CustomEvent('zae:open-tab',{detail:{app:'research',path:['library'],label:'Research / The Library'}}))`); await b.delay(2500);
     assert.equal(await js(`document.querySelectorAll('.zt-tab').length`), 3, 'zae:open-tab (Ctrl/middle-click, voice) opens a third tab');
     await chat('close this tab'); await b.delay(500);
@@ -195,9 +195,9 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
   const workspace = async id => { await js(`window.dispatchEvent(new CustomEvent('zae:workspace',{detail:'${id}'}))`); await b.delay(900); };
   const closeHub = async () => { await js(`document.querySelector('.navhub__close')?.click()`); await b.delay(300); };
   await step('category pages show every module as a bento tile with every screen inside', async () => {
-    const expected = { plan: { LIFE: ['Plan', 'Fitness & Health', 'GODSPEED'], Notes: ['Board', 'Notebook', 'Map', 'All notes'] },
-      know: { Research: 10, Assistant: 5 }, create: { Music: 4, Workbench: 6 }, build: { 'Code Doctor & Files': 11, Arena: 5 },
-      health: { 'Fitness & Health': ['Today', 'Training', 'Food'] }, system: { Settings: 9, Status: 8, Security: 5 } };
+    const expected = { plan: { LIFE: ['Schedule Board', 'Fitness & Health', 'Mail', 'GODSPEED'], Notes: ['Board', 'Notebook', 'Map', 'All notes'] },
+      know: { Research: 13, Assistant: 4 }, create: { Music: 4 }, build: { Workbench: 6, 'Code Doctor & Files': 11, 'LLM Training': 7 },
+      warroom: { 'War Room': ['Defense planning', 'Business plans', 'Cameras'] }, system: { Settings: 9, Status: 8, Security: 5 } };
     for (const [id, modules] of Object.entries(expected)) {
       await workspace(id);
       const tiles = JSON.parse(await js(`JSON.stringify(Object.fromEntries([...document.querySelectorAll('.navhub .bx-bt')].map(t=>[t.querySelector('.bx-n').textContent,[...t.querySelectorAll('.bx-mini button')].map(x=>x.firstChild.textContent)])))`));
@@ -213,7 +213,7 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
   });
   await step('a screen tile opens that exact page', async () => {
     await workspace('know');
-    await js(`[...document.querySelectorAll('.navhub .bx-bt')].find(t=>t.querySelector('.bx-n').textContent==='Research').querySelectorAll('.bx-mini button')[7].click()`); await b.delay(2500);
+    await js(`[...([...document.querySelectorAll('.navhub .bx-bt')].find(t=>t.querySelector('.bx-n').textContent==='Research').querySelectorAll('.bx-mini button'))].find(x=>x.firstChild.textContent==='The Library').click()`); await b.delay(2500);
     assert.equal(await current('research', 'research'), 'library');
     assert.equal(await js(`!document.querySelector('.navhub')`), true, 'the sheet closes');
   });
@@ -242,7 +242,7 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
   await step('module page children use the bento treatment with counts', async () => {
     await js(`window.dispatchEvent(new CustomEvent('zae:open-route',{detail:{app:'tasks',path:[],label:'LIFE'}}))`); await b.delay(2500);
     const tiles = await js(`[...document.querySelectorAll('[data-window-id="tasks"] .bx-bento .bx-bt')].filter(t=>t.getClientRects().length).map(t=>t.querySelector('.bx-n').textContent+' '+t.querySelectorAll('.bx-mini button').length).join(' | ')`);
-    assert.match(tiles, /Plan \d+ \| Fitness & Health \d+ \| GODSPEED \d+/, tiles);
+    assert.match(tiles, /Schedule Board \d+ \| Fitness & Health \d+ \| Mail \d+ \| GODSPEED \d+/, tiles);
     assert.equal(await crumbsIn('[data-window-id="tasks"]'), 'Life > LIFE');
     await b.screenshot(path.join(V2, '08-module-page-children.png'));
   });
@@ -387,7 +387,7 @@ const step = async (name, fn) => { if (only && !only.test(name)) return; try { a
       await js(`window.dispatchEvent(new CustomEvent('zae:workspace',{detail:'plan'}))`); await b.delay(900);
       const heads = () => js(`JSON.stringify([...document.querySelectorAll('.navhub .bx-acc>.bx-bh')].map(x=>x.getAttribute('aria-expanded')))`).then(JSON.parse);
       assert.deepEqual(await heads(), ['true', 'false'], 'first module open by default');
-      assert.match(await js(`document.querySelector('.navhub .bx-acc.open .bx-rows')?.innerText||''`), /Open LIFE home[\s\S]*Plan[\s\S]*Fitness & Health[\s\S]*GODSPEED/);
+      assert.match(await js(`document.querySelector('.navhub .bx-acc.open .bx-rows')?.innerText||''`), /Open LIFE home[\s\S]*Schedule Board[\s\S]*Fitness & Health[\s\S]*GODSPEED/);
       assert.equal(await js(`[...document.querySelectorAll('.navhub .bx-vbar,.navhub .bx-mic,.navhub .bx-pseg')].length`), 3, 'say-or-type bar, mic and category chips');
       assert.ok(await js(`document.querySelector('.navhub .bx-vbar').getBoundingClientRect().height>=56&&document.querySelector('.navhub .bx-mic').getBoundingClientRect().width>=42`), 'bar 56px, mic 42px');
       assert.equal(await js(`!!document.querySelector('.navhub .bx-recent')`), true, 'Continue card');

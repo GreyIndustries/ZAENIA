@@ -34,19 +34,3 @@ export function renderScale(shownWidth: number, layoutWidth: number): number {
   const scale = shownWidth / layoutWidth;
   return Math.round(Math.min(1, Math.max(0.25, scale)) * 100) / 100;
 }
-
-/**
- * C5 burst ring placement (Claude, 2026-11-11): keep the ring fully on screen. It shifts toward the middle first and
- * only shrinks when the viewport (minus safe-area insets and a margin) is smaller than the ring.
- */
-export function burstFit(centre: { x: number; y: number }, size: number,
-  view: { width: number; height: number; top?: number; right?: number; bottom?: number; left?: number }, margin = 6) {
-  const left = (view.left ?? 0) + margin, right = view.width - (view.right ?? 0) - margin;
-  const top = (view.top ?? 0) + margin, bottom = view.height - (view.bottom ?? 0) - margin;
-  const room = Math.max(0, Math.min(right - left, bottom - top));
-  const shown = Math.min(size, room);
-  const half = shown / 2;
-  const clampTo = (value: number, low: number, high: number) => low > high ? (low + high) / 2 : Math.min(high, Math.max(low, value));
-  const x = clampTo(centre.x, left + half, right - half), y = clampTo(centre.y, top + half, bottom - half);
-  return { dx: Math.round(x - centre.x), dy: Math.round(y - centre.y), scale: Math.round(shown / size * 1000) / 1000 };
-}

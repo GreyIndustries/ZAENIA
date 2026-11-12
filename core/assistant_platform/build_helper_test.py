@@ -236,12 +236,19 @@ class RulesTest(unittest.TestCase):
     def test_tool_choice(self):
         both = {"claude": True, "aider": True}
         self.assertEqual(bh.choose_tool("small", available=both, is_online=lambda: True), "aider")
-        self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: True), "claude")
+        self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: True), "aider")
         self.assertEqual(bh.choose_tool("large", available=both, is_online=lambda: False), "aider")
         self.assertEqual(bh.choose_tool("small", "claude", available=both), "claude")
-        self.assertEqual(bh.choose_tool("small", available={"claude": True, "aider": False}, is_online=lambda: True), "claude")
+        with self.assertRaises(RuntimeError):
+            bh.choose_tool("small", available={"claude": True, "aider": False}, is_online=lambda: True)
         with self.assertRaises(RuntimeError):
             bh.choose_tool("small", available={"claude": False, "aider": False})
+
+    def test_automatic_selection_never_probes_or_calls_cloud(self):
+        def forbidden():raise AssertionError('Network probe must not run')
+        for size in ['small','medium','large']:
+            self.assertEqual(bh.choose_tool(size,available={'aider':True,'claude':True},is_online=forbidden),'aider')
+        with self.assertRaises(RuntimeError):bh.choose_tool('large',available={'claude':True,'aider':False},is_online=forbidden)
 
     def test_secrets_stay_out_of_the_tools(self):
         import os

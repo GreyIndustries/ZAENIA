@@ -349,8 +349,20 @@ def build_payload(
         # A caller's own keep-alive (Talk stays loaded) still lets go of graphics memory in game mode.
         settings = {**settings, "keep_alive": _game_keep_alive(keep_alive)}
 
+    chosen = active_model(settings)
+    # Retrieve only after memory.read was checked by BrainService, and only for
+    # this call's actual model (Talk, Seek, or an explicit caller override).
+    from core.assistant_platform.learning_lab import AuthorizedTeachingContext, teaching_context
+    if isinstance(behavior_context, AuthorizedTeachingContext):
+        try:
+            lesson_context = teaching_context(user_text, chosen)
+        except Exception:
+            lesson_context = ""
+        if lesson_context:
+            behavior_context = f"{behavior_context}\n\n{lesson_context}"
+
     return {
-        "model": active_model(settings),
+        "model": chosen,
         "messages": build_messages(
             user_text,
             recent_messages=recent_messages,
