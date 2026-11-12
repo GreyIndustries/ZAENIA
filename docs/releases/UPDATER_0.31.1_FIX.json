@@ -1,0 +1,27 @@
+[
+  {
+    "kind": "fixed",
+    "title": "Install from the deployment project",
+    "description": "The installed app was built in Claude’s temporary folder and searched that folder for staged packages, so Install stopped before the main installer ran. The updater now resolves a valid deployment ancestor containing Core, the installer and the selected staged manifest instead of blindly using the build folder."
+  },
+  {
+    "kind": "fixed",
+    "title": "Compatibility repair for the currently installed app",
+    "description": "A backed-up temporary-build installer now forwards only the validated update ID and existing restart flag to C:\\Projects\\ZAENIA. Discovery manifests are mirrored for the old native check; binaries, hash validation, backups, website installation and receipts stay in the real project. Nothing installs until the owner presses Install and confirms."
+  },
+  {
+    "kind": "fixed",
+    "title": "Preserve the already installed UI",
+    "description": "Claude’s temporary build also contained the newer Preview 05 screens, M5 phone layout, per-pane navigation and browser-like tabs already installed as UI 0.24. The repair package preserves that reviewed installed source and merges GODSPEED moving-aircraft changes into it, rather than downgrading to the older shared UI. Combined interface version is 0.25.0."
+  },
+  {
+    "kind": "security",
+    "title": "Existing owner and package checks are preserved",
+    "description": "Update IDs remain restricted, the desktop confirmation stays in place, and staged executable hashes are still verified by the existing installer. No new remote installation action is introduced. An optional trusted Windows process setting, ZAENIA_PROJECT_ROOT, must name an absolute valid deployment with the selected package."
+  },
+  {
+    "kind": "limitations",
+    "title": "Install must be retried on the PC",
+    "description": "This repair is staged and the compatibility path is ready; automatic installation and server restart have not been performed. Retry the corrected update in desktop Settings > Updates, confirm the second Install button, and keep Restart server enabled for the included aircraft timestamp changes."
+  }
+]

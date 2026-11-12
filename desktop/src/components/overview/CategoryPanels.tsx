@@ -7,7 +7,7 @@ import { api, LIVE_API } from "../../core/bridge";
  * a source that doesn't answer shows "Nothing yet" instead of guesses.
  */
 type Item = { primary: string; secondary?: string; meta?: string };
-type Panel = { id: string; title: string; tab: string; tabLabel: string; items: Item[] | null };
+export type CategoryPanel = { id: string; title: string; tab: string; tabLabel: string; items: Item[] | null };
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const when = (text?: string | null) => {
   if (!text) return "";
@@ -23,7 +23,7 @@ const get = <T,>(path: string) => api<T>("GET", path, undefined, { timeoutMs: 20
   .then(value => value, () => null);
 const P = "/api/platform/personal";
 
-async function load(category: string): Promise<Panel[]> {
+async function load(category: string): Promise<CategoryPanel[]> {
   const today = iso(new Date());
   if (category === "plan") {
     const [events, tasks, reminders, notes] = await Promise.all([
@@ -33,10 +33,10 @@ async function load(category: string): Promise<Panel[]> {
       get<{ notes: { title: string; updatedAt: string; excerpt?: string }[] }>("/api/platform/notes?limit=5"),
     ]);
     return [
-      { id: "events", title: "Coming up", tab: "tasks", tabLabel: "Tasks & Calendar", items: events && events.events.slice(0, 8).map(e => ({ primary: e.title, meta: `${e.date === today ? "Today" : new Date(`${e.date}T00:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}${e.allDay ? "" : ` · ${clock(e.time)}`}` })) },
-      { id: "tasks", title: "Open tasks", tab: "tasks", tabLabel: "Tasks & Calendar", items: tasks && tasks.tasks.filter(t => t.status !== "Completed")
+      { id: "events", title: "Coming up", tab: "tasks", tabLabel: "LIFE", items: events && events.events.slice(0, 8).map(e => ({ primary: e.title, meta: `${e.date === today ? "Today" : new Date(`${e.date}T00:00`).toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" })}${e.allDay ? "" : ` · ${clock(e.time)}`}` })) },
+      { id: "tasks", title: "Open tasks", tab: "tasks", tabLabel: "LIFE", items: tasks && tasks.tasks.filter(t => t.status !== "Completed")
         .sort((a, b) => (a.deadline ?? "9").localeCompare(b.deadline ?? "9")).slice(0, 8).map(t => ({ primary: t.title, secondary: t.status, meta: t.deadline ? (t.deadline.slice(0, 10) < today ? "Overdue" : `Due ${when(t.deadline)}`) : "" })) },
-      { id: "reminders", title: "Reminders", tab: "tasks", tabLabel: "Tasks & Calendar", items: reminders && reminders.reminders.filter(r => !r.done).slice(0, 8).map(r => ({ primary: r.text, meta: new Date(r.due).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) })) },
+      { id: "reminders", title: "Reminders", tab: "tasks", tabLabel: "LIFE", items: reminders && reminders.reminders.filter(r => !r.done).slice(0, 8).map(r => ({ primary: r.text, meta: new Date(r.due).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" }) })) },
       { id: "notes", title: "Recent notes", tab: "notes", tabLabel: "Notes", items: notes && notes.notes.slice(0, 8).map(n => ({ primary: n.title, secondary: (n.excerpt ?? "").slice(0, 90), meta: when(n.updatedAt) })) },
     ];
   }
@@ -47,12 +47,12 @@ async function load(category: string): Promise<Panel[]> {
       get<{ weights: { date: string; weightLb: number }[]; habits: { workouts: boolean[] } }>(`${P}/training`),
     ]);
     return [
-      { id: "food", title: "Eaten today", tab: "fitness", tabLabel: "Fitness & Health", items: food && food.items.slice(0, 8).map(f => ({ primary: f.title, meta: f.calories != null ? `${Math.round(f.calories)} kcal${f.protein ? ` · ${Math.round(f.protein)} g protein` : ""}` : "" })) },
-      { id: "training", title: day?.workout.label || "Today's training", tab: "fitness", tabLabel: "Fitness & Health", items: day && day.workout.exercises.slice(0, 8).map(e => ({ primary: e.exercise, meta: e.prescription })) },
-      { id: "totals", title: "Today so far", tab: "fitness", tabLabel: "Fitness & Health", items: day && day.eaten ? [
+      { id: "food", title: "Eaten today", tab: "fitness", tabLabel: "LIFE · Fitness & Health", items: food && food.items.slice(0, 8).map(f => ({ primary: f.title, meta: f.calories != null ? `${Math.round(f.calories)} kcal${f.protein ? ` · ${Math.round(f.protein)} g protein` : ""}` : "" })) },
+      { id: "training", title: day?.workout.label || "Today's training", tab: "fitness", tabLabel: "LIFE · Fitness & Health", items: day && day.workout.exercises.slice(0, 8).map(e => ({ primary: e.exercise, meta: e.prescription })) },
+      { id: "totals", title: "Today so far", tab: "fitness", tabLabel: "LIFE · Fitness & Health", items: day && day.eaten ? [
         { primary: `${Math.round(day.eaten.calories)} kcal eaten`, meta: day.targets.eat ? `of ${Math.round(day.targets.eat)}` : "" },
         { primary: `${Math.round(day.eaten.protein)} g protein`, meta: day.targets.protein ? `of ${Math.round(day.targets.protein)} g` : "" }] : null },
-      { id: "weight", title: "Recent weigh-ins", tab: "fitness", tabLabel: "Fitness & Health", items: overview && overview.weights.slice(-8).reverse().map(w => ({ primary: `${w.weightLb.toFixed(1)} lb`, meta: when(`${w.date}T12:00`) })) },
+      { id: "weight", title: "Recent weigh-ins", tab: "fitness", tabLabel: "LIFE · Fitness & Health", items: overview && overview.weights.slice(-8).reverse().map(w => ({ primary: `${w.weightLb.toFixed(1)} lb`, meta: when(`${w.date}T12:00`) })) },
     ];
   }
   if (category === "know") {
@@ -94,14 +94,14 @@ async function load(category: string): Promise<Panel[]> {
     ];
   }
   const [bar, checks, activity, security] = await Promise.all([
-    get<{ model: string; voice: string; cpu: number; ramUsedGb: number; ramTotalGb: number; diskFreeGb: number; backup: string | null }>("/api/status/bar"),
+    get<{ model: string; brains?: { model: string }[]; voice: string; cpu: number; ramUsedGb: number; ramTotalGb: number; diskFreeGb: number; backup: string | null }>("/api/status/bar"),
     get<{ latest: { status: string; at?: string; counts?: Record<string, number> } | null }>("/api/security/checks"),
     get<{ events: { at: string; label: string; severity: string }[] }>("/api/security/activity?limit=6"),
     get<{ level: string; score: number }>("/api/security/summary"),
   ]);
   return [
     { id: "status", title: "This PC now", tab: "status", tabLabel: "Status", items: bar && [
-      { primary: `CPU ${Math.round(bar.cpu)}% · RAM ${bar.ramUsedGb.toFixed(1)} of ${bar.ramTotalGb.toFixed(1)} GB` }, { primary: `Brain: ${bar.model}`, meta: `Voice: ${bar.voice}` },
+      { primary: `CPU ${Math.round(bar.cpu)}% · RAM ${bar.ramUsedGb.toFixed(1)} of ${bar.ramTotalGb.toFixed(1)} GB` }, { primary: `SE: ${bar.brains?.[0] ? `Talk ${bar.brains[0].model}` : bar.model}`, meta: `Voice: ${bar.voice}` },
       { primary: `${Math.round(bar.diskFreeGb)} GB free`, meta: bar.backup ? `Backup ${bar.backup}` : "" }] },
     { id: "security", title: "Security", tab: "security", tabLabel: "Security", items: security && [
       { primary: `Score ${security.score} · ${security.level}`, meta: checks?.latest ? `Last check: ${checks.latest.status}${checks.latest.at ? `, ${when(checks.latest.at)}` : ""}` : "" }] },
@@ -109,16 +109,24 @@ async function load(category: string): Promise<Panel[]> {
   ];
 }
 
-export function CategoryPanels({ category, name, description, onOpen, onBack }: { category: string; name: string; description: string; onOpen: (tab: string) => void; onBack: () => void }) {
-  const [panels, setPanels] = useState<Panel[] | null>(null);
+export function useCategoryPanels(category: string | null) {
+  const [panels, setPanels] = useState<CategoryPanel[] | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     setPanels(null);
-    if (LIVE_API) void load(category).then(next => { if (live) setPanels(next); });
+    if (!category) return;
+    if (LIVE_API) void load(category).then(next => { if (live) setPanels(next); }).catch(() => { if (live) setPanels([]); });
     else setPanels([]);
     return () => { live = false; };
   }, [category, attempt]);
+  return { panels, retry: () => setAttempt(n => n + 1) };
+}
+
+export function CategoryPanels({ name, description, onOpen, onBack, panels, onRetry }: {
+  name: string; description: string; onOpen: (tab: string) => void; onBack: () => void;
+  panels: CategoryPanel[] | null; onRetry: () => void;
+}) {
   return <div className="ov-cat" role="region" aria-label={`${name}: recent things`}>
     <header className="ov-cat__head">
       <button type="button" className="ov-cat__back" onClick={onBack}>← Core</button>
@@ -131,7 +139,7 @@ export function CategoryPanels({ category, name, description, onOpen, onBack }: 
         <header><b>{panel.title}</b><button type="button" onClick={() => onOpen(panel.tab)}>Open {panel.tabLabel} ↗</button></header>
         {panel.items && panel.items.length ? <ul>{panel.items.map((item, i) => <li key={i}><span>{item.primary}{item.secondary && <small>{item.secondary}</small>}</span>{item.meta && <em>{item.meta}</em>}</li>)}</ul>
           : panel.items ? <p className="ov-muted">Nothing yet.</p>
-          : <p className="ov-muted">Couldn't load this right now. <button type="button" className="ov-cat__retry" onClick={() => setAttempt(n => n + 1)}>Try again</button></p>}
+          : <p className="ov-muted">Couldn't load this right now. <button type="button" className="ov-cat__retry" onClick={onRetry}>Try again</button></p>}
       </section>)}
     </div>
   </div>;

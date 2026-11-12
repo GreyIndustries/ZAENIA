@@ -8,11 +8,11 @@ function compile(file, modules, globals) {
   return exports;
 }
 async function main() {
-  const storage = new Map(), calls = [];
+  const storage = new Map(), calls = [], lifecycleEvents = [];
   let status = 200, detail = null;
-  const browser = { localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) }, setTimeout, clearTimeout };
+  const browser = { dispatchEvent: event => { lifecycleEvents.push(event.type); return true; }, localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value), removeItem: key => storage.delete(key) }, setTimeout, clearTimeout };
   const bridge = compile("bridge.ts", { "@tauri-apps/api/core": {}, "./coreTelemetry": { localStatusEndpoint: () => null } }, {
-    window: browser, AbortController, fetch: async (url, options) => { calls.push({ url, options }); return { status, ok: status === 200, json: async () => detail ?? { success: true }, blob: async () => new Blob(["audio"]) }; }, console,
+    window: browser, Event, AbortController, fetch: async (url, options) => { calls.push({ url, options }); return { status, ok: status === 200, json: async () => detail ?? { success: true }, blob: async () => new Blob(["audio"]) }; }, console,
   });
   assert.equal(bridge.savedToken(), null);
   await bridge.checkPhoneConnection();
@@ -32,6 +32,7 @@ async function main() {
   assert.equal(calls.at(-1).options.credentials, "same-origin");
   bridge.saveToken("token-to-forget");
   await bridge.disconnectPhone();
+  assert.deepEqual(lifecycleEvents, ["zae:trip-session-end"]);
   assert.equal(calls.at(-1).url, "/api/auth/logout");
   assert.equal(bridge.savedToken(), null);
   const nativeCalls = [];

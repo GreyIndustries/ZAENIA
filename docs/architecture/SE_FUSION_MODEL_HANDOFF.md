@@ -39,7 +39,7 @@ Semantic names include `ZAENIA_Constellation_Fusion`, `Talk_Constellation`, `See
 
 ## Existing app integration
 
-The existing SE view under Arena's **SE & tools** and Status **Readiness** offers a **Fusion model** button. Claude's latest presentation changes retain Constellation as the initial view and add peripheral component details; the selected view is saved in `zaenia.se.visual`. This publication preserves those SE presentation dependencies. Unrelated SecurityModel work is excluded.
+Fusion is the default appearance in the existing SE view under Arena's **SE & tools** and Status **Readiness**. The **Lightweight constellation** button retains Claude's original view; preference is saved in `zaenia.se.visual`. SecurityModel and the shared projected-canvas engine remain separate and unchanged by this model task.
 
 `SEFusionCanvas` consumes the existing `ConstellationFeed`: `signals()`, `text(id)`, `tip(id)` and `hubTip()`. Signal order is Talk, Seek, Study, Keep. The viewer accepts an optional selection callback for a brain or Conductor and a fallback callback. To reuse just the geometry:
 
@@ -85,4 +85,4 @@ For an app release, follow `AGENTS.md`: build `desktop/dist-web` and the Tauri r
 - Actual Chrome/WebGL preview: rotation with keyboard and pointer, zoom/reset, selection, activity modes and reduced-motion controls inspected. Narrow-screen layout inspected at 390 × 844; viewport restored afterward.
 - Desktop/browser Vite and native Tauri release builds passed. The existing updater backed up the prior binary, installed and reopened the app; installed/build SHA-256 hashes match. The existing Core serves the website, viewer bundle and 3,765,276-byte GLB with HTTP 200. Core and voice were not restarted. Exact release evidence is recorded in handoff section 20. This preview is not a live owner-voice trial or a benchmark of inference/model performance.
 
-Owner subsequently requested GitHub publication. The clean `codex/mediapipe-fusion` publication branch is based on `1097322` (the already-published password/narration history). It includes Fusion and the hand-control upgrade, with narrow Arena/Readiness integration. Unrelated Brief, SecurityModel, terminology-only changes and backend WIP are excluded. GitHub `main` is not merged by this publication.
+No GitHub merge is authorized by this model request. Preserve the earlier isolated publication branches and all existing uncommitted work.

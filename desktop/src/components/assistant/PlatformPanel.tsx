@@ -1,3 +1,4 @@
+import { DetailScreen, PageNavigator, detailKey } from "../shell/PageNavigator";
 import { useEffect, useRef, useState } from "react";
 import { api, DESKTOP_APPROVER, errorText, LIVE_API, openProfileTool, restartServer, startVoiceService } from "../../core/bridge";
 import { ACTION_KINDS, displayPreferences, jobPercent } from "../../core/platformModel";
@@ -99,7 +100,7 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
 
   return <section className="section-content platform-panel" aria-label="Assistant capabilities" aria-busy={busy}>
     <div className="platform-panel__heading"><div><span className="subheading">ASSISTANT TOOLS</span><h2>Work with ZAE</h2></div><button type="button" disabled={disabled} onClick={() => void perform(() => load())}>Refresh</button></div>
-    <nav className="platform-tabs" aria-label="Assistant capability sections">{TABS.map(name => <button type="button" key={name} aria-pressed={tab === name} onClick={() => setTab(name)}>{name}</button>)}</nav>
+    <PageNavigator id="assistant-tools" name="Assistant tools" items={TABS.map(name => ({ id: name, label: name }))} current={tab} onChoose={next => setTab(next as Tab)}/>
     {!LIVE_API && <p className="platform-note">Connect the desktop or phone app to use these tools. Camera control remains optional and device-local.</p>}
     {error && <p className="platform-error" role="alert">{error}</p>}{note && <p className="platform-note" role="status">{note}</p>}
     {tab === "Operate" && <OperatorPanel/>}
@@ -152,6 +153,8 @@ export function PlatformPanel({ runtime, windows, onRestore, hands, toggleHands,
       {(runtime.summary?.jobs ?? []).filter(job => job.status === "completed" && job.result?.draft).slice(0, 5).map(job => <button type="button" key={job.id} onClick={() => setGeneratedDraft(job.result!.draft!)}>Review draft: {job.title}</button>)}
       {generatedDraft && <article className="platform-card"><h3>Review proposed plan</h3><p>No tasks have been created or completed from this draft.</p><ProjectPlanEditor plan={generatedDraft} version={JSON.stringify(generatedDraft)} disabled={disabled} onSave={plan => perform(async () => { const saved = await api<Project>("POST", pathFor("projects"), plan); setSelectedProject(saved); setGeneratedDraft(null); }, "Reviewed project plan saved.")}/></article>}
       <div className="platform-inline">{projects.map(project => <button type="button" key={project.id} aria-pressed={selectedProject?.id === project.id} onClick={() => setSelectedProject(project)}>{project.title} · {project.progress}%</button>)}</div>
+      <DetailScreen id="tools-project" name="Projects" open={!!selectedProject} itemId={selectedProject?.id} title={selectedProject?.title || "Project"}
+        onOpen={key => { const found = projects.find(item => detailKey(item.id) === key); if (found) setSelectedProject(found); }} onClose={() => setSelectedProject(null)}/>
       {selectedProject && <article className="platform-card"><h3>{selectedProject.title}</h3><p>{selectedProject.goal}</p><progress value={selectedProject.progress} max={100}/><p>Next available step: {selectedProject.nextStep?.title ?? "No unblocked unfinished steps."}</p>
         <details><summary>Edit titles, milestones, deadlines and dependencies</summary><ProjectPlanEditor plan={selectedProject} version={`${selectedProject.id}:${selectedProject.revision}`} disabled={disabled} onSave={plan => changeProject(selectedProject, plan)}/></details>
         <ol className="platform-steps">{selectedProject.steps.map(step => <li key={step.id}><strong>{step.title}</strong><small>{step.milestone}{step.deadline ? ` · due ${step.deadline}` : ""}{step.dependsOn.length ? ` · ${step.dependsOn.length} prerequisites` : ""}</small><select value={step.status} disabled={disabled} aria-label={`Status for ${step.title}`} onChange={event => void changeProject(selectedProject, { steps: selectedProject.steps.map(item => item.id === step.id ? { ...item, status: event.target.value as Step["status"] } : item) })}><option value="pending">Pending</option><option value="active">In progress</option><option value="completed">Completed</option></select></li>)}</ol>

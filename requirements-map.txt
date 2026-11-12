@@ -1,0 +1,3 @@
+# Optional public AIS ship feed. Already present as 17.1 on the inspected PC.
+# Marine is unavailable with a setup message when this dependency is absent.
+websockets>=14,<18

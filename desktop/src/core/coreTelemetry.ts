@@ -31,7 +31,7 @@ export const PREVIEW_TELEMETRY: CoreTelemetry = {
   synchronization: "IN PROGRESS",
   modules: [
     { id: "security", name: "Security", phase: "ready" },
-    { id: "brain", name: "Local Brain", phase: "ready" },
+    { id: "brain", name: "SE engine", phase: "ready" },
     { id: "voice", name: "Voice", phase: "working" },
     { id: "calendar", name: "Calendar", phase: "ready" },
     { id: "tasks", name: "Tasks", phase: "ready" },

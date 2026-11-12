@@ -401,6 +401,10 @@ def create_app(
     application.include_router(create_selfcare_router(require_api_authentication))
     from core.api.research_routes import create_research_router
     application.include_router(create_research_router(require_api_authentication))
+    from core.api.update_routes import create_update_router
+    application.include_router(create_update_router(require_api_authentication))  # Settings > Updates and About (reads only)
+    from core.api.map_routes import create_map_router
+    application.include_router(create_map_router(require_api_authentication))  # LIFE > Map & traffic
 
     # ZAE's phone line (Twilio). Public only through Tailscale Funnel's /phone
     # path; every request must carry Twilio's signature. Off until set up.

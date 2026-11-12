@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { nodeWakeLevel } from "../../core/coreWake";
+import { coreVisible, OPAQUE_SURFACES, renderScale, samplePoints } from "../../core/coreVisibility";
+import type { CoreHit } from "../../core/coreVisibility";
 import type { CoreTelemetry, ModulePhase } from "../../core/coreTelemetry";
 import { BRANCHES, computeLayout, createNeuralField } from "./neuralField";
+import { rememberCore } from "./CoreStage";
 import type { BranchKey, CoreExtras, FieldLayout, NeuralField, VoicePhase } from "./neuralField";
 import "./NeuralCore.css";
 
@@ -29,6 +32,10 @@ type Props = {
   ringed?: boolean;
   /** Background jobs running now: one bead each orbits the middle ring (Grey's upgrade 3, 2026-10-31). */
   activeJobs?: number;
+  /** Changes whenever windows, sheets or the dock move, so the core re-checks whether it can be seen. */
+  layoutKey?: string;
+  /** Hex accent that recolours the core (C5: the page's module colour while it sits in the mic). */
+  tint?: string;
 };
 
 const phaseCopy: Record<VoicePhase, string> = { idle: "STANDING BY", listening: "LISTENING", thinking: "THINKING", speaking: "SPEAKING" };
@@ -63,6 +70,14 @@ function ModuleIcon({ name }: { name: BranchKey }) {
   return <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>;
 }
 
+/** "#5fd39a" → "95,211,154"; anything else → undefined. */
+function hexRgb(hex?: string) {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex ?? "");
+  if (!m) return undefined;
+  const n = parseInt(m[1], 16);
+  return `${n >> 16},${(n >> 8) & 255},${n & 255}`;
+}
+
 function usePrefersReducedMotion() {
   const [reduced, setReduced] = useState(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   useEffect(() => {
@@ -79,7 +94,7 @@ function usePrefersReducedMotion() {
  * the branches belong to the organism. Module orbs and labels sit on top as
  * real buttons for keyboard and screen-reader access.
  */
-export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore, ringed = true, activeJobs = 0 }: Props) {
+export function NeuralCore({ telemetry, source, motion, paused = false, processing = false, startup, onSelect, phase = "idle", followUntil, categories, onCategory, onCore, ringed = true, activeJobs = 0, layoutKey = "", tint }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fieldRef = useRef<NeuralField | null>(null);
@@ -93,10 +108,14 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
   const [night, setNight] = useState(nightNow);
   useEffect(() => { const id = window.setInterval(() => setNight(nightNow()), 60_000); return () => window.clearInterval(id); }, []);
   // Live upgrades (Grey picked 1, 2, 3 and 5): mood-coloured rings, voice ripples while she speaks, a bead per running job, the night side.
-  const extras: CoreExtras = { ...preview, mood: preview.mood ?? true, pulse: preview.pulse ?? true, beads: preview.beads ?? Math.min(6, activeJobs), night: preview.night ?? night };
+  const extras: CoreExtras = { ...preview, mood: preview.mood ?? true, pulse: preview.pulse ?? true, beads: preview.beads ?? Math.min(6, activeJobs), night: preview.night ?? night, tint: hexRgb(tint) };
   const ringedRef = useRef(ringed);
   ringedRef.current = ringed;
   const animate = motion && !reduced;
+  // Pause while nothing of the core can be seen (Claude, 2026-11-11): under an opaque window or sheet,
+  // off-screen, or between slots. Checked on layout events, never by polling.
+  const [visible, setVisible] = useState(true);
+  const recheck = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     const wrap = wrapRef.current, canvas = canvasRef.current;
@@ -104,22 +123,66 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     const field = createNeuralField(canvas);
     if (!field) { setUnavailable(true); return; }
     fieldRef.current = field;
+    // Lay out in the box's own CSS size; draw at the size actually shown (e.g. orbit view's 0.68 scale).
+    let drawn = "";
     const measure = () => {
-      const box = wrap.getBoundingClientRect();
-      if (box.width < 40 || box.height < 40) return;
-      const next = computeLayout(box.width, box.height, ringedRef.current);
-      field.setLayout(next);
+      const width = wrap.offsetWidth, height = wrap.offsetHeight;
+      if (width < 40 || height < 40) return;
+      const scale = renderScale(wrap.getBoundingClientRect().width, width);
+      const key = `${width}x${height}@${scale}:${ringedRef.current}`;
+      if (key === drawn) return;
+      drawn = key;
+      const next = computeLayout(width, height, ringedRef.current);
+      field.setLayout(next, scale);
       setLayout(next);
     };
     const observer = new ResizeObserver(measure);
     observer.observe(wrap);
     measure();
-    return () => { observer.disconnect(); field.destroy(); fieldRef.current = null; };
+    let onScreen = true, frame = 0, late = 0;
+    const check = () => {
+      frame = 0;
+      const box = wrap.getBoundingClientRect();
+      const hits: CoreHit[] = samplePoints(box).map(([x, y]) => {
+        if (x < 0 || y < 0 || x >= window.innerWidth || y >= window.innerHeight) return "outside";
+        const hit = document.elementFromPoint(x, y);
+        if (!hit) return "outside";
+        if (wrap.contains(hit)) return "core";
+        const surface = hit.closest(OPAQUE_SURFACES);
+        return surface && !surface.contains(wrap) ? "opaque" : "other";
+      });
+      setVisible(coreVisible({ connected: wrap.isConnected, onScreen, width: box.width, height: box.height, hits }));
+      if (wrap.isConnected) rememberCore(wrap);
+      measure();
+    };
+    const soon = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+      // Once more after window/sheet/dock transitions settle.
+      window.clearTimeout(late); late = window.setTimeout(check, 700);
+    };
+    recheck.current = soon;
+    const seen = new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; soon(); });
+    seen.observe(wrap);
+    window.addEventListener("resize", soon);
+    window.addEventListener("zae:core-moved", soon);
+    document.addEventListener("transitionend", soon, true);
+    document.addEventListener("animationend", soon, true);
+    document.addEventListener("visibilitychange", soon);
+    soon();
+    return () => {
+      observer.disconnect(); seen.disconnect(); cancelAnimationFrame(frame); window.clearTimeout(late);
+      window.removeEventListener("resize", soon); window.removeEventListener("zae:core-moved", soon);
+      document.removeEventListener("transitionend", soon, true); document.removeEventListener("animationend", soon, true);
+      document.removeEventListener("visibilitychange", soon);
+      recheck.current = () => undefined;
+      field.destroy(); fieldRef.current = null;
+    };
   }, []);
+  useEffect(() => { recheck.current(); }, [layoutKey]);
 
   useEffect(() => {
-    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused, processing, phase: preview.phase ?? phase, ringed, extras });
-  }, [startup.progress, animate, paused, processing, phase, layout, ringed, extras.beads, extras.night]);
+    fieldRef.current?.setState({ progress: startup.progress, motion: animate && !paused && visible, processing, phase: preview.phase ?? phase, ringed, extras });
+  }, [startup.progress, animate, paused, visible, processing, phase, layout, ringed, extras.beads, extras.night, extras.tint]);
   const followLeft = useFollowUpLeft(followUntil, phase);
   const following = phase === "idle" && followLeft > 0;
 
@@ -134,7 +197,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
     if (/token is not set up/.test(text)) return "Token missing";
     if (/token mode/.test(text)) return "Token mode";
     if (/unlocked/.test(text)) return "Passkey unlocked";
-    return (detail ?? "").split(/s+/).filter(Boolean).slice(0, 2).join(" ") || "Protected locally";
+    return (detail ?? "").split(/\s+/).filter(Boolean).slice(0, 2).join(" ") || "Protected locally";
   };
   const underIcon = (key: BranchKey): { tone: "good" | "fix" | "idle"; text: string } | null => {
     if (key === "status") {
@@ -161,6 +224,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
 
   return <div
     ref={wrapRef}
+    data-core-paused={visible ? undefined : ""}
     className={`neural-core neural-core--${phase} ${layout?.compact ? "neural-core--compact" : ""} ${processing ? "neural-core--processing" : ""}`}
     role="group"
     aria-label={`ZÆNIA neural core with six connected modules. ${source === "preview" ? "Module statuses are illustrative preview data." : "Module statuses reflect available local telemetry."}`}
@@ -176,7 +240,7 @@ export function NeuralCore({ telemetry, source, motion, paused = false, processi
           <i aria-hidden="true"/>{following ? <>FOLLOW-UP OPEN <small>{Math.ceil(followLeft / 1000)}s · no name needed</small></> : phaseCopy[phase]}
         </div>
       </>}
-      {onCore && startup.ready && <button type="button" className="core-tap" aria-label="Show every tab"
+      {onCore && startup.ready && <button type="button" className="core-tap" aria-label="Open core app launcher"
         style={{ left: layout.cx, top: layout.cy, width: layout.r * 1.7, height: layout.r * 1.7 }} onClick={onCore}/>}
       {!ringed && BRANCHES.map((branch, index) => {
         const place = layout.orbs[index];

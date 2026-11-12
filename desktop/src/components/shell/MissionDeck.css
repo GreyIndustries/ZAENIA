@@ -1,0 +1,23 @@
+/* Grey's Mission Deck: the existing core/palette, with raised page and app cards. */
+.zaenia-app--mission-deck .navhub__app{background:linear-gradient(130deg,#26374b,#0e1c2b);border-top-color:color-mix(in srgb,var(--accent,#e0a353) 60%,#344054);box-shadow:0 14px 24px #0005,inset 0 1px 0 #ffffff0b}
+.zaenia-app--mission-deck .navhub__workspace-title h3{font-size:23px;font-weight:450}.zaenia-app--mission-deck .navhub__apps{gap:20px}
+.mission-recent{display:flex;gap:14px;align-items:flex-start;padding:16px;margin-top:18px;border:1px solid color-mix(in srgb,var(--accent,#e0a353) 35%,#30435a);border-radius:14px;background:linear-gradient(110deg,#2a221b,#112131);color:var(--zx-text,#e1e8f0)}
+.mission-recent__mark{width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid #ab805044;border-radius:10px;color:var(--accent,#e0a353);font-size:20px}
+.mission-recent>div:last-child{min-width:0}.mission-recent small{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent,#e0a353)}
+.mission-recent p{font-size:13px;line-height:1.65;margin:5px 0 4px;overflow-wrap:anywhere}.mission-recent span{font-size:10px;color:var(--zx-muted,#9baec4)}
+.mission-voice-help{margin-top:14px;border-top:1px solid var(--zx-line,#30435a);padding-top:10px;font-size:12px;color:var(--zx-muted,#9baec4)}
+.mission-voice-help summary{min-height:36px;cursor:pointer}.mission-voice-help p{line-height:1.7;font-size:12px}.mission-voice-help button{font-size:12px;margin-top:6px}
+.os-snap-picker{position:fixed;z-index:250;width:300px;max-width:calc(100vw - 16px);padding:16px;border:1px solid #52627a;border-radius:15px;background:#0b1728;color:#e1e8f0;box-shadow:0 18px 45px #0009;font:13px system-ui}
+.os-snap-picker strong{font-weight:500}.os-snap-picker>div{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.os-snap-picker button{padding:8px;min-height:90px;border:1px solid #344c69;border-radius:10px;background:#14263b;color:#dbe8f6;cursor:pointer;font:11px system-ui}
+.os-snap-picker button:hover,.os-snap-picker button:focus-visible{border-color:#e0a353;background:#20354f}.os-snap-picker small{font-size:10px;color:#a2b5ce;line-height:1.7}
+.os-snap-diagram{position:relative;display:block;height:48px;margin-bottom:10px}.os-snap-diagram i{position:absolute;display:block;background:#688bac;border:1px solid #91acc4;border-radius:3px}
+.os-window__controls .os-snap-trigger{font-size:18px}.os-tab-manager__bulk .os-snap-trigger{min-width:44px;font-size:20px}
+
+/* Keep useful content in view inside split panes; full-size pages retain their hero treatment. */
+.os-layer--snapped .glass-masthead{padding:10px 14px;margin-bottom:10px}
+.os-layer--snapped .glass-masthead__title{font-size:20px;margin:0}
+.os-layer--snapped .glass-masthead__kicker,.os-layer--snapped .glass-masthead__lede{display:none}
+.os-layer--snapped .mission-recent{padding:10px;margin-top:10px}
+.os-layer--snapped .mission-recent p{font-size:12px}
+.os-layer--snapped .mission-voice-help{display:none}

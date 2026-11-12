@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { ChangeEvent } from "react";
 import { api, DESKTOP_APPROVER, errorText, LIVE_API, nearPassActive } from "../../core/bridge";
 import "./FilesPanel.css";
+import { DetailScreen, PageNavigator } from "../shell/PageNavigator";
+/** The Files views are pages (Claude 2026-11-11). */
+const FILE_PAGES = [{ id: "recent", label: "Recent" }, { id: "browse", label: "Browse" }, { id: "changes", label: "Changes" }];
 
 type FileEntry = { path: string; name: string; kind: "file" | "dir"; size?: number; modified?: string; editable?: boolean };
 type FileContent = FileEntry & { text: string; sha256: string; lineEnding: "crlf" | "lf"; protected: boolean };
@@ -131,10 +134,8 @@ export function FilesPanel({ onPendingChange }: { onPendingChange?: (count: numb
     {error && <p className="files-panel__error" role="alert">{error}</p>}
     <div className="files-panel__layout">
       <nav className="files-panel__side" aria-label="Files">
-        <div className="files-panel__tabs" role="tablist">
-          {(["recent", "browse", "changes"] as View[]).map(item => <button key={item} type="button" role="tab" aria-selected={view === item} onClick={() => setView(item)}>
-            {item === "recent" ? "Recent" : item === "browse" ? "Browse" : "Changes"}{item === "changes" && pending > 0 && <span className="files-panel__badge">{pending}</span>}
-          </button>)}
+        <PageNavigator id="files-view" name="Files" items={FILE_PAGES.map(item => item.id === "changes" && pending > 0 ? { ...item, label: `Changes (${pending})` } : item)} current={view} onChoose={next => setView(next as View)}/>
+        <div className="files-panel__tabs" hidden>
         </div>
         {view === "recent" && <ul className="files-panel__list">
           {recent === null && <li className="files-panel__empty">Loading…</li>}
@@ -168,6 +169,8 @@ export function FilesPanel({ onPendingChange }: { onPendingChange?: (count: numb
         {!detailOpen && <p className="files-panel__empty">Choose a file to view or edit it{pending ? `, or open Changes to review ${pending} waiting change${pending > 1 ? "s" : ""}` : ""}.</p>}
         {message && <p className="files-panel__message" role="status">{message}</p>}
 
+        <DetailScreen id="files-open" name="Files" open={!!(file || proposal)} title={file?.path?.split(/[\\/]/).pop() || (proposal ? "Proposed change" : "File")}
+          onOpen={() => { /* reopened from the list */ }} onClose={() => { setFile(null); setProposal(null); setEditing(false); }}/>
         {file && <article className="files-panel__file">
           <header>
             <button type="button" className="files-panel__back" onClick={() => setFile(null)} aria-label="Back to the list">‹</button>

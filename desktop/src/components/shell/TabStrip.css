@@ -1,0 +1,30 @@
+/* Compact Chrome-like tab strip above the pages, in the preview-05 palette (Claude 2026-11-11). */
+.zt-strip{position:absolute;left:12px;right:12px;top:6px;z-index:7;display:flex;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.zt-strip::-webkit-scrollbar{display:none}
+.zt-tab{flex:0 1 200px;min-width:90px;display:flex;align-items:center;gap:6px;height:30px;padding:0 6px 0 12px;border-radius:10px 10px 4px 4px;border:1px solid #1c2a40;background:#0a1423cc;color:#9baec4;font-size:12px;cursor:pointer;user-select:none}
+.zt-tab:hover{border-color:#25364c;color:#e1e8f2}
+.zt-tab.on{background:linear-gradient(130deg,rgba(14,26,43,.98),rgba(8,16,28,.98));border-color:#344054;color:#e1e8f2;box-shadow:inset 0 2px 0 var(--accent,#e0a353)}
+.zt-tab.min{opacity:.6}
+.zt-tab:focus-visible{outline:2px solid var(--accent,#e0a353);outline-offset:1px}
+.zt-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.zt-pin{color:var(--accent,#e0a353)}
+.zt-x{width:20px;height:20px;border-radius:6px;border:0;background:none;color:inherit;font-size:13px;line-height:1;cursor:pointer;flex:none}
+.zt-x:hover{background:#ffffff14}
+.zt-new,.zt-manage{flex:none;height:30px;min-width:30px;border-radius:9px;border:1px solid #1c2a40;background:#0a1423cc;color:#9baec4;font-size:12px;cursor:pointer;padding:0 10px}
+.zt-new:hover,.zt-manage:hover{border-color:var(--accent,#e0a353);color:#e1e8f2}
+.zt-manage span{margin-left:4px;color:var(--accent,#e0a353)}
+.zt-drop{position:absolute;inset:44px 0 136px;z-index:70;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px;pointer-events:auto}
+.zt-drop>div{display:grid;place-items:center;border:2px dashed color-mix(in srgb,var(--accent,#e0a353) 60%,transparent);border-radius:18px;background:color-mix(in srgb,var(--accent,#e0a353) 8%,#050a12cc);color:#e1e8f2;font-size:13px}
+.zt-manager{position:absolute;top:42px;right:12px;z-index:75;width:min(460px,calc(100% - 24px));max-height:70vh;overflow:auto;padding:14px;border-radius:16px;border:1px solid #344054;background:#081120f7;box-shadow:0 20px 50px #000a;color:#e1e8f2;font-size:12.5px;display:flex;flex-direction:column;gap:10px}
+.zt-manager header{display:flex;justify-content:space-between;align-items:center}.zt-manager header strong{font-family:"Space Grotesk","Inter",sans-serif;font-size:17px}
+.zt-manager button{min-height:30px;padding:3px 9px;border-radius:8px;border:1px solid #25364c;background:#0b1626;color:#c9d6e6;font:inherit;cursor:pointer}
+.zt-manager button:hover:not(:disabled){border-color:var(--accent,#e0a353)}.zt-manager button:disabled{opacity:.4;cursor:default}
+.zt-bulk{display:flex;flex-wrap:wrap;gap:6px}
+.zt-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.zt-list li{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px;border-radius:10px;border:1px solid #1c2a40;background:#0a1626}
+.zt-go{flex:1 1 200px;display:flex!important;flex-direction:column;align-items:flex-start;text-align:left;border:0!important;background:none!important}
+.zt-go[aria-current=page] b{color:var(--accent,#e0a353)}.zt-go small{color:#9baec4;font-size:10.5px}
+.zt-acts{display:flex;gap:4px;flex-wrap:wrap}
+.zt-closed{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border-top:1px solid #1c2a40;padding-top:10px}.zt-closed strong{width:100%}
+.zt-help{margin:0;color:#9baec4;font-size:11px;line-height:1.5}
+.os-layer{top:44px}

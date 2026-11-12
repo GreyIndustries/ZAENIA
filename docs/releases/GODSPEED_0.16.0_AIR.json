@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "added",
+    "title": "Smooth moving aircraft",
+    "description": "Aircraft markers move between feed reports using observed position, speed and heading. Short corrections blend toward new reports rather than jumping at every refresh. Predicted markers are labeled estimated; this is not a continuous radar stream."
+  },
+  {
+    "kind": "changed",
+    "title": "Real observation timestamps",
+    "description": "Core now preserves each aircraft position timestamp and last-contact time from OpenSky. Feed observation time and fetch time are separate; a cached or newly fetched old observation is not relabeled fresh. Missing/future timestamps keep an aircraft stationary and visibly unknown."
+  },
+  {
+    "kind": "fixed",
+    "title": "Bounded and stale-data-safe movement",
+    "description": "Prediction stops after 45 seconds from the position report. Aircraft fade as stale after 60 seconds and disappear after 120 seconds. Ground aircraft and invalid speed/heading values are not extrapolated. Invalid coordinates are omitted, older out-of-order reports are rejected, and missing IDs are removed on a successful new feed."
+  },
+  {
+    "kind": "added",
+    "title": "Animate aircraft control",
+    "description": "GODSPEED Air has a named Animate aircraft checkbox. Turning it on also shows aircraft on the map; turning it off shows reported positions only. The preference stays on this device. Operating-system reduced-motion preferences disable animated prediction while still allowing report updates."
+  },
+  {
+    "kind": "changed",
+    "title": "Clearer flight details",
+    "description": "The Air panel shows feed observation age and explains estimated motion. Aircraft tooltips show report age and whether a marker is reported, estimated, stale or unknown. Selected flight details update to new reports and state the observation time."
+  },
+  {
+    "kind": "performance",
+    "title": "Animation without extra provider calls",
+    "description": "The aircraft overlay updates independently at up to 20 frames per second while visible; the full map and route do not redraw for every aircraft frame. Hidden/disabled layers stop visible animation work. The existing 30-second feed refresh and server cache remain; no additional provider polling or dependency is introduced."
+  },
+  {
+    "kind": "added",
+    "title": "Voice paths use the existing guarded UI controls",
+    "description": "With GODSPEED open, say Press Air, then Turn on Animate aircraft or Turn off Animate aircraft. The recognized-text path uses the same native checkbox handler as a click and does not grant permissions. Browser tests verify named-control routing; microphone/acoustic trials remain separate."
+  },
+  {
+    "kind": "limitations",
+    "title": "Estimated movement and incomplete coverage",
+    "description": "Motion between reports is a bounded speed/heading estimate and may differ from actual turns, acceleration or coverage gaps. Public feed data can be delayed or rate limited. Core must restart to supply observation timestamps; older Core responses stay stationary instead of inventing fresh positions. Real-device live display remains to validate after owner installation."
+  }
+]

@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "changed",
+    "title": "The core lives in the mic on every page except Home",
+    "description": "Home keeps the big core in the centre card with its Standing by / Listening / Thinking / Speaking label. On every other page (category sheets, apps, records, split panes, Settings and the tab manager) the same core glides into the chat bar's mic button in about half a second and becomes a small spinning field there. Pages stay clean: no corner core and no second core anywhere."
+  },
+  {
+    "kind": "added",
+    "title": "Voice states burst out of the mic",
+    "description": "Off Home, while ZAE is listening, thinking or speaking, the core grows out of the mic into a ring about 150 px across, with the state word (LISTENING, THINKING, SPEAKING) to its left. The ring always stays fully on screen: next to a screen edge (as on the phone) it slides toward the middle, past any notch or rounded-corner safe area, and only shrinks on a screen narrower than the ring. Listening sends out pulse rings, thinking orbits three small dots, and speaking pulses one ring gently. When she is done it shrinks back into the mic."
+  },
+  {
+    "kind": "changed",
+    "title": "The mic core takes the page's colour",
+    "description": "Off Home the core is tinted with the open app's colour: LIFE green, Notes violet, Research teal, Assistant pink, and the app's own colour elsewhere; the category sheet and tab manager use amber. Home keeps its usual colours."
+  },
+  {
+    "kind": "changed",
+    "title": "Phone uses the M5 bar's mic",
+    "description": "On the phone, any page other than Home puts the core in the 42 px mic of the 'Say or type a page' bar (or the chat bar's when a page has no M5 bar). The phone Home core is unchanged."
+  },
+  {
+    "kind": "fixed",
+    "title": "One core that never restarts",
+    "description": "There is now exactly one core for the whole app. Opening the first window, going back Home, opening Calm view or moving between phone screens no longer rebuilds it, so its animation never jumps or restarts. Calm view no longer runs a second core alongside the hidden Home one."
+  },
+  {
+    "kind": "performance",
+    "title": "The core pauses whenever you can't see it",
+    "description": "The core stops drawing when it is fully under an opaque window or sheet, scrolled off-screen, or between places, and starts again the moment any of it is visible. It is drawn at the size you actually see (46 px in the mic, smaller in orbit view) instead of a full-size image shrunk down. Window unfocused or minimised still pauses it as before."
+  },
+  {
+    "kind": "fixed",
+    "title": "Small fixes around the core",
+    "description": "The Around the core view no longer shows STANDING BY over the CORE label. The Tabs strip no longer covers the Today card on Home. The security readout splits its words correctly. Unused core styles were removed."
+  },
+  {
+    "kind": "limitations",
+    "title": "What was not tested",
+    "description": "Checked in headless Chrome at 1440x900, 390x844 and 360x780 with a dev-only voice switch, not with a real microphone or real speech playback. Speaking uses a gentle pulse because the app has no speech output level to follow. Not yet checked on the installed desktop app's GPU or a physical phone."
+  }
+]

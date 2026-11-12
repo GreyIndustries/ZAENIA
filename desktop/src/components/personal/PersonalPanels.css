@@ -65,3 +65,8 @@
 
 .nutrition-note{display:block;color:#b7c8db;margin:4px 0 6px}
 .metric-partial{display:block;margin-top:4px;font-size:11px;font-weight:400;color:var(--zx-muted,#9fb6cf)}
+/* A food or exercise entry is its own screen: the rest of the Log page steps aside but stays mounted (Claude 2026-11-11). */
+.personal-log[data-detail] .nutrition-meal{display:none}
+.personal-log[data-detail] .personal-two{grid-template-columns:1fr}
+.personal-log[data-detail=food] .personal-two>div:nth-child(2),.personal-log[data-detail=exercise] .personal-two>div:first-child{display:none}
+.personal-log[data-detail=meal] .personal-two{display:none}

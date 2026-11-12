@@ -3,6 +3,7 @@ import { api, errorText, IN_TAURI, LIVE_API } from "../../core/bridge";
 import { AnalysisResult } from "../research/researchShared";
 import "../research/Research.css";
 import "./ToolTabs.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 const needServer = <p className="research__note">This needs the ZÆNIA server: open it in the desktop app.</p>;
 
@@ -58,6 +59,8 @@ export function CodeDoctorPanel() {
             <div key={index} className={`cd-finding cd-finding--${item.level}`}>{item.line ? `L${item.line}: ` : ""}{item.message}</div>)}</td></tr>)}</tbody></table>
           {!files.length && <p className="research__empty">Nothing found at this level. 🎉</p>}</div>
         <aside className="research__side">
+          <DetailScreen id="scanner-file" name="Scanner" open={!!file} itemId={file ?? undefined} title={file?.split(/[\\/]/).pop() || "File"}
+            onOpen={id => { const name = files.find(entry => detailKey(entry) === id); if (name) setFile(name); }} onClose={() => setFile(null)}/>
           {file ? <>
             <h3>{file}</h3>
             <div className="research__actions">
@@ -189,10 +192,10 @@ export function ArenaPanel() {
   };
   if (!LIVE_API) return needServer;
   return <div className="research">
-    <p className="research__note">Ask two or three of your local models the same question, see their answers side by side, and vote for the best. The leaderboard shows which brain suits you; you can make the winner her brain (and switch back any time). Models run one at a time, so this takes a little while.</p>
+    <p className="research__note">Ask two or three of your local models the same question, see their answers side by side, and vote for the best. The leaderboard shows which model suits you; you can make the winner the SE's main model (and switch back any time). Models run one at a time, so this takes a little while.</p>
     {error && <p className="research__error" role="alert">{error}</p>}
     {state && <>
-      <p className="research__meta">Her brain now: <strong>{state.brain.model}</strong>{state.brain.override ? " (picked in the Arena)" : ""}{state.brain.override && <> · <button type="button" className="research__link" onClick={() => void useBrain(null)}>go back to the configured brain</button></>}</p>
+      <p className="research__meta">The SE's main model now: <strong>{state.brain.model}</strong>{state.brain.override ? " (picked in the Arena)" : ""}{state.brain.override && <> · <button type="button" className="research__link" onClick={() => void useBrain(null)}>go back to the configured model</button></>}</p>
       <div className="research__actions">{state.models.map(model => <label key={model.name} className="research__meta ar-model">
         <input type="checkbox" checked={picked.includes(model.name)} disabled={!picked.includes(model.name) && picked.length >= 3}
           onChange={event => setPicked(current => event.target.checked ? [...current, model.name] : current.filter(name => name !== model.name))}/>
@@ -207,7 +210,7 @@ export function ArenaPanel() {
       {answer.error ? <p className="research__error">Didn't answer ({answer.error}).</p> : <div className="research__result">{answer.answer.split("\n").map((line, index) => <p key={index}>{line}</p>)}</div>}
       <div className="research__actions">
         <button type="button" className={round.winner === answer.model ? "research__primary" : ""} disabled={!!answer.error} onClick={() => void vote(answer.model)}>{round.winner === answer.model ? "★ Best" : "This one's best"}</button>
-        {IN_TAURI && <button type="button" disabled={!!answer.error || state?.brain.model === answer.model} onClick={() => void useBrain(answer.model)}>Use as her brain</button>}
+        {IN_TAURI && <button type="button" disabled={!!answer.error || state?.brain.model === answer.model} onClick={() => void useBrain(answer.model)}>Use in the SE</button>}
       </div>
     </div>)}</div>}
     {state && state.board.length > 0 && <div className="research__side"><h3>Leaderboard</h3>

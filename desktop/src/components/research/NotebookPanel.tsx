@@ -6,6 +6,7 @@ import { AnalysisResult, NeedsServer, UNTRUSTED_NOTE, useAnalysis } from "./rese
 import { securitySession } from "../security/SecurityPanel";
 import { LiveTranscript } from "../notes/LiveTranscript";
 import "./Research.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 type Source = { id: string; title: string; kind: string; url: string; meta: string; chars: number; addedAt: string };
 type TopicDetail = { id: string; name: string; notes: string; noteId?: string; sources: Source[] };
@@ -119,6 +120,8 @@ export function NotebookPanel() {
       </section>
 
       <section className="research__side" aria-label="Sources">
+        <DetailScreen id="notebook-topic" name="Notebook" open={!!current} itemId={current?.id} title={current?.name || "Topic"}
+          onOpen={key => { const topic = topics.find(item => detailKey(item.id) === key); if (topic) void open(topic.id); }} onClose={() => setCurrent(null)}/>
         <h3>Sources{current ? `: ${current.name}` : ""}</h3>
         {current ? <>
           <ul className="research__list">{current.sources.map((source, index) => <li key={source.id}><button type="button" aria-pressed={selectedSource === source.id}

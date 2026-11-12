@@ -52,7 +52,7 @@ export function AssistantFront({ onAsk, onOpen, notice, unread }: { onAsk: (text
         <span className="af-kicker">Lead · next up</span>
         <h1>{lead}</h1>
         <p>{leadBody}</p>
-        <div className="af-chips">{["Brief me", "Plan tomorrow", "Log food", "What did I miss?"].map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}</div>
+        <div className="af-chips">{["Plan tomorrow", "Log food", "What did I miss?"].map(text => <button key={text} type="button" onClick={() => onAsk(text)}>{text}</button>)}</div>
       </article>
       <div className="af-rule" aria-hidden="true"/>
       <div className="af-stories">

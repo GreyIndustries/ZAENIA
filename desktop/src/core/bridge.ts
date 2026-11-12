@@ -121,6 +121,7 @@ export async function completeVoiceLogin(challengeId: string, audio: string): Pr
   forgetToken();
 }
 export async function disconnectPhone(): Promise<void> {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("zae:trip-session-end"));
   await callServer("/api/auth/logout", "", STATUS_TIMEOUT_MS, {});
   forgetToken();
 }
@@ -270,6 +271,13 @@ export async function restartServer(): Promise<void> {
   catch (error) { throw fromTauri(error); }
 }
 
+/** Desktop only: install a staged update (Settings > Updates). ZAE closes and reopens; the server restart is optional. */
+export async function installUpdate(id: string, restart: boolean): Promise<void> {
+  if (!IN_TAURI) throw new BridgeError("Install updates from the desktop app on the PC.", "forbidden");
+  try { await invoke("install_update", { id, restart }); }
+  catch (error) { throw fromTauri(error); }
+}
+
 /** Desktop only: start the server with the API token (hidden) or the passkey (opens a window to type it). */
 export async function startServer(mode: "token" | "passkey"): Promise<void> {
   if (!IN_TAURI) throw new BridgeError("Start the server from the desktop app on the PC.", "forbidden");
@@ -291,7 +299,7 @@ export async function openVoiceTraining(): Promise<void> {
   catch (error) { throw fromTauri(error); }
 }
 
-/** Desktop only: open the one-time Gmail (read-only) sign-in window. */
+/** Desktop only: open the one-time Gmail connect window (app password typed at the PC). */
 export async function connectGmail(): Promise<void> {
   if (!IN_TAURI) throw new BridgeError("Connect Gmail from the desktop app on the PC.", "forbidden");
   try { await invoke("connect_gmail"); }

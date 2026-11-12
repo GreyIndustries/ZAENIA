@@ -1,3 +1,4 @@
+mod update_paths;
 use std::{
     env,
     fs,
@@ -222,7 +223,8 @@ async fn zaenia_api(
         || route.starts_with("/api/voice")
         || route.starts_with("/api/briefing")
         || route.starts_with("/api/calendar")
-        || route.starts_with("/api/research");
+        || route.starts_with("/api/research")
+        || route.starts_with("/api/email");
     // Her research analysis reads long material on the local brain.
     let slowest = route == "/api/research/analyze";
     call_api(method, &path, body, if slowest { 300 } else if slow { 150 } else { 30 }).await
@@ -424,7 +426,7 @@ fn open_voice_training() -> Result<(), String> {
     open_voice_window(&script, &root).map_err(|_| "Could not open voice training.".to_string())
 }
 
-/// Opens the one-time Gmail (read-only) sign-in for important-email summaries.
+/// Opens the one-time Gmail connect window (IMAP app password, typed at the PC).
 #[tauri::command]
 fn connect_gmail() -> Result<(), String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -436,7 +438,7 @@ fn connect_gmail() -> Result<(), String> {
     if !script.is_file() {
         return Err(format!("Gmail connect script not found: {}", script.display()));
     }
-    open_voice_window(&script, &root).map_err(|_| "Could not open the Gmail sign-in window.".to_string())
+    open_voice_window(&script, &root).map_err(|_| "Could not open the Gmail connect window.".to_string())
 }
 
 /// Restarts the ZÆNIA API server with the project's own script, hidden.
@@ -449,6 +451,60 @@ fn restart_server() -> Result<(), String> {
         .ok_or_else(|| "Could not find the ZÆNIA project folder.".to_string())?
         .to_path_buf();
     run_restart_script(&root)
+}
+
+/// Settings > Updates > Install: runs scripts/install_update.ps1 for one staged update, hidden and detached so it
+/// can close and reopen this app. Only the update's folder name (checked here) and the restart choice are passed.
+#[tauri::command]
+fn install_update(app: tauri::AppHandle, id: String, restart: bool) -> Result<(), String> {
+    let valid = !id.is_empty() && id.len() <= 64
+        && id.chars().next().map_or(false, |c| c.is_ascii_alphanumeric())
+        && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-');
+    if !valid {
+        return Err("Choose an update from Settings > Updates.".to_string());
+    }
+    let build_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent().and_then(|desktop| desktop.parent())
+        .ok_or_else(|| "Could not locate the build folder.".to_string())?;
+    let configured_root = env::var("ZAENIA_PROJECT_ROOT").ok()
+        .filter(|value| !value.trim().is_empty()).map(|value| PathBuf::from(value.trim()));
+    let root = update_paths::find_update_root(build_root, configured_root.as_deref(), &id)?;
+    run_install_script(&root, &id, restart)?;
+    // ZAE closes itself so the installer can replace it (a window close can be held up by an unsaved-note prompt).
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(1500));
+        app.exit(0);
+    });
+    Ok(())
+}
+
+#[cfg(windows)]
+fn run_install_script(root: &Path, id: &str, restart: bool) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+    const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
+    let script = root.join("scripts").join("install_update.ps1");
+    if !script.is_file() {
+        return Err(format!("Install script not found: {}", script.display()));
+    }
+    let command = |flags: u32| {
+        let mut command = std::process::Command::new("powershell.exe");
+        command.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-File"]).arg(&script).args(["-Id", id]);
+        if restart {
+            command.arg("-RestartServer");
+        }
+        command.current_dir(root).creation_flags(flags).spawn()
+    };
+    command(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP | CREATE_BREAKAWAY_FROM_JOB)
+        .or_else(|_| command(CREATE_NO_WINDOW | CREATE_NEW_PROCESS_GROUP))
+        .map_err(|error| format!("Could not start the update: {}", error))?;
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn run_install_script(_root: &Path, _id: &str, _restart: bool) -> Result<(), String> {
+    Err("Installing updates from the app is only set up on Windows.".to_string())
 }
 
 /// Security-tab owner console: unlocking with the passkey or the spoken phrase,
@@ -547,6 +603,7 @@ pub fn run() {
                 zaenia_stream,
                 start_voice_service,
                 restart_server,
+                install_update,
                 zaenia_briefing_audio,
                 start_server,
                 connect_google_calendar,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./SecurityChecks.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 type CheckStatus = "pass" | "warn" | "fail";
 type Check = { group: "tests" | "setup" | "activity"; id: string; title: string; status: CheckStatus; detail: string; fix: string };
@@ -98,6 +99,8 @@ export function SecurityChecks() {
     {latest && !running && <ReportView report={latest}/>}
     {state && state.reports.length > 0 && <>
       <h3 className="security-checks__history-title">Reports ({state.reports.length})</h3>
+      <DetailScreen id="security-report" name="Security self-check" open={!!open} itemId={open?.id} title={open ? `Report · ${new Date(open.at).toLocaleString()}` : "Report"}
+        onOpen={id => { const report = state.reports.find(entry => detailKey(entry.id) === id); if (report) void view(report.id); }} onClose={() => setOpen(null)}/>
       <ul className="security-checks__history">{state.reports.map(report => <li key={report.id}>
         <button type="button" aria-expanded={report.id === latest?.id || open?.id === report.id} onClick={() => void view(report.id)}>
           <span className={`security-checks__badge security-checks__badge--${report.status}`}>{statusWord[report.status]}</span>

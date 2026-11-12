@@ -51,6 +51,21 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/research/notebook/link/[0-9a-f]{32}", "memory.write"),
         ("GET", r"/api/voice/status", "status.read"),
         ("GET", r"/api/weather/now", "status.read"),
+        # Settings > Updates and About (update_routes.py): versions, staged updates, install history. Read only.
+        ("GET", r"/api/updates", "status.read"),
+        # LIFE > Map & traffic (map_routes.py): saved tiles and landmarks, WSDOT traffic. Reads only.
+        ("GET", r"/api/map/home", "status.read"),
+        ("GET", r"/api/map/tile/\d{1,2}/\d{1,6}/\d{1,6}", "status.read"),
+        ("GET", r"/api/map/landmarks", "status.read"),
+        ("GET", r"/api/map/traffic", "status.read"),
+        ("GET", r"/api/map/traffic/segments", "status.read"),
+        ("POST", r"/api/map/route", "status.read"),
+        ("GET", r"/api/map/search", "status.read"),
+        ("GET", r"/api/map/weather/alerts", "status.read"),
+        ("GET", r"/api/map/radar", "status.read"),
+        ("GET", r"/api/map/radar/tile/\d{1}/\d{1,3}/\d{1,3}", "status.read"),
+        ("GET", r"/api/map/aircraft", "status.read"),
+        ("GET", r"/api/map/marine", "status.read"),
         ("GET", r"/api/screen/watch", "status.read"),
         ("GET", r"/api/gaming/coach", "status.read"),
         ("GET", r"/api/news/tech", "status.read"),
@@ -85,6 +100,23 @@ OPERATION_PATTERNS: tuple[tuple[str, re.Pattern[str], str], ...] = tuple(
         ("POST", r"/api/vault/delete", "status.read"),
         ("GET", r"/api/email/important", "notifications.read"),
         ("POST", r"/api/email/check", "notifications.read"),
+        # Full mail over IMAP (imap_mail.py, replies.py). Reading uses the local copy; a reply is a
+        # draft until sent, and sending also needs the desktop key or the phone's near-PC pass.
+        ("GET", r"/api/email/messages", "notifications.read"),
+        ("GET", r"/api/email/messages/[0-9a-f]{1,32}", "notifications.read"),
+        ("GET", r"/api/email/sync", "notifications.read"),
+        ("POST", r"/api/email/sync", "notifications.read"),
+        ("GET", r"/api/email/drafts", "notifications.read"),
+        ("POST", r"/api/email/drafts", "notifications.write"),
+        ("POST", r"/api/email/suggest", "notifications.write"),
+        ("PUT", r"/api/email/drafts/[0-9a-f]{32}", "notifications.write"),
+        ("POST", r"/api/email/drafts/[0-9a-f]{32}/discard", "notifications.write"),
+        ("POST", r"/api/email/drafts/[0-9a-f]{32}/send", "notifications.write"),
+        # Attachments are fetched from Gmail on demand; saving writes only to Downloads\ZAENIA Mail.
+        ("GET", r"/api/email/messages/[0-9a-f]{1,32}/attachments", "notifications.read"),
+        ("GET", r"/api/email/messages/[0-9a-f]{1,32}/attachments/\d{1,3}", "notifications.read"),
+        ("POST", r"/api/email/messages/[0-9a-f]{1,32}/attachments/\d{1,3}/read", "notifications.read"),
+        ("POST", r"/api/email/messages/[0-9a-f]{1,32}/attachments/\d{1,3}/save", "notifications.write"),
         ("POST", r"/api/news/tech/refresh", "status.read"),
         ("POST", r"/api/news/tech/feedback", "memory.write"),
         ("POST", r"/api/assistant/wake", "chat.reply"),
@@ -213,6 +245,21 @@ class NewsFeedback(BaseModel):
     more: bool
 
 
+class EmailDraftCreate(BaseModel):
+    messageId: str = Field(pattern=r"^[0-9a-f]{1,32}$")
+    body: str = Field(min_length=1, max_length=20000)
+    replyAll: bool = False
+
+
+class EmailDraftEdit(BaseModel):
+    body: str = Field(min_length=1, max_length=20000)
+
+
+class EmailSuggest(BaseModel):
+    messageId: str = Field(pattern=r"^[0-9a-f]{1,32}$")
+    note: str = Field(default="", max_length=1000)
+
+
 class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=400)
     priority: str = Field(default="Normal", max_length=20)
@@ -289,8 +336,8 @@ class GameCoachRequest(BaseModel):
 
 class RemoteCommand(BaseModel):
     model_config = {'extra': 'forbid'}
-    action: str = Field(min_length=2, max_length=20)
-    target: str = Field(default="", max_length=20)
+    action: str = Field(min_length=2, max_length=80)
+    target: str = Field(default="", max_length=80)
 
 
 class RemoteWindow(BaseModel):
@@ -567,6 +614,143 @@ def create_ui_router(require_api_authentication: Callable[..., Any], mode: Calla
         except Exception as error:
             raise HTTPException(503, f"Email check failed ({type(error).__name__}).") from error
         return {**result, **email_watch().recent(20)}
+
+    # ---- full mail over IMAP: local copy, drafts, approved sends
+    def mail_call(fn: Callable[[], Any]) -> Any:
+        from core.email_watch.replies import ReplyError
+        try:
+            return fn()
+        except ReplyError as error:
+            raise HTTPException(409, str(error)) from error
+
+    def need_imap() -> None:
+        from core.email_watch import imap_mail
+        if not imap_mail.status()["connected"]:
+            raise HTTPException(409, "Connect Gmail with an app password first (System Status, Email, Fix it).")
+
+    @router.get("/api/email/messages")
+    def email_messages(q: str = Query(default="", max_length=300), label: str = Query(default="", max_length=100),
+                       category: str = Query(default="", pattern=r"^(|primary|promotions|social|updates|forums)$"),
+                       before: int = Query(default=0, ge=0), limit: int = Query(default=30, ge=1, le=100)) -> dict[str, Any]:
+        from core.email_watch.mail_store import mail_store
+        store = mail_store()
+        if q.strip():
+            items = store.search(q, limit)
+        else:
+            # A Gmail tab (Primary, Promotions, ...) is inbox mail in that category, like Gmail shows it.
+            items = store.recent(limit, label=(label or ("INBOX" if category else None)), before_ms=before or None,
+                                 category=category or None)
+        return {"messages": items}
+
+    @router.get("/api/email/messages/{message_id}")
+    def email_message(message_id: str) -> dict[str, Any]:
+        from core.email_watch.mail_store import mail_store
+        store = mail_store()
+        message = store.message(message_id)
+        if message is None:
+            raise HTTPException(404, "That email isn't in ZAE's copy of your mail.")
+        thread = store.thread(message["threadId"]) if message.get("threadId") else [message]
+        return {"message": message, "thread": thread}
+
+    def attachment_call(fn: Callable[[], Any]) -> Any:
+        from core.email_watch.attachments import AttachmentError
+        need_imap()
+        try:
+            return fn()
+        except AttachmentError as error:
+            raise HTTPException(404, str(error)) from error
+        except OSError as error:
+            raise HTTPException(503, f"Couldn't reach Gmail or save the file ({type(error).__name__}).") from error
+
+    @router.get("/api/email/messages/{message_id}/attachments")
+    def email_attachments(message_id: str) -> dict[str, Any]:
+        from core.email_watch import attachments
+        return {"attachments": attachment_call(lambda: attachments.list_attachments(message_id))}
+
+    @router.get("/api/email/messages/{message_id}/attachments/{index}")
+    def email_attachment_preview(message_id: str, index: int) -> dict[str, Any]:
+        from core.email_watch import attachments
+        return attachment_call(lambda: attachments.preview(message_id, index))
+
+    @router.post("/api/email/messages/{message_id}/attachments/{index}/read")
+    def email_attachment_read(message_id: str, index: int) -> dict[str, Any]:
+        from core.email_watch import attachments
+        return attachment_call(lambda: attachments.read(message_id, index))
+
+    @router.post("/api/email/messages/{message_id}/attachments/{index}/save")
+    def email_attachment_save(message_id: str, index: int) -> dict[str, Any]:
+        from core.email_watch import attachments
+        saved = attachment_call(lambda: attachments.save(message_id, index))
+        audit("email.attachment_saved", operation="notifications.write", reason_code="saved_to_downloads")
+        return saved
+
+    @router.get("/api/email/sync")
+    def email_sync_state() -> dict[str, Any]:
+        from core.email_watch import imap_mail
+        return {**imap_mail.status(), **imap_mail.sync_state()}
+
+    @router.post("/api/email/sync")
+    def email_sync_now() -> dict[str, Any]:
+        from core.email_watch import imap_mail
+        need_imap()
+        try:
+            result = imap_mail.sync()
+        except Exception as error:
+            raise HTTPException(503, f"Couldn't reach Gmail ({type(error).__name__}).") from error
+        return {**imap_mail.status(), **{k: v for k, v in result.items() if k != "watchIds"}}
+
+    @router.get("/api/email/drafts")
+    def email_drafts(status: str = Query(default="draft", pattern=r"^(draft|sending|sent|discarded|all)$")) -> dict[str, Any]:
+        from core.email_watch.mail_store import mail_store
+        return {"drafts": mail_store().drafts(status=None if status == "all" else status)}
+
+    @router.post("/api/email/drafts")
+    def email_draft_create(body: EmailDraftCreate) -> dict[str, Any]:
+        from core.email_watch import replies
+        need_imap()
+        draft = mail_call(lambda: replies.create_draft(body.messageId, body.body, reply_all=body.replyAll))
+        audit("email.draft_saved", operation="notifications.write", reason_code="draft_created")
+        return draft
+
+    @router.post("/api/email/suggest")
+    def email_suggest(body: EmailSuggest) -> dict[str, Any]:
+        from core.email_watch import replies
+        from core.email_watch.mail_store import mail_store
+        message = mail_store().message(body.messageId)
+        if message is None:
+            raise HTTPException(404, "That email isn't in ZAE's copy of your mail.")
+        try:
+            return {"body": replies.suggest_reply(message, body.note)}
+        except Exception as error:
+            raise HTTPException(503, f"The local model couldn't write a reply ({type(error).__name__}).") from error
+
+    @router.put("/api/email/drafts/{draft_id}")
+    def email_draft_edit(draft_id: str, body: EmailDraftEdit) -> dict[str, Any]:
+        from core.email_watch import replies
+        return mail_call(lambda: replies.update_draft(draft_id, body.body))
+
+    @router.post("/api/email/drafts/{draft_id}/discard")
+    def email_draft_discard(draft_id: str) -> dict[str, Any]:
+        from core.email_watch import replies
+        return mail_call(lambda: replies.discard_draft(draft_id))
+
+    @router.post("/api/email/drafts/{draft_id}/send")
+    def email_draft_send(draft_id: str, x_zaenia_desktop_key: str | None = Header(default=None, alias="X-ZAENIA-DESKTOP-KEY"),
+                         x_zaenia_near_pass: str | None = Header(default=None, alias="X-ZAENIA-NEAR-PASS")) -> dict[str, Any]:
+        """Grey's approval: only the paired desktop app, or the phone confirmed at the PC, can send."""
+        from core.api.near_pc import desktop_or_near
+        from core.email_watch import replies
+        need_imap()
+        proof = desktop_or_near(x_zaenia_desktop_key, x_zaenia_near_pass)
+        if proof is None:
+            from core.api.desktop_key import is_paired
+            if not is_paired():
+                raise HTTPException(403, "The desktop app isn't paired yet. At the PC run: python -m core.api.server pair-desktop")
+            raise HTTPException(403, "Approve email replies in the ZÆNIA desktop app on the PC, or confirm from the phone at the PC.")
+        draft = mail_call(lambda: replies.send_draft(draft_id))
+        audit("email.reply_sent", operation="notifications.write",
+              reason_code=("approved_desktop" if proof == "desktop" else "approved_phone_at_pc") + ("" if draft.get("verified") else "_unconfirmed"))
+        return draft
 
     @router.get("/api/security/activity")
     def security_activity(limit: int = Query(default=60, ge=1, le=300)) -> dict[str, Any]:

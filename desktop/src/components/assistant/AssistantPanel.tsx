@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./AssistantPanel.css";
+import { DetailScreen } from "../shell/PageNavigator";
 import { KnowledgePanel } from './KnowledgePanel';
 import { ProfileReview } from './ProfileReview';
 
@@ -111,6 +112,7 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
     if (changed) { onChanged?.(); void load(); }
   }
 
+  const keptCorrection = useRef<{ editing: string; draft: typeof EMPTY_MEMORY } | null>(null);
   function resetDraft() { setEditing(null); setDraft(EMPTY_MEMORY); }
   function saveMemory(event: FormEvent) {
     event.preventDefault();
@@ -173,6 +175,9 @@ export function AssistantPanel({ refreshVersion = 0, onChanged }: { refreshVersi
         <p className="assistant-panel__note">Facts, preferences, and goals you explicitly save stay available across conversations. You can correct or forget them here.</p>
         {memoryError && <p className="assistant-panel__error" role="alert">{memoryError}</p>}
         <form className="assistant-panel__form" onSubmit={saveMemory}>
+          <DetailScreen id="memory-correction" name="Personal memory" open={!!editing} title={editing ? `Correct: ${draft.key || "memory"}` : "Memory"}
+            onOpen={() => { const kept = keptCorrection.current; if (kept) { setEditing(kept.editing); setDraft(kept.draft); } }}
+            onClose={() => { if (editing) keptCorrection.current = { editing, draft }; resetDraft(); }}/>
           <div className="assistant-panel__form-title">{editing ? "Correct this memory" : "Add a memory"}</div>
           <label>Key<input value={draft.key} required maxLength={120} readOnly={Boolean(editing)} disabled={disabled}
             placeholder="e.g. preferred name" onChange={event => setDraft(current => ({ ...current, key: event.target.value }))}/></label>

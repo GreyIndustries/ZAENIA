@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { AddToNotebook, AnalysisResult, useAnalysis } from "../research/researchShared";
 import "../research/Research.css";
 import { openLink } from "../../core/openLink";
 import "./NewsPanel.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 import previewArtA from "../../assets/jarvis-hologram.webp";
 import previewArtB from "../../assets/core/warehouse-clean.webp";
 import previewArtC from "../../assets/neural-core-sphere.webp";
@@ -139,6 +140,8 @@ function WorldSearch({ onOpen }: { onOpen: (story: { title: string; link: string
 /** News: tech and world headlines from ZAE's tracked newsrooms, laid out as a glass magazine, with a reader. */
 export function NewsPanel() {
   const [reading, setReading] = useState<{ title: string; link: string; source: string } | null>(null);
+  const seenStories = useRef(new Map<string, { title: string; link: string; source: string }>());
+  if (reading) seenStories.current.set(detailKey(reading.link), reading);
   const open = (story: Story) => setReading({ title: story.title, link: story.link, source: story.sources.join(", ") });
   const [topic, setTopic] = useState("");
   const [query, setQuery] = useState("");
@@ -211,6 +214,8 @@ export function NewsPanel() {
     {news && !news.stories.length && !busy && <p className="news__note">No headlines yet. Tap ↻ when you're online.</p>}
 
     {LIVE_API && <WorldSearch onOpen={setReading}/>}
+    <DetailScreen id="news-article" name="News" open={!!reading} itemId={reading?.link} title={reading?.title || "Article"}
+      onOpen={key => { const story = seenStories.current.get(key ?? ""); if (story) setReading(story); }} onClose={() => setReading(null)}/>
     {reading && <Reader key={reading.link} story={reading} onClose={() => setReading(null)}/>}
 
     {said && <p className="news__note" role="status">{said}</p>}

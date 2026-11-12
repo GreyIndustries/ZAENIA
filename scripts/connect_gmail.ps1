@@ -1,24 +1,18 @@
-# Connect Gmail (read-only) so ZAENIA can summarise important email. One time only.
-# Uses the same OAuth client as Google Calendar: data\google_calendar\credentials.json.
-# First, in Google Cloud Console (same project): enable the "Gmail API" and add the
-# scope ".../auth/gmail.readonly" to the OAuth consent screen.
-# Your browser opens; sign in and click Allow. The sign-in stays on this PC.
+# Connect Gmail to ZAENIA with a Google app password. One time only; no Google Cloud project needed.
+# ZAE copies your mail to this PC (data\email\mail.db) so she can read and search all of it.
+# Replies are drafts until you press Approve in the app.
+#
+# Before running: turn on 2-Step Verification for your Google account, then create an
+# app password at https://myaccount.google.com/apppasswords. You type it here, at the PC only;
+# it is sealed to your Windows account (data\secure\gmail_app_password.dpapi).
 
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 Set-Location $ProjectRoot
-$Host.UI.RawUI.WindowTitle = "ZAENIA - Connect Gmail (read-only)"
+$Host.UI.RawUI.WindowTitle = "ZAENIA - Connect Gmail"
 
-$Client = Join-Path $ProjectRoot "data\google_calendar\credentials.json"
-if (-not (Test-Path $Client)) {
-    Write-Host "First create a Google OAuth client (type: Desktop app) and save its JSON file as:"
-    Write-Host "  $Client"
-    Write-Host "Then run this again."
-    Start-Sleep -Seconds 20
-    exit 1
-}
-
-& $Python -m core.email_watch.gmail connect
+Start-Process "https://myaccount.google.com/apppasswords"
+& $Python -m core.email_watch.imap_mail connect
 Write-Host ""
 Write-Host "You can close this window."
-Start-Sleep -Seconds 8
+Start-Sleep -Seconds 12

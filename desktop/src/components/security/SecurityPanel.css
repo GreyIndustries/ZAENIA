@@ -86,3 +86,6 @@
 .sec-summary .sec-gauge{width:64px;height:64px}.sec-summary .sec-gauge>div{width:48px;height:48px}.sec-summary .sec-gauge strong{font-size:17px}
 .sec-summary button{height:32px;padding:0 12px;border-radius:9px;cursor:pointer;font-size:11.5px;color:#cfeaff;background:rgba(40,90,140,.25);border:1px solid rgba(143,202,255,.4)}
 @media(max-width:600px){.sec-locked__actions button{min-width:0;width:100%}}
+/* The 3D security model (2026-11-04) sits in its own block, not wider than it is useful */
+.sec-model .se3d{max-width:760px;margin:0 auto}
+.sec-model p{margin:0 0 10px}

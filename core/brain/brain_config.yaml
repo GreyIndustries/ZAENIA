@@ -1,8 +1,9 @@
 brain:
   enabled: true
   provider: "ollama"
-  model: "llama3.1:8b"
-  # Used when the model above isn't downloaded in Ollama (ollama pull llama3.1:8b).
+  # Must match "default" in conductor.py's WORKLOADS, the one table of which model does what.
+  model: "qwen3.5:9b"
+  # Used when the model above isn't downloaded in Ollama (ollama pull qwen3.5:9b).
   fallback_model: "qwen3:8b"
 
   endpoint: "http://127.0.0.1:11434/api/chat"

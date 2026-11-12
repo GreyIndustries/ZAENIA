@@ -35,6 +35,18 @@ class RemoteControlTest(unittest.TestCase):
         self.assertFalse(remote.state(now=1100)["online"])
         self.assertIn("wake", shown["actions"])
 
+    def test_snap_layout_targets_stay_screen_only_and_bounded(self):
+        for count, targets in [(2, "notes,research"), (3, "notes,research,music"), (4, "notes,research,music,workbench")]:
+            remote.queue_command(f"arrange_{count}", targets, now=100)
+            command = remote.collect(now=101)[0]
+            self.assertEqual(command["target"], targets)
+            self.assertEqual(command["action"], f"arrange_{count}")
+        for action, target in [("arrange_5", ""), ("arrange_2", "notes,notes"), ("arrange_2", "notes,../../private"), ("arrange_4", "notes,research"), ("arrange_2", "notes,notepad")]:
+            with self.assertRaises(ValueError):
+                remote.queue_command(action, target)
+        remote.queue_command("undo_arrange", now=100)
+        self.assertEqual(remote.collect(now=250), [])
+
     def test_routes_have_capabilities(self):
         from core.api.ui_routes import operation_for
         self.assertEqual(operation_for("POST", "/api/remote/commands"), "assistant.desktop.manage")

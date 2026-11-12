@@ -5,6 +5,9 @@ const mod = {};
 const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, "../src/core/handGestures.ts"), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText;
 vm.runInNewContext(code, { exports: mod, Math, Number, Array });
 const { HandMotionController, normalizeHandSettings } = mod;
+const actions = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, "../src/core/gestureActions.ts"), "utf8"), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText, { exports: actions, Math, Number, Array });
+const { GestureActions } = actions;
 let count = 0;
 function check(name, run) { run(); count++; console.log(`  OK ${name}`); }
 function hand({ x = .5, y = .72, side = "Right", pose = "point", pinch = .08, score = .95 } = {}) {
@@ -122,5 +125,22 @@ check("reset requires fresh targeting and callback failure cannot invent a targe
   const r = rig(); grab(r); r.engine.reset();
   for (let i = 0; i < 10; i++) assert.equal(r.step([hand({ pose: "pinch" })]).motion, null);
   for (let i = 0; i < 12; i++) assert.equal(r.step([hand()], 40, () => { throw new Error("detached target"); }).target, null);
+});
+check("two visible hands still stop once in shortcut mode", () => {
+  const motion = new HandMotionController(), shortcuts = new GestureActions(), fired = [];
+  const hands = [hand({ x: .35, pose: "palm" }), hand({ x: .75, side: "Left" })];
+  for (let at = 1000; at <= 2400; at += 40) {
+    const frame = motion.update(hands, at, () => null);
+    const result = shortcuts.update(hands.length === 1 ? hands[0].points : null, at, false, frame.stop);
+    if (result.action) fired.push(result.action.kind);
+  }
+  assert.deepEqual(fired, ["stop"]);
+});
+check("a simultaneous motion Stop suppresses a taught action rather than firing both", () => {
+  const shortcuts = new GestureActions(), points = hand({ pose: "fist" }).points;
+  shortcuts.setPoses(() => ({ id: "custom", name: "Close", action: { kind: "close" } }));
+  shortcuts.update(points, 1000);
+  assert.equal(shortcuts.update(points, 1700, false, true).action.kind, "stop");
+  assert.equal(shortcuts.update(points, 3000).action, null);
 });
 console.log(`${count} hand motion checks passed.`);

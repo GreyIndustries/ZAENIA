@@ -1,0 +1,39 @@
+/* Settings hub side menu: same look as the Fitness & Health food rail. */
+.settings-hub{display:grid;grid-template-columns:190px minmax(0,1fr);gap:var(--zx-gap,12px);align-items:start;container-type:inline-size}
+.settings-hub__rail{display:flex;flex-direction:column;gap:4px;position:sticky;top:0}
+.settings-hub__rail button{text-align:left;background:transparent;border:1px solid transparent;color:var(--zx-muted,#9fb6cf);border-radius:var(--zx-radius-sm,8px);padding:9px 12px;font:inherit;cursor:pointer}
+.settings-hub__rail button:hover{color:var(--zx-text,#dbe8f6)}
+.settings-hub__rail button[aria-pressed=true]{background:var(--zx-panel-2,#13233a);border-color:var(--zx-line,#1f3149);color:var(--zx-text,#dbe8f6);font-weight:600}
+.settings-hub__main{min-width:0}
+@media (max-width:760px){.settings-hub{grid-template-columns:minmax(0,1fr)}.settings-hub__rail{flex-direction:row;flex-wrap:wrap;position:static}}
+
+/* Updates and About */
+.zu{display:flex;flex-direction:column;gap:var(--zx-gap,12px)}
+.zu-card{border:1px solid var(--zx-line,#1f3149);background:var(--zx-panel,rgba(12,21,36,.86));border-radius:var(--zx-radius,12px);padding:14px 16px}
+.zu-card h3{margin:0 0 4px;font-size:15px;color:var(--zx-text,#dbe8f6)}
+.zu-kicker{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--zx-accent,#e0a353);margin:0 0 8px}
+.zu-muted{color:var(--zx-muted,#9fb6cf);font-size:12px;margin:2px 0}
+.zu-versions{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.zu-versions>div{border:1px solid var(--zx-line,#1f3149);border-radius:var(--zx-radius-sm,8px);padding:10px 12px;background:var(--zx-inset,rgba(5,11,22,.5))}
+.zu-versions small{display:block;font-size:11px;color:var(--zx-muted,#9fb6cf)}
+.zu-versions b{font-size:20px;font-variant-numeric:tabular-nums;color:var(--zx-text,#dbe8f6)}
+.zu-update{display:flex;flex-direction:column;gap:6px}
+.zu-update ul,.zu-history ul{margin:4px 0 0 18px;padding:0;color:var(--zx-text,#dbe8f6);font-size:13px}
+.zu-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:6px}
+.zu-actions label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--zx-text,#dbe8f6)}
+.zu-btn{border:1px solid var(--zx-accent,#e0a353);background:rgba(120,72,20,.25);color:#ffd08a;border-radius:var(--zx-radius-sm,8px);padding:8px 14px;font:inherit;cursor:pointer}
+.zu-btn:disabled{opacity:.5;cursor:default}
+.zu-btn--quiet{border-color:var(--zx-line,#1f3149);background:transparent;color:var(--zx-muted,#9fb6cf)}
+.zu-banner{border-radius:var(--zx-radius-sm,8px);padding:10px 12px;font-size:13px;border:1px solid var(--zx-line,#1f3149)}
+.zu-banner--ok{border-color:rgba(127,227,168,.5);color:#bff3d2}.zu-banner--failed{border-color:rgba(255,120,100,.55);color:#ffc9bd}.zu-banner--running{color:#ffd08a}
+.zu-history{display:flex;flex-direction:column;gap:10px}
+.zu-history article{border-left:2px solid var(--zx-line,#1f3149);padding:2px 0 2px 12px}
+.zu-tag{display:inline-block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--zx-line,#1f3149);border-radius:999px;padding:1px 8px;margin-left:6px;color:var(--zx-muted,#9fb6cf)}
+.zu-table{width:100%;border-collapse:collapse;font-size:13px}
+.zu-table th{text-align:left;font-weight:500;color:var(--zx-muted,#9fb6cf);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 8px;border-bottom:1px solid var(--zx-line,#1f3149)}
+.zu-table td{padding:7px 8px;border-bottom:1px solid rgba(31,49,73,.5);color:var(--zx-text,#dbe8f6)}
+.zu-table td:nth-child(2){font-variant-numeric:tabular-nums;white-space:nowrap}
+.zu-about-head{display:flex;align-items:center;gap:16px}
+.zu-about-head strong{font-size:30px;letter-spacing:.14em;color:var(--zx-text,#dbe8f6)}
+
+.zu-release-notes h4 { margin:16px 0 8px; font-size:13px; }.zu-release-notes li { margin-bottom:12px; }.zu-release-notes li p { margin:4px 0; line-height:1.6; color:var(--muted,#b4c2cf); white-space:pre-line; overflow-wrap:anywhere; }

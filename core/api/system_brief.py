@@ -161,16 +161,18 @@ def build_system_brief(mode: str) -> dict[str, Any]:
                            f"Only {int((check.get('recognisedRate') or 0) * 100)}% of your recent app-mic turns were recognised.",
                            "Press Fix it to retrain your voice on the approved mic (passkey needed).", "voice_training"))
     try:
+        from core.email_watch.imap_mail import status as imap_status
         from core.email_watch.gmail import status as gmail_status
-        mail = gmail_status()
+        imap_mail_ready = imap_status()["connected"]
+        api_ready = gmail_status()["connected"]
     except Exception:
-        mail = {"clientFile": False, "connected": False}
-    if not mail["connected"]:
-        items.append(_item("improve", "email", "Important email summaries",
-                           "ZAE can't see your email yet.",
-                           "In Google Cloud Console enable the Gmail API and add the gmail.readonly scope, then press Fix it and click Allow."
-                           if mail["clientFile"] else
-                           "Create a Google OAuth client (Desktop app) as for Calendar, then press Fix it.",
+        imap_mail_ready = api_ready = False
+    if not imap_mail_ready:
+        items.append(_item("improve", "email", "Email: all mail and replies",
+                           "ZAE can only see recent inbox summaries through Google Cloud." if api_ready
+                           else "ZAE can't see your email yet.",
+                           "Create a Google app password (needs 2-Step Verification), then press Fix it and type it at the PC. "
+                           "No Google Cloud setup needed.",
                            "connect_gmail"))
     try:
         from core.voice_output.neural_voice import settings as kokoro_settings

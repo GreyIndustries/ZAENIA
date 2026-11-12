@@ -13,7 +13,7 @@ export type HandShape = "one" | "two" | "peace" | "three" | "four" | "five" | "r
 export type GestureAction =
   | { kind: "previous" } | { kind: "next" } | { kind: "home" } | { kind: "minimize" } | { kind: "close" }
   | { kind: "category"; index: number } | { kind: "system" } | { kind: "stop" } | { kind: "calm" } | { kind: "mic" }
-  | { kind: "confirm" } | { kind: "dismiss" };
+  | { kind: "confirm" } | { kind: "dismiss" } | { kind: "command"; text: string };
 export type GestureFrame = { shape: HandShape | null; holding: { label: string; progress: number } | null; action: GestureAction | null };
 
 const dist = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -64,17 +64,47 @@ export class GestureActions {
   private fired = false;
   private lastAction = -Infinity;
   private track: { x: number; y: number; at: number }[] = [];
+  private custom = new Map<HandShape, string>();
+  private matcher: ((points: readonly Point[]) => { id: string; name: string; action: GestureAction } | null) | null = null;
+  private poseId = ""; private poseSince = 0; private poseFired = false;
   static COOLDOWN = 1200; static SWIPE = 0.2; static SWIPE_MS = 450; static STOP_MS = 450;
 
-  reset() { this.shape = null; this.fired = false; this.track = []; }
+  /** Typed shortcuts from the owner: a shape held about a second sends its text to ZAE as a chat message. */
+  setCustom(list: readonly { shape: HandShape; text: string }[]) { this.custom = new Map(list.map(item => [item.shape, item.text])); this.fired = false; }
 
-  update(points: readonly Point[] | null, at: number, _speaking = false): GestureFrame {
+  /** Poses the owner taught (core/handPoses.ts). A taught pose held about 0.7 s fires its action and beats the built-in shapes. */
+  setPoses(match: ((points: readonly Point[]) => { id: string; name: string; action: GestureAction } | null) | null) { this.matcher = match; this.poseId = ""; this.poseFired = false; }
+
+  reset() {
+    this.shape = null; this.since = 0; this.fired = false; this.track = [];
+    this.poseId = ""; this.poseSince = 0; this.poseFired = false;
+  }
+
+  update(points: readonly Point[] | null, at: number, _speaking = false, palmStop = false): GestureFrame {
+    const frame = this.next(points, at);
+    // The motion controller can see a palm with two hands present, when shortcuts have no single-hand input.
+    return palmStop ? { ...frame, holding: null, action: { kind: "stop" } } : frame;
+  }
+
+  private next(points: readonly Point[] | null, at: number): GestureFrame {
     const shape = points ? shapeOf(points) : null;
     if (!points || !shape) { this.reset(); return { shape: null, holding: null, action: null }; }
+    // Reserved shapes win even when a saved/nearby taught template matches them.
+    const taught = !["five", "four", "pinch"].includes(shape) && this.matcher ? this.matcher(points) : null;
+    if (taught) {
+      this.shape = null; this.fired = false; this.track = [];
+      if (taught.id !== this.poseId) { this.poseId = taught.id; this.poseSince = at; this.poseFired = false; }
+      if (this.poseFired || at - this.lastAction < GestureActions.COOLDOWN) return { shape: "other", holding: null, action: null };
+      const progress = Math.min(1, (at - this.poseSince) / 700);
+      if (progress >= 1) { this.poseFired = true; this.lastAction = at; return { shape: "other", holding: null, action: taught.action }; }
+      return { shape: "other", holding: progress > 0.15 ? { label: taught.name, progress } : null, action: null };
+    }
+    this.poseId = ""; this.poseSince = 0; this.poseFired = false;
     const cool = at - this.lastAction >= GestureActions.COOLDOWN;
     if (shape !== this.shape) { this.shape = shape; this.since = at; this.fired = false; }
     if (shape === "five") {
-      if (this.fired || !cool) return { shape, holding: null, action: null };
+      // Stop must remain available immediately after another action's cooldown begins.
+      if (this.fired) return { shape, holding: null, action: null };
       const progress = Math.min(1, (at - this.since) / GestureActions.STOP_MS);
       if (progress >= 1) { this.fired = true; this.lastAction = at; return { shape, holding: null, action: { kind: "stop" } }; }
       return { shape, holding: { label: "Stop talking", progress }, action: null };
@@ -95,10 +125,11 @@ export class GestureActions {
       if (this.track.length > 1 && Math.hypot(dx, dy) > 0.05) { this.since = at; return { shape, holding: null, action: null }; }
     } else this.track = [];
     if (this.fired || !cool) return { shape, holding: null, action: null };
-    const hold = HOLDS[shape];
+    const typed = this.custom.get(shape);
+    const hold = typed ? { ms: 900, label: typed.length > 28 ? `${typed.slice(0, 27)}…` : typed } : HOLDS[shape];
     if (!hold) return { shape, holding: null, action: null };
     const progress = Math.min(1, (at - this.since) / hold.ms);
-    if (progress >= 1) { this.fired = true; this.lastAction = at; return { shape, holding: null, action: ACTION_OF[shape] ?? null }; }
+    if (progress >= 1) { this.fired = true; this.lastAction = at; return { shape, holding: null, action: typed ? { kind: "command", text: typed } : ACTION_OF[shape] ?? null }; }
     return { shape, holding: progress > 0.15 ? { label: hold.label, progress } : null, action: null };
   }
 }
@@ -109,5 +140,5 @@ export const BONES: readonly [number, number][] = [[0, 1], [1, 2], [2, 3], [3, 4
 
 export const ACTION_LABEL: Record<GestureAction["kind"], string> = {
   previous: "Previous tab", next: "Next tab", home: "Home", minimize: "Minimise tab", close: "Close tab", category: "Category",
-  system: "System", stop: "Stopped", calm: "Calm view", mic: "Mic", confirm: "Confirmed", dismiss: "Dismissed",
+  system: "System", stop: "Stopped", calm: "Calm view", mic: "Mic", confirm: "Confirmed", dismiss: "Dismissed", command: "Command sent",
 };

@@ -3,9 +3,12 @@ import { api, errorText, LIVE_API } from "../../core/bridge";
 import { openLink } from "../../core/openLink";
 import { AddToNotebook, NeedsServer } from "./researchShared";
 import "./Research.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
-type Source = { n: number; title: string; url: string };
-type Job = { id: string; question: string; status: "running" | "done" | "failed"; step: string; queries: string[]; sources: Source[]; answer: string; started: string; finished: string | null; error: string | null };
+type Source = { n: number; title: string; url: string; source?: string; kind?: string; meta?: string };
+type Checks = { checked: number; supported: number; unsupported: number; unclear: number; badCitations: number };
+type Job = { id: string; question: string; status: "running" | "done" | "failed"; step: string; queries: string[]; sources: Source[]; answer: string; started: string; finished: string | null; error: string | null;
+  checks?: Checks; checkSummary?: string; sourceStatus?: Record<string, string>; notebookTopic?: string; notebookError?: string; usedEarlier?: boolean };
 type Finding = { at: string; summary: string; sources: Source[] };
 type Topic = { id: string; topic: string; added: string; lastChecked: string | null; findings: Finding[] };
 type State = { jobs: Job[]; watch: Topic[] };
@@ -15,9 +18,10 @@ const when = (iso: string | null) => iso ? new Date(iso).toLocaleString([], { mo
 /** Her answer with [1]-style citations turned into links to the sources. */
 function Cited({ text, sources }: { text: string; sources: Source[] }) {
   return <div className="research__result research__result--tall" aria-live="polite">{text.split("\n").map((line, index) =>
-    <p key={index}>{line.replace(/\*\*/g, "").replace(/^#+\s*/, "").split(/(\[\d+\])/).map((part, i) => {
+    <p key={index}>{line.replace(/\*\*/g, "").replace(/^#+\s*/, "").split(/(\[\d+\]|\[unverified\])/).map((part, i) => {
       const n = /^\[(\d+)\]$/.exec(part)?.[1];
       const source = n ? sources.find(s => s.n === Number(n)) : undefined;
+      if (part === "[unverified]") return <mark key={i} className="wa-unverified" title="ZAE's citation check couldn't find this in the source it cites">unverified</mark>;
       return source ? <button type="button" key={i} className="research__link wa-cite" title={source.title} onClick={() => openLink(source.url)}>{part}</button> : part;
     })}</p>)}</div>;
 }
@@ -25,7 +29,7 @@ function Cited({ text, sources }: { text: string; sources: Source[] }) {
 function Sources({ sources }: { sources: Source[] }) {
   return <ol className="wa-sources">{sources.map(source => <li key={source.n}>
     <button type="button" className="research__link" onClick={() => openLink(source.url)}>{source.title || source.url}</button>
-    <small>{(() => { try { return new URL(source.url).hostname.replace(/^www\./, ""); } catch { return ""; } })()}</small></li>)}</ol>;
+    <small>{source.source && source.source !== "Web" ? `${source.source}${source.meta ? ` · ${source.meta}` : ""}` : (() => { try { return new URL(source.url).hostname.replace(/^www\./, ""); } catch { return ""; } })()}</small></li>)}</ol>;
 }
 
 /** Web agent: ask anything and she researches the web; plus topics she watches every day. */
@@ -65,10 +69,10 @@ export function WebAgentPanel() {
   };
   if (!LIVE_API) return <div className="research"><NeedsServer what="The web agent"/></div>;
   const jobs = state?.jobs ?? [];
-  const current = jobs.find(job => job.id === open) ?? jobs[0];
+  const current = jobs.find(job => job.id === open) ?? null;  // runs list first; a run opens as its own screen
 
   return <div className="research">
-    <p className="research__note">Ask ZAE to research anything: she searches the web, reads up to six pages and answers with numbered sources, on her own brain. You can also say “research …” or “watch the topic …”. Only your search words and ordinary page requests leave the PC; page text is read as data, never as instructions.</p>
+    <p className="research__note">Ask ZAE to research anything: she searches the web and up to 20 free research sources (Wikipedia, OpenAlex, arXiv, PubMed and more), reads the best eight, answers with numbered sources and checks each citation, on her SE (Synergized Encephalon). You can also say “research …” or “watch the topic …”. Only your search words and ordinary page requests leave the PC; page text is read as data, never as instructions.</p>
     <form className="research__bar" onSubmit={event => { event.preventDefault(); void ask(); }}>
       <input value={question} maxLength={500} aria-label="What should ZAE research?" placeholder="What should I research? e.g. best GPU under $500 right now" onChange={event => setQuestion(event.target.value)}/>
       <button type="submit" className="research__primary" disabled={question.trim().length < 3}>Research</button>
@@ -77,14 +81,22 @@ export function WebAgentPanel() {
     <div className="research__split">
       <div className="research__side">
         {!current && <p className="research__empty">Nothing researched yet. Ask her something above.</p>}
+        <DetailScreen id="agent-run" name="Web agent" open={!!current} itemId={current?.id} quiet={open === null} title={current?.question || "Research run"}
+          onOpen={key => { const job = jobs.find(item => detailKey(item.id) === key); if (job) setOpen(job.id); }} onClose={() => setOpen(null)}/>
         {current && <>
           <h3>{current.question}</h3>
           <p className="research__meta">{current.status === "running" ? current.step : current.status === "failed" ? `Stopped: ${current.error}` : `Researched ${when(current.finished)}`}{current.queries.length ? ` · searched: ${current.queries.join(" · ")}` : ""}</p>
           {current.status === "running" && <p className="research__working" role="status">ZAE is researching… {current.step}</p>}
           {current.status === "done" && <>
             <Cited text={current.answer} sources={current.sources}/>
+            {current.checkSummary && <p className={`research__meta wa-check${current.checks?.unsupported ? " wa-check--warn" : ""}`}>Citation check: {current.checkSummary}</p>}
+            {(current.notebookTopic || current.usedEarlier || current.notebookError) && <p className="research__meta">
+              {current.notebookTopic ? "Saved to your Research notebook." : current.notebookError ? `Not saved to the notebook: ${current.notebookError}` : ""}
+              {current.usedEarlier ? " Built on your earlier research on this." : ""}</p>}
             <strong className="sc-label">Sources</strong>
             <Sources sources={current.sources}/>
+            {current.sourceStatus && Object.keys(current.sourceStatus).length > 0 && <details className="wa-searched"><summary>Searched {Object.keys(current.sourceStatus).length} sources</summary>
+              <ul>{Object.entries(current.sourceStatus).map(([name, state]) => <li key={name}><span>{name.replace(/_/g, " ")}</span><small>{state}</small></li>)}</ul></details>}
             <div className="research__actions">
               <AddToNotebook source={{ title: current.question, kind: "web", text: `${current.answer}\n\nSources:\n${current.sources.map(s => `[${s.n}] ${s.title} ${s.url}`).join("\n")}`, meta: "Web agent" }}/>
               <button type="button" onClick={() => void navigator.clipboard?.writeText(current.answer)}>Copy answer</button>

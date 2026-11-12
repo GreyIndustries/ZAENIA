@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DetailScreen } from "../shell/PageNavigator";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import { Locked, securitySession, setSecuritySession } from "../security/SecurityPanel";
 import "./MainViews.css";
@@ -40,6 +41,7 @@ export function NotesThreePane() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<NoteFull | null>(null);
   const [draft, setDraft] = useState<{ title: string; body: string } | null>(null);
+  const [autoPicked, setAutoPicked] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [fail, setFail] = useState<string | null>(null);
@@ -61,7 +63,11 @@ export function NotesThreePane() {
     try { const full = await api<NoteFull>("GET", `${NOTES}/${id}`); setOpen(full); setDraft({ title: full.title, body: full.body }); }
     catch (f) { setFail(errorText(f)); }
   };
-  useEffect(() => { if (!open && shown[0]) void pick(shown[0].id); }, [notes]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Preview 05: the Notebook opens on its note tiles; a note opens as its own screen.
+  useEffect(() => { void setAutoPicked; }, []);
+  useEffect(() => { const go = (event: Event) => { const detail = (event as CustomEvent<{ screen?: string; id?: string }>).detail; if (detail?.screen === "notes/panes" && detail.id) { void pick(detail.id); } };
+    window.addEventListener("zae:open-record", go); return () => window.removeEventListener("zae:open-record", go); });
+
   const dirty = Boolean(open && draft && (draft.title !== open.title || draft.body !== open.body));
   const save = async (changes: Partial<NoteFull> = {}) => {
     if (!open || !draft) return;
@@ -89,6 +95,8 @@ export function NotesThreePane() {
       </button>)}
     </section>
     <main className="sv-three__page">
+      <DetailScreen id="notebook-note" name="Notebook" open={!!open} itemId={open?.id} quiet={autoPicked} title={draft?.title.trim() || open?.title || "Untitled"}
+        onOpen={id => { if (id) void pick(id); }} onClose={() => { setOpen(null); setDraft(null); }}/>
       {!open ? <p className="mv-muted">Pick a note.</p> : draft && <>
         <div className="mv-row sv-three__meta">
           <span className="mv-muted">Edited {ago(open.updatedAt)} ago{(open.tags ?? []).length ? ` · ${(open.tags ?? []).map(t => `#${t}`).join(" ")}` : ""}</span>
@@ -190,7 +198,7 @@ export function ArenaLeaderboard() {
   };
   return <div className="mv">
     <div className="mv-head"><div><span className="mv-kicker">Your votes · {Math.round(total / 2)} rounds</span><h2 className="zx-title">Leaderboard</h2></div>
-      <span className="zx-inset sv-pill">ZAE's brain now: <b>{brain ?? "…"}</b></span></div>
+      <span className="zx-inset sv-pill">The SE's main model now: <b>{brain ?? "…"}</b></span></div>
     {error && <p className="mv-error">{error}</p>}
     <div className="sv-split">
       <section className="zx-card sv-table" role="table" aria-label="Models ranked by your votes">
@@ -203,14 +211,14 @@ export function ArenaLeaderboard() {
           <span>{r.wins}–{r.rounds - r.wins}</span>
           <span className="mv-muted">{r.avgSeconds ? `${r.avgSeconds} s` : "—"}</span>
           <span className="mv-muted">{size(r.model)}</span>
-          <button type="button" className="zx-inset" disabled={r.model === brain || busy !== null} onClick={() => void choose(r.model)}>{r.model === brain ? "Current brain" : busy === r.model ? "Switching…" : "Make ZAE's brain"}</button>
+          <button type="button" className="zx-inset" disabled={r.model === brain || busy !== null} onClick={() => void choose(r.model)}>{r.model === brain ? "Current SE model" : busy === r.model ? "Switching…" : "Make ZAE's brain"}</button>
         </div>)}
       </section>
       <aside className="sv-stack">
         <section className="zx-card"><h3>Installed models</h3>
           {(data?.models ?? []).filter(m => !/embed/i.test(m.name)).map(m => <div key={m.name} className="mv-row sv-line"><span className="sv-mono">{m.name}</span><span className="mv-muted">{m.parameters} · {(m.size / 1e9).toFixed(1)} GB</span></div>)}
         </section>
-        <section className="zx-card"><h3>How it's scored</h3><p className="mv-muted">Each head to head you vote on is a win for one model. Speed is the average time to a full answer on this PC. Changing the brain is a desktop-only setting.</p></section>
+        <section className="zx-card"><h3>How it's scored</h3><p className="mv-muted">Each head to head you vote on is a win for one model. Speed is the average time to a full answer on this PC. Changing the SE's main model is a desktop-only setting.</p></section>
       </aside>
     </div>
   </div>;

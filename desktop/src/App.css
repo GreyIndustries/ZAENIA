@@ -392,9 +392,9 @@
 /* The same glass workspace, with a bounded core/conversation split. */
 .zaenia-app--dynamic .main-stage--overview .progress-stage{min-height:210px;flex:1 1 0}
 .zaenia-app--dynamic .home-chat{flex:0 1 min(clamp(210px,var(--workspace-chat-vh,36dvh),620px),calc(100% - 170px));min-height:180px}
-.zaenia-app--dynamic .progress-stage>.neural-core,.zaenia-app--dynamic .progress-stage>.system-core{transform:translateY(var(--workspace-core-shift,0px)) scale(var(--workspace-core-scale,1));transform-origin:center}
+.zaenia-app--dynamic .progress-stage .neural-core,.zaenia-app--dynamic .progress-stage>.system-core{transform:translateY(var(--workspace-core-shift,0px)) scale(var(--workspace-core-scale,1));transform-origin:center}
 .zaenia-app--motion .home-chat{transition:flex-basis .65s cubic-bezier(.2,.75,.2,1),border-color .35s,box-shadow .35s}
-.zaenia-app--motion .progress-stage>.neural-core,.zaenia-app--motion .progress-stage>.system-core{transition:transform .65s cubic-bezier(.2,.75,.2,1)}
+.zaenia-app--motion .progress-stage .neural-core,.zaenia-app--motion .progress-stage>.system-core{transition:transform .65s cubic-bezier(.2,.75,.2,1)}
 .zaenia-app--motion .nav-item{transition:transform .24s ease,background .2s,color .2s,border .2s}
 .zaenia-app--motion .nav-item:hover,.zaenia-app--motion .nav-item:focus-visible{transform:translateX(3px)}
 .zaenia-app--motion .detail-panel__block{transition:transform .3s ease,border-color .3s}
@@ -464,13 +464,7 @@
 /* Neural core settings now live in the System window. */
 .core-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:16px}
 .core-settings>.detail-panel__block{padding:14px;border-radius:14px;border:1px solid rgba(143,202,255,.18);background:rgba(6,14,28,.5)}
-/* Windows keep clear of the docked core so it is always visible. */
-.main-stage--overview .progress-stage--top-left~.os-layer,.main-stage--overview .progress-stage--left~.os-layer,
-.main-stage--overview .progress-stage--bottom-left~.os-layer{left:calc(min(250px,22%) + 18px)}
-.main-stage--overview .progress-stage--top-right~.os-layer,.main-stage--overview .progress-stage--right~.os-layer,
-.main-stage--overview .progress-stage--bottom-right~.os-layer{right:calc(min(250px,22%) + 18px)}
-.main-stage--overview .progress-stage--top~.os-layer{top:calc(min(200px,28%) + 16px)}
-.main-stage--overview .progress-stage--bottom~.os-layer{bottom:calc(min(200px,28%) + 100px)}
+/* Windows used to keep clear of the docked core; since 2026-11-09 tabs use the full screen and open over it. */
 .identity-header:has(.brand-menu__drop){z-index:60}
 
 /* Launch card: start the server from the app (Start menu launch). */
@@ -547,3 +541,7 @@
 .faceid-keys__row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(147,166,202,.19)}
 .faceid-keys__row span{display:flex;flex-direction:column;gap:2px}.faceid-keys__row small{color:#9fb6cf}
 .faceid-keys__row button{min-height:34px;padding:0 12px;border-radius:8px;border:1px solid #4a2a2a;background:transparent;color:#ffb4a2;cursor:pointer}
+
+/* Home: the open-tabs strip sits above the dashboard cards instead of over the Today card (Claude, 2026-11-11). */
+.main-stage--overview:has(.zt-strip) .ov-rail{padding-top:36px}
+.main-stage--overview:has(.zt-tab) .ov-center{padding-top:36px}

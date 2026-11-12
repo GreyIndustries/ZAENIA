@@ -1,3 +1,4 @@
+import { PageNavigator } from "../shell/PageNavigator";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
@@ -96,10 +97,7 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
   const waiting = !LIVE_API ? <p className="fs-muted">This view needs the ZÆNIA server: open it in the desktop or phone app.</p>
     : !info || !day ? <p className="fs-muted">{error ? "" : "Loading…"}</p> : null;
   return <div className="fs">
-    <nav className="research-page__tabs" role="tablist" aria-label="Fitness sections">
-      {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id}
-        className={tab === id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(id)}>{label}</button>)}
-    </nav>
+    <PageNavigator id={"fitness"} name={"Fitness & Health"} items={tabs.map(([id, label]) => ({ id, label }))} current={tab} onChoose={next => choose(next as Tab)}/>
     {error && <p className="fs-error" role="alert">{error}</p>}
     {note && <p className="fs-note" role="status">✓ {note}</p>}
 
@@ -116,15 +114,13 @@ export function FitnessStudio({ drafts }: { drafts: PersonalDraftCache }) {
         <span><small>Protein</small><b>{fmt(day.eaten?.protein ?? 0)}{info.targets.protein ? ` / ${fmt(info.targets.protein)}` : ""} g</b></span>
         <span><small>Today</small><b>{day.workout.label || "Rest day"}{day.workout.exercises.length ? ` · ${day.workout.exercises.filter(e => day.entry.done?.[e.exercise]).length} of ${day.workout.exercises.length} done` : ""}</b></span>
       </div>}
-      <div className="fs-seg" role="group" aria-label="Training views">{TRAINING_VIEWS.map(([id, label]) =>
-        <button key={id} type="button" aria-pressed={trainingView === id} onClick={() => openTraining(id)}>{label}</button>)}</div>
+      <PageNavigator id="fitness-training" name="Training" items={TRAINING_VIEWS.map(([id, label]) => ({ id, label }))} current={trainingView} onChoose={next => openTraining(next as TrainingView)}/>
     </>}
     {/* Kept mounted so ZAE's "open the setup questions" still reaches it. */}
     <div hidden={!(tab === "training" && trainingView === "program")}><TrainingProgram/></div>
 
     <div className={tab === "food" ? "fs-rail-layout" : undefined}>
-      {tab === "food" && <nav className="fs-rail" aria-label="Food views">{FOOD_VIEWS.map(([id, label]) =>
-        <button key={id} type="button" aria-pressed={foodView === id} onClick={() => openFood(id)}>{label}</button>)}</nav>}
+      {tab === "food" && <PageNavigator id="fitness-food" name="Food" items={FOOD_VIEWS.map(([id, label]) => ({ id, label }))} current={foodView} onChoose={next => openFood(next as FoodView)}/>}
       <div className={tab === "food" ? "fs-rail-main" : undefined}>
         {tab === "food" && foodView === "planner" && <MealPlanner/>}
         <div hidden={!panelPage}><FitnessPanel drafts={drafts} embedded page={panelPage ?? "Log"} recipeShelf={foodView === "week" ? "week" : "cookbook"}/></div>

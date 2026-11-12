@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText, IN_TAURI, LIVE_API, openSecurityTool, type SecurityTool } from "../../core/bridge";
 import { SecurityChecks } from "../status/SecurityChecks";
+import { SecurityModel } from "./SecurityModel";
+import type { Signals } from "./securityGroups";
 import "./SecurityPanel.css";
 
 type Level = "strong" | "fair" | "weak" | "unknown";
 type Area = { id: string; title: string; level: Level; evidence: string[]; risk: string; fix: string; attack: string };
-type Posture = { at: string; score: number; level: Level; counts: Record<Level, number>; areas: Area[] };
+type Posture = { at: string; score: number; level: Level; counts: Record<Level, number>; areas: Area[]; signals?: Signals };
 type Recommendation = { priority: "high" | "medium" | "low"; title: string; why: string; fix: string };
 type Improvements = { trend: { id: string; at: string; status: "pass" | "warn" | "fail"; counts: Record<"pass" | "warn" | "fail", number>; score: number | null }[];
   fixed: string[]; broke: string[]; stronger: string[]; weaker: string[]; since: string | null };
@@ -227,6 +229,11 @@ export function SecurityPanel() {
           <p>{posture.counts.strong} strong · {posture.counts.fair} fair · {posture.counts.weak} weak{posture.counts.unknown ? ` · ${posture.counts.unknown} not measured` : ""}. Measured live {when(posture.at)}, refreshed every 30 seconds.</p>
           <small>A self-assessment of ZAE's own defenses from live readings on this PC, not a penetration test.</small>
         </div>
+      </section>
+      <section className="sec-block sec-model" aria-label="Security model">
+        <h3>Security model</h3>
+        <p className="sec-muted">Four groups of defenses stacked as a tower, coloured by how strong each one is right now: teal strong, amber fair, red weak. The gate on top is every permission check; the signals climbing the pillars speed up when failed or blocked attempts add up.</p>
+        <SecurityModel areas={posture.areas} score={posture.score} level={posture.level} signals={posture.signals}/>
       </section>
       <section className="sec-block" aria-label="Defenses and vulnerabilities">
         <h3>Defenses and weak spots</h3>

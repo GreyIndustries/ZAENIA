@@ -60,6 +60,15 @@ class Transcript:
             self._closed = True
             self._cond.notify_all()
 
+    def drain(self) -> list[Line]:
+        """The lines ready now, in order, without waiting (for one thread that both posts and says them)."""
+        with self._cond:
+            ready = sorted(self._pending, key=lambda item: (STAGE_ORDER[item.stage], item.seq))
+            self._pending = []
+            if ready:
+                self._said_stage = max(self._said_stage, STAGE_ORDER[ready[-1].stage])
+            return ready
+
     def lines(self, *, wait: float = 0.2) -> Iterator[Line]:
         """Hand out lines in stage order, one at a time, until closed and empty."""
         while True:

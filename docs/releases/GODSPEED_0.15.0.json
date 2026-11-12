@@ -1,0 +1,87 @@
+[
+  {
+    "kind": "added",
+    "title": "Opt-in trip tracking",
+    "description": "Start trip watches device location while the ZAE app session remains running, including across ZAE tab switches. Pause, reset, permission loss, arrival and phone disconnect release GPS tracking. App close/reload ends the RAM-only trip; operating-system location permissions remain unchanged."
+  },
+  {
+    "kind": "added",
+    "title": "Visible route completion",
+    "description": "The map shows completed-route shading, percentage completed, distance traveled, distance remaining and remaining time. Measurements follow the planned road geometry rather than straight-line distance to your destination."
+  },
+  {
+    "kind": "added",
+    "title": "Follow and current instruction",
+    "description": "Follow keeps the map centered on an accepted GPS position. Dragging pauses following so you can inspect the map; Recenter / follow restores it. The instruction display advances using route progress; it is not spoken turn-by-turn navigation."
+  },
+  {
+    "kind": "fixed",
+    "title": "Unreliable GPS cannot falsely complete a trip",
+    "description": "Stale, inaccurate, off-route and physically implausible fixes leave the last accepted progress unchanged. Arrival requires progress near the route end and a position close to the destination. Looping routes do not complete just because the start is near the endpoint."
+  },
+  {
+    "kind": "changed",
+    "title": "Trip estimates decrease with progress",
+    "description": "Remaining distance follows accepted geometry progress. Remaining time adds approximate flow-category penalties (slower 1.25x, heavy 1.65x, stop-and-go 2.2x) only where current traffic geometry matches the remaining route. Unknown roads retain baseline time. Coverage and estimated delay are shown; these are heuristics, not provider-measured travel times."
+  },
+  {
+    "kind": "added",
+    "title": "Destination weather alerts",
+    "description": "The weather panel checks alerts near the destination as well as near the current location or saved home. It labels these as point-area checks, not complete weather coverage for every road along the trip."
+  },
+  {
+    "kind": "changed",
+    "title": "Clearer weather and radar context",
+    "description": "Current conditions remain labeled with their saved-home location so they are not mistaken for a live GPS weather observation. Radar shows its observation age and is identified as observed precipitation rather than a forecast."
+  },
+  {
+    "kind": "fixed",
+    "title": "Traffic colors expire",
+    "description": "Timestamp-gated route colors now re-evaluate as time passes. Missing, saved-only or stale traffic remains dashed grey instead of implying clear roads; blue/orange/red retain their reported regular/slower/heavy meanings."
+  },
+  {
+    "kind": "added",
+    "title": "Manual traffic refresh",
+    "description": "Refresh traffic requests an updated report through the existing authenticated API. WSDOT coverage and source timestamps remain visible; this does not add nationwide traffic data."
+  },
+  {
+    "kind": "added",
+    "title": "Detailed patch notes throughout ZAE",
+    "description": "Waiting updates, installed updates and version history now show categorized Added, Changed, Fixed, Removed, Performance, Security & privacy and Known limitations sections when relevant. Each item includes a title and an explanation; older notes remain readable without invented details."
+  },
+  {
+    "kind": "changed",
+    "title": "Release packaging requires explanations",
+    "description": "Every future staged release must supply valid detailed notes in its matching version-history entry or a JSON file. Notes travel with the staged manifest and are preserved in installed history; a short title alone is no longer sufficient."
+  },
+  {
+    "kind": "security",
+    "title": "Trip data stays temporary",
+    "description": "Raw fixes and progress stay in RAM across ZAE tab switches, not on disk or in an AI model. Existing providers may receive routing coordinates during automatic rerouting, including the existing online fallback. Weather lookup uses a rounded area. Phone disconnect ends the trip. Authentication and execution permissions are unchanged."
+  },
+  {
+    "kind": "limitations",
+    "title": "Device and locked-phone validation remains",
+    "description": "Synthetic GPS/browser checks pass; real-road Windows/iPhone use remains to validate. Tracking can continue across ZAE tabs and while the runtime permits background GPS. A browser cannot guarantee GPS on a locked or suspended iPhone; native iOS Core Location integration is still required for reliable locked-phone navigation. Voice maneuvers are not included."
+  },
+  {
+    "kind": "limitations",
+    "title": "Road and feed coverage varies",
+    "description": "Projection onto nearby route geometry is not lane-level map matching. Parallel roads, tunnels and GPS gaps can need a manual route review/reset. Weather is US NWS coverage and traffic is regional WSDOT coverage; unavailable feeds are not fabricated."
+  },
+  {
+    "kind": "added",
+    "title": "Automatic off-route rerouting",
+    "description": "After at least three accurate off-route observations spanning eight seconds, GODSPEED recalculates from the current fix, preserving every unvisited intermediate stop and destination. Requests have a 30-second cooldown and stale replies are ignored after pause/reset. Failures retain the previous route. A switch can disable automatic rerouting."
+  },
+  {
+    "kind": "added",
+    "title": "App-session background trip ownership",
+    "description": "A shared in-memory trip service owns GPS independently of the map component, so switching ZAE tabs does not end the trip and reopening GODSPEED restores it. It requests a screen wake lock when supported and reports when the device releases or cannot provide it. Desktop minimization/background operation depends on the OS and WebView; phone locking may suspend GPS."
+  },
+  {
+    "kind": "limitations",
+    "title": "Traffic ETA and reroutes have bounded coverage",
+    "description": "WSDOT flow classes are regional and approximate; traffic penalties are uncalibrated estimates, and provider route durations may already reflect time-of-day assumptions. Automatic reroutes address being off route or retaining missed stops; they do not globally optimize around congestion. Completion percentages measure the current route and restart when a new remaining route is calculated."
+  }
+]

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorText, IN_TAURI } from "../../core/bridge";
 import { Locked, securitySession, setSecuritySession } from "../security/SecurityPanel";
 import "../research/Research.css";
+import { DetailScreen, detailKey } from "../shell/PageNavigator";
 
 type Item = { id: string; title: string; created: string; size: number; kind: "note" | "file"; name: string };
 type Full = Item & { text: string; data: string; mime: string };
@@ -50,6 +51,7 @@ export function VaultPanel() {
     try { await call("/api/vault/save", { title: file.name, name: file.name, data, mime: file.type }); await load(); }
     catch (failure) { setError(errorText(failure)); }
   };
+  const keptDraft = useRef<{ title: string; text: string } | null>(null);
   const show = async (id: string) => {
     try { setOpen(await call<Full>("/api/vault/item", { id })); } catch (failure) { setError(errorText(failure)); }
   };
@@ -73,6 +75,8 @@ export function VaultPanel() {
         <input type="file" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void addFile(file); event.target.value = ""; }}/></label>
       <button type="button" onClick={() => { setSecuritySession(null); setSession(null); }}>Lock</button>
     </div>
+    <DetailScreen id="vault-draft" name="Vault" open={!!draft} title={draft?.title.trim() || "New vault note"}
+      onOpen={() => { if (keptDraft.current) setDraft(keptDraft.current); }} onClose={() => { keptDraft.current = draft; setDraft(null); }}/>
     {draft && <div className="research__side">
       <input aria-label="Title" placeholder="Title" value={draft.title} maxLength={200} onChange={event => setDraft({ ...draft, title: event.target.value })}/>
       <textarea aria-label="Note" value={draft.text} onChange={event => setDraft({ ...draft, text: event.target.value })} style={{ minHeight: 160 }}/>
@@ -84,6 +88,8 @@ export function VaultPanel() {
           <small>{item.kind} · {new Date(item.created).toLocaleDateString()} · {Math.max(1, Math.round(item.size / 1024))} KB</small></button>
         <button type="button" className="research__danger" onClick={() => void remove(item.id)}>{confirm === item.id ? "Delete?" : "✕"}</button>
       </li>)}{!items.length && <li className="research__empty">The vault is empty.</li>}</ul>
+      <DetailScreen id="vault-item" name="Vault" open={!!open} itemId={open?.id} title={open?.title || "Vault item"}
+        onOpen={id => { const item = items.find(entry => detailKey(entry.id) === id); if (item) void show(item.id); }} onClose={() => setOpen(null)}/>
       {open && <div className="research__side">
         <h3>{open.title}</h3>
         {open.text && <div className="research__result">{open.text.split("\n").map((line, index) => <p key={index}>{line}</p>)}</div>}
