@@ -96,3 +96,11 @@ All past, present and new ZAE features must have a documented voice path. Route 
 
 ## Weekly whole-system release cadence (Grey, 2026-11-11)
 Sunday is the target for a substantial coordinated ZAENIA whole-system release. Plan and measure early in the week, freeze features Friday, validate the release candidate/recovery path Saturday, and release the verified scope Sunday through the existing authorization and owner-install workflow. Preserve accepted features and source provenance; include detailed patch notes, performance evidence, native/web artifacts, voice paths, known limits and rollback. Keep urgent fixes possible between Sundays. This week's plan is in the primary checkout's Master Build Plan, November 11-15 execution section.
+
+## How Claude and Codex work together (Grey, 2026-11-12)
+- Codex is default builder and release owner: versions, master-plan entries, staging and owner-approved main integration.
+- Claude reviews security/auth/execution/updater changes and handles bounded architecture or difficult bugs from exact packets.
+- C:\Projects\ZAENIA is the run/integration folder. Develop in C:\Projects\ZAENIA-codex\<topic> or C:\Projects\ZAENIA-claude\<topic>, on a separate feature branch from main or the current release branch. Never build installers from .tmp snapshots.
+- Claim work in docs/architecture/WORKBOARD.md before touching shared files. Feature branches leave updates/notes/<topic>.json and a handoff; they do not bump versions or stage.
+- Friday feature freeze; Saturday independent release review; Sunday one coordinated owner-installed release. Intelligence/learning does not grant execution rights.
+- ZAE build requests are local by default. Explicit per-request Claude use is labeled as consuming the owner’s allowance; there is no silent cloud fallback.

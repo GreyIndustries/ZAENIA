@@ -125,8 +125,12 @@ desktop/dist-web/
 # Coding-tool leftovers (Aider history and caches)
 .aider*
 # Staged and installed app updates (built exes and phone site), see scripts/stage_update.ps1
-/updates/
+/updates/*
+!/updates/notes/
+!/updates/notes/**
 
 /*-test-summary.json
 /desktop/baseline-frontend-tests.json
 /docs/previews/nav-split/
+
+/docs/handoffs/zae-needs-help/
