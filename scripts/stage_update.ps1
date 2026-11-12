@@ -1,4 +1,4 @@
-# Build a ZAENIA update and stage it for Grey to install from Settings > Updates.
+﻿# Build a ZAENIA update and stage it for Grey to install from Settings > Updates.
 # Nothing installed or served changes here: the desktop exe and the phone site go to updates\pending\<id>\
 # and only Install (scripts\install_update.ps1, run by the desktop app) puts them in place.
 #

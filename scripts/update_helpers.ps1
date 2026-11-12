@@ -1,4 +1,4 @@
-# Pure helpers shared with the isolated installer checks.
+﻿# Pure helpers shared with the isolated installer checks.
 function Get-ZaeInstallProcesses($Processes, [string]$InstalledExe, [string]$ProjectRoot) {
     $Prefix = [IO.Path]::GetFullPath($ProjectRoot).TrimEnd('\') + '\'
     @($Processes | Where-Object {

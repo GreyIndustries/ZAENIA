@@ -1,4 +1,4 @@
-# Install a staged update (Settings > Updates > Install). Started by the desktop app, hidden.
+﻿# Install a staged update (Settings > Updates > Install). Started by the desktop app, hidden.
 # Checks the staged exe against its manifest, backs up the installed app and phone site, closes ZAENIA,
 # puts the new versions in place, optionally restarts the server, records the install and reopens ZAENIA.
 param(
