@@ -4,6 +4,8 @@ import type { CSSProperties, FormEvent, ReactNode } from "react";
 import { SystemProgressCore } from "./components/core/SystemProgressCore";
 import { NeuralCore } from "./components/core/NeuralCore";
 import { CoreBackdrop } from "./components/core/CoreBackdrop";
+import { CorePortal, CoreSlot } from "./components/core/CoreStage";
+import { MicCore } from "./components/core/MicCore";
 import { useWorkspaceMotion, WorkspaceMotionControls } from "./components/core/WorkspaceMotion";
 import { workspacePhase } from "./core/workspaceDynamics";
 import { usePlatformRuntime } from "./core/usePlatformRuntime";
@@ -42,6 +44,7 @@ import type { NotesDraft } from './components/notes/NotesPanel';
 import type { PersonalDraftCache } from './components/personal/PersonalPanels';
 import { useAssistantInbox } from "./core/followThrough";
 import { NotificationCenter } from "./components/shell/NotificationCenter";
+import { BRIEF_EVENT, isBriefRequest } from "./core/briefRequest";
 // Module windows load when first opened, so the core appears sooner.
 const PlanStudio = lazy(() => import("./components/plan/PlanStudio").then(module => ({ default: module.PlanStudio })));
 const FilesPanel = lazy(() => import("./components/files/FilesPanel").then(module => ({ default: module.FilesPanel })));
@@ -67,9 +70,11 @@ const ResearchPage = lazy(() => import("./components/research/ResearchPage").the
 const WorkbenchPanel = lazy(() => import('./components/personal/PersonalPanels').then(module => ({ default: module.WorkbenchPanel })));
 const MusicStudio = lazy(() => import('./components/music/MusicStudio').then(module => ({ default: module.MusicStudio })));
 const FitnessStudio = lazy(() => import('./components/personal/FitnessStudio').then(module => ({ default: module.FitnessStudio })));
+const MapPanel = lazy(() => import("./components/map/MapPanel").then(module => ({ default: module.MapPanel })));
 import { useCoreStartup } from "./core/startup";
 import { skipWhileAway, useAppInBackground } from "./core/appBackground";
-import { AppWindow, Dock, useWindowShell, windowForText } from "./components/shell/WindowShell";
+import { AppWindow, tabBase, useWindowShell, windowForText } from "./components/shell/WindowShell";
+import { TabStrip } from "./components/shell/TabStrip";
 import { layoutAck, parseLayoutCommand } from "./core/layoutCommands";
 import { ACCENTS, appearanceStyle, tabAppearance, DEFAULT_APPEARANCE, parseAppearance, parseAppearanceCommand } from "./core/appearance";
 import type { Appearance } from "./core/appearance";
@@ -83,12 +88,20 @@ import { CALM_PASSWORD_STATUS, CalmPasswordSettings } from "./components/securit
 import { matchCalmPhrase, SLEEP_CUE, type CalmPhrase } from "./core/calmPhrases";
 import { glowItem } from "./core/glow";
 import { EverythingRemembered } from "./components/assistant/EverythingRemembered";
+import { MailPanel } from "./components/assistant/MailPanel";
 import { addFaceId, approveFaceIdKey, faceIdReady, faceIdSupported, listFaceIdKeys, removeFaceIdKey } from "./core/faceId";
 import type { FaceIdKey } from "./core/faceId";
 import { situationNow } from "./core/wakeSituation";
 import { useSwipeNavigation } from "./core/swipe";
 import { AssistantFront } from "./components/overview/AssistantFront";
 import { CATEGORIES } from "./core/categories";
+import { PageActivityObserver, visiblePageNavigators } from "./components/shell/PageActivity";
+import { ResumeOffers, readPageActivities, activityLine, clearPageActivities, parseResumeAnswer, type PageActivity } from "./core/pageActivity";
+import { parseUiCommand, routeSteps, routeForActivity, executeUiControl, voiceControls, type UiCommand, type PageRoute } from "./core/voiceUi";
+import type { SnapCount } from "./core/windowLayout";
+import "./components/shell/MissionDeck.css";
+import { NavigationHub } from "./components/navigation/NavigationHub";
+import { readAppVisits, recordAppVisit } from "./core/navigationActivity";
 import { TopCategories } from "./components/TopCategories";
 import { CodeDoctorStudio } from "./components/tools/CodeStudio";
 import { NotesBoard, StatusGauges, WorkbenchLab } from "./components/studios/MainViews";
@@ -100,8 +113,14 @@ import { AssistantMemoryRules, LookStudio, SettingsSearch, StatusReadiness } fro
 import type { SettingToggle } from "./components/studios/ThirdViews";
 import { NearQr } from "./components/studios/NearQr";
 import { PageTabs } from "./components/shell/PageTabs";
+import { SettingsHub } from "./components/settings/SettingsHub";
+import { UpdatesPanel } from "./components/settings/UpdatesPanel";
+import { AboutPanel } from "./components/settings/AboutPanel";
 import type { LayoutAction, LayoutTarget, Spot } from "./core/layoutCommands";
-import { attendedWindow } from "./core/windowLayout";
+import { attendedWindow, paneInDirection } from "./core/windowLayout";
+import { PaneNavProvider, paneBack, paneForward, recordAppStep, setAppStepHandler } from "./components/shell/PaneNav";
+import { requestHome } from "./components/shell/PageNavigator";
+import { catalogNode, moduleMeta, navigatorFor } from "./core/pageCatalog";
 import "./App.css";
 import "./styles/phone-app.css";
 
@@ -113,13 +132,13 @@ type VisualMode = "blend" | "progress";
 // chat bar. Security is its own tab, locked behind the passkey or spoken phrase.
 const nav = ([
   { id: "overview", label: "Overview", short: "Core", icon: "home" },
-  { id: "status", label: "Status", short: "Status", icon: "pulse" },
-  { id: "security", label: "Security", short: "Security", icon: "shield" },
-  { id: "tasks", label: "Tasks & Calendar", short: "Plan", icon: "calendar" },
+  // Status and Security live inside Settings (Grey, 2026-11-09): its side menu has Settings, Status and Security.
+  // LIFE (Grey, 2026-11-09): Plan (tasks & calendar) and Fitness & Health share one tab. The id stays "tasks" so every
+  // existing command still opens it; "fitness" is an alias that lands on its Fitness & Health sub-tab.
+  { id: "tasks", label: "LIFE", short: "LIFE", icon: "calendar" },
   { id: "notes", label: "Notes", short: "Notes", icon: "notes" },
   { id: 'workbench', label: 'Workbench', short: 'Workbench', icon: 'panel' },
   { id: 'music', label: 'Music', short: 'Music', icon: 'music' },
-  { id: 'fitness', label: 'Fitness & Health', short: 'Fitness', icon: 'check' },
   { id: "research", label: "Research", short: "Research", icon: "pen" },
   { id: "codedoctor", label: "Code Doctor & Files", short: "Code", icon: "codefile" },
   { id: "arena", label: "Arena", short: "Arena", icon: "brain" },
@@ -132,7 +151,7 @@ const sections: Record<Section, { title: string; label: string; description: str
   overview: { title: "The Core", label: "CENTRAL INTELLIGENCE", description: "A living neural network connecting ZÆNIA's subsystems. Signals travel from the nucleus through each branch to its module." },
   status: { title: "Status", label: "READINESS", description: "Live module readiness, PC load and ZAE's overall security level." },
   security: { title: "Security", label: "LOCKED · OWNER ONLY", description: "Live attack resistance, weak spots and how to fix them, improvements over time, security checks and the full activity log." },
-  tasks: { title: "Tasks & Calendar", label: "PLAN", description: "Your schedule and your tasks side by side. Task deadlines show on the calendar; everything is kept on your PC, so the phone and desktop match." },
+  tasks: { title: "LIFE", label: "PLAN · FITNESS & HEALTH · MAP", description: "Your schedule and tasks, training, food and body log, and a map with live traffic, in one tab. Everything is kept on your PC, so the phone and desktop match." },
   calendar: { title: "Calendar", label: "SCHEDULE", description: "Your ZÆNIA calendar, events you add here and live Google Calendar: the same schedule your brief reads." },
   notes: { title: 'Notes', label: 'KEEP FOR LATER', description: 'Save ideas and details, search them later, and choose what ZAE can reference.' },
   workbench: { title: 'Workbench', label: 'PROJECTS · TOOLS · LABS', description: 'Projects and inventions, science and tech tools, and chemistry and physics labs, with ZAE to explain.' },
@@ -149,17 +168,19 @@ const sections: Record<Section, { title: string; label: string; description: str
   assistant: { title: "Assistant", label: "MEMORY & FOLLOW-THROUGH", description: "Review what ZÆNIA remembers and manage timely calendar and task follow-through." },
   files: { title: "Files", label: "SYSTEM FILES", description: "Recent changes and ZÆNIA's code and config. The desktop app saves with a backup; the phone sends changes for approval on the PC." },
   remote: { title: "PC remote", label: "CONTROL THE PC FROM HERE", description: "See what's open on your PC and open, hide or close tabs, show the dashboard or switch to Calm view. Saving, launching and approvals stay at the PC." },
-  system: { title: "Settings", label: "SYSTEM · APPEARANCE · VAULT", description: "Live module states, the core and appearance settings, and the passkey-locked Vault." },
+  system: { title: "Settings", label: "SETTINGS · STATUS · SECURITY", description: "Your settings, live status and the locked Security tools, plus Updates to install and About with every version number." },
 };
 // On desktop every workspace page opens as a window over the core.
 // Phone bottom bar: these first, the open tab if it's another one, then "More" for everything.
-const PHONE_TABS: readonly string[] = ["overview", "tasks", "fitness", "research"];
+const PHONE_TABS: readonly string[] = ["overview", "tasks", "research", "notes"];
 const mainStage = () => document.querySelector<HTMLElement>(".main-stage");
-const WINDOW_IDS: readonly string[] = ["status", "security", "tasks", "notes", "workbench", "music", "fitness", "research", "codedoctor", "arena", "assistant", "system"];
+const WINDOW_IDS: readonly string[] = ["tasks", "notes", "workbench", "music", "research", "codedoctor", "arena", "assistant", "system"];
 // Tasks and Calendar are one tab now; anything asking for "calendar" opens it.
 // News lives in Research and Files in Code Doctor now (Grey, 2026-10-30); the old names open the right sub-tab.
-const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", library: "research", history: "research", notebook: "research", suggestions: "codedoctor", news: "research", files: "codedoctor" };
-const ALIAS_SUBTAB: Record<string, { page: string; tab: string }> = { news: { page: "research", tab: "news" }, files: { page: "codedoctor", tab: "files" } };
+const WINDOW_ALIASES: Record<string, string> = { calendar: "tasks", fitness: "tasks", status: "system", security: "system", library: "research", history: "research", notebook: "research", suggestions: "codedoctor", news: "research", files: "codedoctor" };
+const ALIAS_SUBTAB: Record<string, { page: string; tab: string }> = { news: { page: "research", tab: "news" }, files: { page: "codedoctor", tab: "files" },
+  system: { page: "settingshub", tab: "settings" }, status: { page: "settingshub", tab: "status" }, security: { page: "settingshub", tab: "security" },
+  tasks: { page: "life", tab: "plan" }, calendar: { page: "life", tab: "plan" }, fitness: { page: "life", tab: "fitness" } };
 const phaseLabels: Record<ModulePhase, string> = { ready: "READY", working: "WORKING", pending: "PENDING", error: "ERROR" };
 
 // One seamless wave period every 60 units; the SVG is twice as wide as its
@@ -213,6 +234,7 @@ function Wave({ tone, live }: { tone: "amber" | "blue"; live: boolean }) {
 
 // Phone layout: bottom tab bar, pinned chat box and a slide-up status sheet.
 const PHONE_QUERY = "(max-width: 760px)";
+const PHONE_SECTION_KEY = "zaenia.phone.section";
 function useIsPhone() {
   const [phone, setPhone] = useState(() => window.matchMedia(PHONE_QUERY).matches);
   useEffect(() => {
@@ -354,6 +376,18 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [calmOpen, setCalmOpen] = useState(() => { try { return localStorage.getItem("zaenia.calm.active") === "1"; } catch { return false; } });
   const [calmNote, setCalmNote] = useState<string | null>(null);
   const [calmSetupNotice, setCalmSetupNotice] = useState<string | null>(null);
+  // Settings > Updates: say when an update is waiting for Grey to install (checked at start, then every 30 minutes).
+  const [updateNotice, setUpdateNotice] = useState<string | null>(null);
+  useEffect(() => {
+    if (!IN_TAURI) return;
+    let stopped = false;
+    const check = () => { void api<{ pending?: { title?: string; version?: string; ready?: boolean }[] }>("GET", "/api/updates").then(data => {
+      const ready = (data.pending ?? []).filter(item => item.ready);
+      if (!stopped) setUpdateNotice(ready.length ? `Update ready to install: ${ready[0].title ?? "ZAENIA"} ${ready[0].version ?? ""}`.trim() + (ready.length > 1 ? ` (and ${ready.length - 1} more)` : "") : null);
+    }).catch(() => undefined); };
+    check(); const timer = window.setInterval(check, 30 * 60_000);
+    return () => { stopped = true; window.clearInterval(timer); };
+  }, []);
   const calmSince = useRef(Date.now());
   const calmSession = useRef(0);
   const renderedCalmSession = calmSession.current;
@@ -379,6 +413,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     openSection("overview");
   }
   const [motion, setMotion] = useState(true);
+  // Dev server only: rendered checks drive the voice phase (listening/thinking/speaking) without a microphone.
+  const [devPhase, setDevPhase] = useState<"idle" | "listening" | "thinking" | "speaking" | null>(null);
   // The desktop and phone apps always show live data; sample values exist only in the browser preview.
   const [source, setSource] = useState<"preview" | "local">(() => canGoLive ? "local" : "preview");
   const [startupReplay, setStartupReplay] = useState(0);
@@ -420,6 +456,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const [actionRefresh, setActionRefresh] = useState({ tasks: 0, calendar: 0 });
   const [streamingId, setStreamingId] = useState<number | null>(null);
   const [voiceNote, setVoiceNote] = useState<string | null>(null);
+  // Layout result with a visible Undo (Claude 2026-11-11); shown above the panes, not in the chat bar.
+  const [arrangeToast, setArrangeToast] = useState<{ text: string; undo: boolean; at: number } | null>(null);
+  // Short status lines (e.g. "Nothing to go forward to") fade instead of staying on screen.
+  useEffect(() => { if (!voiceNote) return; const timer = window.setTimeout(() => setVoiceNote(null), 4500); return () => window.clearTimeout(timer); }, [voiceNote]);
+  useEffect(() => { if (!arrangeToast) return; const timer = window.setTimeout(() => setArrangeToast(null), arrangeToast.undo ? 12000 : 6000); return () => window.clearTimeout(timer); }, [arrangeToast]);
   // No wake word: the PC decides what is meant for ZÆNIA, so there is no follow-up window to show.
   const [openMic, setOpenMic] = useState(true);
   const [pcVoice, setPcVoice] = useState<{ running: boolean; state: string; recognising?: boolean | null } | null>(null);
@@ -438,7 +479,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const isPhone = useIsPhone();
   // Desktop shell: pages open as movable windows; the phone keeps full screens.
   const windowed = !isPhone;
+  const [navigationView, setNavigationView] = useState<"orbit" | "workspace" | null>(null);
   const shell = useWindowShell(WINDOW_IDS, WINDOW_ALIASES);
+  const shellRef = useRef(shell); shellRef.current = shell;
   const attendedTab = useRef<string | null>(null);
   const personalDrafts = useRef<PersonalDraftCache>({});
   const layerRef = useRef<HTMLDivElement | null>(null);
@@ -479,6 +522,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   function handleHandAction(action: GestureAction): string | void {
     if (calmOpen || background || document.hidden || nearCode || faceIdPending.length) return "Hand controls paused";
     if (action.kind === "stop") { interrupt(); return "Stopped"; }
+    if (action.kind === "command") { const text = action.text.trim().slice(0, 160); if (!text) return "Empty shortcut"; submit(text); return `Sent: ${text.length > 40 ? `${text.slice(0, 39)}…` : text}`; }
     if (action.kind === "home") { openSection("overview"); return "Home"; }
     if (action.kind === "calm") { goCalm(); return "Calm view"; }
     if (action.kind === "mic") { const on = !listen.alwaysWanted; toggleListening(); return on ? "Mic on" : "Mic off"; }
@@ -494,7 +538,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         const all = [...shell.windows].sort((a, b) => a.id.localeCompare(b.id));
         const index = all.findIndex(win => win.id === shell.active);
         const next = all[(index + step + all.length) % all.length];
-        if (next) { shell.open(next.id); return sections[next.id as Section]?.title ?? "Next tab"; }
+        if (next) { shell.open(next.id); return sections[tabBase(next.id) as Section]?.title ?? "Next tab"; }
         return;
       }
       const order = nav.map(item => item.id).filter(id => id !== "overview" && id !== "remote");
@@ -519,7 +563,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   }
   function handleHandWindow(id: string, event: VisualHandMotion): boolean {
     if (event.kind === "end") { handWindow.current = null; return true; }
-    if (calmOpen || background || document.hidden || !document.hasFocus() || nearCode || faceIdPending.length) { handWindow.current = null; return false; }
+    if (navigationView || calmOpen || background || document.hidden || !document.hasFocus() || nearCode || faceIdPending.length) { handWindow.current = null; return false; }
     const win = shell.windows.find(item => item.id === id && !item.minimized);
     const box = layerRef.current?.getBoundingClientRect();
     if (!win || !box || box.width <= 0 || box.height <= 0) return false;
@@ -532,9 +576,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     grip.rect = handWindowRect(grip.rect, event, { width: window.innerWidth, height: window.innerHeight }, box);
     shell.update(id, grip.rect); return true;
   }
+  const resumeOffers = useRef(new ResumeOffers());
+  const uiRequest = useRef(0);
+  // Dev server only; Vite strips this from production builds. Lets the rendered checks inject a recognised-voice turn
+  // (the same submit path the microphone uses) and a local unsaved draft, without a Core or owner data.
+  if (import.meta.env.DEV) Object.assign(window, { __ZAE_DEV__: { phase: setDevPhase, voice: (text: string) => submit(text, "voice"), seedDraft: (collection: string, value: unknown) => { (personalDrafts.current as Record<string, unknown>)[collection] = { value, dirty: true }; }, seedNote: (note: unknown) => { (notesDraft as { current: unknown }).current = { note, dirty: true }; } } });
+  useEffect(()=>{const clear=()=>resumeOffers.current.reset();window.addEventListener("zae:page-activity-cleared",clear);return()=>window.removeEventListener("zae:page-activity-cleared",clear);},[]);
   const stageSection: Section = windowed ? "overview" : section;
   const activeJobs = (platformRuntime.summary?.jobs ?? []).filter(job => !/done|complete|fail|cancel/i.test(job.status)).length;
   const openSection = (requested: Section) => {
+    window.dispatchEvent(new CustomEvent("zae:navigation-dismiss"));
+    if (requested !== "overview") recordAppVisit(requested);
     const sub = ALIAS_SUBTAB[requested];
     if (sub) {
       try { localStorage.setItem(sub.page === "research" ? "zaenia.researchTab" : `zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ }
@@ -543,6 +595,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const next = (WINDOW_ALIASES[requested] ?? requested) as Section;
     const current = sectionRef.current;
     if (next !== current) {
+      // Phone: one screen, so an app change is a Back step on that screen (Claude 2026-11-11).
+      if (!windowed) { recordAppStep("phone", current, next); try { localStorage.setItem(PHONE_SECTION_KEY, next); } catch { /* optional */ } }
       pageHistory.current.back.push(current);
       if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
       pageHistory.current.forward = [];
@@ -552,31 +606,45 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (!windowed) return;
     if (next === "overview") shell.showDesktop(); else shell.open(next);
   };
-  const movePageHistory = (direction: "back" | "forward") => {
-    const from = direction === "back" ? pageHistory.current.back : pageHistory.current.forward;
-    const to = direction === "back" ? pageHistory.current.forward : pageHistory.current.back;
-    const target = from.pop();
-    if (!target) return;
-    to.push(sectionRef.current);
-    sectionRef.current = target;
-    setSection(target);
-    if (windowed) {
-      if (target === "overview") shell.showDesktop(); else shell.open(target);
-    }
+  /** Back/Forward for one screen: the pane under the pointer (or the attended pane), or the phone screen. */
+  const navigateHistory = (direction: "back" | "forward", paneId?: string | null): boolean => {
+    if (!windowed) return direction === "back" ? paneBack("phone") : paneForward("phone");
+    const pane = paneId ?? attendedWindow(shell.windows, attendedTab.current, shell.active);
+    if (!pane) return false;
+    attendedTab.current = pane;
+    return direction === "back" ? paneBack(pane) : paneForward(pane);
   };
-  // Standard side-button mice send button 4 for Back and button 5 for Forward.
-  // Capture the press before WebView/browser defaults can navigate away from ZÆNIA.
+  const navigateRef = useRef(navigateHistory); navigateRef.current = navigateHistory;
+  useEffect(() => { setAppStepHandler(app => openSection(app as Section)); return () => setAppStepHandler(null); });
+  // Phone reload returns to the last screen (desktop panes already persist with the window shell).
+  useEffect(() => {
+    if (!isPhone) return;
+    try { const saved = localStorage.getItem(PHONE_SECTION_KEY) as Section | null; if (saved && saved !== "overview" && nav.some(item => item.id === saved)) { sectionRef.current = saved; setSection(saved); } } catch { /* optional */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // Standard side-button mice send button 3 for Back and button 4 for Forward. The pane under the pointer
+  // goes back through its own sub-page history. Capture the press before WebView/browser defaults navigate away.
   useEffect(() => {
     const onMouseDown = (event: MouseEvent) => {
       if (event.button !== 3 && event.button !== 4) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       if (calmOpen) return;
-      movePageHistory(event.button === 3 ? "back" : "forward");
+      if (document.querySelector("[data-app-navigation]")) { window.dispatchEvent(new CustomEvent("zae:navigation-back")); return; }
+      const pane = (event.target as Element | null)?.closest?.("[data-window-id]")?.getAttribute("data-window-id") ?? null;
+      if (!navigateRef.current(event.button === 3 ? "back" : "forward", pane)) setVoiceNote(event.button === 3 ? "This is the first page here, sir." : "Nothing to go forward to, sir.");
     };
-    window.addEventListener("mousedown", onMouseDown, true);
-    return () => window.removeEventListener("mousedown", onMouseDown, true);
+    const swallow = (event: MouseEvent) => { if (event.button === 3 || event.button === 4) { event.preventDefault(); event.stopImmediatePropagation(); } };
+    window.addEventListener("mousedown", onMouseDown, true); window.addEventListener("mouseup", swallow, true); window.addEventListener("auxclick", swallow, true);
+    return () => { window.removeEventListener("mousedown", onMouseDown, true); window.removeEventListener("mouseup", swallow, true); window.removeEventListener("auxclick", swallow, true); };
   }, [windowed, calmOpen]);
+  // Nested phone accordions open exact pages through the same router as search and voice (Claude 2026-11-11).
+  useEffect(() => {
+    const route = (event: globalThis.Event) => { const detail = (event as CustomEvent<PageRoute & { pane?: string }>).detail; if (detail?.app && Array.isArray(detail.path)) void navigateUiPage({ app: detail.app, path: detail.path, label: detail.label }, ++uiRequest.current, detail.pane); };
+    const tab = (event: globalThis.Event) => { const detail = (event as CustomEvent<PageRoute>).detail; if (detail?.app && Array.isArray(detail.path)) openRouteInTab(detail); };
+    window.addEventListener("zae:open-route", route); window.addEventListener("zae:open-tab", tab);
+    return () => { window.removeEventListener("zae:open-route", route); window.removeEventListener("zae:open-tab", tab); };
+  });
   useEffect(() => {
     const go = (event: globalThis.Event) => { const page = (event as CustomEvent<string>).detail; if (nav.some(item => item.id === page)) openSection(page as Section); };
     window.addEventListener("zae:open-section", go); return () => window.removeEventListener("zae:open-section", go);
@@ -594,7 +662,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const working = windowed && shell.windows.some(win => !win.minimized);
   // Grey (2026-10-30): the dashboard has no sidebar; it shows only inside a tab. Home lives in the ZÆNIA menu.
   const onDashboard = !isPhone && (windowed ? !working : section === "overview");
-  const coreDock: Spot = coreSpot !== "auto" ? coreSpot : working ? "top-left" : "center";
+  const coreDock: Spot = navigationView === "orbit" ? "center" : coreSpot !== "auto" ? coreSpot : working ? "top-left" : "center";
   const [brandOpen, setBrandOpen] = useState(false);
   const [restartNote, setRestartNote] = useState<string | null>(null);
   // Starting from the Start menu: if the server is off, start it with the API
@@ -625,7 +693,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // The title and sidebar follow the window in front.
   useEffect(() => {
     if (!windowed) return;
-    const active = (shell.active ?? "overview") as Section;
+    const active = (shell.active ? tabBase(shell.active) : "overview") as Section;
     if (active !== sectionRef.current) {
       pageHistory.current.back.push(sectionRef.current);
       if (pageHistory.current.back.length > 100) pageHistory.current.back.shift();
@@ -885,7 +953,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (action.kind === "close") { if (target === "all") shell.closeAll(); else if (target !== "core") shell.close(target); continue; }
       if (action.kind === "minimize") { if (target === "all") shell.showDesktop(); else if (target === "core") setCoreSpot("top-left"); else shell.minimize(target); continue; }
       if (action.kind === "restore") { if (target === "all") shell.restoreAll(); else if (target !== "core") shell.open(target); continue; }
-      if (action.kind === "maximize") { if (target === "core") { shell.showDesktop(); setCoreSpot("center"); } else shell.setRect(target, { x: 0, y: 0, w: 1, h: 1 }); continue; }
+      if (action.kind === "maximize") { if (target === "core") { shell.showDesktop(); setCoreSpot("center"); } else shell.maximize(target); continue; }
       if (action.kind === "place") {
         if (target === "core") { setCoreSpot(action.spot); continue; }
         const rect = { ...RECTS[action.spot] };
@@ -909,10 +977,13 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // commands. Saving files, launching apps and approvals are not on the list; they stay behind the desktop key.
   const remoteRef = useRef<(command: { action: string; target: string }) => void>(() => undefined);
   remoteRef.current = ({ action, target }) => {
-    if (calmOpen && (action === "open" || action === "wake" || action === "show_desktop")) {
+    if (calmOpen && (action === "open" || action === "wake" || action === "show_desktop" || action.startsWith("arrange_") || action === "undo_arrange")) {
       setCalmNote("Use your verified wake-up call or enter the dashboard password on this screen."); return;
     }
     const tab = WINDOW_IDS.includes(target) ? target as Section : null;
+    if ((nearCode || faceIdPending.length) && (action.startsWith("arrange_") || action === "undo_arrange")) return;
+    if (/^arrange_[234]$/.test(action)) { arrangeUiWindows(Number(action[action.length-1]) as SnapCount,target?target.split(","):undefined); return; }
+    if (action === "undo_arrange") { shell.undoSnap(); return; }
     if (action === "open" && tab) openSection(tab);
     else if (action === "close" && tab) { shell.close(tab); if (!windowed && section === tab) openSection("overview"); }
     else if (action === "minimize" && tab) shell.minimize(tab);
@@ -931,9 +1002,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   // A request Grey said to the PC voice (already checked as his voice): it runs here like a typed one, so in-app
   // actions happen and their result shows in the chat; the reply is spoken when Voice is on.
   const voiceTurnRef = useRef<(text: string) => void>(() => undefined);
-  voiceTurnRef.current = text => { if (calmOpen || !text.trim()) return; setVoiceNote(null); if (speakReplies) speech.prime(); submit(text); };
+  voiceTurnRef.current = text => { if (calmOpen || !text.trim()) return; setVoiceNote(null); if (speakReplies) speech.prime(); submit(text,"voice"); };
   calmEventRef.current = event => { if ((event.kind === "wake") === calmOpen) void calmPhrase(event, true); };
-  remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[win.id as Section]?.title ?? win.id, minimized: win.minimized })),
+  remoteSnapshot.current = JSON.stringify({ windows: shell.windows.map(win => ({ id: win.id, title: sections[tabBase(win.id) as Section]?.title ?? win.id, minimized: win.minimized })),
     active: shell.active ?? null, calm: calmOpen, section });
   useEffect(() => {
     if (!IN_TAURI) return;
@@ -994,7 +1065,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (action === "restart_token") { void restartServer().catch(failure => setVoiceNote(errorText(failure))); return "Restarting the server, sir."; }
     if (action === "connect_google") { void connectGoogleCalendar().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Google sign-in. Click Allow in your browser."; }
     if (action === "voice_training") { void openVoiceTraining().catch(failure => setVoiceNote(errorText(failure))); return "Opening voice training. Have your passkey ready, sir."; }
-    if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail sign-in. It's read-only; click Allow in your browser."; }
+    if (action === "connect_gmail") { void connectGmail().catch(failure => setVoiceNote(errorText(failure))); return "Opening the Gmail connect window. Create an app password on the Google page that opens, then type it in the window at the PC."; }
     if (action === "open_files") { openSection("files"); return "Files are up."; }
     if (action === "open_tasks") { openSection("tasks"); return "Tasks are up."; }
     if (action === "open_status") { openSection("status"); return "Status is up."; }
@@ -1041,7 +1112,159 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
     return true;
   }
-  function submit(message: string) {
+  function currentUiScope(): HTMLElement {
+    return document.querySelector<HTMLElement>(".navhub") ?? document.querySelector<HTMLElement>(".os-window--active .os-window__body") ?? document.querySelector<HTMLElement>(".main-stage") ?? document.body;
+  }
+  function currentUiApp(): string {
+    const scope=currentUiScope();const navigator=visiblePageNavigators(scope).slice(-1)[0]?.dataset.pageNavigator;
+    if(navigator==="status"||navigator==="security")return navigator;
+    const win=scope.closest<HTMLElement>("[data-window-id]")?.dataset.windowId;return win ? tabBase(win) : section;
+  }
+  function arrangeUiWindows(count: SnapCount, ids?: string[], anchor?: string): string {
+    if(!windowed)return "This phone shows one screen at a time, sir. Say “arrange three windows” to send that layout to your PC.";
+    const before=shell.windows.filter(win=>!win.minimized).map(win=>win.id);
+    const placed=shell.snap(count,ids,{anchor,recent:readAppVisits().map(visit=>visit.id)});
+    if(!placed){const text=`I need ${count} different apps for that layout, sir.`;setArrangeToast({text,undo:false,at:Date.now()});return text;}
+    for(const id of placed)recordAppVisit(id);
+    window.dispatchEvent(new CustomEvent("zae:navigation-dismiss"));setCoreSpot("auto");
+    const tucked=before.filter(id=>!placed.includes(id)).length;
+    const text=`Arranged ${count} windows: ${placed.map(id=>sections[tabBase(id) as Section]?.title??id).join(", ")}${tucked?`. ${tucked} other window${tucked>1?"s are":" is"} minimized in the dock`:""}, sir.`;
+    setArrangeToast({text,undo:true,at:Date.now()});
+    return text;
+  }
+  /** Open a page as its own screen tab (Ctrl/middle-click, "Open in new tab", voice). Phone: one screen, so it just opens. */
+  function openRouteInTab(route: PageRoute): string | null {
+    if(!windowed||route.app==="overview"||route.app==="remote"){void navigateUiPage(route, ++uiRequest.current);return null;}
+    const base=(WINDOW_ALIASES[route.app] ?? route.app);
+    if(!(base in sections))return null;
+    const id=shell.openTab(base);
+    void navigateUiPage(route, ++uiRequest.current, id);
+    return id;
+  }
+  async function navigateUiPage(route: PageRoute, request = uiRequest.current, target?: string): Promise<boolean> {
+    if(IN_TAURI && route.app==="remote")return false;
+    const steps=route.app==="remote"?[]:routeSteps(route);
+    for(const step of steps)try{localStorage.setItem(step.key,step.tab);}catch{/* optional */}
+    if(route.app==="overview"){
+      openSection("overview");
+      if(route.path[0]!=="dashboard")window.setTimeout(()=>window.dispatchEvent(new Event("zae:core-apps")),80);
+      return true;
+    }
+    if(!(route.app in sections))return false;
+    const canonical = WINDOW_ALIASES[route.app] ?? route.app;
+    // Stay in the tab the request came from when it shows the same app (two Build-request tabs, …).
+    const pane = windowed ? (target && tabBase(target) === canonical ? target : canonical) : undefined;
+    if(pane && pane !== canonical){ if(shell.windows.some(win=>win.id===pane)) shell.open(pane); } else openSection(route.app as Section);
+    let ready = false;
+    for(let attempt=0;attempt<60;attempt++){
+      if(uiRequest.current!==request)return false;
+      await new Promise(resolve=>window.setTimeout(resolve,40));
+      const scope=windowed?document.querySelector<HTMLElement>(`[data-window-id="${pane}"]${pane===canonical?".os-window--active":""} .os-window__body`):document.querySelector<HTMLElement>(`.glass-module--${canonical}`);
+      if(scope && (visiblePageNavigators(scope).length || route.app==="remote")){ready=true;break;}
+    }
+    if(!ready)return false;
+    // Wait for lazy/kept-alive pages, then deliver each hierarchical step to its normal handler.
+    for(const step of steps){
+      let delivered=false;
+      for(let attempt=0;attempt<100;attempt++){
+        if(calmOpen || uiRequest.current!==request)return false;
+        window.dispatchEvent(new CustomEvent("zae:page-tab",{detail:{page:step.page,tab:step.tab,pane}}));
+        await new Promise(resolve=>window.setTimeout(resolve,40));
+        const paneScope=pane?document.querySelector<HTMLElement>(`[data-window-id="${pane}"] .os-window__body`)??undefined:undefined;
+        const matching=visiblePageNavigators(paneScope).some(nav=>nav.dataset.pageNavigator===step.page&&nav.dataset.pageCurrent===step.tab);
+        if(matching || step.page==="settingshub"){delivered=true;break;}
+      }
+      if(!delivered)return false;
+    }
+    // A module or a screen with children opens on its home: the preview-05 bento of what's inside.
+    if(route.app!=="overview"&&route.app!=="remote"){const target=route.path.length?catalogNode(route.app,route.path):null;if(!route.path.length||target?.children?.length)requestHome(navigatorFor(route.app,route.path),pane);}
+    return true;
+  }
+  function recentUiActivity(): PageActivity | null {
+    const nav=visiblePageNavigators(currentUiScope()).slice(-1)[0];
+    return readPageActivities().find(item=>nav?item.navigator===nav.dataset.pageNavigator&&item.page===nav.dataset.pageCurrent:item.app===currentUiApp())??null;
+  }
+  async function runUiCommand(command: UiCommand, origin: "text"|"voice", generation:number): Promise<string> {
+    if(command.kind==="arrange"){
+      if(!windowed){const queued=await api<{pcOnline:boolean}>("POST","/api/remote/commands",{action:`arrange_${command.count}`,target:command.apps?.join(",")??""}).catch(()=>null);if(!queued)return "This phone stays on one screen, sir. I couldn't reach your PC to send that layout request.";return queued.pcOnline?`Sent a ${command.count}-window layout request to your PC; this phone stays on one screen, sir.`:"Your PC is offline; the layout request is queued briefly. This phone stays on one screen, sir.";}
+      return arrangeUiWindows(command.count,command.apps);
+    }
+    if(command.kind==="tabs"){window.dispatchEvent(new Event("zae:tab-manager"));return windowed?"Here are your open tabs, sir.":"This phone shows one screen at a time, sir.";}
+    if(command.kind==="close-tab"){if(!windowed||!shell.active)return "There's no tab to close here, sir.";const id=shell.active;shell.close(id);return "Closed that tab, sir. Say “reopen closed tab” to bring it back.";}
+    if(command.kind==="reopen-tab"){if(!windowed)return "This phone shows one screen at a time, sir.";return shell.restoreClosed()?"Reopened your last closed tab, sir.":"No recently closed tabs, sir.";}
+    if(command.kind==="open-tab"){const id=openRouteInTab(command.route);return id?`Opened ${command.route.label} in a new tab, sir.`:`Opening ${command.route.label}, sir.`;}
+    if(command.kind==="split-pages"){
+      if(!windowed){void navigateUiPage(command.routes[0], ++uiRequest.current);return "This phone shows one screen at a time, sir. Opened the first page.";}
+      const [a,b]=command.routes;const baseA=WINDOW_ALIASES[a.app]??a.app,baseB=WINDOW_ALIASES[b.app]??b.app;
+      const request=++uiRequest.current;
+      const firstOk=await navigateUiPage(a,request);
+      // Reuse an open tab of the second app (not the one showing the first page) before opening a new one.
+      const second=baseA===baseB?(shellRef.current.windows.find(win=>win.id!==baseA&&tabBase(win.id)===baseB)?.id??shell.openTab(baseB)):baseB;
+      const secondOk=await navigateUiPage(b,request,second);
+      await new Promise(resolve=>window.setTimeout(resolve,60));
+      const placed=shellRef.current.snap(2,[baseA,second]);
+      return firstOk&&secondOk&&placed?`Split: ${a.label} | ${b.label}, sir.`:"I couldn't open both of those side by side, sir.";
+    }
+    if(command.kind==="undo-arrange"){
+      if(!windowed){const sent=await api("POST","/api/remote/commands",{action:"undo_arrange",target:""}).then(()=>true,()=>false);return sent?"Sent an Undo layout request to your PC, sir.":"I couldn't reach your PC to undo its layout, sir.";}
+      return shell.undoSnap()?"Restored the previous arrangement, sir.":"No arrangement to undo, sir.";
+    }
+    if(command.kind==="back"||command.kind==="forward"){
+      if(!navigateHistory(command.kind))return command.kind==="back"?"This is the first page here, sir.":"Nothing to go forward to, sir.";
+      return command.kind==="back"?"Back, sir.":"Forward, sir.";
+    }
+    if(command.kind==="focus-pane"){
+      if(!windowed)return "This phone shows one screen at a time, sir.";
+      const visible=shell.windows.filter(win=>!win.minimized);
+      const target=paneInDirection(visible,attendedWindow(shell.windows,attendedTab.current,shell.active),command.direction);
+      if(!target)return "There's no pane in that direction, sir.";
+      attendedTab.current=target;shell.open(target);
+      window.setTimeout(()=>document.querySelector<HTMLElement>(`[data-window-id="${target}"] .os-window__body`)?.focus({preventScroll:true}),60);
+      return `${sections[target as Section]?.title??target} pane, sir.`;
+    }
+    if(command.kind==="restore-size"){
+      if(!windowed)return "This phone shows one screen at a time, sir.";
+      const target=attendedWindow(shell.windows,attendedTab.current,shell.active);
+      return target&&shell.restoreSize(target)?"Back to its place in the layout, sir.":"That window isn't maximized, sir.";
+    }
+    if(command.kind==="ambiguous")return `Which page, sir: ${command.labels.join("; ")}?`;
+    if(command.kind==="workspace"){window.dispatchEvent(new CustomEvent("zae:workspace",{detail:command.id}));return "Workspace opened, sir.";}
+    if(command.kind==="launcher"){window.dispatchEvent(new Event("zae:core-apps"));return "Your apps, sir.";}
+    if(command.kind==="clear-recent"){clearPageActivities();resumeOffers.current.reset();return "Cleared recent page work on this device, sir.";}
+    if(command.kind==="navigate"||command.kind==="resume"){
+      const recent=command.kind==="resume"?recentUiActivity():null;
+      const route=command.kind==="navigate"?command.route:recent?routeForActivity(recent):null;
+      if(!route)return "No recent work is available to resume here, sir.";
+      if(!await navigateUiPage(route))return "That page hasn't become available yet, sir.";
+      if(uiRequest.current!==generation)return "";
+      const activity=recentUiActivity();
+      const offer=origin==="voice"&&command.kind==="navigate"&&activity?resumeOffers.current.offer(activity):null;
+      return offer??`Opened ${route.label}, sir.`;
+    }
+    if(command.kind==="recent"){const activity=recentUiActivity();return activity?activityLine(activity):"No recent work is recorded on this page yet, sir.";}
+    const scope=currentUiScope();
+    if(command.kind==="voice-help"){
+      const controls=voiceControls(scope).map(node=>node.getAttribute("aria-label")||node.textContent?.trim()||"").filter(Boolean).slice(0,8);
+      return `You can say open an app and page, go back, go forward, next page, show pages, what was I working on here, arrange two, three or four windows, next pane, restore size, press a control, or set a named field. Visible controls: ${controls.join(", ")||"none"}. Protected actions keep their required authentication.`;
+    }
+    if(command.kind==="pages"||command.kind==="next"||command.kind==="previous"){
+      const nav=visiblePageNavigators(scope).slice(-1)[0];if(!nav)return "Open an app page first, sir.";
+      if(command.kind==="pages"){
+        const names=[...nav.querySelectorAll<HTMLElement>(".page-nav__siblings button,.page-nav__picker option")].map(node=>node.textContent?.trim()).filter(Boolean);
+        nav.querySelector<HTMLElement>(".page-nav__siblings button[aria-current=page],.page-nav__picker select")?.focus();
+        return names.length?`Pages here: ${names.join(", ")}, sir.`:"This page has no sibling pages, sir.";
+      }
+      const button=nav.querySelector<HTMLButtonElement>(command.kind==="next"?"[data-page-next]":"[data-page-previous]");
+      if(!button||button.disabled)return "You're at the end of these pages, sir.";
+      button.click();
+      return "Page changed, sir.";
+    }
+    if(command.kind==="press"||command.kind==="field"||command.kind==="toggle")return executeUiControl(command,scope);
+    return "That interface command is unavailable here, sir.";
+  }
+
+  function submit(message: string, origin: "text" | "voice" = "text") {
+    const uiGeneration = ++uiRequest.current;
     const phrase = matchCalmPhrase(message);
     if (phrase?.kind === "sleep") { void calmPhrase(phrase, false); return; }
     interrupt();
@@ -1050,12 +1273,45 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     const photoHistory = photoTurns.current.slice(-6);
     const attachedFiles = filesRef.current;
     const fileQuestion = attachedFiles.length > 0;
+    if (!photoQuestion && !fileQuestion) {
+      const answer = resumeOffers.current.answer(message);
+      const uiCommand = answer ? null : parseUiCommand(message, currentUiApp());
+      if (answer || uiCommand) {
+        const respond = (text: string) => {
+          if (uiRequest.current !== uiGeneration) return;
+          const at=new Date().toISOString();
+          setChat(prev=>[...prev,{id:++messageCounter.current,role:"user",text:message,at},{id:++messageCounter.current,role:"assistant",text,at}]);
+          if(speakReplies){speech.prime();void speech.speak(`ui-${messageCounter.current}`,text);}
+          followUntil.current=Date.now()+(resumeOffers.current.pending ? 90_000 : FOLLOW_UP_MS);
+        };
+        if (calmOpen || nearCode || faceIdPending.length) { respond("Finish the current authentication or wake-up flow first, sir."); return; }
+        if (answer) {
+          if(answer.answer==="continue"){
+            const route=routeForActivity(answer.activity);
+            if(route)void navigateUiPage(route).then(opened=>respond(opened?answer.reply:"That saved page is unavailable, sir."),()=>respond("That saved page is unavailable, sir."));
+            else respond("That saved page is no longer available, sir.");
+          }else respond(answer.reply);
+        } else {
+          resumeOffers.current.clearPending();
+          void runUiCommand(uiCommand!,origin,uiGeneration).then(respond,()=>respond("I couldn't complete that interface action, sir."));
+        }
+        return;
+      }
+      resumeOffers.current.clearPending();
+    }
     const fixCommand = IN_TAURI && !photoQuestion && !fileQuestion ? FIX_COMMANDS.find(([pattern]) => pattern.test(message.toLowerCase().replace(/^(?:zae|zay|zaenia)[, ]+/, "").trim())) : undefined;
     const fixReply = fixCommand ? runFix(fixCommand[1]) : null;
     if (fixReply) {
       const at = new Date().toISOString();
       setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, at }, { id: ++messageCounter.current, role: "assistant", text: fixReply, at }]);
       if (speakReplies) { speech.prime(); void speech.speak(`fix-${messageCounter.current}`, fixReply); }
+      return;
+    }
+    if (!photoQuestion && !fileQuestion && LIVE_API && isBriefRequest(message)) {
+      // The briefing panel (calendar, weather, traffic; read aloud) starts from words now that its button is gone.
+      const at = new Date().toISOString();
+      setChat(prev => [...prev, { id: ++messageCounter.current, role: "user", text: message, at }, { id: ++messageCounter.current, role: "assistant", text: "Pulling your brief now. It plays and shows at the top right.", at }]);
+      window.dispatchEvent(new Event(BRIEF_EVENT));
       return;
     }
     const restyle = photoQuestion || fileQuestion ? null : parseAppearanceCommand(message, appearance);
@@ -1086,6 +1342,11 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         const reminderRequest = /\b(remind(?:er|ers)?|nudge|alarm)\b/i.test(message);
         if (reminderRequest) {
           try { localStorage.setItem("zaenia.plan.tab", "reminders"); } catch { /* optional */ }
+        }
+        const sub = ALIAS_SUBTAB[target];
+        if (sub) {
+          try { localStorage.setItem(sub.page === "research" ? "zaenia.researchTab" : `zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ }
+          window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub }));
         }
         shell.open(target);
         if (reminderRequest) window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:plan-tab", { detail: "reminders" })), 60);
@@ -1277,6 +1538,9 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     }
     if (calmOpen) return;
     const words = (result.addressed ? result.command : result.text).trim();
+    if (resumeOffers.current.pending && parseResumeAnswer(words) && (result.addressed || Date.now()<followUntil.current)) {
+      if(barged)speech.duck(false);setVoiceNote(null);submit(words,"voice");return;
+    }
     if (barged) {
       // Rule: the moment she hears you she has already stopped talking and
       // writing (onBargeIn) and is back to listening; what you said next is
@@ -1289,12 +1553,12 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       if (!acceptsVoiceTurn(result, true) && !isStopRequest(words) && !result.dismiss) { speech.duck(false); return; }
       interrupt();
       if (result.dismiss || isStopRequest(words)) { setVoiceNote("Stopped. Go ahead when you're ready."); return; }
-      setVoiceNote(null); submit(words);
+      setVoiceNote(null); submit(words,"voice");
       return;
     }
     if (clipMode === "dictate") {
       if (!words) { setVoiceNote("Didn't catch that. Tap the mic and try again."); return; }
-      setVoiceNote(null); submit(words);
+      setVoiceNote(null); submit(words,"voice");
       return;
     }
     if (isQuietVoiceAcknowledgement(result, sendingRef.current || Date.now() < followUntil.current)) {
@@ -1306,7 +1570,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       // While she's thinking: "Zay, stop" stops her; "Zay, <something else>" replaces the request.
       if (!acceptsVoiceTurn(result, Date.now() < followUntil.current)) return;
       if (!words || result.dismiss || isStopRequest(words)) { interrupt(); setVoiceNote("Stopped. Go ahead when you're ready."); return; }
-      setVoiceNote(null); submit(words);
+      setVoiceNote(null); submit(words,"voice");
       return;
     }
     const inFollowUp = Date.now() < followUntil.current;
@@ -1318,8 +1582,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     if (result.addressed && !words) {
       followUntil.current = Date.now() + FOLLOW_UP_MS;
       setVoiceNote("Listening.");
-    } else if ((acceptsVoiceTurn(result, inFollowUp) || parseLayoutCommand(words) || parseAppearanceCommand(words, appearance)) && words) {
-      setVoiceNote(null); submit(words);
+    } else if ((acceptsVoiceTurn(result, inFollowUp) || parseLayoutCommand(words) || parseUiCommand(words,currentUiApp()) || parseAppearanceCommand(words, appearance)) && words) {
+      setVoiceNote(null); submit(words,"voice");
     }
   }
   const micPaused = briefingActive || speech.playing !== null || speech.loading !== null;
@@ -1425,7 +1689,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
   const moduleInfo = telemetry?.modules.find(m => m.id === selectedModule);
   const headerStatus = source === "preview" ? (startup.ready ? "SYSTEM ONLINE · PREVIEW" : "SYSTEM STARTING") : (localTelemetry ? (localTelemetry.system?.mode === "unattended" ? "SYSTEM ONLINE · TOKEN MODE" : "SYSTEM ONLINE · LIVE") : "STATUS UNAVAILABLE");
   // The live phase drives the core at once; the workspace layout settles more slowly.
-  const voicePhase = workspacePhase({
+  const voicePhase = (import.meta.env.DEV && devPhase) || workspacePhase({
     hearing: listen.status === "hearing" || pcVoice?.state === "hearing",
     transcribing: listen.status === "transcribing",
     sending,
@@ -1455,6 +1719,16 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
     return () => window.clearInterval(id);
   }, []);
   const restingNow = resting && workspaceMotion.settings.adaptive && voicePhase === "idle";
+  // C5 "Core in the mic" (Grey, 2026-11-11): Home keeps the hero core; every other page, the category sheet and the
+  // tab manager put the same core in the chat mic, tinted with the page's module colour.
+  const [tabManagerOpen, setTabManagerOpen] = useState(false);
+  useEffect(() => { const on = (event: Event) => setTabManagerOpen(Boolean((event as CustomEvent).detail)); window.addEventListener("zae:tab-manager-state", on); return () => window.removeEventListener("zae:tab-manager-state", on); }, []);
+  const coreAtMic = mode === "blend" && !calmOpen && (isPhone ? section !== "overview" : working || navigationView === "workspace" || tabManagerOpen);
+  const activeApp = isPhone ? section : working && shell.active ? tabBase(shell.active) : "";
+  const coreAccent = coreAtMic && activeApp ? moduleMeta(activeApp).accent : "#e0a353";
+  // Anything that can cover or move the core: it re-checks whether it is visible when this changes.
+  const coreLayoutKey = [section, coreDock, coreAtMic ? "mic" : "", tabManagerOpen ? "tabs" : "", navigationView ?? "", calmOpen ? "calm" : "", isPhone ? "phone" : "", sheetOpen ? "sheet" : "", phoneMore ? "more" : "", restingNow ? "rest" : "",
+    shell.windows.map(win => `${win.id}:${win.minimized ? "m" : ""}${Math.round(win.x)},${Math.round(win.y)},${Math.round(win.w)},${Math.round(win.h)},${win.z}`).join(";")].join("|");
 
   const coreSettings = <>
           <AppearanceSettings value={appearance} onChange={setAppearance}/>
@@ -1494,7 +1768,6 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "labs", label: "Labs", render: () => <LabsPanel/> },
       ]}/>;
       case 'music': return <MusicStudio/>;
-      case 'fitness': return <FitnessStudio drafts={personalDrafts.current}/>;
       case 'news': return <ResearchPage initial="news"/>;
       case 'library':
       case 'history':
@@ -1537,10 +1810,17 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "pc", label: "This PC", render: () => <PcSpecsPanel/> },
       ]}/>;
       case "tasks":
-      case "calendar": return <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/>;
+      case "calendar":
+      case "fitness": return <PageTabs id="life" tabs={[
+        { id: "plan", label: "Plan", render: () => <PlanStudio tasksVersion={actionRefresh.tasks} calendarVersion={actionRefresh.calendar}/> },
+        { id: "fitness", label: "Fitness & Health", render: () => <FitnessStudio drafts={personalDrafts.current}/> },
+        // Map & traffic (Grey, 2026-11-09): saved OpenStreetMap tiles and landmarks, live WSDOT traffic.
+        { id: "map", label: "GODSPEED", render: () => <MapPanel/> },
+      ]}/>;
       // Assistant: the front page ("The ZAE Daily") first, then the existing assistant tools.
       case "assistant": return <PageTabs id="assistant" tabs={[
         { id: "front", label: "Today's edition", render: () => <AssistantFront onAsk={text => submit(text)} onOpen={next => openSection(next as Section)} notice={inbox.notice ? { title: inbox.notice.title, message: inbox.notice.message } : null} unread={inbox.unreadCount}/> },
+        { id: "mail", label: "Mail", render: () => <MailPanel/> },
         { id: "remembered", label: "Everything remembered", render: () => <EverythingRemembered/> },
         { id: "memory", label: "Memory & rules", render: () => <AssistantMemoryRules toggles={[
           { id: "listen", name: "Listening", detail: listen.mode === "always" ? "App mic on" : "App mic off", on: listen.mode === "always", toggle: toggleListening, disabled: !listen.supported },
@@ -1548,13 +1828,23 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         ]}/> },
         { id: "tools", label: "Assistant tools", render: () => <><PlatformPanel runtime={platformRuntime} windows={shell.windows} onRestore={restoreWindows} hands={hands} handsSupported={handsSupported} handNote={handNote} toggleHands={() => { setHands(value => !value); setHandNote(null); }}/><AssistantPanel refreshVersion={assistantRefresh} onChanged={() => { void inbox.refresh(); speech.prime(); }}/></> },
       ]}/>;
-      case "system": {
+      // Settings (Grey, 2026-11-09): Settings, Status and Security in one window with a side menu.
+      case "system": return <SettingsHub pages={[
+        { id: "settings", label: "Settings", render: () => settingsPage() },
+        { id: "status", label: "Status", render: () => sectionBody("status") },
+        { id: "security", label: "Security", render: () => sectionBody("security") },
+      ]}/>;
+      default: return null;
+    }
+  }
+
+  function settingsPage(): ReactNode {
+    {
         const settingToggles: SettingToggle[] = [
             { id: "listen", name: "Listening", detail: listen.mode === "always" ? "App mic on" : "App mic off", on: listen.mode === "always", toggle: toggleListening, disabled: !listen.supported },
             { id: "speak", name: "Speak replies", detail: speakReplies ? "Out loud" : "Text only", on: speakReplies, toggle: toggleSpeak },
             { id: "motion", name: "Core motion", detail: motion ? "Signals moving" : "Still", on: motion, toggle: () => setMotion(v => !v) },
             { id: "hands", name: "Hand controls", detail: handsSupported ? (hands ? "Camera on" : "Camera off") : "Desktop only", on: hands, toggle: () => { setHands(v => !v); setHandNote(null); }, disabled: !handsSupported },
-            { id: "sidebar", name: "Sidebar in tabs", detail: sidebarHidden ? "Hidden" : "Shown", on: !sidebarHidden, toggle: () => setSidebarHidden(v => !v) },
             { id: "calm", name: "Calm view when idle", detail: idleAfter ? `After ${idleAfter} min` : "Off", on: idleAfter > 0, toggle: () => { const next = idleAfter ? 0 : 5; try { localStorage.setItem("zaenia.overview.idleMinutes", String(next)); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:overview-idle", { detail: next })); } },
             { id: "calmnow", name: "Calm view now", detail: "Return by verified voice or dashboard password", on: calmOpen, toggle: () => { void goCalm(); } },
             { id: "voicepc", name: "PC voice", detail: pcVoice?.running ? "Listening on this PC" : "Off", on: Boolean(pcVoice?.running), toggle: () => { if (!pcVoice?.running) void startPcVoice(); }, disabled: !IN_TAURI || pcVoice === null || Boolean(pcVoice?.running) },
@@ -1571,15 +1861,30 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         { id: "vault", label: "Vault", render: () => <VaultPanel/> },
         { id: "notifications", label: "Notifications", render: () => <PhoneNotifications/> },
         ...(IN_TAURI ? [{ id: "faceid", label: "Phone Face ID", render: () => <FaceIdKeys/> }] : []),
+        { id: "updates", label: "Updates", render: () => <UpdatesPanel/> },
+        { id: "about", label: "About", render: () => <AboutPanel/> },
       ]}/>;
-      }
-      default: return null;
     }
   }
 
-  return <div className={`zaenia-app zaenia-app--dynamic${hands && !calmOpen ? " zaenia-app--hands" : ""}${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${sidebarHidden || onDashboard ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
+  return <div className={`zaenia-app zaenia-app--dynamic zaenia-app--mission-deck${hands && !calmOpen ? " zaenia-app--hands" : ""}${workspaceMotion.animate ? " zaenia-app--motion" : ""}${isPhone ? " zaenia-app--phone" : ""}${isPhone && sheetOpen ? " zaenia-app--sheet" : ""}${restingNow ? " zaenia-app--resting" : ""}${background ? " zaenia-app--background" : ""}${appearance.orbs === "match" ? " zaenia-app--orbs-match" : ""}${!isPhone || sidebarHidden ? " zaenia-app--no-sidebar" : ""}${onDashboard ? " zaenia-app--dashboard" : ""}${isPhone ? "" : " zaenia-app--no-aside"}${appearance.font !== "default" ? " zaenia-app--font" : ""}${appearance.size !== 100 ? " zaenia-app--sized" : ""}${appearance.accent !== "amber" || appearance.glow !== 100 ? " zaenia-app--tinted" : ""}`} style={{ ...workspaceMotion.style, ...appearanceStyle(appearance) } as CSSProperties} data-workspace-phase={workspaceMotion.phase}
     data-corners={appearance.corners} data-motion={appearance.motion}>
     <CoreBackdrop/>
+    {/* One neural core for every page (Claude, 2026-11-11): it moves between the Home, docked, phone and Calm slots
+        without remounting, and pauses itself whenever nothing of it can be seen. */}
+    {coreAtMic && <MicCore phase={voicePhase} accent={coreAccent} phone={isPhone} layoutKey={coreLayoutKey}/>}
+    <CorePortal>{calmOpen
+      ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES} activeJobs={activeJobs} layoutKey={coreLayoutKey}/>
+      : <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} activeJobs={activeJobs} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}
+          categories={coreDock === "center" ? CATEGORIES : undefined} onCategory={index => window.dispatchEvent(new CustomEvent("zae:core-category", { detail: index }))}
+          onCore={coreAtMic ? undefined : () => window.dispatchEvent(new CustomEvent("zae:core-apps"))} layoutKey={coreLayoutKey} tint={coreAtMic && activeApp ? coreAccent : undefined}/>}</CorePortal>
+    <PageActivityObserver section={section} enabled={!calmOpen && !nearCode && faceIdPending.length===0}/>
+
+    <NavigationHub apps={nav.filter(item => item.id !== "overview").map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon}/> }))}
+      enabled={!calmOpen && !nearCode && faceIdPending.length === 0} phone={isPhone} motion={appearance.motion === "full"}
+      onViewChange={setNavigationView} onOpen={id => openSection(id as Section)} onRoute={route => { void navigateUiPage(route, ++uiRequest.current); }}
+      voice={{ available: LIVE_API && listen.supported, start: () => { listen.clearError(); if (listen.mode !== "dictate") interrupt(); if (speakReplies) speech.prime(); listen.dictate(); } }}/>
+
     {IN_TAURI && faceIdPending.length > 0 && <div className="faceid-approve" role="dialog" aria-label="Approve Face ID">
       <b>Your phone wants to add Face ID sign-in</b>
       <span>Only approve this if you just tapped "Add Face ID" on your iPhone. It lets that iPhone sign in to ZAE's phone app with Face ID. Your PC's passkey and security settings don't change.</span>
@@ -1593,10 +1898,14 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       <button type="button" onClick={() => { setNearCode(null); void api("POST", "/api/near/end", {}, { desktop: true }).catch(() => undefined); }}>That's not me, cancel</button>
     </div>}
     {calmOpen && <CalmView key={renderedCalmSession} listening={calmListening} note={calmNote} onPasswordReturn={() => { if (calmSession.current === renderedCalmSession) returnFromCalm(); }}
-      core={<NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={false} startup={startup} phase="idle" categories={CATEGORIES} activeJobs={activeJobs}/>}/>}
+      core={<CoreSlot priority={3}/>}/>}
     {calmSetupNotice && !calmOpen && <div className="faceid-offer" role="status"><span>{calmSetupNotice}</span><div>
       <button type="button" onClick={() => { try { localStorage.setItem("zaenia.pageTab.security", "calm-password"); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "security", tab: "calm-password" } })); openSection("security"); setCalmSetupNotice(null); }}>Password setup</button>
       <button type="button" onClick={() => setCalmSetupNotice(null)}>Later</button>
+    </div></div>}
+    {updateNotice && !calmOpen && !calmSetupNotice && <div className="faceid-offer" role="status"><span>{updateNotice}</span><div>
+      <button type="button" onClick={() => { try { localStorage.setItem("zaenia.pageTab.settings", "updates"); } catch { /* optional */ } window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "settings", tab: "updates" } })); openSection("system"); setUpdateNotice(null); }}>Open Updates</button>
+      <button type="button" onClick={() => setUpdateNotice(null)}>Later</button>
     </div></div>}
     <HandControls enabled={hands} suspended={calmOpen || background || Boolean(nearCode) || faceIdPending.length > 0} speaking={speech.playing !== null}
       onDisable={reason => { setHands(false); setHandNote(reason ?? "Camera hand controls off."); }} onAction={handleHandAction} onWindowMotion={handleHandWindow}/>
@@ -1638,12 +1947,20 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
       {/* Home sits in the top bar next to the ZÆNIA box (Grey, 2026-10-31), no longer in its menu. */}
       {!isPhone && <button type="button" className="identity-home" onClick={() => openSection("overview")} aria-current={onDashboard ? "page" : undefined}
         aria-label="Home: the dashboard" title="Home: the dashboard"><Icon name="home" size={19}/><span>Home</span></button>}
-      {!isPhone && <TopCategories current={section} onOpen={id => openSection(id as Section)}
+      {!isPhone && <TopCategories current={section}
         tabs={nav.map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon} size={16}/> }))}/>}
       <div className="topbar"><div className="topbar__meta">
         <NotificationCenter pendingFiles={pendingFiles} onOpen={(target, sub) => {
           if (sub) { try { localStorage.setItem(`zaenia.pageTab.${sub.page}`, sub.tab); } catch { /* optional */ } window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: sub })), 200); }
           openSection(target as Section); }}/>
+        {/* Mail button beside the bell (Grey, 2026-11-09): opens Assistant > Mail (Gmail over IMAP). */}
+        {LIVE_API && <button type="button" className="nc-bell" aria-label="Mail" title="Mail" onClick={() => {
+          try { localStorage.setItem("zaenia.pageTab.assistant", "mail"); } catch { /* optional */ }
+          window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:page-tab", { detail: { page: "assistant", tab: "mail" } })), 200);
+          openSection("assistant"); }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+        </button>}
         <span className="preview-status"><span className="preview-status__dot"/>{headerStatus}</span>
         {weather && weather.temperature !== null && <span className="topbar__weather" title={`${weather.place}: high ${Math.round(weather.high ?? 0)}°, low ${Math.round(weather.low ?? 0)}°`}>{Math.round(weather.temperature)}° <small>{sentenceCase(weather.condition)}</small></span>}
         <BackgroundWorkBadge jobs={platformRuntime.summary?.jobs ?? []} onOpen={() => { openSection("assistant"); window.setTimeout(() => window.dispatchEvent(new CustomEvent("zae:assistant-tab", { detail: "Work" })), 60); }}/>
@@ -1651,7 +1968,8 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
         {isPhone && <button type="button" className="sheet-toggle" aria-label={sheetOpen ? "Close core panel" : "Open core panel"} aria-expanded={sheetOpen} aria-controls="core-panel" onClick={()=>setSheetOpen(v=>!v)}><Icon name="panel" size={18}/></button>}
       </div></div>
     </header>
-    {!sidebarHidden && !onDashboard && <aside className="sidebar" aria-label="Main navigation">
+    {/* Grey (2026-11-09): no apps sidebar on any desktop screen; open tabs from the ZÆNIA menu, core or dock. The phone keeps its bottom tab bar. */}
+    {isPhone && !sidebarHidden && <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar__group-label">WORKSPACE</div>
       {isPhone && phoneMore && createPortal(<div className="phone-more" role="dialog" aria-label="All tabs" onClick={() => setPhoneMore(false)}>
         <div className="phone-more__sheet" onClick={event => event.stopPropagation()}>
@@ -1675,23 +1993,26 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             : <div className="stage-copy"><div className="eyebrow"><span className="eyebrow__line"/>{info.label}</div><h1 id="main-title">{info.title}<span>.</span></h1><p>{info.description}</p></div>}
           {stageSection === "overview" && <OverviewFrame telemetry={telemetry} look={tabAppearance(appearance, "overview").look} style={tabAppearance(appearance, "overview").style as CSSProperties}
             docked={coreDock !== "center"} apps={nav.filter(item => item.id !== "overview").map(item => ({ id: item.id, label: item.label, icon: <Icon name={item.icon}/> }))} phone={isPhone} calm={overviewCalm} onCalm={chooseCalm} onOpen={next => openSection(next as Section)} onAsk={text => submit(text)}>
-            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? <NeuralCore telemetry={telemetry} source={source} motion={motion} paused={background} processing={coreBusy} startup={startup} activeJobs={activeJobs} onSelect={(next)=>openSection(next)} phase={voicePhase} followUntil={showFollowUp ? readFollowUntil : undefined}
-              categories={coreDock === "center" ? CATEGORIES : undefined} onCategory={index => window.dispatchEvent(new CustomEvent("zae:core-category", { detail: index }))}
-              onCore={coreDock === "center" ? () => window.dispatchEvent(new CustomEvent("zae:core-apps")) : undefined}/> : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
+            <div className={`progress-stage progress-stage--${coreDock}`}>{mode === "blend" ? (coreAtMic ? null : <CoreSlot/>) : <SystemProgressCore telemetry={telemetry} source={source} motion={motion} visualMode={mode}/>}</div>
           </OverviewFrame>}
-          {!windowed && section !== "overview" && glassBody(section, false)}
-          {windowed && <div className={`os-layer os-layer--${voicePhase}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
-            {shell.windows.filter(win => !win.minimized).map(win => <AppWindow key={win.id} win={win} title={sections[win.id as Section].title} label={sections[win.id as Section].label}
+          {!windowed && section !== "overview" && <PaneNavProvider paneId="phone" appId={section} app={info.title}>{glassBody(section, false)}</PaneNavProvider>}
+          {windowed && <div className={`os-layer os-layer--${voicePhase}${shell.snapped ? " os-layer--snapped" : ""}${restingNow ? " os-layer--resting" : ""}`} ref={layerRef}>
+            {shell.windows.map(win => <AppWindow onArrange={(count,anchor)=>{arrangeUiWindows(count,undefined,anchor);}} key={win.id} win={win} title={sections[tabBase(win.id) as Section].title} label={sections[tabBase(win.id) as Section].label}
+              onResize={rect => shell.resize(win.id, rect)} onMaximize={() => shell.maximize(win.id)} onRestoreSize={() => shell.restoreSize(win.id)} onMoveStart={shell.untile}
               active={shell.active === win.id} stage={() => layerRef.current?.getBoundingClientRect() ?? null}
               onAttention={() => { attendedTab.current = win.id; }}
               onFocus={() => { attendedTab.current = win.id; shell.open(win.id); }} onClose={() => shell.close(win.id)} onMinimize={() => shell.minimize(win.id)} onChange={rect => shell.update(win.id, rect)}>
-              {glassBody(win.id as Section)}
+              <PaneNavProvider paneId={win.id} appId={tabBase(win.id)} app={sections[tabBase(win.id) as Section].title}>{glassBody(tabBase(win.id) as Section)}</PaneNavProvider>
             </AppWindow>)}
+            {arrangeToast && <div className="os-arrange-toast" role="status" aria-live="polite"><span>{arrangeToast.text}</span>
+              {arrangeToast.undo && shell.canUndoSnap && <button type="button" onClick={() => { const undone = shell.undoSnap(); setArrangeToast({ text: undone ? "Restored the previous arrangement, sir." : "No arrangement to undo, sir.", undo: false, at: Date.now() }); }}>Undo</button>}
+              <button type="button" aria-label="Dismiss layout message" onClick={() => setArrangeToast(null)}>×</button></div>}
           </div>}
-          {windowed && <Dock windows={shell.windows} titles={Object.fromEntries(WINDOW_IDS.map(id => [id, sections[id as Section].title]))} active={shell.active} onOpen={shell.open}
-            onTarget={id => { attendedTab.current = id; }} onClose={shell.close} onMinimize={shell.minimize}
-            onCloseAll={shell.closeAll} onMinimizeAll={shell.showDesktop} onRestoreAll={shell.restoreAll} onChange={shell.update}
-            onPlace={(id, spot) => runLayout([{ kind: "place", target: id as LayoutTarget, spot, small: true }])}/>}
+          {windowed && <TabStrip shell={shell} titles={Object.fromEntries(WINDOW_IDS.map(id => [id, sections[id as Section].title]))}
+            onArrange={count => { arrangeUiWindows(count); }}
+            onUndo={() => setArrangeToast({ text: shell.undoSnap() ? "Restored the previous arrangement, sir." : "No arrangement to undo, sir.", undo: false, at: Date.now() })}
+            onNewTab={() => window.dispatchEvent(new CustomEvent("zae:workspace", { detail: "plan" }))}
+            onNote={text => setArrangeToast({ text, undo: false, at: Date.now() })}/>}
           {stageSection === "overview" && inbox.notice && <section className="assistant-notice" role="status" aria-label="ZÆNIA follow-through">
             <strong>{inbox.notice.title}</strong><p>{inbox.notice.message}</p>
             <div><button type="button" onClick={() => openSection("assistant")}>Open Assistant{inbox.unreadCount > 0 ? ` (${inbox.unreadCount})` : ""}</button>
@@ -1711,7 +2032,7 @@ function ZaeniaApp({ onForgetPhone, onAuthLost, connectionNotice }: { onForgetPh
             <button type="button" className="launch-card__later" onClick={() => setLaunchDismissed(true)}>Not now</button>
           </section>}
           {connectionNotice && <p className="phone-connect__message" role="status">{connectionNotice}</p>}
-          {LIVE_API && <BrowserBriefing onAuthLost={onAuthLost} onActive={setBriefingActive} beforePlay={speech.stop}/>}
+          {LIVE_API && <BrowserBriefing onAuthLost={onAuthLost} onActive={setBriefingActive} beforePlay={speech.stop} showButton={isPhone}/>}
           {/* Talk to ZÆNIA from every page: input bar plus a floating transcript. */}
           {clarify && <ClarifyCard original={clarify.original} questions={clarify.questions} onCancel={() => setClarify(null)}
             onSend={text => { setClarify(null); submit(text); }}/>}

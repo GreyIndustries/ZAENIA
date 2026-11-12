@@ -1,0 +1,54 @@
+# What ZAE does NOT have yet (Grey, 2026-11-08). self_map.py generates what IS inside her from the source files;
+# this list is the other half: things Grey wants or the build plan describes that aren't built, or are only partly built.
+# Keep it short and honest. Move an item out when its feature ships (the generated map will then list it).
+# status: planned (nothing built), partial (some pieces exist, the workflow isn't complete), idea (a goal, not planned yet)
+
+items:
+  - name: "Stream Studio"
+    status: planned
+    what: "Twitch and YouTube stream automation with OBS, replacing Streamer.bot."
+    note: "Documentation only. No OBS, Twitch or YouTube connection exists."
+    plan: "Master Build Plan section 31"
+
+  - name: "Coding and upgrading herself without Claude Code or Codex"
+    status: partial
+    what: "Handling the coding and upgrade work done today with Claude Code and Codex, locally, by October 2027."
+    note: "Build requests can write and test a change in a copy for Grey's approval, but end-to-end success isn't measured yet and the local model's builds have been unreliable."
+    plan: "Master Build Plan section 30"
+
+  - name: "Personal finance workspace"
+    status: planned
+    what: "Budgets, balances, spending and debt projections from manual entry or approved imports."
+    note: "No banking connection, transfers or payments."
+    plan: "Master Build Plan section 29.2 B"
+
+  - name: "Linked knowledge and decision reasons"
+    status: planned
+    what: "Connecting goals, people, documents and decisions with the reasons behind them."
+    plan: "Master Build Plan section 29.2 A"
+
+  - name: "Offline sync between devices"
+    status: planned
+    what: "Phone and other devices keeping working while disconnected and syncing back safely."
+    plan: "Master Build Plan section 29.2 E"
+
+  - name: "Health device connections"
+    status: planned
+    what: "Reading data from fitness watches, scales or other health devices."
+    note: "Fitness & Health uses what Grey enters."
+    plan: "Master Build Plan section 29.1, row 9"
+
+  - name: "Plant growing systems"
+    status: idea
+    what: "Aquaponic, hydroponic and aeroponic grow systems that ZAE monitors and maintains."
+    note: "Grey's goal; nothing is built and it isn't in the build plan yet."
+
+  - name: "Home security system"
+    status: idea
+    what: "Cameras, door or motion sensors and alarms for Grey's home."
+    note: "The Security tab protects ZAE herself, not the house."
+
+  - name: "Replacing the operating system"
+    status: idea
+    what: "ZAE as Grey's whole operating system instead of Windows."
+    note: "She runs as an app on Windows."

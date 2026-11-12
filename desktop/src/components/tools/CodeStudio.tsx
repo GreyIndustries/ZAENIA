@@ -1,3 +1,5 @@
+import { usePaneNav } from "../shell/PaneNav";
+import { DetailScreen, PageNavigator, detailKey } from "../shell/PageNavigator";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./CodeStudio.css";
@@ -9,7 +11,7 @@ import "./CodeStudio.css";
  * Source stay as later sub-tabs. Saving still needs the desktop app and keeps a backup; ZAE's protected files are refused.
  */
 type Finding = { file: string; line: number; level: "error" | "warn" | "info"; message: string };
-export type Scan = { project: string; isZae: boolean; totals: { files: number; lines: number }; counts: Record<string, number>; findings: Finding[]; biggest?: { file: string; lines: number }[] };
+export type Scan = { project: string; isZae: boolean; totals: { files: number; lines: number }; counts: Record<string, number>; findings: Finding[]; biggest?: { file: string; lines: number }[]; files?: { file: string; lines: number }[] };
 type Fix = { changed: boolean; message?: string; diff?: string; text?: string; oldHash?: string; protected?: boolean };
 type Suggestion = { id: string; for: string; title: string; why: string; how?: string; effort?: string; status: "new" | "approved" | "dismissed"; created: string };
 type History = { at: string; error: number; warn: number; info: number }[];
@@ -43,6 +45,7 @@ export function useCodeScan() {
 }
 type ScanState = ReturnType<typeof useCodeScan>;
 import { CodeEditorView, CodeSideBySide } from "../studios/ThirdViews";
+import { PlainEnglish } from "./PlainEnglish";
 
 export function CodeHealth({ code, onReview }: { code: ScanState; onReview: (file: string) => void }) {
   const { scan } = code;
@@ -129,7 +132,7 @@ export function ReviewQueue({ code, focusFile }: { code: ScanState; focusFile: s
   const key = (item: QueueItem) => item.kind === "fix" ? `fix:${item.file}` : `idea:${item.s.id}`;
   const shown = items.filter(item => !skipped.includes(key(item)) && (filter === "all" || item.kind === filter));
   useEffect(() => { if (focusFile) { setPicked(`fix:${focusFile}`); setFilter("all"); } }, [focusFile]);
-  const current = shown.find(item => key(item) === picked) ?? shown[0] ?? null;
+  const current = shown.find(item => key(item) === picked) ?? null;  // list first; an item opens as its own screen
   useEffect(() => { setFix(null); setExplain(""); setNote(null); setError(null); }, [current && key(current)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const act = async (label: string, work: () => Promise<void>) => {
@@ -158,6 +161,9 @@ export function ReviewQueue({ code, focusFile }: { code: ScanState; focusFile: s
     <main className="cs-queue__main">
       {error && <p className="cs-error" role="alert">{error}</p>}
       {note && <p className="cs-note" role="status">{note}</p>}
+      <DetailScreen id="review-change" name="Review queue" open={!!current} itemId={current ? key(current) : undefined} quiet={picked === null}
+        title={current ? current.kind === "fix" ? current.file.split("/").pop() ?? current.file : current.s.title : "Change"}
+        onOpen={id => { const item = shown.find(entry => detailKey(key(entry)) === id); if (item) setPicked(key(item)); }} onClose={() => setPicked(null)}/>
       {!current && <p className="cs-muted">Nothing to review. Scan a project, or ask ZAE for ideas in Suggestions.</p>}
       {current?.kind === "fix" && <>
         <div className="cs-row cs-row--between">
@@ -201,22 +207,22 @@ export function ReviewQueue({ code, focusFile }: { code: ScanState; focusFile: s
 export function CodeDoctorStudio({ extra }: { extra: { id: string; label: string; render: () => React.ReactNode }[] }) {
   const code = useCodeScan();
   const [focusFile, setFocusFile] = useState<string | null>(null);
-  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, { id: "side", label: "Side by side" }, { id: "editor", label: "Editor" }, ...extra.map(({ id, label }) => ({ id, label }))];
+  const tabs = [{ id: "health", label: "Health" }, { id: "queue", label: "Review queue" }, { id: "side", label: "Side by side" }, { id: "editor", label: "Editor" }, { id: "plain", label: "ENTHON" }, ...extra.map(({ id, label }) => ({ id, label }))];
   const [tab, setTab] = useState(() => { try { const saved = localStorage.getItem("zaenia.pageTab.codedoctor"); return tabs.some(t => t.id === saved) ? saved! : "health"; } catch { return "health"; } });
   const [opened, setOpened] = useState<string[]>([tab]);
   const choose = (next: string) => { setTab(next); setOpened(list => list.includes(next) ? list : [...list, next]); try { localStorage.setItem("zaenia.pageTab.codedoctor", next); } catch { /* optional */ } };
+  const paneScope = usePaneNav();
   useEffect(() => {
-    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: string }>).detail; if (detail?.page === "codedoctor") choose(detail.tab); };
+    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: string }>).detail; if ((detail as { pane?: string })?.pane && paneScope && (detail as { pane?: string }).pane !== paneScope.paneId) return; if (detail?.page === "codedoctor" && tabs.some(item => item.id === detail.tab)) choose(detail.tab); };
     window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
   });
   return <div className="research-page">
-    <nav className="research-page__tabs" role="tablist" aria-label="Code Doctor sections">
-      {tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id} className={tab === item.id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(item.id)}>{item.label}</button>)}
-    </nav>
-    {opened.includes("health") && <div role="tabpanel" hidden={tab !== "health"}><CodeHealth code={code} onReview={file => { setFocusFile(file); choose("queue"); }}/></div>}
-    {opened.includes("queue") && <div role="tabpanel" hidden={tab !== "queue"}><ReviewQueue code={code} focusFile={focusFile}/></div>}
-    {opened.includes("side") && <div role="tabpanel" hidden={tab !== "side"}><CodeSideBySide code={code}/></div>}
-    {opened.includes("editor") && <div role="tabpanel" hidden={tab !== "editor"}><CodeEditorView code={code}/></div>}
-    {extra.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="tabpanel" hidden={tab !== item.id}>{item.render()}</div>)}
+    <PageNavigator id={"codedoctor"} name={"Code Doctor & Files"} items={tabs} current={tab} onChoose={choose}/>
+    {opened.includes("health") && <div role="region" aria-label="Health" data-page-panel="health" hidden={tab !== "health"}><CodeHealth code={code} onReview={file => { setFocusFile(file); choose("queue"); }}/></div>}
+    {opened.includes("queue") && <div role="region" aria-label="Review queue" data-page-panel="queue" hidden={tab !== "queue"}><ReviewQueue code={code} focusFile={focusFile}/></div>}
+    {opened.includes("side") && <div role="region" aria-label="Side by side" data-page-panel="side" hidden={tab !== "side"}><CodeSideBySide code={code}/></div>}
+    {opened.includes("editor") && <div role="region" aria-label="Editor" data-page-panel="editor" hidden={tab !== "editor"}><CodeEditorView code={code}/></div>}
+    {opened.includes("plain") && <div role="region" aria-label="ENTHON" data-page-panel="plain" hidden={tab !== "plain"}><PlainEnglish code={code}/></div>}
+    {extra.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="region" aria-label={item.label} data-page-panel={item.id} hidden={tab !== item.id}>{item.render()}</div>)}
   </div>;
 }

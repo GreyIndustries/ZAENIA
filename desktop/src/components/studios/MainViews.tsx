@@ -104,7 +104,7 @@ export function WorkbenchLab({ onOpenEditor }: { onOpenEditor: () => void }) {
 }
 
 // ---------------------------------------------------------------- Status: Live gauges
-type Bar = { cpu: number; ramUsedGb: number; ramTotalGb: number; gpu: { use: number; memoryUsedGb: number; memoryTotalGb: number; temperature: number } | null; diskFreeGb: number; model: string };
+type Bar = { cpu: number; ramUsedGb: number; ramTotalGb: number; gpu: { use: number; memoryUsedGb: number; memoryTotalGb: number; temperature: number } | null; diskFreeGb: number; model: string; brains?: { model: string }[] };
 type Proc = { name: string; cpu: number; memGb: number };
 
 function Gauge({ label, value, share, sub, tone }: { label: string; value: string; share: number; sub: string; tone: string }) {
@@ -148,7 +148,7 @@ export function StatusGauges() {
           <g className="mv-chart__grid"><line x1="0" y1="50" x2="600" y2="50"/><line x1="0" y1="90" x2="600" y2="90"/><line x1="0" y1="130" x2="600" y2="130"/></g>
           {history.length > 1 && <><polyline points={line("cpu")} className="mv-chart__cpu"/><polyline points={line("gpu")} className="mv-chart__gpu"/></>}
         </svg>
-        <small className="mv-muted">{history.length > 1 ? `Brain: ${bar?.model ?? "—"}. GPU spikes are usually ZAE thinking.` : "The chart fills in while this page is open."}</small>
+        <small className="mv-muted">{history.length > 1 ? `SE: ${bar?.brains?.[0] ? `Talk ${bar.brains[0].model}` : bar?.model ?? "—"}. GPU spikes are usually the SE thinking.` : "The chart fills in while this page is open."}</small>
       </section>
       <section className="zx-card">
         <h3>What's using it</h3>

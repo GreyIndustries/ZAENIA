@@ -1,7 +1,10 @@
+import { DetailScreen, PageNavigator, detailKey } from "../shell/PageNavigator";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DragEvent } from "react";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import "./MusicStudio.css";
+/** Lyrics and session notes are separate pages of a song (Claude 2026-11-11). */
+const SONG_TEXT = [{ id: "lyrics", label: "Lyrics" }, { id: "notes", label: "Session notes" }];
 
 const PATH = "/api/platform/personal/music";
 const STAGES = ["Idea", "Writing", "Recording", "Mixing", "Mastering", "Released"] as const;
@@ -87,10 +90,7 @@ export function MusicStudio() {
   const tabs: [Tab, string][] = [["dashboard", "Dashboard"], ["studio", "Studio"], ["song", "Song"], ["connections", "Connections"]];
 
   return <div className="ms">
-    <nav className="research-page__tabs" role="tablist" aria-label="Music sections">
-      {tabs.map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id}
-        className={tab === id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(id)}>{label}</button>)}
-    </nav>
+    <PageNavigator id="music" name="Music" items={tabs.map(([id, label]) => ({ id, label }))} current={tab} onChoose={next => choose(next as Tab)}/>
     {error && <p className="ms-error" role="alert">{error}</p>}
     {note && <p className="ms-note" role="status">✓ {note}</p>}
     {tab === "dashboard" && <Dashboard songs={songs} connections={data.connections} items={data.checklist} busy={busy} onOpen={openSong} onSave={save}
@@ -232,6 +232,8 @@ function SongWorkspace({ songs, items, selected, onSelect, busy, onSave }: { son
       {dirty && <small className="ms-muted">Save or undo changes to switch songs.</small>}
     </aside>
     <div className="ms-ws">
+      <DetailScreen id="music-song" name="Song" open itemId={draft.id ?? "new"} quiet={!selected} title={draft.title.trim() || "Untitled song"}
+        onOpen={key => { const song = songs.find(item => detailKey(item.id ?? "") === key); if (song?.id && !dirty) onSelect(song.id); }} onClose={() => { /* the Song page always shows a song; Back moves to the previous one */ }}/>
       <div className="ms-row ms-ws__head">
         <label className="ms-art ms-art--big" style={{ background: ART[draft.art] ?? ART.amber }}><span className="sr-only">Card colour</span>
           <select value={draft.art} onChange={e => edit({ art: e.target.value })}>{Object.keys(ART).map(c => <option key={c}>{c}</option>)}</select></label>
@@ -256,10 +258,7 @@ function SongWorkspace({ songs, items, selected, onSelect, busy, onSave }: { son
 
       <div className="ms-ws__grid">
         <section className="ms-card ms-editor">
-          <div className="ms-seg" role="group" aria-label="Text">
-            <button type="button" aria-pressed={view === "lyrics"} onClick={() => setView("lyrics")}>Lyrics</button>
-            <button type="button" aria-pressed={view === "notes"} onClick={() => setView("notes")}>Session notes</button>
-          </div>
+          <PageNavigator id="song-text" name="Song text" items={SONG_TEXT} current={view} onChoose={next => setView(next as "lyrics" | "notes")}/>
           {view === "lyrics"
             ? <textarea value={draft.lyrics} maxLength={30000} aria-label="Lyrics" placeholder={"[Verse 1]\nYour lines here\n\n[Chorus]\n…"} onChange={e => edit({ lyrics: e.target.value })}/>
             : <textarea value={draft.body} maxLength={30000} aria-label="Session notes" placeholder="Ideas, arrangement, mix notes, what to try next…" onChange={e => edit({ body: e.target.value })}/>}

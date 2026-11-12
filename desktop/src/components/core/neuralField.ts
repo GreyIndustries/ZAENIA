@@ -52,6 +52,12 @@ const COMPACT_RING: Record<BranchKey, [number, number]> = {
 /** Places the core and its six orbs so the outer label plates always fit. */
 export function computeLayout(width: number, height: number, ringed = false): FieldLayout {
   const compact = width < 760;
+  if (ringed && width < 220 && height < 220) {
+    // C5 mic core (Claude, 2026-11-11): a small box around the chat mic; the rings fill it edge to edge.
+    const cx = width / 2, cy = height / 2;
+    const r = Math.max(8, (Math.min(width, height) / 2 - 2) / RING_OUTER);
+    return { width, height, cx, cy, r, orbR: 0, compact: true, orbs: [] };
+  }
   if (ringed) {
     // Grey, 2026-10-31: the core by itself, its nerves wrapped around it like Saturn's rings (outer ring 2.15 r).
     const cx = width / 2, cy = height * (compact ? 0.5 : 0.45);
@@ -99,7 +105,7 @@ export type FieldState = { progress: number; motion: boolean; processing: boolea
  *  tilt   - ring tilt/openness (the hand gesture would turn this live)
  *  night  - day/night: a soft night side across the sphere and warmer, calmer light after sunset
  */
-export type CoreExtras = { mood?: boolean; pulse?: boolean; beads?: number; tilt?: number; night?: boolean; voice?: number };
+export type CoreExtras = { mood?: boolean; pulse?: boolean; beads?: number; tilt?: number; night?: boolean; voice?: number; /** "r,g,b": recolour the whole core (C5 mic core takes the page's module accent). */ tint?: string };
 const MOOD_RGB = { idle: "220,120,50", listening: "120,190,255", thinking: "255,206,96", speaking: "255,246,232" };
 
 /* ------------------------------------------------------------------ */
@@ -133,7 +139,8 @@ function buildRings(): { strands: RingStrand[]; signals: RingSignal[] } {
 }
 
 export type NeuralField = {
-  setLayout(layout: FieldLayout): void;
+  /** `scale` is the on-screen size relative to the layout box (e.g. 0.68 when CSS shrinks the core), so the drawing buffer matches what is shown. */
+  setLayout(layout: FieldLayout, scale?: number): void;
   setState(state: FieldState): void;
   destroy(): void;
 };
@@ -432,7 +439,7 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
   let geo: BranchGeo[] = [];
   let fans: Fan[] = [];
   let state: FieldState = { progress: 0, motion: true, processing: false };
-  let dpr = 1, raf = 0, last = performance.now(), dirty = true, drawnProgress = -1;
+  let dpr = 1, renderScale = 1, raf = 0, last = performance.now(), dirty = true, drawnProgress = -1;
   let spin = 0.6, time = 0;
   // Eased 0..1 weights per voice phase, so the core blends between behaviours.
   let lis = 0, thk = 0, spk = 0;
@@ -843,11 +850,22 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
     });
     ctx.globalAlpha = 1;
 
+    // Module accent tint (mic core off Home): recolour what was drawn, keeping its shape and transparency.
+    if (ex.tint) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = `rgb(${ex.tint})`;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+    }
+
     // Shared bloom makes the sphere and its branches read as one light source.
     if (canBlur && bctx) {
       bctx.setTransform(1, 0, 0, 1, 0, 0);
       bctx.clearRect(0, 0, bloom.width, bloom.height);
-      bctx.filter = "blur(8px)";
+      bctx.filter = `blur(${(8 * renderScale).toFixed(2)}px)`;
       bctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, bloom.width, bloom.height);
       bctx.filter = "none";
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -904,17 +922,21 @@ export function createNeuralField(canvas: HTMLCanvasElement): NeuralField | null
   schedule();
 
   return {
-    setLayout(next) {
+    setLayout(next, scale = 1) {
       L = next;
-      dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      renderScale = Math.min(1, Math.max(0.25, scale));
+      dpr = Math.min(window.devicePixelRatio || 1, 1.5) * renderScale;
       canvas.width = Math.max(1, Math.round(next.width * dpr));
       canvas.height = Math.max(1, Math.round(next.height * dpr));
-      bloom.width = Math.max(1, Math.round(next.width * 0.5));
-      bloom.height = Math.max(1, Math.round(next.height * 0.5));
+      bloom.width = Math.max(1, Math.round(next.width * 0.5 * renderScale));
+      bloom.height = Math.max(1, Math.round(next.height * 0.5 * renderScale));
       geo = next.orbs.length ? BRANCHES.map((b, i) => buildBranch(b, next.orbs[i], next, i)) : [];
       fans = next.compact ? [] : [buildFan(-1, next), buildFan(1, next)];
-      dirty = true;
-      schedule();
+      // Resizing the canvas clears it; redraw at once so a resize never paints an empty frame.
+      draw();
+      drawnProgress = state.progress;
+      dirty = false;
+      if (state.motion) schedule();
     },
     setState(next) {
       state = next;

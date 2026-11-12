@@ -1,3 +1,5 @@
+import { usePaneNav } from "./PaneNav";
+import { PageNavigator } from "./PageNavigator";
 import { Suspense, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import "../research/Research.css";
@@ -15,15 +17,13 @@ export function PageTabs({ id, tabs }: { id: string; tabs: { id: string; label: 
     try { localStorage.setItem(key, next); } catch { /* optional */ }
   };
   // "Open Files" / "open news" jump straight to that sub-tab even when this page is already open.
+  const paneScope = usePaneNav();
   useEffect(() => {
-    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: string }>).detail; if (detail?.page === id && tabs.some(item => item.id === detail.tab)) choose(detail.tab); };
+    const jump = (event: Event) => { const detail = (event as CustomEvent<{ page: string; tab: string }>).detail; if ((detail as { pane?: string })?.pane && paneScope && (detail as { pane?: string }).pane !== paneScope.paneId) return; if (detail?.page === id && tabs.some(item => item.id === detail.tab)) choose(detail.tab); };
     window.addEventListener("zae:page-tab", jump); return () => window.removeEventListener("zae:page-tab", jump);
   });
   return <div className="research-page">
-    <nav className="research-page__tabs" role="tablist" aria-label={`${id} sections`}>
-      {tabs.map(item => <button key={item.id} type="button" role="tab" aria-selected={tab === item.id}
-        className={tab === item.id ? "research-page__tab research-page__tab--on" : "research-page__tab"} onClick={() => choose(item.id)}>{item.label}</button>)}
-    </nav>
-    {tabs.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="tabpanel" hidden={tab !== item.id}><Suspense fallback={<p className="research__empty">Loading…</p>}>{item.render()}</Suspense></div>)}
+    <PageNavigator id={id} name={id === "life" ? "LIFE" : id.charAt(0).toUpperCase() + id.slice(1)} items={tabs} current={tab} onChoose={choose}/>
+    {tabs.filter(item => opened.includes(item.id)).map(item => <div key={item.id} role="region" data-page-panel={item.id} aria-label={item.label} hidden={tab !== item.id}><Suspense fallback={<p className="research__empty">Loading…</p>}>{item.render()}</Suspense></div>)}
   </div>;
 }

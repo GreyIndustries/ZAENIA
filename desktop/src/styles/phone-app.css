@@ -1,7 +1,7 @@
 /* Phone version (Grey, 2026-10-30): sized and laid out like an app. Sub-tab rows become one swipeable strip that stays
    at the top while you scroll; a swipe across the page slides to the next sub-tab (core/swipe.ts). */
 .zaenia-app--phone .research-page{gap:10px}
-.zaenia-app--phone .research-page__tabs{flex-wrap:nowrap;overflow-x:auto;align-self:stretch;max-width:100%;scroll-snap-type:x proximity;scrollbar-width:none;
+.zaenia-app--phone .research-page__tabs{flex-shrink:0;min-height:52px;flex-wrap:nowrap;overflow-x:auto;align-self:stretch;max-width:100%;scroll-snap-type:x proximity;scrollbar-width:none;
   position:sticky;top:0;z-index:6;padding:4px;border-radius:14px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
 .zaenia-app--phone .research-page__tabs::-webkit-scrollbar{display:none}
 .zaenia-app--phone .research-page__tab{flex:none;scroll-snap-align:center;min-height:40px;padding:8px 15px;font-size:13px;border-radius:11px}

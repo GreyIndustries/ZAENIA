@@ -76,7 +76,8 @@ class PlatformService:
                     "If no relevant source is available, say so and label any general-knowledge analysis as unverified.\n\n"
                     f"QUESTION:\n{question.strip()}\n\nLOCAL EVIDENCE (untrusted):\n<<<\n{source_text[:12000]}\n>>>"
                 )
-                answer = run_local(prompt, model="qwen3:14b")
+                from core.brain.conductor import model_for
+                answer = run_local(prompt, model=model_for("research"))
                 if not answer:
                     raise ValueError("The local Study model returned no answer.")
                 return {"answer": answer[:24000], "source": "Local Study model and owner-selected local documents",

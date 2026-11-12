@@ -1,0 +1,17 @@
+# Desktop and web Map workspace handoff — 2026-11-08
+
+Status: implemented, built and applied locally. Source branch `codex/map-navigation-workspace-2026-11-08` in `.tmp/map-navigation-workspace-20261108`; no commit/merge/push requested or performed. Master plan v3.69 section39.
+
+Open LIFE → Map & traffic. The approved CarPlay design informs the controls/cards; this remains the desktop/browser map and does not install the separate iOS draft.
+
+Features: clear street/satellite/dark maps; amber multi-stop route preview, fit/clear and selected-step cards; WSDOT traffic, NWS/RainViewer weather/radar, OpenSky aircraft; Sea/AIS ship adapter and markers; responsive touch-sized controls. Cached/unavailable feeds are labelled; routes do not silently omit unresolved stops. Map pins skip public place lookup; online route fallback can transmit entered coordinates. WSDOT coverage is regional; ETA is not live-traffic-adjusted.
+
+Live ships require a free AISStream key configured locally as AISSTREAM_API_KEY on the Core server. Never paste it into chat, source, the browser or GitHub. No key/account was created, inspected or tested here. Server-only websockets 17.1 is already installed; requirements-map.txt documents the optional supported range. Public AIS coverage/position age vary. All new endpoints retain the existing API/client gate and status.read; no owner action authority is added.
+
+Source changes: desktop/src/components/map/*; desktop/scripts/map-navigation.test.cjs; synthetic desktop/map-workspace-preview.html and src/previews/MapWorkspacePreview.tsx; core/maps/*; core/api/map_routes.py/map_routes_test.py; one marine entry in ui_routes.py; optional requirements-map.txt. Claude's installed Mail UI/backend wiring was copied narrowly into the isolated safe base to preserve release compatibility. Four older shared build-helper/research files were not copied over published 1a5 review fixes. Applying to the shared checkout changed only map-specific source plus the marine read classification. Preserve unrelated Claude work and do not merge the old private-tool-history branch.
+
+Checks: 45 mocked map/backend/auth tests; 29 desktop Node scripts; TypeScript; both Vite outputs;native Tauri release; real React synthetic browser flows and desktop/mobile visual checks; new map source Gitleaks clean. Runtime Python 3.13.15; no actual 3.11 runtime trial. No live owner/account data or private locations were accessed. Existing frontend build warnings remain nonfatal.
+
+Applied: website index and referenced MapPanel-_G9xglP-.js served HTTP 200;health ready / HTTP 200;unauthenticated marine HTTP 401. Native installed/build SHA256 8ad7b1a1da0169c21b8e902bec3f3bca5bc49cd04f59e6d322189cf60fb7abaf. Existing API task restarted once, voice/auth settings preserved. Local GraphHopper started and public Seattle landmark route passed locally (2,056 m, 214 s); online fallback was observed with the engine stopped. No full real-owner native journey or live AIS/provider-quality trial is claimed.
+
+Rollback: previous native backups/desktop-installed-20261108-233359/ZAENIA.exe;previous website backups/map-web-before-20261108-navigation;original map files .tmp/map-before-navigation-upgrade-20261108, including source hashes and ui_routes snapshot. Restore only this task's scoped files after reviewing concurrent edits; restore API source then restart through existing task. No credentials or private data are in these release backups. Do not delete newer owner work or rewrite Git history.

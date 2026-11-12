@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SEBrainMap } from "../tools/SEBrainMap";
 import { api, errorText, LIVE_API } from "../../core/bridge";
 import type { CoreTelemetry, ModulePhase } from "../../core/coreTelemetry";
@@ -8,6 +8,7 @@ import type { Scan } from "../tools/CodeStudio";
 import "./MainViews.css";
 import "./SecondViews.css";
 import "./ThirdViews.css";
+import { DetailScreen } from "../shell/PageNavigator";
 
 /**
  * Grey's 2nd and 3rd picks (2026-10-30), batch 3: Settings "Search" (B) and "Make ZAE yours" (C), Status "Readiness"
@@ -26,11 +27,11 @@ const PLACES: { name: string; where: string; help: string; page: string; tab: st
   { name: "The Vault", where: "Settings › Vault", help: "Private files, opened with the Security unlock", page: "settings", tab: "vault", words: "vault private secret files" },
   { name: "Phone notifications", where: "Settings › Notifications", help: "Push to your phone, test a notification", page: "settings", tab: "notifications", words: "phone push notification alerts" },
   { name: "Reminders", where: "Status › Protocols", help: "Time-based nudges on screen, spoken or on your phone", page: "status", tab: "protocols", words: "reminder nudge time alarm protocols" },
-  { name: "Workout and food reminders", where: "Fitness & Health", help: "Training days, weigh-in and food log nudges", page: "fitness", tab: "", words: "workout food weigh reminder fitness training" },
+  { name: "Workout and food reminders", where: "LIFE · Fitness & Health", help: "Training days, weigh-in and food log nudges", page: "fitness", tab: "", words: "workout food weigh reminder fitness training" },
   { name: "Backups", where: "Status › Self-Sustain", help: "Nightly backup of ZAE's data and the watchdog", page: "status", tab: "selfsustain", words: "backup restore watchdog self sustain" },
   { name: "Security unlock and passkey", where: "Security › Details", help: "Passkey, spoken phrase and voice check settings", page: "security", tab: "details", words: "passkey security unlock voice phrase password" },
-  { name: "ZAE's brain model", where: "Arena › Leaderboard", help: "Which local model answers you", page: "arena", tab: "leaders", words: "brain model llm llama qwen arena" },
-  { name: "Her brains and coding tools", where: "Arena › Brains & tools", help: "Talk, Seek, Study, Keep, Ollama, Claude Code, Aider and OpenCode, live", page: "arena", tab: "brains", words: "brains talk seek study keep ollama models gpu claude aider opencode coding tools" },
+  { name: "The SE's main model", where: "Arena › Leaderboard", help: "Which local model the Synergized Encephalon uses", page: "arena", tab: "leaders", words: "brain model llm llama qwen arena" },
+  { name: "The SE and coding tools", where: "Arena › SE & tools", help: "Talk, Seek, Study, Keep, Ollama, Claude Code, Aider and OpenCode, live", page: "arena", tab: "brains", words: "se synergized encephalon brains brain talk seek study keep ollama models gpu claude aider opencode coding tools" },
   { name: "Build requests", where: "Code Doctor › Build requests", help: "Ask ZAE to change her own app; approve at the PC", page: "codedoctor", tab: "build", words: "build request code change upgrade yourself approve undo" },
   { name: "Memory and learned patterns", where: "Assistant › Memory & rules", help: "What ZAE keeps about you, and confirming patterns", page: "assistant", tab: "memory", words: "memory facts learn pattern remember forget" },
   { name: "Quiet hours and spoken notices", where: "Assistant › Assistant tools", help: "When ZAE speaks and when she stays quiet", page: "assistant", tab: "tools", words: "quiet hours spoken notices follow through timezone" },
@@ -97,7 +98,7 @@ export function LookStudio({ appearance, onChange }: { appearance: Appearance; o
 }
 
 // ---------------------------------------------------------------- Status A: readiness
-const READY_GROUPS = [{ name: "Brain and safety", ids: ["brain", "brain_talk", "brain_seek", "brain_study", "brain_keep", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
+const READY_GROUPS = [{ name: "SE and safety", ids: ["brain", "brain_talk", "brain_seek", "brain_study", "brain_keep", "security"] }, { name: "Voice", ids: ["voice", "carplay"] }, { name: "Connections", ids: ["calendar", "weather", "traffic"] }];
 const phaseOk = (phase: ModulePhase) => phase === "ready" || phase === "working";
 export function StatusReadiness({ telemetry, onStartVoice }: { telemetry: CoreTelemetry | null; onStartVoice?: () => void }) {
   const [extra, setExtra] = useState<{ id: string; name: string; now: boolean | null; percent: number | null }[]>([]);
@@ -214,7 +215,8 @@ export function CodeSideBySide({ code }: { code: ScanState }) {
   const [done, setDone] = useState<string[]>([]);
   const act = useFix(code.project);
   const current = files.find(([f]) => f === file) ?? files.find(([f]) => !done.includes(f));
-  useEffect(() => { setView(null); }, [current?.[0]]);
+  const keptFix = useRef<typeof view>(null);
+  useEffect(() => { setView(null); keptFix.current = null; }, [current?.[0]]);
   if (!LIVE_API) return needServer("Code Doctor");
   if (!code.scan) return <ScanFirst code={code}/>;
   const write = () => current && act.run("writing a fix", async () => {
@@ -230,6 +232,8 @@ export function CodeSideBySide({ code }: { code: ScanState }) {
   const stretch = view?.fix.text ? changedStretch(view.before, view.fix.text) : null;
   const errors = (fs: Finding[]) => fs.filter(f => f.level === "error").length;
   return <div className="sv-review">
+    <DetailScreen id="side-fix" name="Side by side" open={!!view} title={current ? `Proposed fix · ${current[0].split("/").pop()}` : "Proposed fix"}
+      onOpen={() => { if (keptFix.current) setView(keptFix.current); }} onClose={() => { keptFix.current = view; setView(null); }}/>
     <aside className="zx-card sv-stack sv-review__queue">
       <span className="mv-kicker">Waiting for you</span><h3 className="zx-title">{files.length - done.length} file{files.length - done.length === 1 ? "" : "s"} to fix</h3>
       {files.map(([f, fs]) => <button key={f} type="button" className="sv-three__item" aria-pressed={current?.[0] === f} disabled={done.includes(f)} onClick={() => setFile(f)}>

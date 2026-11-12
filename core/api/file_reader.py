@@ -105,7 +105,8 @@ def describe_image(raw: bytes, ask_vision: Callable[[str, str], str] | None = No
     def default(prompt: str, image_b64: str) -> str:
         import urllib.request
         from core.assistant_operator.local_http import opener
-        body = {"model": "qwen3.5:4b", "stream": False, "think": False, "keep_alive": "2m", "options": {"num_predict": 900},
+        from core.brain.conductor import model_for
+        body = {"model": model_for("skim"), "stream": False, "think": False, "keep_alive": "2m", "options": {"num_predict": 900},
                 "messages": [{"role": "user", "content": prompt, "images": [image_b64]}]}
         request = urllib.request.Request("http://127.0.0.1:11434/api/chat", data=json.dumps(body).encode(),
                                          headers={"Content-Type": "application/json"})

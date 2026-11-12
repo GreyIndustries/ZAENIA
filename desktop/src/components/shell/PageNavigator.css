@@ -1,0 +1,88 @@
+/* Pages drawn as Grey's preview 05 (desktop) and M5 (phone). Claude 2026-11-11. */
+.pane-nav-root{display:flex;flex-direction:column;gap:16px;min-width:0}
+.pane-nav-root>*{min-width:0}
+[data-pane-root=phone].pane-nav-root{gap:10px}
+.research-page{min-width:0}.research-page>[hidden]{display:none!important}
+
+/* One page header per screen: parent levels take no space; a level showing its home hides its content (kept mounted). */
+.page-nav--parent{display:block;height:0;margin:0!important;padding:0!important;border:0!important;overflow:hidden}
+.page-nav[data-home] ~ *,.page-nav[data-searching] ~ *{display:none!important}
+.page-nav[hidden]{display:none!important}
+.bx-page{display:flex;flex-direction:column;gap:16px;margin:0;padding:0;border:0;background:none;color:var(--text,#e1e8f2)}
+.bx-page--phone{gap:0}
+.bx-page+*{min-width:0}
+
+/* Window = the preview sheet: no title strip, no Manage-tabs strip; controls sit in the top row. */
+.os-window__bar{display:none!important}
+.os-dock{display:none!important}
+.os-window{border-radius:22px;border-color:#344054;background:linear-gradient(130deg,rgba(7,14,26,.97),rgba(6,12,21,.94));box-shadow:0 26px 90px #0009,inset 0 1px 0 #ffffff0c}
+.os-window__body{padding:20px;container:pane / size;background:radial-gradient(70% 120px at 50% calc(100% + 30px),color-mix(in srgb,#ff8a3d 13%,transparent),transparent 70%)}
+.os-window__body:focus{outline:none}
+.pane-top{flex:none}
+.pane-top .bx-back{margin-left:auto}
+.pane-top .os-snap-trigger{font-size:15px}
+@container pane (max-height:460px){.pane-nav-root{gap:10px}.bx-ttl{font-size:22px}.bx-recent{padding:8px 12px}}
+@container pane (max-width:640px){.pane-top .bx-sbox{flex-basis:100%;order:3}}
+
+/* Old chrome not in the preview: hero banners, in-page headings, voice-help panel, Settings side menu, phone stage header. */
+.pane-nav-root .glass-masthead,.os-window__body .glass-masthead{display:none!important}
+.pane-nav-root .platform-panel__heading .subheading,.pane-nav-root .platform-panel__heading>div>h2,.pane-nav-root .platform-panel__heading>h2{display:none}
+.pane-nav-root .mission-voice-help,.pane-nav-root .mission-recent{display:none!important}
+.settings-hub__rail{display:none!important}
+.settings-hub{display:block!important}.settings-hub__main{width:100%}
+.zaenia-app--phone .stage-copy{display:none!important}
+.pane-nav-root .research__tabs,.pane-nav-root .research-page__tabs,.pane-nav-root .personal-tabs[data-nav-row]{display:none}
+
+/* Opening a record is a full leaf screen: the list beside it steps aside (kept mounted). */
+.research__split:has(>.page-nav--detail:not([hidden]))>*:has(~.page-nav--detail:not([hidden])),
+.research__split:not(:has(>.page-nav--detail:not([hidden]))):has(.page-nav--detail:not([hidden]))>*:not(:has(.page-nav--detail:not([hidden]))),
+.cs-queue:has(>.page-nav--detail:not([hidden]))>*:has(~.page-nav--detail:not([hidden])),
+.cs-queue:not(:has(>.page-nav--detail:not([hidden]))):has(.page-nav--detail:not([hidden]))>*:not(:has(.page-nav--detail:not([hidden]))),
+.sv-review:has(>.page-nav--detail:not([hidden]))>*:has(~.page-nav--detail:not([hidden])),
+.sv-review:not(:has(>.page-nav--detail:not([hidden]))):has(.page-nav--detail:not([hidden]))>*:not(:has(.page-nav--detail:not([hidden]))),
+.mail-panel:has(.page-nav--detail:not([hidden])) .mail-panel__list{display:none!important}
+.research__split:has(.page-nav--detail:not([hidden])),.cs-queue:has(.page-nav--detail:not([hidden])),.sv-review:has(.page-nav--detail:not([hidden])){grid-template-columns:1fr!important;display:block}
+
+/* Notebook: folders become filter pills, notes become tiles; an open note is its own screen. */
+.pane-nav-root .sv-three{display:flex;flex-direction:column;gap:12px;background:none;border:0;padding:0;box-shadow:none}
+.pane-nav-root .sv-three__folders{display:flex;flex-wrap:wrap;gap:6px;border:0;padding:0;background:none}
+.pane-nav-root .sv-three__folders .mv-kicker{display:none}
+.pane-nav-root .sv-three__folders button{height:32px;padding:0 11px;border-radius:9px;border:1px solid #1c2a40;background:#0b1626;font-size:12px;color:#9baec4;display:inline-flex;gap:6px;align-items:center}
+.pane-nav-root .sv-three__folders button[aria-pressed=true]{color:var(--a,#a68bff);border-color:var(--a,#a68bff)}
+.pane-nav-root .sv-three__list{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;border:0;padding:0;background:none;max-height:none}
+.pane-nav-root .sv-three__list>input{grid-column:1/-1}
+.pane-nav-root .sv-three__item{border-radius:18px!important;border:1px solid #25364c!important;background:linear-gradient(160deg,rgba(18,32,54,.7),rgba(8,16,28,.7))!important;padding:16px!important;min-height:96px}
+.pane-nav-root .sv-three:has(.page-nav--detail:not([hidden])) .sv-three__folders,
+.pane-nav-root .sv-three:has(.page-nav--detail:not([hidden])) .sv-three__list{display:none}
+.pane-nav-root .sv-three:not(:has(.page-nav--detail:not([hidden]))) .sv-three__page{display:none}
+
+/* Record lists (recipes, plans, entries) as tiles. */
+.pane-nav-root .personal-entries{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.pane-nav-root .personal-entries>button{border-radius:18px;border:1px solid #25364c;background:linear-gradient(160deg,rgba(18,32,54,.7),rgba(8,16,28,.7));padding:16px;min-height:72px;text-align:left}
+.notes-workspace:has(> [hidden]){grid-template-columns:1fr}
+.notes-workspace>[hidden],.notes-controls[hidden]{display:none!important}
+
+/* "Continue …" for a kept draft, in the preview's recent-work style. */
+.personal-resume{display:block;width:100%;margin:0 0 12px;min-height:44px;padding:10px 14px;text-align:left;border:1px solid #1c2a40;border-left:2px solid var(--a,var(--accent,#e0a353));border-radius:12px;background:#050d1899;color:#e1e8f2;font:inherit;font-size:13px;cursor:pointer}
+.personal-resume:focus-visible{outline:2px solid var(--a,#e0a353);outline-offset:2px}
+/* Studios' own layouts must not wrap the page header in side rails or tinted panels. */
+.pane-nav-root .fs-rail-layout{display:flex;flex-direction:column;gap:16px}
+.os-window__body .glass-module,[data-pane-root] .glass-module{background:none!important;border:0!important;box-shadow:none!important;padding:0!important}
+.pane-nav-root .fs>.bx-page{margin-bottom:0}
+.pane-nav-root .fs-rail-layout{align-items:stretch}
+.bx-root .bx-vbar input,.bx-root .bx-cmd input{border:0!important;background:none!important;box-shadow:none!important;padding:0!important;min-height:0!important;height:auto!important;border-radius:0!important}
+/* Queues and request lists as tiles until one is opened. */
+.pane-nav-root .cs-queue{display:block}
+.pane-nav-root .cs-queue__list{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px!important}
+.pane-nav-root .cs-qitem{border-radius:18px!important;border:1px solid #25364c!important;background:linear-gradient(160deg,rgba(18,32,54,.7),rgba(8,16,28,.7))!important;padding:14px 16px!important;min-height:84px;text-align:left}
+/* A record screen replaces its list screen entirely: the list's intro, ask box and notes step aside too. */
+.cs:has(>.cs-queue>.page-nav--detail:not([hidden]))>:not(.cs-queue){display:none!important}
+.cs-queue>.page-nav--detail:not([hidden]){margin-bottom:14px}
+/* A note open as its own screen: the notes toolbar and preview notice step aside; the editor uses the full width. */
+.notes-panel:has(>.page-nav--detail:not([hidden]))>:not(.page-nav--detail):not(.notes-workspace){display:none!important}
+.notes-panel:has(>.page-nav--detail:not([hidden])) .notes-workspace{display:block!important;grid-template-columns:1fr!important}
+.notes-panel:has(>.page-nav--detail:not([hidden])) .notes-editor{max-width:none!important;width:100%!important}
+/* Opaque panes and sheets: nothing behind a window or the category sheet shows through (Claude 2026-11-11). */
+.os-layer .os-window{background:linear-gradient(130deg,#070e1a,#060c15)!important;backdrop-filter:none!important}
+.navhub.navhub--p05,.navhub.navhub--m5{background:linear-gradient(160deg,#08111d,#050b14)!important;backdrop-filter:none!important}
+.zt-manager{background:#081120!important}

@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { api, briefingAudio, BridgeError, errorText } from "../../core/bridge";
 import { SILENT_WAV } from "../../core/speech";
+import { BRIEF_EVENT } from "../../core/briefRequest";
 import "./BrowserBriefing.css";
 
 type Brief = { session_id: string; generated_at: string; briefing_text: string; audio_ready: boolean; needs_answer?: boolean; question_type?: string };
-type Props = { onAuthLost?: () => void; onActive: (active: boolean) => void; beforePlay: () => void };
+type Props = { onAuthLost?: () => void; onActive: (active: boolean) => void; beforePlay: () => void; showButton?: boolean };
 
-/** On-demand, full calendar/weather/traffic brief in the existing browser app. */
-export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
+/** On-demand, full calendar/weather/traffic brief. The "Brief me" button is gone (Grey, 2026-11-04): ask for it by
+ * words ("on the road brief", "brief me"), which fires BRIEF_EVENT; the panel then opens, plays it and shows the text. */
+export function BrowserBriefing({ onAuthLost, onActive, beforePlay, showButton = false }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [playing, setPlaying] = useState(false);
@@ -22,6 +24,12 @@ export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
   const inFlight = useRef(false);
 
   useEffect(() => { onActive(busy || playing); }, [busy, playing, onActive]);
+  const start = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    const ask = () => start.current();
+    window.addEventListener(BRIEF_EVENT, ask);
+    return () => window.removeEventListener(BRIEF_EVENT, ask);
+  }, []);
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -67,6 +75,10 @@ export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
     finally { inFlight.current = false; if (mounted.current) setBusy(false); }
   }
 
+  // An explicit request asks for current information, even while a previous brief is visible.
+  // generate's synchronous inFlight guard coalesces requests while that refresh is running.
+  start.current = () => { void generate(); };
+
   async function retryAudio() {
     if (!brief || inFlight.current) return;
     inFlight.current = true; setBusy(true); setError(null);
@@ -96,12 +108,14 @@ export function BrowserBriefing({ onAuthLost, onActive, beforePlay }: Props) {
   }
 
   return <section className={`browser-briefing${open ? " browser-briefing--open" : ""}`} aria-label="Your briefing">
-    <button className="browser-briefing__toggle" type="button" aria-expanded={open} aria-controls="browser-briefing-panel"
+    {/* Gone on the desktop (ask for it by words); the phone keeps its button. */}
+    {showButton && <button className="browser-briefing__toggle" type="button" aria-expanded={open} aria-controls="browser-briefing-panel"
       onClick={() => { if (open) { audio.current?.pause(); setOpen(false); } else if (brief) setOpen(true); else void generate(); }}>
       {open ? "Close briefing" : "Brief me"}
-    </button>
+    </button>}
     <div id="browser-briefing-panel" className="browser-briefing__panel" hidden={!open}>
-      <div className="browser-briefing__head"><strong>Your briefing</strong><button type="button" disabled={busy} onClick={() => void generate()}>{busy ? "Preparing…" : "Refresh"}</button></div>
+      <div className="browser-briefing__head"><strong>Your briefing</strong><span><button type="button" disabled={busy} onClick={() => void generate()}>{busy ? "Preparing…" : "Refresh"}</button>
+        <button type="button" onClick={() => { audio.current?.pause(); setOpen(false); }}>Close</button></span></div>
       {busy && <p role="status">Checking your schedule, weather and traffic…</p>}
       {brief && <><p className="browser-briefing__text">{brief.briefing_text}</p><small>Updated {new Date(brief.generated_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}</small></>}
       {brief?.needs_answer && <div className="platform-inline" aria-label="Answer briefing question">

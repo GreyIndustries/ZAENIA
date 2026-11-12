@@ -4,6 +4,9 @@ import { openLink } from "../../core/openLink";
 import type { AnalysisTask } from "./researchShared";
 import { AddToNotebook, AnalysisResult, NeedsServer, useAnalysis } from "./researchShared";
 import "./Research.css";
+import { PageNavigator } from "../shell/PageNavigator";
+/** Scripture's four screens (Claude 2026-11-11). */
+const SCRIPTURE_PAGES = [{ id: "passage", label: "Passage" }, { id: "search", label: "Word search" }, { id: "ancient", label: "Ancient texts" }, { id: "marks", label: "My marks" }];
 
 type Word = { original: string; transliteration: string; gloss: string; strong: string; morphology: string; dataset: string };
 type Verse = { verse: number; texts: Record<string, string>; words: Word[] };
@@ -137,7 +140,7 @@ export function ScripturePanel() {
   const label = (id: string) => info.choices.find(choice => choice.id === id)?.label ?? id;
 
   return <div className="research research--scripture">
-    <p className="research__note">Free, public texts only. {info.note} Explanations come from ZAE's own brain; text is read as data, never as instructions.</p>
+    <p className="research__note">Free, public texts only. {info.note} Explanations come from ZAE's SE (Synergized Encephalon); text is read as data, never as instructions.</p>
     <form className="research__bar" onSubmit={event => { event.preventDefault(); void lookUp(); }}>
       <select value={source} aria-label="Source" onChange={event => switchTo(event.target.value as Source)}>
         {(Object.keys(SOURCES) as Source[]).map(id => <option key={id} value={id}>{SOURCES[id].label}</option>)}
@@ -146,9 +149,9 @@ export function ScripturePanel() {
       <button type="submit" className="research__primary" disabled={busy}>{busy ? "Looking up…" : "Look up"}</button>
       <input value={query} maxLength={200} aria-label="Search words" placeholder={`Search ${info.label.toLowerCase()}, e.g. ${source === "quran" ? "mercy" : source === "jewish" ? "repentance" : "shepherd"}`} onChange={event => setQuery(event.target.value)} style={{ flex: "1 1 160px" }}/>
       <button type="button" onClick={() => void searchWords()}>Search words</button>
-      <button type="button" aria-pressed={mode === "ancient"} onClick={() => setMode("ancient")}>Ancient texts</button>
-      <button type="button" aria-pressed={mode === "marks"} onClick={() => { setMode("marks"); void loadExtras(); }}>My marks</button>
     </form>
+    <PageNavigator id="scripture" name="Scripture & ancient" items={SCRIPTURE_PAGES} current={mode}
+      onChoose={next => { setMode(next as typeof mode); if (next === "marks") void loadExtras(); }}/>
     <div className="research__actions">
       {!info.fixed && info.choices.map(item => <label key={item.id} className="research__meta sc-chip" title={item.note}>
         <input type="checkbox" checked={translations.includes(item.id)} onChange={event => setTranslations(current => event.target.checked ? [...current, item.id] : current.filter(id => id !== item.id))}/>{item.label}</label>)}

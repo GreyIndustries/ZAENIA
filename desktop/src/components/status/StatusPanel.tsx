@@ -6,7 +6,7 @@ import "./StatusPanel.css";
 // The modules the ZÆNIA server checks for the live status feed (core/api/status_feed.py).
 const modules = [
   { id: "security", title: "Security & access", note: "Owner passkey, API token and server mode" },
-  { id: "brain", title: "Local brain", note: "Ollama and the conversation model" },
+  { id: "brain", title: "SE engine (Ollama)", note: "The Synergized Encephalon's engine and its four brains" },
   { id: "voice", title: "Voice", note: "Kokoro voice for spoken replies and the brief" },
   { id: "calendar", title: "Calendar", note: "Google Calendar link and the local calendar" },
   { id: "traffic", title: "Traffic", note: "WSDOT traffic for the drive brief" },

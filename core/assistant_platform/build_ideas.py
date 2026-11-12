@@ -21,13 +21,33 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONVERSATION = PROJECT_ROOT / "data" / "conversation_memory.jsonl"
 UPTIME = PROJECT_ROOT / "data" / "ui" / "uptime.json"
 STATE = PROJECT_ROOT / "data" / "ui" / "build_ideas.json"
-STUDY_MODEL = "qwen3:14b"
+from core.brain.conductor import OVERNIGHT_MODEL, STUDY_MODEL  # noqa: E402  (the one table of which model does what)
 
 _CANT = re.compile(r"\b(?:I\s+(?:couldn't|can't|cannot|wasn't\s+able|am\s+not\s+able|don't\s+have\s+(?:access|a\s+way))|isn't\s+available|"
                    r"didn't\s+work|something\s+went\s+wrong|not\s+sure\s+what\s+you\s+mean)\b", re.I)
 _CLAIM = re.compile(r"^\s*(?:done|logged|saved|added|set|all\s+set|got\s+it[,.]?\s+(?:logged|saved|added))\b|\b(?:I've|I\s+have)\s+(?:logged|saved|added|set|created|updated)\b", re.I)
 _CORRECTION = re.compile(r"^\s*(?:no[,.!]|(?:nope|that's\s+(?:not|wrong)|not\s+what\s+I|you\s+(?:didn't|got\s+it\s+wrong)|wrong)\b)", re.I)
 _TALK_ONLY = {"normal", "quick_self", "grounded_system", "live_data", "conductor_seek_web", None}
+
+
+def _overnight(prompt: str, run: Callable[..., str]) -> str:
+    """Nightly ideas use the big overnight model when it's there, free its memory afterwards, and fall back to Study."""
+    try:
+        answer = run(prompt, model=OVERNIGHT_MODEL)
+        if answer.strip():
+            return answer
+    except Exception:
+        pass
+    finally:
+        try:
+            from core.brain.conductor import TALK_KEEP_ALIVE, TALK_MODEL
+            from core.brain.local_llm import _game_keep_alive, set_residency
+            set_residency(OVERNIGHT_MODEL, 0)
+            if _game_keep_alive(TALK_KEEP_ALIVE) == TALK_KEEP_ALIVE:
+                set_residency(TALK_MODEL, TALK_KEEP_ALIVE)
+        except Exception:
+            pass
+    return run(prompt, model=STUDY_MODEL)
 
 
 def _read_turns(since: datetime, path: Path = CONVERSATION) -> list[dict[str, Any]]:
@@ -97,7 +117,7 @@ def ideas_prompt(signals: list[str], never: list[str], earlier: list[str]) -> st
 
 def _study(prompt: str) -> str:
     from core.research.analyze import run_local
-    return run_local(prompt, model=STUDY_MODEL)
+    return _overnight(prompt, run_local)
 
 
 class NightlyIdeas:

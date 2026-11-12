@@ -46,7 +46,7 @@ export function ArenaHeadToHead() {
   if (!LIVE_API) return needServer("The Arena");
   const answers = round?.answers ?? [];
   return <div className="mv">
-    <div className="mv-head"><div><span className="mv-kicker">Pick the best brain</span><h2 className="zx-title">Arena</h2></div>
+    <div className="mv-head"><div><span className="mv-kicker">Pick the best SE model</span><h2 className="zx-title">Arena</h2></div>
       <button type="button" className="mv-ghost" onClick={() => { setPair(pickPair()); setRound(null); setVoted(null); }}>New pair</button></div>
     <form className="mv-ask zx-inset" onSubmit={event => void ask(event)}>
       <input value={question} maxLength={2000} placeholder="Ask both models the same question…" aria-label="Question for the models" onChange={event => setQuestion(event.target.value)}/>

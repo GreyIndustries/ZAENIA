@@ -1,5 +1,6 @@
 /* ZÆNIA shell windows: glass panels floating over the core. */
-.os-layer{position:absolute;inset:18px 18px 92px;z-index:5;pointer-events:none}
+/* Grey (2026-11-09): tabs use the full screen, edge to edge from under the tab pills down to the chat bar. */
+.os-layer{position:absolute;inset:44px 0 136px;z-index:5;pointer-events:none}
 .os-window{
   position:absolute;display:flex;flex-direction:column;min-width:0;min-height:0;pointer-events:auto;
   border-radius:16px;border:1px solid rgba(143,202,255,.32);border-top-color:rgba(255,207,129,.45);
@@ -71,3 +72,19 @@
 .os-tab-manager__size{padding-top:10px;border-top:1px solid #334760;display:grid;gap:10px}.os-tab-manager__size label{display:flex;flex-wrap:wrap;justify-content:space-between;gap:5px}.os-tab-manager__size input{width:100%;accent-color:#eeb35d;min-height:24px}.os-tab-manager__size output{color:#ffda9e}
 .os-tab-manager__positions{display:grid;grid-template-columns:1fr 1fr;gap:5px}.os-tab-manager__positions button{text-transform:capitalize}.os-tab-manager__help{color:#94acc4;margin-bottom:0}
 .os-tab-manager__phrases{margin-top:12px;border-top:1px solid #334760;padding-top:10px}.os-tab-manager__phrases summary{cursor:pointer;color:#ffda9e}.os-tab-manager__phrases div{margin-top:10px}.os-tab-manager__phrases p{margin:4px 0 0;color:#a8bed4;font-size:11px}
+/* Full-screen tabs reach the right edge too (no leftover gutter on desktop). */
+.zaenia-app:not(.zaenia-app--phone) .dashboard{padding-right:0}
+
+/* A voice-opened window must remain visible while background animation is paused. */
+.zaenia-app--background .os-window{animation:none}
+/* Snapped panes remain readable at their assigned size while ZAE listens or speaks. */
+.os-layer.os-layer--snapped .os-window{opacity:1;transform:none;animation:none}
+
+/* Minimized windows stay mounted (drafts, scroll and page history survive) but take no space or input. */
+.os-window[hidden]{display:none!important}
+/* Layout result with Undo, above the panes and clear of the chat bar (Claude 2026-11-11). */
+.os-arrange-toast{position:absolute;right:14px;top:-38px;z-index:60;display:flex;align-items:center;gap:10px;max-width:min(440px,calc(50% - 250px));padding:6px 8px 6px 12px;border-radius:12px;border:1px solid rgba(255,191,87,.45);background:rgba(6,14,28,.94);color:#e6f2ff;font-size:12px;box-shadow:0 12px 30px #0008;pointer-events:auto}
+.os-arrange-toast span{flex:1;min-width:0;line-height:1.45}
+.os-arrange-toast button{min-height:30px;padding:3px 12px;border-radius:8px;border:1px solid rgba(143,202,255,.35);background:#102037;color:#ffd08a;font:inherit;cursor:pointer}
+.os-arrange-toast button:focus-visible{outline:2px solid #ffd58f;outline-offset:2px}
+.os-window__body:focus{outline:none}

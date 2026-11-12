@@ -83,3 +83,16 @@ Read docs/architecture/HANDOFF_2026-10-30.md first: it lists what Claude finishe
 ## Release outputs
 
 For every user-requested ZÆNIA application update, build both the native desktop app and the browser website (`desktop/dist-web`). Install the native build and refresh the served website when the user has requested the update be applied. Do not treat a source-only change as a completed app update.
+
+**In-app updates (Grey, 2026-11-09):** from now on, stage updates instead of installing them. Bump the numbers and add a history entry in `desktop/src/config/versions.json` (UI-only changes bump `ui` and the changed tab; capability or security changes bump `system`; beta stays below 1.0), then run `scripts/stage_update.ps1 -Title "..." -Notes "first change|second change" [-Part ui|system|tab:<id>] [-RestartServer]`. It builds both outputs into `updates/pending/<id>/` without touching the installed app or the served site. Grey installs from Settings > Updates (Install, optional server restart), which runs `scripts/install_update.ps1`: hash check, backups in `backups/update-*`, close, install, mirror `desktop/dist-web`, optional restart, history in `data/updates/installed.json`, reopen.
+
+
+## Detailed patch notes (Grey, 2026-11-10)
+Every update in every ZAE component must include detailed categorized releaseNotes entries (kind, title, description) in version history or a JSON file passed to stage_update.ps1 -ReleaseNotesFile. Explain user-visible additions, changes, fixes, actual removals, performance/security effects and known limitations as applicable. Do not invent changes for empty categories. Preserve older notes and record new notes in staged manifests and installed history.
+
+## Voice parity (Grey, 2026-11-10)
+All past, present and new ZAE features must have a documented voice path. Route voice through the same guarded handlers as clicks; never grant permissions from recognition or learning. New UI features must expose named controls/page commands, examples and voice tests. Report coverage and platform-specific gaps honestly; native authentication, approvals and device dialogs retain their existing requirements. Contextual resume offers are voice-origin only and must respect later/not-now/dismiss replies without creating unrequested reminders.
+
+
+## Weekly whole-system release cadence (Grey, 2026-11-11)
+Sunday is the target for a substantial coordinated ZAENIA whole-system release. Plan and measure early in the week, freeze features Friday, validate the release candidate/recovery path Saturday, and release the verified scope Sunday through the existing authorization and owner-install workflow. Preserve accepted features and source provenance; include detailed patch notes, performance evidence, native/web artifacts, voice paths, known limits and rollback. Keep urgent fixes possible between Sundays. This week's plan is in the primary checkout's Master Build Plan, November 11-15 execution section.

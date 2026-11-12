@@ -121,3 +121,12 @@ desktop/dist-web/
 !package-lock.json
 !Cargo.lock
 
+
+# Coding-tool leftovers (Aider history and caches)
+.aider*
+# Staged and installed app updates (built exes and phone site), see scripts/stage_update.ps1
+/updates/
+
+/*-test-summary.json
+/desktop/baseline-frontend-tests.json
+/docs/previews/nav-split/
